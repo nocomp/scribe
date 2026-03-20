@@ -254,16 +254,9 @@ async def call_ai(system: str, prompt: str, max_tokens: int = 700) -> tuple[str,
         raise
     except httpx.ConnectError:
         provider_label = "serveur local" if cfg.is_local else cfg.provider
-<<<<<<< HEAD
-        if cfg.provider == "ollama":
-            extra = "Verifiez qu'Ollama est demarre."
-        else:
-            extra = "Verifiez votre connexion et la cle API."
-=======
         extra = "Vérifiez votre connexion et la clé API."
         if cfg.provider == "ollama":
             extra = "Vérifiez qu'Ollama est démarré."
->>>>>>> 5f9caa7b898d2463a4358beffeb5a14af4b016f5
         raise HTTPException(
             status_code=503,
             detail=f"Impossible de joindre {provider_label} ({cfg.base_url}). {extra}"
