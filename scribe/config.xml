@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  config.xml — DÉMO 1 — Centre Hospitalier de Valmont
+  Modifier ce fichier puis lancer : python setup.py
+  OU utiliser directement : python setup_demo1.py  (recommandé pour la démo)
+-->
+<scribe>
+
+  <etablissement>
+    <nom>Centre Hospitalier de Valmont</nom>
+    <sigle>CHV</sigle>
+    <finess>000000001</finess>
+  </etablissement>
+
+  <admin>
+    <login>dircrise</login>
+    <password>Scribe2026!</password>
+    <nom_affiche>Directeur de Crise</nom_affiche>
+  </admin>
+
+  <sites>
+    <site>
+      <nom>Site Principal — Valmont</nom>
+      <adresse>1 avenue de l'Hôpital, 74000 Valmont</adresse>
+      <latitude>46.2012</latitude>
+      <longitude>6.1445</longitude>
+      <telephone_garde>04 50 00 00 01</telephone_garde>
+    </site>
+    <site>
+      <nom>Site Secondaire — Crestval</nom>
+      <adresse>12 route de la Clinique, 74100 Crestval</adresse>
+      <latitude>46.2480</latitude>
+      <longitude>6.0910</longitude>
+      <telephone_garde>04 50 00 00 02</telephone_garde>
+    </site>
+    <site>
+      <nom>Unité Psychiatrique — Les Pins</nom>
+      <adresse>Chemin des Pins, 74000 Valmont</adresse>
+      <latitude>46.1850</latitude>
+      <longitude>6.1790</longitude>
+      <telephone_garde></telephone_garde>
+    </site>
+    <site>
+      <nom>EHPAD — Résidence du Lac</nom>
+      <adresse>15 allée du Lac, 74200 Rivebelle</adresse>
+      <latitude>46.1620</latitude>
+      <longitude>6.2100</longitude>
+      <telephone_garde></telephone_garde>
+    </site>
+    <site>
+      <nom>SAMU — Centre 15</nom>
+      <adresse>Zone SDIS, 74000 Valmont</adresse>
+      <latitude>46.1950</latitude>
+      <longitude>6.1200</longitude>
+      <telephone_garde>15</telephone_garde>
+    </site>
+  </sites>
+
+  <directeurs>
+    <directeur>
+      <nom>M. A. DIRECTEUR</nom>
+      <fonction>Directeur Général</fonction>
+      <abreviation>DG</abreviation>
+    </directeur>
+    <directeur>
+      <nom>Mme B. ADJOINTE</nom>
+      <fonction>Directrice Générale Adjointe</fonction>
+      <abreviation>DGA</abreviation>
+    </directeur>
+    <directeur>
+      <nom>M. C. SOINS</nom>
+      <fonction>Directeur des Soins</fonction>
+      <abreviation>DS</abreviation>
+    </directeur>
+    <directeur>
+      <nom>M. D. SYSTEMES</nom>
+      <fonction>Directeur des Systèmes d'Information</fonction>
+      <abreviation>DSI</abreviation>
+    </directeur>
+    <directeur>
+      <nom>M. E. SECURITE</nom>
+      <fonction>Responsable Sécurité des SI</fonction>
+      <abreviation>RSSI</abreviation>
+    </directeur>
+    <directeur>
+      <nom>Mme F. RESSOURCES</nom>
+      <fonction>Directrice des Ressources Humaines</fonction>
+      <abreviation>DRH</abreviation>
+    </directeur>
+    <directeur>
+      <nom>M. G. FINANCES</nom>
+      <fonction>Directeur des Affaires Financières</fonction>
+      <abreviation>DAF</abreviation>
+    </directeur>
+  </directeurs>
+
+  <annuaire_normal>
+    <contact service="STANDARD" local="Accueil principal" tel="0"/>
+    <contact service="URGENCES — IOA" local="Accueil urgences" tel="1001"/>
+    <contact service="SMUR" local="Salle SMUR" tel="1002"/>
+    <contact service="REANIMATION" local="Salle de soins" tel="2001"/>
+    <contact service="BLOC OPERATOIRE" local="Salle de régulation" tel="3001"/>
+    <contact service="MATERNITE" local="Salle de soins" tel="7001"/>
+    <contact service="PEDIATRIE" local="Salle de soins" tel="7003"/>
+    <contact service="CARDIOLOGIE" local="Salle de soins" tel="4002"/>
+    <contact service="CADRE DE NUIT" local="Bureau cadre nuit" tel="9000"/>
+    <contact service="PHARMACIE" local="Secrétariat" tel="E005"/>
+    <contact service="IMAGERIE — SCANNER" local="Accueil imagerie" tel="A001"/>
+    <contact service="LABORATOIRE" local="Accueil labo" tel="A003"/>
+    <contact service="DIRECTION GENERALE" local="Secrétariat DG" tel="E001"/>
+    <contact service="DSI INFORMATIQUE" local="Support DSI" tel="E003"/>
+    <contact service="SECURITE" local="Loge sécurité" tel="E009"/>
+    <contact service="SERVICES TECHNIQUES" local="Atelier" tel="E004"/>
+  </annuaire_normal>
+
+  <annuaire_secours>
+    <contact service="URGENCES — SECOURS" local="GSM de garde" tel="06 00 00 01 01" note="24h/24"/>
+    <contact service="REANIMATION — SECOURS" local="GSM de garde" tel="06 00 00 01 02" note=""/>
+    <contact service="CADRE DE NUIT — SECOURS" local="GSM cadre" tel="06 00 00 01 03" note=""/>
+    <contact service="DIRECTION — SECOURS" local="GSM DG/DGA" tel="06 00 00 01 04" note="Astreinte direction"/>
+    <contact service="DSI — SECOURS" local="GSM DSI" tel="06 00 00 01 05" note="Astreinte informatique"/>
+    <contact service="SAMU 15" local="Régulation médicale" tel="15" note="Urgences médicales"/>
+    <contact service="POMPIERS 18" local="" tel="18" note=""/>
+    <contact service="POLICE / GENDARMERIE" local="" tel="17" note=""/>
+    <contact service="CERT SANTE" local="Signalement cyber" tel="cert-sante@esante.gouv.fr" note="Incidents cyber obligatoires"/>
+    <contact service="ANSSI" local="Signalement national" tel="www.cybermalveillance.gouv.fr" note="Incidents critiques"/>
+  </annuaire_secours>
+
+  <!-- Langue interface : fr en de es it nl pl pt -->
+  <langue>fr</langue>
+
+  <ia>
+    <fournisseur>albert</fournisseur>
+    <cle_api></cle_api>
+    <modele></modele>
+    <url_base></url_base>
+  </ia>
+
+  <federation>
+    <enabled>false</enabled>
+    <collecteur_url>http://ADRESSE_COLLECTEUR:9000/api/push</collecteur_url>
+    <token>CHOISIR_16_CARACTERES_MIN</token>
+    <intervalle_secondes>30</intervalle_secondes>
+    <share_details>true</share_details>
+    <share_min_urgency>1</share_min_urgency>
+  </federation>
+
+</scribe>

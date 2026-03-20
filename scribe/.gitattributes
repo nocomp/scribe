@@ -1,0 +1,18 @@
+# Enforce LF line endings for scripts and text files to ensure POSIX compatibility in Docker
+# See: https://git-scm.com/docs/gitattributes
+
+# Shell scripts and entrypoints
+*.sh text eol=lf
+
+# Docker and compose files
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Python source
+*.py text eol=lf
+
+# Config files
+*.xml text eol=lf
+*.json text eol=lf

@@ -34,10 +34,15 @@ RUN addgroup --system scribe && \
     adduser --system --ingroup scribe --home /app --shell /usr/sbin/nologin scribe && \
     chown -R scribe:scribe /app /data
 
-USER scribe
-
 # Script d'entrée (COPY --chmod avoids filesystem permission issues on some hosts)
 COPY --chmod=0755 docker-entrypoint.sh /docker-entrypoint.sh
+
+# Ensure the entrypoint uses LF line endings (avoid "sh\r" shebang errors on Linux)
+# Must run as root before USER directive to avoid permission issues
+RUN sed -i 's/\r$//' /docker-entrypoint.sh
+
+# Switch to non-root user for security
+USER scribe
 
 EXPOSE 8000
 

@@ -1,5 +1,4 @@
 # ── Données sensibles — ne JAMAIS inclure dans l'image ──
-config.xml
 scribe.db
 *.db
 *.sqlite
@@ -22,6 +21,10 @@ env/
 .env
 .env.*
 
+# ── Autres env ──
+*.bat
+
+
 # ── OS / IDE ──
 .DS_Store
 Thumbs.db
@@ -36,3 +39,4 @@ logs/
 # ── Tests ──
 tests/
 *.test.py
+

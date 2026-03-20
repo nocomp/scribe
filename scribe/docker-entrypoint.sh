@@ -18,13 +18,20 @@ if [ ! -L /app/uploads ]; then
     ln -sf /data/uploads /app/uploads
 fi
 
-# Config XML : priorité à /data/config.xml (monté par volume), sinon /app/config.xml
+# Config XML : priorité à /data/config.xml (monté par volume), sinon /app/config.xml, sinon config_demo1.xml
 if [ -f /data/config.xml ]; then
     CONFIG_PATH=/data/config.xml
     echo "  [config] Utilisation de /data/config.xml"
-else
+elif [ -f /app/config.xml ]; then
     CONFIG_PATH=/app/config.xml
-    echo "  [config] Utilisation de /app/config.xml (valeurs par défaut)"
+    echo "  [config] Utilisation de /app/config.xml"
+elif [ -f /app/config_demo1.xml ]; then
+    CONFIG_PATH=/app/config_demo1.xml
+    echo "  [config] Utilisation de /app/config_demo1.xml (configuration par défaut) - ATTENTION cette instance utilise des données de démonstration"
+    echo " Bien modifier les données avant passage en production"
+else
+    echo "  [config] ✗ Aucune configuration trouvée"
+    exit 1
 fi
 
 # Base SQLite : stocker dans /data/db/
@@ -65,7 +72,7 @@ if [ -f /data/config.js ]; then
 fi
 
 echo ""
-echo "  ✓ SCRIBE démarré sur http://0.0.0.0:8000"
+echo "  ✓ SCRIBE démarré sur http://localhost:8000"
 echo "  ✓ Données persistantes dans /data/"
 echo ""
 
