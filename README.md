@@ -13,7 +13,7 @@
 **Digital Crisis Management Log for Healthcare Facilities**
 
 [![Version](https://img.shields.io/badge/version-1.3.0-blue)](https://github.com/nocomp/scribe)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![License: GNU AGPLv3](https://img.shields.io/badge/GNU AGPLv3-orange)](LICENSE)
 [![Stack](https://img.shields.io/badge/stack-Python%20%7C%20FastAPI%20%7C%20SQLite-orange)](https://github.com/nocomp/scribe)
 [![Languages](https://img.shields.io/badge/languages-FR%20EN%20DE%20ES%20IT%20NL%20PL%20PT-purple)](https://github.com/nocomp/scribe)
 
