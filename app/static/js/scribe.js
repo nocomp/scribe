@@ -418,15 +418,22 @@ function openTab(id, btn) {
 }
 
 // ── CARTE ────────────────────────────────────────────
+// Attributions cartographiques conformes (v2.0.1) :
+//   - OpenStreetMap : © OpenStreetMap contributors, ODbL
+//     https://www.openstreetmap.org/copyright
+//   - CartoDB : © OpenStreetMap contributors, © CARTO
+//     https://carto.com/attributions
+//   - Esri World Imagery : Tiles © Esri
+//     https://www.esri.com/en-us/legal/terms/data-attributions
 let mapSoins = null;
 function initMap() {
   map = L.map('map', {zoomControl:true}).setView([45.9, 6.1], 10);
   const _osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {attribution:'© OpenStreetMap', maxZoom:19});
+    {attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors', maxZoom:19});
   const _cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    {attribution:'CartoDB Light', maxZoom:19});
+    {attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>', maxZoom:19});
   const _satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    {attribution:'Esri World Imagery', maxZoom:19});
+    {attribution:'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community', maxZoom:19});
   const _baseLayers = {'⬜ Clair': _cartoLight, '🗺 OSM': _osmLayer, '🛰 Satellite': _satellite};
   _cartoLight.addTo(map);
   L.control.layers(_baseLayers, {}, {position:'topright', collapsed:false}).addTo(map);
@@ -439,7 +446,7 @@ function initMap() {
   if (mapSoinsEl) {
     mapSoins = L.map('map-soins', {zoomControl:true}).setView([45.9, 6.1], 10);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      {attribution:'CartoDB Light', maxZoom:19}).addTo(mapSoins);
+      {attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>', maxZoom:19}).addTo(mapSoins);
     // Synchroniser zoom/center avec la carte principale
     map.on('moveend zoomend', () => {
       if (mapSoins) mapSoins.setView(map.getCenter(), map.getZoom(), {animate:false});

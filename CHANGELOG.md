@@ -7,6 +7,18 @@ et le projet utilise [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.0.1] — 2026-04-26
+
+### 🐛 Corrections juridiques
+
+- **Conformité licence OpenStreetMap** : ajout de l'attribution complète et cliquable sur toutes les cartes Leaflet (instances joueur + collecteur territorial). L'attribution suit désormais les exigences officielles de [openstreetmap.org/copyright](https://www.openstreetmap.org/copyright) :
+  - `© OpenStreetMap contributors` avec lien vers la page de copyright
+  - Attribution `© CARTO` ajoutée pour les fonds CartoDB Light
+  - Attribution `Tiles © Esri` complète pour le fond satellite
+- Aucun changement fonctionnel — uniquement les chaînes d'attribution affichées sous chaque carte.
+
+---
+
 ## [2.0.0] — 2026-04-26
 
 Réécriture majeure du projet, passage en architecture plugins, ajout du mode exercice complet, vue mobile, MFA TOTP, multi-langue. Cette version introduit également un nouveau système de fédération inter-GHT avec collecteur dédié.
