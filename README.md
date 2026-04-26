@@ -115,7 +115,7 @@ python setup.py          # menu interactif : démo / config personnalisée
 ```bash
 # Docker
 git clone https://github.com/nocomp/scribe
-cd scribe && git checkout beta
+cd scribe 
 docker compose up -d
 # → http://localhost:8000   login: dircrise / Scribe2026!
 ```
@@ -569,7 +569,7 @@ python setup.py       # interactive menu: demo / custom config
 
 ```bash
 # Docker
-git clone https://github.com/nocomp/scribe && cd scribe && git checkout beta
+git clone https://github.com/nocomp/scribe && cd scribe 
 docker compose up -d
 # → http://localhost:8000
 ```
