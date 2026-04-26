@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  config_exo_chu_centre.xml — Mode EXERCICE / Site fictif CHU_CENTRE
+  Données fictives uniquement.
+-->
+<scribe>
+
+  <etablissement>
+    <nom>Centre Hospitalier Centre</nom>
+    <sigle>CHU_CENTRE</sigle>
+    <finess>0000000010</finess>
+    <login_tagline>EXERCICE — Données fictives</login_tagline>
+    <login_footer>Mode exercice de gestion de crise</login_footer>
+  </etablissement>
+
+  <admin>
+    <login>dircrise</login>
+    <password>Exercice2026!</password>
+    <nom_affiche>Directeur de Crise — CHU_CENTRE</nom_affiche>
+  </admin>
+
+  <sites>
+    <site>
+      <nom>CHU_CENTRE — Site principal</nom>
+      <adresse>1 avenue de l'Hôpital, Lyon</adresse>
+      <latitude>45.7640</latitude>
+      <longitude>4.8357</longitude>
+      <telephone_garde>0X 00 00 00 00</telephone_garde>
+    </site>
+  </sites>
+
+  <directeurs>
+    <directeur>
+      <nom>Directeur Général</nom>
+      <fonction>DG CHU_CENTRE</fonction>
+      <abreviation>DG</abreviation>
+    </directeur>
+    <directeur>
+      <nom>RSSI</nom>
+      <fonction>Responsable Sécurité SI</fonction>
+      <abreviation>RSSI</abreviation>
+    </directeur>
+  </directeurs>
+
+  <ia>
+    <fournisseur>albert</fournisseur>
+    <cle_api></cle_api>
+    <modele></modele>
+  </ia>
+
+  <federation>
+    <enabled>true</enabled>
+    <collecteur_url>http://localhost:8565/api/push</collecteur_url>
+    <token>token_demo_chu_centre</token>
+    <push_interval>30</push_interval>
+  </federation>
+
+</scribe>

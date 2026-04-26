@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Notifications — SCRIBE</title>
+<style>
+:root{
+  --blue:#003189;--red:#e1000f;--bg:#f0f2f5;--s:#fff;--s2:#f1f5f9;
+  --bd:#e2e8f0;--tx:#0f172a;--mu:#64748b;--mo:monospace;
+  --ok:#16a34a;--warn:#f59e0b;--err:#dc2626;--info:#0284c7;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx);padding:20px;max-width:1100px;margin:0 auto}
+h1{font-family:var(--mo);font-size:14px;letter-spacing:2px;margin-bottom:4px;color:var(--blue)}
+.lead{font-size:13px;color:var(--mu);margin-bottom:20px}
+.card{background:var(--s);border:1px solid var(--bd);border-radius:8px;padding:18px;margin-bottom:14px}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.card-hdr h2{font-family:var(--mo);font-size:11px;letter-spacing:1px;font-weight:700;color:var(--blue)}
+.pill{font-family:var(--mo);font-size:9px;padding:3px 8px;border-radius:10px;letter-spacing:.5px}
+.pill.ok{background:rgba(22,163,74,.12);color:var(--ok);border:1px solid rgba(22,163,74,.3)}
+.pill.off{background:rgba(100,116,139,.12);color:var(--mu);border:1px solid rgba(100,116,139,.3)}
+.pill.warn{background:rgba(245,158,11,.12);color:var(--warn);border:1px solid rgba(245,158,11,.3)}
+.row{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.row label{font-family:var(--mo);font-size:10px;color:var(--mu);min-width:120px}
+.row input,.row select,.row textarea{flex:1;font-family:var(--mo);font-size:11px;padding:7px 10px;border:1px solid var(--bd);border-radius:4px;background:var(--s2);color:var(--tx)}
+.row input[type=checkbox]{flex:0;margin-right:6px}
+.btn{font-family:var(--mo);font-size:10px;padding:7px 14px;border-radius:5px;border:1px solid var(--bd);background:var(--s);color:var(--tx);cursor:pointer}
+.btn:hover{background:var(--s2)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:#001d55}
+.btn-danger{background:var(--err);color:#fff;border-color:var(--err)}
+.btn-ok{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn-warn{background:var(--warn);color:#fff;border-color:var(--warn)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.subs-table{width:100%;font-size:11px;border-collapse:collapse}
+.subs-table th{text-align:left;padding:8px;background:var(--s2);font-family:var(--mo);font-size:9px;color:var(--mu);letter-spacing:.5px;border-bottom:1px solid var(--bd)}
+.subs-table td{padding:8px;border-bottom:1px solid var(--bd)}
+.muted{color:var(--mu);font-size:10px}
+.silence-state{display:flex;align-items:center;gap:12px;padding:12px;border-radius:6px;background:var(--s2)}
+.silence-state.on{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3)}
+#toast{position:fixed;bottom:20px;right:20px;padding:10px 18px;border-radius:5px;font-family:var(--mo);font-size:11px;display:none;z-index:9999}
+#toast.ok{background:#dcfce7;color:#15803d;border:1px solid #86efac}
+#toast.err{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}
+.notice{background:rgba(2,132,199,.08);border:1px solid rgba(2,132,199,.3);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#0284c7}
+code{background:var(--s2);padding:2px 5px;border-radius:3px;font-size:10px}
+.kind-icon{font-size:16px;margin-right:6px}
+details{margin-top:10px;padding:10px;background:var(--s2);border-radius:5px}
+details summary{cursor:pointer;font-family:var(--mo);font-size:10px;color:var(--mu);letter-spacing:.5px}
+</style>
+</head>
+<body>
+
+<h1>🔔 NOTIFICATIONS</h1>
+<div class="lead">Configurez les canaux de notification (mail, push navigateur, SMS) et gérez votre propre mode sourdine.</div>
+
+<div class="notice">
+  <strong>📘 Règle de sécurité :</strong> le mode sourdine silencie tous les canaux <strong>sauf</strong> les incidents critiques (niveau 4/4), qui passent toujours. C'est voulu : pas question de louper une crise majeure à cause d'une sourdine oubliée.
+</div>
+
+<!-- ── SOURDINE ────────────────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-hdr">
+    <h2>Mode sourdine personnel</h2>
+    <span id="silence-pill" class="pill off">Actif</span>
+  </div>
+  <div id="silence-state" class="silence-state">
+    <span id="silence-icon" style="font-size:24px">🔔</span>
+    <div style="flex:1">
+      <div id="silence-label" style="font-weight:600;font-size:13px">Notifications actives</div>
+      <div id="silence-detail" class="muted">Vous recevez toutes les notifications selon vos souscriptions.</div>
+    </div>
+    <div class="actions" id="silence-actions">
+      <button class="btn btn-warn" onclick="silence(60)">🔕 Sourdine 1h</button>
+      <button class="btn btn-warn" onclick="silence(null)">🔕 Jusqu'à décision</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONFIGURATION SERVEUR (ADMIN) ─────────────────────────────────── -->
+<div class="card" id="admin-config-card" style="display:none;border-left:4px solid var(--blue)">
+  <div class="card-hdr">
+    <h2>⚙️ Configuration serveur (admin)</h2>
+    <span class="pill warn">Réservé admin</span>
+  </div>
+  <div class="muted" style="margin-bottom:14px">
+    Configure les canaux de notification au niveau du serveur. Les tokens/mots de passe ne sont jamais renvoyés en clair — pour modifier un canal déjà configuré, resaisissez toutes les valeurs.
+  </div>
+
+  <!-- Telegram -->
+  <details open style="margin-bottom:10px">
+    <summary>💬 Telegram — <span id="adm-telegram-state">Non configuré</span></summary>
+    <div style="padding-top:12px">
+      <div class="muted" style="margin-bottom:8px">
+        Créez un bot via <a href="https://t.me/BotFather" target="_blank">@BotFather</a> (/newbot), puis collez son token ci-dessous.
+      </div>
+      <div class="row">
+        <label>Bot token</label>
+        <input type="password" id="adm-tg-token" placeholder="1234567890:AAH..." autocomplete="off">
+      </div>
+      <div class="row">
+        <label>URL publique SCRIBE</label>
+        <input type="text" id="adm-tg-url" placeholder="http://vps.example.fr:8660">
+      </div>
+      <div class="row">
+        <label>Format messages</label>
+        <select id="adm-tg-format">
+          <option value="HTML" selected>HTML (recommandé)</option>
+          <option value="Markdown">Markdown</option>
+          <option value="">Texte brut</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Silencieux si urgency &lt;</label>
+        <select id="adm-tg-silent">
+          <option value="1">1 (jamais silencieux)</option>
+          <option value="2">2</option>
+          <option value="3" selected>3 (vigilance silencieuse)</option>
+          <option value="4">4 (tout sauf critique)</option>
+          <option value="5">5 (toujours silencieux)</option>
+        </select>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="adm-telegram-enabled"> Activer ce canal</label>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="saveChannel('telegram')">💾 Enregistrer</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- Mail SMTP -->
+  <details style="margin-bottom:10px">
+    <summary>✉️ Mail SMTP — <span id="adm-mail-state">Non configuré</span></summary>
+    <div style="padding-top:12px">
+      <div class="row">
+        <label>Hôte SMTP</label>
+        <input type="text" id="adm-mail-host" placeholder="smtp.example.fr">
+        <label style="min-width:50px">Port</label>
+        <input type="number" id="adm-mail-port" value="587" style="max-width:100px">
+      </div>
+      <div class="row">
+        <label>Utilisateur</label>
+        <input type="text" id="adm-mail-user" placeholder="scribe-alerts@example.fr" autocomplete="off">
+      </div>
+      <div class="row">
+        <label>Mot de passe</label>
+        <input type="password" id="adm-mail-pass" placeholder="(ne sera pas affiché)" autocomplete="new-password">
+      </div>
+      <div class="row">
+        <label>Adresse From</label>
+        <input type="text" id="adm-mail-from" placeholder="SCRIBE &lt;scribe-alerts@example.fr&gt;">
+      </div>
+      <div class="row">
+        <label>Sécurité</label>
+        <select id="adm-mail-security">
+          <option value="tls" selected>STARTTLS (port 587)</option>
+          <option value="ssl">SMTPS (port 465)</option>
+          <option value="none">Aucune (port 25, non recommandé)</option>
+        </select>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="adm-mail-enabled"> Activer ce canal</label>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="saveChannel('mail')">💾 Enregistrer</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- SMS -->
+  <details style="margin-bottom:10px">
+    <summary>📱 SMS — <span id="adm-sms-state">Non configuré</span></summary>
+    <div style="padding-top:12px">
+      <div class="row">
+        <label>Provider</label>
+        <select id="adm-sms-provider" onchange="toggleSmsFields()">
+          <option value="ovh">OVH SMS (France, ~0.06€/SMS)</option>
+          <option value="twilio">Twilio (international, ~0.07€/SMS)</option>
+          <option value="free">Free Mobile (tests uniquement, 1 numéro)</option>
+        </select>
+      </div>
+
+      <div id="adm-sms-ovh-fields" class="sms-provider-fields">
+        <div class="row"><label>Endpoint</label>
+          <select id="adm-sms-ovh-endpoint">
+            <option value="ovh-eu" selected>OVH Europe (ovh-eu)</option>
+            <option value="ovh-ca">OVH Canada (ovh-ca)</option>
+          </select></div>
+        <div class="row"><label>Application Key</label>
+          <input type="text" id="adm-sms-ovh-appkey" autocomplete="off"></div>
+        <div class="row"><label>Application Secret</label>
+          <input type="password" id="adm-sms-ovh-appsecret" autocomplete="off"></div>
+        <div class="row"><label>Consumer Key</label>
+          <input type="password" id="adm-sms-ovh-conskey" autocomplete="off"></div>
+        <div class="row"><label>Service Name</label>
+          <input type="text" id="adm-sms-ovh-service" placeholder="sms-xxxx-1"></div>
+        <div class="row"><label>Expéditeur affiché</label>
+          <input type="text" id="adm-sms-ovh-sender" value="SCRIBE" maxlength="11"></div>
+      </div>
+
+      <div id="adm-sms-twilio-fields" class="sms-provider-fields" style="display:none">
+        <div class="row"><label>Account SID</label>
+          <input type="text" id="adm-sms-tw-sid" autocomplete="off"></div>
+        <div class="row"><label>Auth Token</label>
+          <input type="password" id="adm-sms-tw-token" autocomplete="off"></div>
+        <div class="row"><label>Numéro émetteur</label>
+          <input type="text" id="adm-sms-tw-sender" placeholder="+33..."></div>
+      </div>
+
+      <div id="adm-sms-free-fields" class="sms-provider-fields" style="display:none">
+        <div class="row"><label>User Free</label>
+          <input type="text" id="adm-sms-free-user" placeholder="12345678"></div>
+        <div class="row"><label>API key</label>
+          <input type="password" id="adm-sms-free-key" autocomplete="off"></div>
+        <div class="muted" style="padding:8px;background:rgba(245,158,11,.1);border-radius:4px">
+          ⚠️ Free Mobile n'envoie qu'à votre propre numéro — utile pour tester la chaîne mais pas pour un vrai déploiement.
+        </div>
+      </div>
+
+      <div class="row">
+        <label><input type="checkbox" id="adm-sms-enabled"> Activer ce canal</label>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="saveChannel('sms')">💾 Enregistrer</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- Web Push -->
+  <details style="margin-bottom:10px">
+    <summary>🌐 Web Push (VAPID) — <span id="adm-webpush-state">Non configuré</span></summary>
+    <div style="padding-top:12px">
+      <div class="muted" style="margin-bottom:10px">
+        Les clés VAPID sont générées une seule fois par instance. La clé publique est envoyée au navigateur pour qu'il s'abonne, la clé privée reste côté serveur pour signer les push.
+      </div>
+      <div class="actions" style="margin-bottom:10px">
+        <button class="btn btn-warn" onclick="generateVapidKeys()">🔑 Générer nouvelles clés VAPID</button>
+      </div>
+      <div class="row">
+        <label>Clé publique</label>
+        <input type="text" id="adm-vapid-public" placeholder="BN..." autocomplete="off">
+      </div>
+      <div class="row">
+        <label>Clé privée</label>
+        <textarea id="adm-vapid-private" rows="4" placeholder="-----BEGIN PRIVATE KEY-----..." style="width:100%;font-family:monospace;font-size:10px;padding:7px 10px;border:1px solid var(--bd);border-radius:4px;background:var(--s2)"></textarea>
+      </div>
+      <div class="row">
+        <label>Subject (contact)</label>
+        <input type="email" id="adm-vapid-subject" placeholder="mailto:admin@example.fr">
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="adm-webpush-enabled"> Activer ce canal</label>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="saveChannel('webpush')">💾 Enregistrer</button>
+      </div>
+    </div>
+  </details>
+
+</div>
+
+<!-- ── ABONNEMENT WEB PUSH (navigateur actuel) ─────────────────────────── -->
+<div class="card">
+  <div class="card-hdr">
+    <h2>🌐 Notifications navigateur (Web Push)</h2>
+    <span id="push-pill" class="pill off">Non activé</span>
+  </div>
+  <div class="muted" style="margin-bottom:10px">
+    Active les notifications système de ce navigateur, <strong>même onglet fermé</strong>. Pas d'app à installer — fonctionne sur Chrome, Firefox, Safari, Edge, Android, iOS 16.4+.
+  </div>
+  <div id="push-status" class="row">
+    <div style="flex:1">Support navigateur : <strong id="push-support">—</strong></div>
+    <div style="flex:1">Permission : <strong id="push-permission">—</strong></div>
+  </div>
+  <div class="actions">
+    <button id="btn-push-enable"  class="btn btn-primary" onclick="enablePush()">🔔 Activer sur ce navigateur</button>
+    <button id="btn-push-disable" class="btn" onclick="disablePush()" style="display:none">Désactiver</button>
+    <button id="btn-push-test"    class="btn" onclick="testChannel('webpush')" style="display:none">Tester</button>
+    <button id="btn-sound-enable" class="btn" onclick="enableSound()">🔊 Autoriser le son</button>
+  </div>
+</div>
+
+<!-- ── MAIL ─────────────────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-hdr">
+    <h2>✉️ Notifications mail</h2>
+    <span id="mail-pill" class="pill off">Non configuré</span>
+  </div>
+  <div class="row">
+    <label>Adresse mail</label>
+    <input type="email" id="mail-target" placeholder="prenom.nom@ch-exemple.fr">
+    <input type="text" id="mail-label" placeholder="Label (ex: Mail pro)" style="max-width:180px">
+  </div>
+  <div class="row">
+    <label>Niveau mini</label>
+    <select id="mail-urg">
+      <option value="1">1 - Info</option>
+      <option value="2" selected>2 - Vigilance</option>
+      <option value="3">3 - Alerte</option>
+      <option value="4">4 - Critique uniquement</option>
+    </select>
+  </div>
+  <div class="actions">
+    <button class="btn btn-primary" onclick="addSub('mail')">➕ M'abonner</button>
+    <button class="btn" onclick="testChannel('mail')">Tester</button>
+  </div>
+</div>
+
+<!-- ── SMS ─────────────────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-hdr">
+    <h2>📱 Notifications SMS</h2>
+    <span id="sms-pill" class="pill off">Non configuré</span>
+  </div>
+  <div class="muted" style="margin-bottom:10px">
+    Réservé aux astreintes et incidents <strong>critiques (niveau 4)</strong> par défaut. Nécessite un provider SMS configuré côté serveur (OVH, Twilio, ou Free Mobile pour tests).
+  </div>
+  <div class="row">
+    <label>Numéro (E.164)</label>
+    <input type="tel" id="sms-target" placeholder="+33612345678">
+    <input type="text" id="sms-label" placeholder="Label (ex: Astreinte)" style="max-width:180px">
+  </div>
+  <div class="row">
+    <label>Niveau mini</label>
+    <select id="sms-urg">
+      <option value="3">3 - Alerte</option>
+      <option value="4" selected>4 - Critique uniquement</option>
+    </select>
+  </div>
+  <div class="actions">
+    <button class="btn btn-primary" onclick="addSub('sms')">➕ M'abonner</button>
+    <button class="btn" onclick="testChannel('sms')">Tester</button>
+  </div>
+</div>
+
+<!-- ── TELEGRAM ─────────────────────────────────────────────────────── -->
+<!-- v2307 — id "sub-telegram-card" ajouté pour pouvoir masquer cette
+     carte côté JS quand le backend Telegram n'est pas actif (cas
+     par défaut depuis v2307). -->
+<div class="card" id="sub-telegram-card">
+  <div class="card-hdr">
+    <h2>💬 Notifications Telegram</h2>
+    <span id="telegram-pill" class="pill off">Non configuré</span>
+  </div>
+  <div class="muted" style="margin-bottom:10px">
+    <strong>Gratuit, fiable, instantané</strong> — l'alternative moderne aux SMS. Fonctionne sur tous les téléphones (iOS/Android) et en web/desktop.
+  </div>
+  <details style="margin-bottom:10px">
+    <summary>📘 Comment obtenir mon chat_id Telegram ?</summary>
+    <div style="padding-top:8px;font-size:11px;line-height:1.6">
+      1. Ouvrir Telegram, chercher le bot indiqué par votre administrateur SCRIBE<br>
+      2. Cliquer <strong>Démarrer</strong> (ou envoyer <code>/start</code>)<br>
+      3. Chercher le bot <code>@userinfobot</code> et lui envoyer <code>/start</code> — il affiche votre ID<br>
+      4. Copier cet ID (nombre, ex: <code>123456789</code>) dans le champ ci-dessous<br>
+      5. <strong>Important :</strong> envoyer au moins 1 message au bot SCRIBE avant le test, sinon il ne peut pas vous contacter
+    </div>
+  </details>
+  <div class="row">
+    <label>chat_id Telegram</label>
+    <input type="text" id="telegram-target" placeholder="123456789 (ID numérique uniquement)">
+    <input type="text" id="telegram-label" placeholder="Label (ex: Telegram perso)" style="max-width:180px">
+  </div>
+  <div class="row">
+    <label>Niveau mini</label>
+    <select id="telegram-urg">
+      <option value="1">1 - Info</option>
+      <option value="2">2 - Vigilance</option>
+      <option value="3" selected>3 - Alerte</option>
+      <option value="4">4 - Critique uniquement</option>
+    </select>
+  </div>
+  <div class="actions">
+    <button class="btn btn-primary" onclick="addSub('telegram')">➕ M'abonner</button>
+    <button class="btn" onclick="testChannel('telegram')">Tester</button>
+  </div>
+</div>
+
+<!-- ── MES ABONNEMENTS ──────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-hdr">
+    <h2>Mes abonnements actifs</h2>
+    <span id="sub-count" class="pill off">0</span>
+  </div>
+  <div id="subs-wrap">
+    <div class="muted">Chargement...</div>
+  </div>
+</div>
+
+<!-- ── AUDIT TRAIL (admin) ──────────────────────────────────────────── -->
+<div class="card" id="audit-card" style="display:none">
+  <div class="card-hdr">
+    <h2>📋 Historique (admin)</h2>
+    <button class="btn" onclick="loadLog()">🔄 Rafraîchir</button>
+  </div>
+  <div class="muted" style="margin-bottom:8px">
+    Audit trail : qui a reçu quoi, quand, par quel canal, avec quel statut.
+  </div>
+  <div id="log-wrap"><div class="muted">Cliquez Rafraîchir pour charger.</div></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '/api/v1/notifications';
+let tok = localStorage.getItem('scribe_token') || '';
+const hdr = () => ({'Authorization': 'Bearer ' + tok, 'Content-Type': 'application/json'});
+
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type || 'ok';
+  t.style.display = 'block';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+
+async function api(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({}, hdr(), opts.headers || {});
+  const r = await fetch(API + path, opts);
+  if (r.status === 401) throw new Error('Non authentifié');
+  if (!r.ok) {
+    let body;
+    try { body = await r.json(); } catch(e) { body = {detail: r.statusText}; }
+    throw new Error(body.detail || `HTTP ${r.status}`);
+  }
+  return r.json();
+}
+
+// ── Configuration serveur (admin) ────────────────────────────────────
+function toggleSmsFields() {
+  const p = document.getElementById('adm-sms-provider').value;
+  ['ovh','twilio','free'].forEach(k => {
+    const el = document.getElementById('adm-sms-' + k + '-fields');
+    if (el) el.style.display = (p === k) ? 'block' : 'none';
+  });
+}
+
+async function loadChannelsState() {
+  try {
+    const cfg = await api('/config');
+    const channels = {};
+    (cfg.channels || []).forEach(c => { channels[c.kind] = c; });
+
+    // v2307 — Masquer les sections UI des backends non disponibles côté
+    // serveur. Exemple : Telegram est retiré des backends activés par
+    // défaut depuis v2307 ; l'UI doit s'adapter pour ne pas afficher des
+    // formulaires qui ne fonctionneront pas.
+    const available = new Set(cfg.available_kinds || ['mail','webpush','sms','telegram']);
+    // Masquage de la section Telegram côté admin (via l'élément <details> parent)
+    const tgAdminSummary = document.getElementById('adm-telegram-state');
+    if (!available.has('telegram') && tgAdminSummary) {
+      const det = tgAdminSummary.closest('details');
+      if (det) det.style.display = 'none';
+    }
+    // Masquage de la carte Telegram côté user (via id dédié)
+    const tgUserCard = document.getElementById('sub-telegram-card');
+    if (!available.has('telegram') && tgUserCard) {
+      tgUserCard.style.display = 'none';
+    }
+
+    // Mise à jour des états affichés
+    ['telegram','mail','sms','webpush'].forEach(k => {
+      if (!available.has(k)) return;   // backend non dispo → skip
+      const stateEl = document.getElementById('adm-' + k + '-state');
+      const enabledEl = document.getElementById('adm-' + k + '-enabled');
+      const c = channels[k];
+      if (stateEl) {
+        if (!c) { stateEl.textContent = 'Non configuré'; stateEl.style.color = 'var(--mu)'; }
+        else if (c.enabled) { stateEl.textContent = 'Activé ✓'; stateEl.style.color = 'var(--ok)'; }
+        else if (c.configured) { stateEl.textContent = 'Configuré mais désactivé'; stateEl.style.color = 'var(--warn)'; }
+        else { stateEl.textContent = 'Non configuré'; stateEl.style.color = 'var(--mu)'; }
+      }
+      if (enabledEl && c) enabledEl.checked = !!c.enabled;
+    });
+  } catch(e) {
+    // Probablement pas admin — masquer la carte
+    document.getElementById('admin-config-card').style.display = 'none';
+  }
+}
+
+function _telegramConfig() {
+  return {
+    bot_token: document.getElementById('adm-tg-token').value.trim(),
+    parse_mode: document.getElementById('adm-tg-format').value,
+    disable_notification_below: parseInt(document.getElementById('adm-tg-silent').value, 10),
+    scribe_base_url: document.getElementById('adm-tg-url').value.trim(),
+  };
+}
+
+function _mailConfig() {
+  const sec = document.getElementById('adm-mail-security').value;
+  return {
+    smtp_host: document.getElementById('adm-mail-host').value.trim(),
+    smtp_port: parseInt(document.getElementById('adm-mail-port').value, 10),
+    smtp_user: document.getElementById('adm-mail-user').value.trim(),
+    smtp_pass: document.getElementById('adm-mail-pass').value,
+    from_addr: document.getElementById('adm-mail-from').value.trim(),
+    use_tls: sec === 'tls',
+    use_ssl: sec === 'ssl',
+  };
+}
+
+function _smsConfig() {
+  const p = document.getElementById('adm-sms-provider').value;
+  if (p === 'ovh') {
+    return {
+      provider: 'ovh',
+      endpoint: document.getElementById('adm-sms-ovh-endpoint').value,
+      app_key: document.getElementById('adm-sms-ovh-appkey').value.trim(),
+      app_secret: document.getElementById('adm-sms-ovh-appsecret').value.trim(),
+      consumer_key: document.getElementById('adm-sms-ovh-conskey').value.trim(),
+      service_name: document.getElementById('adm-sms-ovh-service').value.trim(),
+      sender: document.getElementById('adm-sms-ovh-sender').value.trim() || 'SCRIBE',
+    };
+  } else if (p === 'twilio') {
+    return {
+      provider: 'twilio',
+      account_sid: document.getElementById('adm-sms-tw-sid').value.trim(),
+      auth_token: document.getElementById('adm-sms-tw-token').value.trim(),
+      sender: document.getElementById('adm-sms-tw-sender').value.trim(),
+    };
+  } else {
+    return {
+      provider: 'free',
+      user: document.getElementById('adm-sms-free-user').value.trim(),
+      api_key: document.getElementById('adm-sms-free-key').value.trim(),
+    };
+  }
+}
+
+function _webpushConfig() {
+  return {
+    vapid_public_key: document.getElementById('adm-vapid-public').value.trim(),
+    vapid_private_key: document.getElementById('adm-vapid-private').value.trim(),
+    subject: document.getElementById('adm-vapid-subject').value.trim(),
+  };
+}
+
+async function saveChannel(kind) {
+  const configs = {
+    telegram: _telegramConfig,
+    mail:     _mailConfig,
+    sms:      _smsConfig,
+    webpush:  _webpushConfig,
+  };
+  const builder = configs[kind];
+  if (!builder) { toast('Canal inconnu', 'err'); return; }
+
+  const config = builder();
+  const enabledEl = document.getElementById('adm-' + kind + '-enabled');
+  const enabled = enabledEl ? enabledEl.checked : false;
+  const labels = {
+    telegram: 'Bot Telegram SCRIBE',
+    mail:     'Mail SMTP',
+    sms:      'Notifications SMS',
+    webpush:  'Web Push navigateur',
+  };
+
+  try {
+    await api('/channel/' + kind, {
+      method: 'POST',
+      body: JSON.stringify({
+        label: labels[kind],
+        enabled: enabled,
+        config: config,
+      }),
+    });
+    toast('✓ Canal ' + kind + ' enregistré', 'ok');
+    loadChannelsState();
+  } catch(e) {
+    toast('Erreur: ' + e.message, 'err');
+  }
+}
+
+async function generateVapidKeys() {
+  try {
+    const r = await api('/generate-vapid', {method: 'POST'});
+    document.getElementById('adm-vapid-public').value = r.public_key || '';
+    document.getElementById('adm-vapid-private').value = r.private_key || '';
+    if (!document.getElementById('adm-vapid-subject').value) {
+      document.getElementById('adm-vapid-subject').value = 'mailto:admin@scribe.local';
+    }
+    toast('✓ Clés VAPID générées — pensez à activer le canal', 'ok');
+  } catch(e) {
+    toast('Erreur génération: ' + e.message, 'err');
+  }
+}
+
+// ── Sourdine ─────────────────────────────────────────────────────────
+async function loadSilence() {
+  try {
+    const s = await api('/silence');
+    const pill = document.getElementById('silence-pill');
+    const ic   = document.getElementById('silence-icon');
+    const lbl  = document.getElementById('silence-label');
+    const det  = document.getElementById('silence-detail');
+    const act  = document.getElementById('silence-actions');
+    const state = document.getElementById('silence-state');
+    if (s.active) {
+      pill.className = 'pill warn'; pill.textContent = 'SOURDINE';
+      ic.textContent = '🔕';
+      lbl.textContent = 'Sourdine active';
+      let detail = 'Silencieux pour tous les niveaux SAUF critiques (4/4).';
+      if (s.until) {
+        const u = new Date(s.until);
+        detail += ` Fin automatique à ${u.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}.`;
+      } else {
+        detail += ' Levée manuelle uniquement.';
+      }
+      det.textContent = detail;
+      state.classList.add('on');
+      act.innerHTML = '<button class="btn btn-ok" onclick="liftSilence()">🔔 Reprendre les notifs</button>';
+    } else {
+      pill.className = 'pill ok'; pill.textContent = 'ACTIF';
+      ic.textContent = '🔔';
+      lbl.textContent = 'Notifications actives';
+      det.textContent = 'Vous recevez toutes les notifications selon vos souscriptions.';
+      state.classList.remove('on');
+      act.innerHTML = '<button class="btn btn-warn" onclick="silence(60)">🔕 Sourdine 1h</button>' +
+                      '<button class="btn btn-warn" onclick="silence(null)">🔕 Jusqu&#39;à décision</button>';
+    }
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function silence(minutes) {
+  try {
+    await api('/silence', {method:'POST', body:JSON.stringify({
+      duration_min: minutes, reason: minutes ? `${minutes}min` : 'manuel'
+    })});
+    toast('🔕 Sourdine activée', 'ok');
+    loadSilence();
+  } catch(e) { toast(e.message, 'err'); }
+}
+async function liftSilence() {
+  try {
+    await api('/silence', {method:'DELETE'});
+    toast('🔔 Sourdine levée', 'ok');
+    loadSilence();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ── Web Push ─────────────────────────────────────────────────────────
+async function initPushStatus() {
+  const support = document.getElementById('push-support');
+  const perm    = document.getElementById('push-permission');
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    support.textContent = '❌ Non supporté';
+    document.getElementById('btn-push-enable').disabled = true;
+    return;
+  }
+  support.textContent = '✓ Supporté';
+  perm.textContent = Notification.permission;
+
+  // Check si déjà abonné
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      document.getElementById('push-pill').className = 'pill ok';
+      document.getElementById('push-pill').textContent = 'Activé';
+      document.getElementById('btn-push-enable').style.display = 'none';
+      document.getElementById('btn-push-disable').style.display = 'inline-block';
+      document.getElementById('btn-push-test').style.display = 'inline-block';
+    }
+  } catch(e) { /* pas encore enregistré */ }
+}
+
+async function enablePush() {
+  try {
+    if (Notification.permission === 'denied') {
+      toast('Permission refusée — activez manuellement dans les réglages du site', 'err');
+      return;
+    }
+    // 1. Register SW
+    const reg = await navigator.serviceWorker.register('/static/service-worker.js');
+    await navigator.serviceWorker.ready;
+
+    // 2. Get VAPID public key
+    const vapid = await api('/vapid-public-key');
+    const pub = vapid.public_key;
+
+    // 3. Subscribe
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(pub),
+    });
+
+    // 4. Envoyer la subscription au serveur
+    await api('/subscribe', {method:'POST', body:JSON.stringify({
+      channel_kind: 'webpush',
+      target: JSON.stringify(sub),
+      label: 'Ce navigateur (' + navigator.platform + ')',
+      min_urgency: 3,
+    })});
+
+    toast('✓ Notifications push activées !', 'ok');
+    initPushStatus();
+    loadSubs();
+  } catch(e) {
+    toast('Erreur: ' + e.message, 'err');
+    console.error(e);
+  }
+}
+
+async function disablePush() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) await sub.unsubscribe();
+    toast('Push désactivé sur ce navigateur', 'ok');
+    initPushStatus();
+    loadSubs();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = window.atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+// ── Abonnement mail/SMS ──────────────────────────────────────────────
+async function addSub(kind) {
+  const target = document.getElementById(kind + '-target').value.trim();
+  if (!target) { toast('Remplir la cible', 'err'); return; }
+  const label  = document.getElementById(kind + '-label').value.trim();
+  const urg    = parseInt(document.getElementById(kind + '-urg').value, 10);
+  try {
+    await api('/subscribe', {method:'POST', body:JSON.stringify({
+      channel_kind: kind, target, label, min_urgency: urg
+    })});
+    toast(`✓ Abonné ${kind}`, 'ok');
+    document.getElementById(kind + '-target').value = '';
+    document.getElementById(kind + '-label').value = '';
+    loadSubs();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function testChannel(kind) {
+  try {
+    await api('/test/' + kind, {method:'POST'});
+    toast(`✓ Test ${kind} envoyé — vérifiez votre boite`, 'ok');
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function unsubscribe(id) {
+  if (!confirm('Se désabonner ?')) return;
+  try {
+    await api('/subscribe/' + id, {method:'DELETE'});
+    toast('✓ Désabonné', 'ok');
+    loadSubs();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function loadSubs() {
+  try {
+    const subs = await api('/subscriptions/me');
+    document.getElementById('sub-count').textContent = subs.length;
+    const wrap = document.getElementById('subs-wrap');
+    if (!subs.length) {
+      wrap.innerHTML = '<div class="muted">Aucun abonnement. Ajoutez-en un ci-dessus.</div>';
+      return;
+    }
+    const icons = {mail:'✉️', webpush:'🌐', sms:'📱', telegram:'💬'};
+    wrap.innerHTML = '<table class="subs-table"><thead><tr>' +
+      '<th>Canal</th><th>Cible</th><th>Label</th><th>Niveau</th><th>Dernier envoi</th><th></th>' +
+      '</tr></thead><tbody>' +
+      subs.map(s => '<tr>' +
+        '<td><span class="kind-icon">'+(icons[s.channel_kind]||'🔔')+'</span>'+s.channel_kind+'</td>' +
+        '<td><code>'+esc(s.target_preview)+'</code></td>' +
+        '<td>'+esc(s.label)+'</td>' +
+        '<td>urgency ≥ '+s.min_urgency+'</td>' +
+        '<td class="muted">'+(s.last_used_at ? new Date(s.last_used_at).toLocaleString('fr-FR') : '—')+'</td>' +
+        '<td><button class="btn btn-danger" onclick="unsubscribe('+s.id+')">Retirer</button></td>' +
+      '</tr>').join('') + '</tbody></table>';
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function loadLog() {
+  try {
+    const rows = await api('/log?limit=100');
+    const wrap = document.getElementById('log-wrap');
+    if (!rows.length) { wrap.innerHTML = '<div class="muted">Aucune notification émise.</div>'; return; }
+    wrap.innerHTML = '<table class="subs-table"><thead><tr>' +
+      '<th>Date</th><th>Event</th><th>Urg</th><th>User</th><th>Canal</th><th>Cible</th><th>Statut</th>' +
+      '</tr></thead><tbody>' +
+      rows.map(r => {
+        const cls = {sent:'ok', failed:'err', silenced:'warn', rate_limited:'warn', deduped:'warn'}[r.status] || 'off';
+        return '<tr>' +
+          '<td class="muted">'+new Date(r.ts).toLocaleString('fr-FR')+'</td>' +
+          '<td>'+esc(r.event_type)+'</td>' +
+          '<td>'+r.urgency+'/4</td>' +
+          '<td>'+(r.user_id||'—')+'</td>' +
+          '<td>'+esc(r.channel_kind)+'</td>' +
+          '<td><code>'+esc(r.target)+'</code></td>' +
+          '<td><span class="pill '+cls+'">'+r.status+'</span>'+(r.error ? '<div class="muted">'+esc(r.error.substring(0,80))+'</div>' : '')+'</td>' +
+        '</tr>';
+      }).join('') + '</tbody></table>';
+  } catch(e) {
+    document.getElementById('audit-card').style.display = 'none';
+  }
+}
+
+function esc(s) {
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Audio unlock (navigateurs bloquent autoplay tant que pas d'interaction) ──
+function enableSound() {
+  try {
+    // Jouer un son court silencieux pour débloquer l'autoplay
+    const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+    audio.volume = 0.01;
+    audio.play().then(() => {
+      localStorage.setItem('scribe_sound_unlocked', '1');
+      toast('✓ Audio autorisé', 'ok');
+    }).catch(e => { toast('Échec audio: ' + e.message, 'err'); });
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────
+async function init() {
+  if (!tok) {
+    // Tenter via parent (si embed en iframe dans SCRIBE)
+    try { tok = window.parent.localStorage.getItem('scribe_token') || ''; } catch(e) {}
+    if (!tok) {
+      document.body.innerHTML = '<div class="card" style="color:#dc2626">Non authentifié — ouvrez SCRIBE d&#39;abord.</div>';
+      return;
+    }
+  }
+  loadSilence();
+  initPushStatus();
+  loadSubs();
+  // Tenter de charger le log + config admin (si admin)
+  try {
+    await loadLog();
+    document.getElementById('audit-card').style.display = 'block';
+    document.getElementById('admin-config-card').style.display = 'block';
+    await loadChannelsState();
+  } catch(e) { /* pas admin */ }
+}
+init();
+</script>
+</body>
+</html>

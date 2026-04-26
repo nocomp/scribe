@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  config_exo_ch_nord.xml — Mode EXERCICE / Site fictif CH Nord
+
+  Site participant à un exercice de gestion de crise multi-sites.
+  Les credentials et tokens sont fictifs : adapte-les si tu déploies
+  un exercice à plus large échelle (changer le mot de passe admin
+  dircrise, le token de fédération, et l'URL du collecteur).
+
+  Pour démarrer un exercice multi-sites complet :
+    bash lancer_exercice.sh    (Linux/Mac)
+    START-EXERCICE.bat         (Windows)
+-->
+<scribe>
+
+  <etablissement>
+    <nom>Centre Hospitalier Nord</nom>
+    <sigle>CH_NORD</sigle>
+    <finess>000000010</finess>
+    <login_tagline>EXERCICE — Données fictives</login_tagline>
+    <login_footer>Mode exercice de gestion de crise</login_footer>
+  </etablissement>
+
+  <admin>
+    <login>dircrise</login>
+    <password>Exercice2026!</password>
+    <nom_affiche>Directeur de Crise — CH Nord</nom_affiche>
+  </admin>
+
+  <sites>
+    <site>
+      <nom>CH Nord — Site principal</nom>
+      <adresse>Place de la Libération, 75001 Paris</adresse>
+      <latitude>48.8566</latitude>
+      <longitude>2.3522</longitude>
+      <telephone_garde>01 00 00 10 00</telephone_garde>
+    </site>
+  </sites>
+
+  <directeurs>
+    <directeur>
+      <nom>Directeur Général</nom>
+      <fonction>DG CH Nord</fonction>
+      <abreviation>DG</abreviation>
+    </directeur>
+    <directeur>
+      <nom>Directeur des Soins</nom>
+      <fonction>DS CH Nord</fonction>
+      <abreviation>DS</abreviation>
+    </directeur>
+    <directeur>
+      <nom>RSSI</nom>
+      <fonction>Responsable Sécurité SI</fonction>
+      <abreviation>RSSI</abreviation>
+    </directeur>
+  </directeurs>
+
+  <ia>
+    <fournisseur>albert</fournisseur>
+    <cle_api></cle_api>
+    <modele></modele>
+  </ia>
+
+  <federation>
+    <enabled>true</enabled>
+    <collecteur_url>http://localhost:8565/api/push</collecteur_url>
+    <token>token_demo_ch_nord</token>
+    <push_interval>30</push_interval>
+  </federation>
+
+</scribe>

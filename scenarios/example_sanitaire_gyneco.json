@@ -1,0 +1,401 @@
+{
+  "meta": {
+    "id": "exo_gyneco_2026",
+    "titre": "Exercice G7 — Crise obstétricale multi-sites",
+    "description": "Hémorragie du post-partum + prématuré extrême. Saturation maternité CHAG. Coordination inter-GHT nécessaire.",
+    "sujet": "Femme enceinte hémorragie au bloc + prématuré. Saturation de la maternité CHAG.",
+    "duree_min": 60,
+    "duree_reel_min": 240,
+    "ratio_compression": 4.0,
+    "complexite": "DIFFICILE",
+    "type_crise": "SANITAIRE",
+    "objectifs_pedagogiques": [
+      "Activation coordonnée du plan blanc maternité",
+      "Coordination inter-GHT pour transfert maternel et néonatal",
+      "Communication SAMU / coordination régionale",
+      "Gestion des capacités en temps réel",
+      "Décision de transfert sous contrainte de délai"
+    ],
+    "nb_stimuli": 10
+  },
+  "acteurs": [
+    {
+      "sigle": "CHAG",
+      "nom_etablissement": "Centre Hospitalier Annecy-Genevois",
+      "role": "coordinateur",
+      "port": 8660,
+      "joueurs": [
+        {
+          "username": "dircrise",
+          "display_name": "Directeur de Crise CHAG",
+          "role_exercice": "Directeur de cellule de crise",
+          "responsabilites": [
+            "Activation plan blanc",
+            "Coordination inter-GHT",
+            "Contact préfecture"
+          ]
+        },
+        {
+          "username": "maternite",
+          "display_name": "Sage-femme Coordinatrice CHAG",
+          "role_exercice": "Coordination maternité",
+          "responsabilites": [
+            "Gestion capacité maternité",
+            "Transfert maternel",
+            "SAMU 15"
+          ]
+        },
+        {
+          "username": "reanimation",
+          "display_name": "Médecin Réanimateur CHAG",
+          "role_exercice": "Prise en charge réanimation",
+          "responsabilites": [
+            "Réanimation hémorragie",
+            "USI néonatale"
+          ]
+        }
+      ]
+    },
+    {
+      "sigle": "GHTLMB",
+      "nom_etablissement": "GHT Léman Mont-Blanc",
+      "role": "participant",
+      "port": 8661,
+      "joueurs": [
+        {
+          "username": "dircrise",
+          "display_name": "Directeur de Crise GHTLMB",
+          "role_exercice": "Récepteur du transfert",
+          "responsabilites": [
+            "Accueil transfert maternel",
+            "Capacité maternité",
+            "Coordination CHAG"
+          ]
+        }
+      ]
+    }
+  ],
+  "stimuli": [
+    {
+      "id": "S01",
+      "t_min": 0,
+      "cible": "CHAG",
+      "type": "incident",
+      "titre": "Hémorragie post-partum au bloc",
+      "description_animateur": "Déclenchement du scénario. Patiente en hémorragie sévère au bloc opératoire. Les équipes CHAG doivent réagir immédiatement.",
+      "payload": {
+        "fait": "ALERTE MATERNITÉ : Hémorragie du post-partum au bloc opératoire. Patiente P2G2, 34 SA, césarienne en cours. Perte estimée > 2L. Produits sanguins en urgence requis.",
+        "urgency": 3,
+        "type_crise": "SANITAIRE",
+        "site_id": "CHAG-MATERNITE",
+        "unite_fonctionnelle": "Bloc obstétrical",
+        "declarant_nom": "Sage-femme coordinatrice",
+        "analyse": "Situation critique nécessitant activation du protocole hémorragie obstétricale",
+        "jalons_labels": [
+          "Alerter le chef de service maternité",
+          "Activer protocole hémorragie obstétricale",
+          "Contacter banque du sang EFS",
+          "Informer le directeur de crise"
+        ]
+      },
+      "action_attendue": "Créer l'incident, alerter la cellule de crise, activer le protocole hémorragie",
+      "indicateurs_reussite": [
+        "Incident créé dans les 5 min",
+        "Jalons activés",
+        "Directeur de crise informé"
+      ]
+    },
+    {
+      "id": "S03b",
+      "t_min": 3,
+      "type": "incident",
+      "cible": "CHAG",
+      "payload": {
+        "fait": "PANNE ÉQUIPEMENT : Perte du respirateur du bloc 5. Maintenance informée. Alternatives disponibles sur autres blocs. Vérifier quel bloc est utilisé pour la césarienne en cours.",
+        "urgency": 2,
+        "type_crise": "SANITAIRE",
+        "impact_fonctionnel": true,
+        "site_id": "CHAG-BLOC",
+        "unite_fonctionnelle": "Bloc opératoire",
+        "declarant_nom": "IBODE de garde",
+        "analyse": "Équipement HS identifié. Impact direct sur la capacité opératoire du plateau technique. Besoin de vérifier compatibilité avec intervention en cours.",
+        "jalons_labels": [
+          "Identifier le bloc concerné par l'intervention en cours",
+          "Mobiliser équipement de secours",
+          "Notifier biomédical",
+          "Arbitrer report d'interventions programmées"
+        ]
+      }
+    },
+    {
+      "id": "S02",
+      "t_min": 5,
+      "cible": "CHAG",
+      "type": "incident",
+      "titre": "Prématuré extrême — saturation néonatologie",
+      "description_animateur": "Complication : le nouveau-né est prématuré à 28 SA. La néonatologie CHAG est saturée. Transfert néonatal nécessaire.",
+      "payload": {
+        "fait": "COMPLICATION : Nouveau-né prématuré 28 SA extrait par césarienne. Score d'Apgar 4/8. Unité de néonatologie CHAG SATURÉE — 0 lit SCNN disponible. Transfert néonatal à organiser en urgence.",
+        "urgency": 4,
+        "type_crise": "SANITAIRE",
+        "site_id": "CHAG-NEONATOLOGIE",
+        "unite_fonctionnelle": "Néonatologie",
+        "declarant_nom": "Pédiatre de garde",
+        "analyse": "Saturation SCNN — transfert SMUR néonatal à activer immédiatement",
+        "jalons_labels": [
+          "Contacter SAMU 15 pour SMUR néonatal",
+          "Identifier établissement receveur (néonatologie)",
+          "Préparer dossier transfert néonatal",
+          "Informer parents de la situation"
+        ],
+        "impact_fonctionnel": true
+      },
+      "action_attendue": "Contacter SAMU, initier recherche place SCNN, préparer transfert",
+      "indicateurs_reussite": [
+        "Incident créé urgence 4",
+        "Contact SAMU documenté",
+        "Transfert initié"
+      ]
+    },
+    {
+      "id": "S03",
+      "t_min": 10,
+      "cible": "CHAG",
+      "type": "message",
+      "titre": "Message SAMU — coordination",
+      "description_animateur": "Le SAMU répond et oriente vers GHTLMB pour la mère. Le joueur doit initier le transfert.",
+      "payload": {
+        "contenu": "📞 SAMU 15 — Régulation médicale : Transfert maternel CHAG → GHTLMB autorisé. SMUR disponible dans 8 min. GHTLMB confirme 1 lit réanimation obstétricale. Préparez le dossier de transport et les produits sanguins pour le transfert. Médecin régulateur : Dr DUPONT.",
+        "expediteur": "SAMU 15 — Coordination",
+        "type": "ALERTE"
+      },
+      "action_attendue": "Prendre en compte le message, initier le transfert vers GHTLMB dans SCRIBE",
+      "indicateurs_reussite": [
+        "Message lu",
+        "Transfert créé dans SCRIBE vers GHTLMB"
+      ]
+    },
+    {
+      "id": "S04",
+      "t_min": 12,
+      "cible": "CHAG",
+      "type": "transfert",
+      "titre": "Création transfert maternel → GHTLMB",
+      "description_animateur": "Stimulus de support : si le joueur n'a pas encore initié le transfert, l'animateur peut l'injecter manuellement.",
+      "payload": {
+        "unite_origine": "Maternité CHAG — Bloc obstétrical",
+        "etablissement_destination": "GHTLMB",
+        "site_destination": "Hôpitaux du Léman — Thonon-les-Bains",
+        "unite_destination": "Réanimation obstétricale",
+        "motif": "Hémorragie post-partum — saturation CHAG",
+        "mode_transport": "SMUR",
+        "urgence": "IMMEDIAT",
+        "etablissement_origine": "CHAG",
+        "redacteur": "Sage-femme coordinatrice",
+        "statut": "EN_COURS",
+        "nom": "Patient simulation",
+        "prenom": "",
+        "ipp": "EXO-S04",
+        "commentaire": "Motif: Hémorragie post-partum — saturation CHAG"
+      },
+      "action_attendue": "Confirmer le transfert dans SCRIBE, compléter les informations",
+      "indicateurs_reussite": [
+        "Transfert EN_COURS visible côté GHTLMB"
+      ]
+    },
+    {
+      "id": "S05",
+      "t_min": 15,
+      "cible": "GHTLMB",
+      "type": "incident",
+      "titre": "GHTLMB — Préparation accueil transfert",
+      "description_animateur": "GHTLMB reçoit l'alerte. Ils doivent préparer l'accueil et confirmer la capacité.",
+      "payload": {
+        "fait": "ALERTE TRANSFERT ENTRANT : Patiente hémorragie post-partum en provenance de CHAG. Arrivée SMUR estimée dans 15 minutes. Préparer réanimation obstétricale et produits sanguins. Contacter EFS Thonon.",
+        "urgency": 3,
+        "type_crise": "SANITAIRE",
+        "site_id": "GHTLMB-REANIMATION",
+        "unite_fonctionnelle": "Réanimation obstétricale",
+        "declarant_nom": "Cadre de garde GHTLMB",
+        "analyse": "Préparation accueil transfert maternel urgent",
+        "jalons_labels": [
+          "Confirmer disponibilité lit réanimation",
+          "Contacter EFS pour produits sanguins",
+          "Préparer salle d'accueil",
+          "Informer chirurgien de garde"
+        ]
+      },
+      "action_attendue": "GHTLMB crée l'incident de réception, prépare l'accueil",
+      "indicateurs_reussite": [
+        "Incident GHTLMB créé",
+        "Jalons validés",
+        "Communication avec CHAG"
+      ]
+    },
+    {
+      "id": "S06b",
+      "t_min": 18,
+      "type": "incident",
+      "cible": "CHAG",
+      "payload": {
+        "fait": "INCIDENT SI : DPI gynéco-obstétrique indisponible pendant 15 min (maintenance imprévue). Saisie sur papier. Risque de perte de traçabilité pour le transfert en cours.",
+        "urgency": 2,
+        "type_crise": "CYBER",
+        "impact_fonctionnel": true,
+        "site_id": "CHAG-MATERNITE",
+        "unite_fonctionnelle": "Maternité, Bloc obstétrical",
+        "declarant_nom": "Sage-femme coordinatrice",
+        "analyse": "Panne SI limitée mais problématique pendant le transfert. Procédure dégradée papier à activer.",
+        "jalons_labels": [
+          "Activer procédure papier",
+          "Appeler DSI / éditeur",
+          "Tracer tous les actes pour re-saisie ultérieure",
+          "Vérifier retour à la normale"
+        ]
+      }
+    },
+    {
+      "id": "S06",
+      "t_min": 25,
+      "cible": "CHAG",
+      "type": "capacite",
+      "titre": "Mise à jour capacité — bloc saturé",
+      "description_animateur": "Le bloc CHAG est maintenant bloqué sur 2 tables. Mise à jour de la capacité.",
+      "payload": {
+        "uf_code": "BL1",
+        "statut_global": "critique",
+        "lits_disponibles": 0,
+        "lits_total": 4,
+        "commentaire": "Bloc saturé — 2 tables mobilisées pour hémorragie"
+      },
+      "action_attendue": "Documenter la saturation du bloc, adapter les plannings",
+      "indicateurs_reussite": [
+        "Capacité mise à jour dans SCRIBE"
+      ]
+    },
+    {
+      "id": "S07",
+      "t_min": 35,
+      "cible": "CHAG",
+      "type": "incident",
+      "titre": "Demande médias / préfecture",
+      "description_animateur": "La préfecture demande un point de situation. Exercice de communication institutionnelle.",
+      "payload": {
+        "fait": "La préfecture de Haute-Savoie demande un point de situation écrit sur l'incident en cours. La presse locale est informée d'une 'situation exceptionnelle' à l'hôpital. Besoin d'un communiqué de situation dans les 30 minutes.",
+        "urgency": 2,
+        "type_crise": "SANITAIRE",
+        "site_id": "CHAG",
+        "unite_fonctionnelle": "Direction",
+        "declarant_nom": "Chargé de communication",
+        "analyse": "Gestion institutionnelle et communication de crise",
+        "jalons_labels": [
+          "Rédiger point de situation préfecture",
+          "Valider le communiqué avec le directeur",
+          "Transmettre à la préfecture"
+        ]
+      },
+      "action_attendue": "Rédiger un communiqué de situation, coordonner avec la préfecture",
+      "indicateurs_reussite": [
+        "Incident traité",
+        "Communiqué rédigé dans SCRIBE"
+      ]
+    },
+    {
+      "id": "S08",
+      "t_min": 50,
+      "cible": "CHAG",
+      "type": "incident",
+      "titre": "Résolution — stabilisation patiente",
+      "description_animateur": "La situation se normalise. Les équipes doivent documenter la résolution et préparer le REX.",
+      "payload": {
+        "fait": "STABILISATION : Patiente stable en réanimation GHTLMB. Hémorragie contrôlée. Nouveau-né transféré en SCNN CHU Grenoble. Cellule de crise peut envisager la clôture progressive. Préparer le retour d'expérience.",
+        "urgency": 1,
+        "type_crise": "SANITAIRE",
+        "site_id": "CHAG",
+        "unite_fonctionnelle": "Direction",
+        "declarant_nom": "Directeur de crise",
+        "analyse": "Phase de résolution — coordination post-crise",
+        "jalons_labels": [
+          "Confirmer stabilisation patiente avec GHTLMB",
+          "Confirmer prise en charge néonatal CHU Grenoble",
+          "Préparer chronologie pour REX",
+          "Informer les équipes de la résolution"
+        ]
+      },
+      "action_attendue": "Résoudre les incidents, initier le REX, archiver",
+      "indicateurs_reussite": [
+        "Incidents résolus",
+        "REX initié",
+        "Bilan préparé"
+      ]
+    }
+  ],
+  "decisions_attendues": [
+    {
+      "t_min": 2,
+      "contenu": "Activation cellule de crise CHAG",
+      "responsable": "Directeur de crise",
+      "obligatoire": true
+    },
+    {
+      "t_min": 5,
+      "contenu": "Activation protocole hémorragie obstétricale",
+      "responsable": "Chef de service maternité",
+      "obligatoire": true
+    },
+    {
+      "t_min": 8,
+      "contenu": "Contact SAMU 15 pour coordination régionale",
+      "responsable": "Sage-femme coordinatrice",
+      "obligatoire": true
+    },
+    {
+      "t_min": 12,
+      "contenu": "Validation transfert maternel vers GHTLMB",
+      "responsable": "Directeur de crise",
+      "obligatoire": true
+    },
+    {
+      "t_min": 15,
+      "contenu": "Activation SMUR néonatal pour transfert",
+      "responsable": "Pédiatre de garde",
+      "obligatoire": true
+    },
+    {
+      "t_min": 20,
+      "contenu": "Communication préfecture",
+      "responsable": "Directeur",
+      "obligatoire": false
+    },
+    {
+      "t_min": 50,
+      "contenu": "Initiation du retour d'expérience (REX)",
+      "responsable": "Directeur de crise",
+      "obligatoire": false
+    }
+  ],
+  "debriefing_guide": {
+    "points_cles": [
+      "Réactivité lors de l'alerte initiale (T+0 à T+5)",
+      "Qualité de la communication inter-GHT CHAG ↔ GHTLMB",
+      "Gestion du double problème (mère + nouveau-né)",
+      "Coordination avec le SAMU",
+      "Documentation dans SCRIBE en temps réel"
+    ],
+    "questions_debriefing": [
+      "Quelles ont été les premières actions prises et pourquoi ?",
+      "Comment s'est passée la communication avec GHTLMB ?",
+      "Qu'est-ce qui aurait pu être fait plus rapidement ?",
+      "Les informations documentées dans SCRIBE étaient-elles suffisantes ?",
+      "Que feriez-vous différemment lors d'un vrai incident ?"
+    ],
+    "pieges_frequents": [
+      "Oublier le nouveau-né en se concentrant sur la mère",
+      "Ne pas contacter le SAMU assez tôt",
+      "Communication CHAG-GHTLMB insuffisante ou trop tardive",
+      "Sous-estimer la saturation des capacités",
+      "Ne pas documenter les décisions dans SCRIBE"
+    ]
+  },
+  "solution_attendue": "CELLULE DE CRISE — RÉPONSE IDÉALE (SCÉNARIO GYNECO-OBSTÉTRIQUE)\n\nT+0 — ALERTE HÉMORRAGIE POST-PARTUM (urgence 3)\n• Activer immédiatement le protocole hémorragie obstétricale (équipe bloc renforcée, anesthésiste, sage-femme coord).\n• Demander en urgence produits sanguins à la banque du sang EFS (2 CGR + PFC + fibrinogène).\n• Jalon attendu : \"Protocole hémorragie obstétricale activé\" coché dans les 3 minutes.\n\nT+3 — PANNE RESPIRATEUR BLOC 5 (impact fonctionnel)\n• Vérifier quel bloc est utilisé pour la césarienne en cours — point critique à valider IMMÉDIATEMENT.\n• Mobiliser le respirateur de secours ou rebasculer sur un autre bloc (3 ou 6).\n• Prévenir biomédical de garde et reporter les interventions programmées non urgentes.\n• Ne pas laisser la panne coupler avec l'hémorragie en cours.\n\nT+5 — COMPLICATION NÉONATALE + SATURATION NÉONATOLOGIE CHAG\n• Appel SAMU 15 pour orienter le nouveau-né prématuré (28 SA, Apgar 4/8) vers un SCNN disponible.\n• Contacter GHTLMB (Hôpitaux du Léman) pour validation capacité réa obstétricale/néonat.\n• Activation potentielle du plan blanc si saturation étendue.\n\nT+10 — COORDINATION SAMU AUTORISÉE POUR TRANSFERT MATERNEL\n• Préparer dossier de transport complet (antécédents, examens, produits sanguins à embarquer).\n• Confirmer équipe SMUR avec médecin régulateur.\n• Informer GHTLMB de l'ETA et de l'état patient.\n\nT+12 — TRANSFERT MATERNEL INITIÉ\n• Créer la fiche transfert dans SCRIBE : CHAG Maternité bloc obstétrical → GHTLMB Réanimation obstétricale.\n• Suivre l'ambulance en temps réel (onglet transferts, statut EN_COURS).\n• GHTLMB doit recevoir la fiche entrante automatiquement (fédération).\n\nT+15 — CÔTÉ GHTLMB — ACCUEIL TRANSFERT\n• Confirmer réception dans le kanban transferts entrants.\n• Préparer box d'accueil réa obstétricale.\n• Décision de cellule : activer équipe de relève si transfert complexe.\n\nT+18 — INCIDENT SI (DPI GYNÉCO INDISPONIBLE)\n• Activer immédiatement la procédure papier (impression fiches de transmission).\n• Appeler DSI + éditeur pour remise en service rapide.\n• Tracer manuellement tous les actes pour re-saisie ultérieure.\n• Ne PAS retarder le transfert en cours à cause de la panne SI.\n\nT+25 — MISE À JOUR CAPACITÉ\n• Déclarer la capacité maternité via le panneau CAPACITÉ (statut : critique ou ferme).\n• Informer la cellule de crise régionale via messagerie inter-GHT.\n\nT+35 — POINT DE SITUATION PRÉFECTURE\n• Rédiger un point de situation écrit (fait, analyse, moyens, perspectives).\n• Utiliser le bouton \"🤖 Analyse IA\" + \"Convertir en actions\" pour structurer rapidement.\n• Envoyer via messagerie ou communiqué officiel.\n\nT+50 — STABILISATION\n• Patiente stable en réa GHTLMB, hémorragie contrôlée, nouveau-né transféré.\n• Passer les incidents en statut \"RÉSOLUTION\" puis \"RÉSOLU\".\n• Archiver la crise via le bouton \"Archiver\" (créé un ZIP horodaté).\n\nCOMPÉTENCES ATTENDUES\n• Réactivité : chaque stimulus doit entraîner une action dans les 2-3 minutes.\n• Communication : messages chat inter-GHT, présences cellule enregistrées, 2-3 décisions tracées minimum.\n• Décision : au moins 4 décisions formelles en cellule (protocole hémorragie, transfert, activation plan blanc, procédure papier).\n• Coordination inter-GHT : fiche transfert créée + fiche entrante reçue côté GHTLMB + chat inter-établissements actif.\n• Méthode : jalons cochés sur l'hémorragie (chef service alerté, protocole activé, EFS contactée, directeur informé).\n• Documentation : analyse remplie sur chaque incident, jalons tenus à jour.\n\nPIÈGES À ÉVITER\n• Ne pas traiter l'hémorragie et la panne respirateur indépendamment — vérifier la co-occurrence.\n• Ne pas attendre que le DPI soit réparé pour transférer.\n• Ne pas oublier la cellule régionale quand on a trop d'incidents locaux."
+}

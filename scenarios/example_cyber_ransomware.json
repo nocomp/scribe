@@ -1,0 +1,154 @@
+{
+  "meta": {
+    "id": "example_cyber_ransomware_2026",
+    "titre": "DÉMO — Cyberattaque ransomware hospitalier",
+    "description": "Chiffrement des serveurs de fichiers et du SIH. Compromission AD. L'équipe doit activer le PC Cyber, isoler le réseau, communiquer avec CERT Santé/ANSSI, maintenir la continuité des soins en mode dégradé papier.",
+    "sujet": "Ransomware sur le SIH et SI de laboratoire + exfiltration de données patients",
+    "duree_min": 60,
+    "duree_reel_min": 480,
+    "ratio_compression": 8.0,
+    "complexite": "DIFFICILE",
+    "type_crise": "CYBER",
+    "objectifs_pedagogiques": [
+      "Activer le PC Cyber dès la première alerte",
+      "Prendre la décision d'isoler les réseaux en préservant la continuité des soins",
+      "Coordonner les communications avec CERT Santé, ANSSI, ARS, CNIL",
+      "Gérer la continuité d'activité en mode dégradé (papier, circuits alternatifs)",
+      "Documenter pour le REX et la déclaration CNIL"
+    ],
+    "categorie": "cyber",
+    "tags": ["demo", "ransomware", "cyber", "pci"],
+    "nb_stimuli": 10
+  },
+  "acteurs": [
+    {
+      "sigle": "CHAG",
+      "nom_etablissement": "Centre Hospitalier Annecy Genevois (CHAG)",
+      "role": "coordinateur",
+      "port": 8660,
+      "joueurs": [
+        {"username": "dircrise", "display_name": "Directeur de Crise", "role_exercice": "Coordination globale"},
+        {"username": "dsi_chag", "display_name": "DSI", "role_exercice": "Chef cellule technique"},
+        {"username": "rssi_chag", "display_name": "RSSI", "role_exercice": "Expert cybersécurité"}
+      ]
+    },
+    {"sigle": "CERT_SANTE", "nom_etablissement": "CERT Santé", "port": null, "joueurs": []},
+    {"sigle": "ANSSI", "nom_etablissement": "ANSSI", "port": null, "joueurs": []},
+    {"sigle": "ARS", "nom_etablissement": "ARS Auvergne-Rhône-Alpes", "port": null, "joueurs": []}
+  ],
+  "stimuli": [
+    {
+      "id": "S01", "t_min": 0, "type": "incident", "cible": "CHAG",
+      "titre": "🔴 ALERTE SOC : Activité ransomware détectée sur serveur de fichiers SRV-DATA01",
+      "description_animateur": "L'incident initial. Le SOC externe signale un chiffrement massif en cours. Attendre que la cellule de crise soit activée.",
+      "action_attendue": "Activer le PC Cyber. Isoler SRV-DATA01 du réseau.",
+      "payload": {
+        "fait": "Activité ransomware détectée sur SRV-DATA01 — chiffrement en cours de plusieurs partages réseau (RH, imagerie, comptabilité). Alerte générée par EDR CrowdStrike.",
+        "analyse": "Pattern de chiffrement rapide (LockBit ou variante). Fichiers .enc générés. IOC: ransom_note.txt présent dans chaque dossier.",
+        "urgency": 4, "type_crise": "CYBER", "impact_fonctionnel": true,
+        "unite_fonctionnelle": "SI"
+      }
+    },
+    {
+      "id": "S02", "t_min": 8, "type": "message", "cible": "CHAG",
+      "titre": "Alerte CERT Santé",
+      "description_animateur": "Le CERT Santé envoie une alerte officielle. L'équipe doit répondre avec un premier bilan.",
+      "action_attendue": "Accuser réception, fournir premier bilan sous 1h.",
+      "payload": {
+        "expediteur": "CERT_SANTE",
+        "sujet": "Campagne LockBit en cours sur le secteur santé",
+        "contenu": "Plusieurs établissements touchés simultanément. Vecteur initial suspecté : phishing ciblé DSI. Nous demandons un point situation sous 1h. Contact direct : cert-sante@sante.gouv.fr"
+      }
+    },
+    {
+      "id": "S03", "t_min": 15, "type": "incident", "cible": "CHAG",
+      "titre": "🔴 PACS imagerie inaccessible",
+      "description_animateur": "Escalade : les examens radiologiques ne sont plus consultables. Impact clinique direct.",
+      "action_attendue": "Décision sur la continuité de l'activité imagerie.",
+      "payload": {
+        "fait": "PACS imagerie médicale : serveurs inaccessibles. Les radiologues ne peuvent pas consulter les examens. 3 patients en urgence bloqués.",
+        "analyse": "Soit chiffrement étendu au VLAN imagerie, soit isolation volontaire par la DSI",
+        "urgency": 4, "type_crise": "CYBER", "impact_fonctionnel": true,
+        "unite_fonctionnelle": "IMAGERIE"
+      }
+    },
+    {
+      "id": "S04", "t_min": 22, "type": "decision", "cible": "CHAG",
+      "titre": "DÉCISION STRATÉGIQUE : isolement complet du réseau",
+      "description_animateur": "Point de bascule. Isoler = protéger, mais casse encore plus la continuité.",
+      "action_attendue": "Décision formelle à tracer.",
+      "payload": {
+        "contenu": "Proposer à la direction l'isolement complet du réseau WAN et des interco inter-sites. Continuité en mode 100% papier.",
+        "responsable": "Directeur de Crise + DSI",
+        "base_reglementaire": "Plan de Réponse aux Incidents Cyber"
+      }
+    },
+    {
+      "id": "S05", "t_min": 28, "type": "message", "cible": "CHAG",
+      "titre": "ANSSI demande l'isolement",
+      "description_animateur": "L'ANSSI confirme officiellement la demande d'isolement — aide à trancher.",
+      "action_attendue": "Appliquer la décision.",
+      "payload": {
+        "expediteur": "ANSSI",
+        "sujet": "Instruction technique : isolement recommandé",
+        "contenu": "Compte tenu de la persistance détectée, nous recommandons l'isolement complet du SI. Un analyste CERT-FR est mobilisable pour vous épauler dans les 2h."
+      }
+    },
+    {
+      "id": "S06", "t_min": 35, "type": "incident", "cible": "CHAG",
+      "titre": "⚠️ Panne téléphonie IP liée à l'isolement",
+      "description_animateur": "Conséquence inattendue de l'isolement : perte de la téléphonie IP.",
+      "action_attendue": "Activer la téléphonie de secours (GSM, talkies).",
+      "payload": {
+        "fait": "Téléphonie IP hors service suite à l'isolement VLAN voix. Pas de standard, pas de poste de soins joignable.",
+        "analyse": "Prévu dans le plan de continuité, mais la bascule vers GSM professionnels n'est pas encore testée en réel.",
+        "urgency": 3, "type_crise": "TECHNIQUE", "impact_fonctionnel": true,
+        "unite_fonctionnelle": "TELECOM"
+      }
+    },
+    {
+      "id": "S07", "t_min": 42, "type": "message", "cible": "CHAG",
+      "titre": "Demande ARS : bilan et impact patient",
+      "description_animateur": "L'ARS entre dans la boucle — demande un état quantitatif.",
+      "action_attendue": "Produire un bilan quantifié (services touchés, patients en attente, reports).",
+      "payload": {
+        "expediteur": "ARS",
+        "sujet": "Demande bilan urgent",
+        "contenu": "La cellule régionale de crise demande sous 2h : (1) liste exhaustive des services impactés, (2) nombre de patients en attente ou reportés, (3) besoins en renfort ou transfert."
+      }
+    },
+    {
+      "id": "S08", "t_min": 50, "type": "decision", "cible": "CHAG",
+      "titre": "DÉCISION : demande de déclenchement Plan Blanc",
+      "description_animateur": "Si les impacts cliniques s'aggravent, le Plan Blanc devient nécessaire.",
+      "action_attendue": "Décision formelle de déclenchement ou non.",
+      "payload": {
+        "contenu": "Délibération sur le déclenchement du Plan Blanc CHAG suite à impacts cliniques : imagerie hors service, laboratoire dégradé, blocs opératoires en mode papier uniquement.",
+        "responsable": "Directeur de l'établissement",
+        "base_reglementaire": "Code santé publique L.3131-7 / Plan Blanc"
+      }
+    },
+    {
+      "id": "S09", "t_min": 55, "type": "message", "cible": "CHAG",
+      "titre": "Demande CNIL : notification violation de données",
+      "description_animateur": "Aspect RGPD : obligation de notifier sous 72h si données personnelles compromises.",
+      "action_attendue": "Engager la déclaration CNIL, identifier le DPO.",
+      "payload": {
+        "expediteur": "CERT_SANTE",
+        "sujet": "Rappel obligation CNIL 72h",
+        "contenu": "Nous rappelons que si des données à caractère personnel sont compromises, une notification CNIL sous 72h est obligatoire (RGPD art. 33). Pensez à mobiliser votre DPO."
+      }
+    },
+    {
+      "id": "S10", "t_min": 58, "type": "decision", "cible": "CHAG",
+      "titre": "DÉCISION : stratégie de communication publique",
+      "description_animateur": "Les médias commencent à appeler. Il faut parler d'une seule voix.",
+      "action_attendue": "Rédiger le communiqué, désigner un porte-parole.",
+      "payload": {
+        "contenu": "Définir la stratégie de communication publique : communiqué de presse, porte-parole unique, information des familles et patients.",
+        "responsable": "Directeur de Crise + Communication",
+        "base_reglementaire": "Directive interne Communication de crise"
+      }
+    }
+  ]
+}

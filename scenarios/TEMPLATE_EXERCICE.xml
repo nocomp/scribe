@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SCRIBE — Template de scénario d'exercice de crise
+  Version : 2.3.54
+  
+  Copier ce fichier, le renommer (ex: exercice_mon_scenario.xml)
+  et le placer dans le dossier scenarios/ ou l'importer depuis l'interface animateur.
+  
+  Types de crise : SANITAIRE | CYBER | MIXTE | RH | TERTIAIRE
+  Complexité : FACILE | MOYEN | DIFFICILE | EXPERT
+  Types de stimuli : incident | message | transfert | chat | decision
+  Urgence (incidents) : 1=Veille | 2=Alerte | 3=Crise | 4=Critique
+-->
+<exercice>
+
+  <!-- ── Métadonnées ── -->
+  <meta>
+    <id>exo_mon_scenario_2026</id>
+    <titre>Mon exercice de crise</titre>
+    <description>Description courte du scénario en 2-3 phrases.</description>
+    <type_crise>SANITAIRE</type_crise>
+    <complexite>MOYEN</complexite>
+    <duree_exercice_min>60</duree_exercice_min>
+    <duree_reel_simulee_min>240</duree_reel_simulee_min>
+    <!-- ratio_compression = duree_reel / duree_exercice = 4x ici -->
+    <objectifs>
+      <objectif>Tester la coordination inter-services</objectif>
+      <objectif>Exercer la communication de crise</objectif>
+      <objectif>Valider le Plan Blanc maternité</objectif>
+    </objectifs>
+  </meta>
+
+  <!-- ── Acteurs / Joueurs ── -->
+  <!-- Ports exercice : CHAG=8660 GHTLMB=8661 CHRUMILLY=8662 HDLEMAN=8663 HPMB=8664 CHB=8665 CHPG=8666 -->
+  <acteurs>
+    <acteur sigle="CHAG" port="8660" role="coordinateur">
+      <nom_etablissement>Centre Hospitalier Annecy-Genevois</nom_etablissement>
+      <joueurs>
+        <joueur>
+          <username>dircrise</username>
+          <display_name>Dr Martin — Directeur de Crise CHAG</display_name>
+          <role_exercice>Directeur de cellule de crise</role_exercice>
+          <responsabilites>
+            <resp>Activation plan blanc</resp>
+            <resp>Coordination inter-GHT</resp>
+            <resp>Communication préfecture</resp>
+          </responsabilites>
+        </joueur>
+        <joueur>
+          <username>urgences</username>
+          <display_name>Dr Dupont — Chef des Urgences</display_name>
+          <role_exercice>Médecin responsable urgences</role_exercice>
+          <responsabilites>
+            <resp>Gestion afflux patients</resp>
+            <resp>Triage et orientation</resp>
+          </responsabilites>
+        </joueur>
+      </joueurs>
+    </acteur>
+    <acteur sigle="GHTLMB" port="8661" role="participant">
+      <nom_etablissement>GHT Léman Mont-Blanc</nom_etablissement>
+      <joueurs>
+        <joueur>
+          <username>dircrise</username>
+          <display_name>Mme Bernard — Directrice GHTLMB</display_name>
+          <role_exercice>Récepteur transfert et coordinateur site</role_exercice>
+          <responsabilites>
+            <resp>Accueil transfert</resp>
+            <resp>Gestion capacités</resp>
+          </responsabilites>
+        </joueur>
+      </joueurs>
+    </acteur>
+  </acteurs>
+
+  <!-- ── Stimuli ── -->
+  <!-- Espacer progressivement : T+0, T+5, T+10, T+20, T+35, T+50... -->
+  <stimuli>
+
+    <stimulus>
+      <id>S01</id>
+      <t_min>0</t_min>            <!-- Minutes depuis le début de l'exercice -->
+      <cible>CHAG</cible>         <!-- Sigle du site qui reçoit le stimulus -->
+      <type>incident</type>
+      <titre>Déclenchement — Nom court du stimulus</titre>
+      <description_animateur>
+        Ce que voit l'animateur : contexte, objectif pédagogique, ce que les joueurs doivent faire.
+      </description_animateur>
+      <action_attendue>Action ou décision que les joueurs doivent prendre</action_attendue>
+      <payload>
+        <!-- Champs pour un incident SCRIBE -->
+        <fait>Description précise pour les joueurs — ce qu'ils voient dans SCRIBE</fait>
+        <urgency>3</urgency>
+        <type_crise>SANITAIRE</type_crise>
+        <site_id>CHAG</site_id>
+        <unite_fonctionnelle>Maternité</unite_fonctionnelle>
+        <declarant_nom>Sage-femme coordinatrice</declarant_nom>
+        <analyse></analyse>
+        <jalons>
+          <jalon>Alerter le chef de service maternité</jalon>
+          <jalon>Contacter le SAMU 15</jalon>
+          <jalon>Activer le protocole hémorragie</jalon>
+          <jalon>Informer le directeur de crise</jalon>
+        </jalons>
+      </payload>
+    </stimulus>
+
+    <stimulus>
+      <id>S02</id>
+      <t_min>10</t_min>
+      <cible>CHAG</cible>
+      <type>message</type>
+      <titre>Message entrant — exemple</titre>
+      <description_animateur>Message entrant simulé depuis le SAMU ou un partenaire</description_animateur>
+      <action_attendue>Les joueurs doivent répondre et documenter la décision</action_attendue>
+      <payload>
+        <contenu>📞 SAMU 15 — Votre message simulé ici. Les joueurs le verront dans la messagerie.</contenu>
+        <expediteur>SAMU 15 — Coordination</expediteur>
+      </payload>
+    </stimulus>
+
+    <stimulus>
+      <id>S03</id>
+      <t_min>20</t_min>
+      <cible>GHTLMB</cible>
+      <type>incident</type>
+      <titre>Stimulus sur site secondaire</titre>
+      <description_animateur>Forcer la coordination inter-sites en injectant un incident sur GHTLMB</description_animateur>
+      <action_attendue>Communication CHAG ↔ GHTLMB et coordination</action_attendue>
+      <payload>
+        <fait>Description de l'incident pour les joueurs GHTLMB</fait>
+        <urgency>2</urgency>
+        <type_crise>SANITAIRE</type_crise>
+        <site_id>GHTLMB</site_id>
+        <unite_fonctionnelle>Urgences</unite_fonctionnelle>
+        <declarant_nom>Médecin urgentiste</declarant_nom>
+        <jalons>
+          <jalon>Contacter CHAG pour coordination</jalon>
+          <jalon>Préparer l'accueil</jalon>
+        </jalons>
+      </payload>
+    </stimulus>
+
+  </stimuli>
+
+  <!-- ── Décisions attendues ── -->
+  <decisions_attendues>
+    <decision obligatoire="true" t_min="5" responsable="Directeur de crise">
+      Activation cellule de crise CHAG
+    </decision>
+    <decision obligatoire="true" t_min="10" responsable="Chef de service">
+      Activation protocole hémorragie obstétricale
+    </decision>
+    <decision obligatoire="false" t_min="30" responsable="Directeur">
+      Communication préfecture
+    </decision>
+  </decisions_attendues>
+
+  <!-- ── Guide de débriefing ── -->
+  <debriefing>
+    <points_cles>
+      <point>Réactivité lors de l'alerte initiale (T+0 à T+5 min)</point>
+      <point>Qualité de la communication inter-sites CHAG ↔ GHTLMB</point>
+      <point>Documentation dans SCRIBE en temps réel</point>
+    </points_cles>
+    <questions>
+      <question>Quelles ont été les premières actions et pourquoi ?</question>
+      <question>Comment s'est passée la coordination inter-établissements ?</question>
+      <question>Que feriez-vous différemment lors d'un vrai incident ?</question>
+    </questions>
+    <pieges>
+      <piege>Oublier de documenter les décisions dans SCRIBE</piege>
+      <piege>Ne pas contacter le SAMU assez tôt</piege>
+      <piege>Communication insuffisante entre sites</piege>
+    </pieges>
+  </debriefing>
+
+</exercice>

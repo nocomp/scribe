@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#003189">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>SCRIBE mobile</title>
+<link rel="icon" href="/static/favicon.ico">
+<style>
+  /* v2315 — Vue mobile SCRIBE. Autonome (pas de scribe.js monolithique).
+     Design inspiré des apps terrain (Waze, Yuka, SNCF Connect) :
+     - Dense mais lisible : 14px base, poids variés
+     - Actions primaires en zone de pouce (bas de l'écran)
+     - Couleurs SCRIBE (bleu 003189) + accents sémantiques
+     - Safe-area iOS/Android pour notch et bottom-bar
+  */
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --blue: #003189;
+    --blue-hover: #0049b0;
+    --red: #dc2626;
+    --orange: #f97316;
+    --yellow: #f59e0b;
+    --green: #15803d;
+    --violet: #7c3aed;
+    --mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
+    --safe-top: env(safe-area-inset-top, 0);
+    --safe-bottom: env(safe-area-inset-bottom, 0);
+    --tab-h: 58px;
+    --header-h: 52px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+  }
+  body {
+    min-height: 100vh;
+    padding-top: calc(var(--header-h) + var(--safe-top));
+    padding-bottom: calc(var(--tab-h) + var(--safe-bottom));
+  }
+
+  /* HEADER FIXE */
+  .hdr {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    background: var(--blue); color: #fff;
+    padding-top: var(--safe-top);
+    height: calc(var(--header-h) + var(--safe-top));
+    display: flex; align-items: center; justify-content: space-between;
+    padding-left: 14px; padding-right: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.12);
+  }
+  .hdr-title {
+    font-family: var(--mono); font-size: 13px; font-weight: 700;
+    letter-spacing: 1.5px;
+  }
+  .hdr-title .v { font-size: 10px; opacity: .6; margin-left: 6px; font-weight: 400; }
+  .hdr-right {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 11px;
+  }
+  .hdr-status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #22c55e;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .hdr-status-dot.off { background: var(--red); animation: none; }
+  @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .5 } }
+
+  /* CONTAINER */
+  .wrap { padding: 12px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .card-h {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-h .count {
+    background: var(--muted); color: #fff;
+    font-size: 10px; padding: 1px 8px; border-radius: 10px;
+    letter-spacing: 0;
+  }
+
+  /* KPI CARDS accueil */
+  .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    border-left: 4px solid var(--blue);
+    min-height: 88px;
+  }
+  .kpi.danger { border-left-color: var(--red); }
+  .kpi.warn   { border-left-color: var(--orange); }
+  .kpi.ok     { border-left-color: var(--green); }
+  .kpi.info   { border-left-color: var(--violet); }
+  .kpi-label {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px;
+    color: var(--muted); text-transform: uppercase;
+  }
+  .kpi-val { font-size: 26px; font-weight: 700; line-height: 1.1; margin-top: 6px; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .kpi.danger .kpi-val { color: var(--red); }
+  .kpi.warn   .kpi-val { color: var(--orange); }
+  .kpi.ok     .kpi-val { color: var(--green); }
+
+  /* LIST ROW */
+  .row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .row:last-child { border-bottom: none; }
+  .row:active { background: rgba(0,49,137,.04); }
+  .row-dot {
+    flex-shrink: 0;
+    width: 8px; height: 8px; border-radius: 50%;
+    margin-top: 6px;
+    background: var(--muted);
+  }
+  .row-dot.u4, .row-dot.critique { background: var(--red); }
+  .row-dot.u3, .row-dot.alerte { background: var(--orange); }
+  .row-dot.u2 { background: var(--yellow); }
+  .row-dot.u1 { background: var(--green); }
+  .row-body { flex: 1; min-width: 0; }
+  .row-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .row-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .row-badge {
+    font-family: var(--mono); font-size: 9px;
+    padding: 2px 8px; border-radius: 12px;
+    background: var(--border); color: var(--text);
+    margin-left: 4px;
+  }
+  .row-badge.warn { background: #fef3c7; color: #92400e; }
+  .row-badge.danger { background: #fee2e2; color: #991b1b; }
+  .row-badge.unread { background: var(--red); color: #fff; }
+
+  /* CAPACITÉ — Jauges */
+  .cap-row {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .cap-row:last-child { border-bottom: none; }
+  .cap-row-h {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .cap-nom { font-size: 12px; font-weight: 600; }
+  .cap-pct { font-family: var(--mono); font-size: 11px; font-weight: 700; }
+  .cap-bar-wrap {
+    background: var(--border);
+    height: 8px; border-radius: 4px; overflow: hidden;
+    margin-top: 4px;
+  }
+  .cap-bar {
+    height: 100%; background: var(--green);
+    transition: width .3s ease;
+  }
+  .cap-bar.warn { background: var(--yellow); }
+  .cap-bar.alert { background: var(--orange); }
+  .cap-bar.crit  { background: var(--red); }
+  .cap-sub { font-size: 10px; color: var(--muted); margin-top: 3px; font-family: var(--mono); }
+
+  /* TAB BAR BOTTOM */
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    padding-bottom: var(--safe-bottom);
+    height: calc(var(--tab-h) + var(--safe-bottom));
+  }
+  .tab-btn {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center;
+    font-family: inherit; background: none; border: none;
+    color: var(--muted); padding: 0;
+    font-size: 10px; font-weight: 500;
+    cursor: pointer; position: relative;
+  }
+  .tab-btn .ic { font-size: 20px; line-height: 1; margin-bottom: 2px; }
+  .tab-btn.active { color: var(--blue); }
+  .tab-btn .tabbadge {
+    position: absolute; top: 8px; right: calc(50% - 18px);
+    background: var(--red); color: #fff;
+    font-size: 9px; font-weight: 700; font-family: var(--mono);
+    padding: 1px 5px; border-radius: 10px;
+    min-width: 14px; text-align: center;
+  }
+
+  /* LOGIN */
+  .login-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: var(--blue);
+    color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px;
+    padding-top: calc(20px + var(--safe-top));
+  }
+  .login-overlay.hidden { display: none; }
+  .login-logo { font-family: var(--mono); font-size: 22px; font-weight: 700; letter-spacing: 3px; margin-bottom: 8px; }
+  .login-sub { font-family: var(--mono); font-size: 10px; opacity: .7; margin-bottom: 28px; letter-spacing: 2px; }
+  .login-form { width: 100%; max-width: 340px; }
+  .login-form input {
+    display: block; width: 100%;
+    padding: 13px 14px; margin-bottom: 10px;
+    border: none; border-radius: 8px;
+    background: rgba(255,255,255,.15);
+    color: #fff; font-size: 15px; font-family: inherit;
+    -webkit-appearance: none;
+  }
+  .login-form input::placeholder { color: rgba(255,255,255,.55); }
+  .login-form input:focus { outline: 2px solid rgba(255,255,255,.4); background: rgba(255,255,255,.22); }
+  .login-form button {
+    width: 100%;
+    padding: 13px; margin-top: 6px;
+    background: #fff; color: var(--blue);
+    border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+  .login-form button:active { background: #e5e7eb; }
+  .login-err { font-size: 12px; color: #fca5a5; margin-top: 8px; text-align: center; min-height: 14px; }
+
+  /* DETAILS DRAWER */
+  .drawer {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(0,0,0,.5);
+    display: none; align-items: flex-end;
+  }
+  .drawer.open { display: flex; }
+  .drawer-inner {
+    background: var(--surface);
+    width: 100%;
+    max-height: 85vh;
+    border-top-left-radius: 16px; border-top-right-radius: 16px;
+    overflow-y: auto;
+    padding: 16px; padding-bottom: calc(16px + var(--safe-bottom));
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%) } to { transform: translateY(0) } }
+  .drawer-h {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .drawer-title { font-size: 15px; font-weight: 700; flex: 1; padding-right: 10px; }
+  .drawer-close {
+    background: none; border: none;
+    font-size: 22px; color: var(--muted);
+    width: 32px; height: 32px; padding: 0; cursor: pointer; line-height: 1;
+  }
+  .dfield { margin-bottom: 14px; }
+  .dfield-label { font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  .dfield-value { font-size: 13px; color: var(--text); white-space: pre-wrap; }
+  .dactions { display: grid; gap: 8px; margin-top: 16px; }
+  .dactions button {
+    padding: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 8px;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer; font-family: inherit;
+    text-align: center;
+  }
+  .dactions button.primary { background: var(--blue); color: #fff; border: none; }
+  .dactions button:active { opacity: .8; }
+
+  /* EMPTY & LOADING */
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+  .empty-ic { font-size: 36px; margin-bottom: 8px; opacity: .4; }
+  .empty-msg { font-size: 13px; }
+
+  .load {
+    text-align: center; padding: 20px; color: var(--muted); font-size: 12px;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(var(--tab-h) + 12px + var(--safe-bottom));
+    background: #1f2937; color: #fff;
+    padding: 10px 16px; border-radius: 24px;
+    font-size: 13px; z-index: 200;
+    max-width: 80%;
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s ease;
+  }
+  .toast.show { opacity: 1; }
+  .toast.err { background: var(--red); }
+  .toast.ok { background: var(--green); }
+
+  /* OFFLINE BANNER */
+  .offline-banner {
+    position: fixed;
+    top: calc(var(--header-h) + var(--safe-top));
+    left: 0; right: 0; z-index: 49;
+    background: var(--orange); color: #fff;
+    text-align: center; padding: 4px;
+    font-size: 11px; font-weight: 600;
+    display: none;
+  }
+  .offline-banner.show { display: block; }
+
+  /* PULL-TO-REFRESH visual */
+  .ptr {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 8px;
+    min-height: 0;
+    transition: min-height .2s;
+  }
+  .ptr.pulling { min-height: 32px; }
+
+  /* BACK TO DESKTOP */
+  .desktop-link {
+    display: block;
+    text-align: center;
+    padding: 14px;
+    margin-top: 20px;
+    color: var(--muted);
+    font-size: 11px;
+    font-family: var(--mono);
+    letter-spacing: 1px;
+  }
+  .desktop-link a { color: var(--blue); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-logo">SCRIBE</div>
+  <div class="login-sub">MOBILE · v2.3.101</div>
+  <form class="login-form" id="login-form" onsubmit="doLogin(event)">
+    <input type="text" id="log-user" placeholder="Identifiant" autocomplete="username" required>
+    <input type="password" id="log-pwd" placeholder="Mot de passe" autocomplete="current-password" required>
+    <button type="submit">Se connecter</button>
+    <div class="login-err" id="log-err"></div>
+  </form>
+</div>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-title">SCRIBE<span class="v">mobile</span></div>
+  <div class="hdr-right">
+    <span id="hdr-sigle"></span>
+    <span class="hdr-status-dot" id="hdr-dot"></span>
+  </div>
+</header>
+
+<div class="offline-banner" id="offline-banner">⚠ Hors réseau — données en cache</div>
+
+<!-- WRAP -->
+<div class="wrap">
+
+  <!-- SCREEN : ACCUEIL -->
+  <div class="screen active" id="scr-accueil">
+    <div class="kpi-grid">
+      <div class="kpi danger" id="kpi-incidents" onclick="switchScreen('incidents')">
+        <div class="kpi-label">Incidents</div>
+        <div class="kpi-val" id="kpi-inc-val">—</div>
+        <div class="kpi-sub" id="kpi-inc-sub">actifs</div>
+      </div>
+      <div class="kpi warn" id="kpi-transferts" onclick="switchScreen('accueil')">
+        <div class="kpi-label">Transferts</div>
+        <div class="kpi-val" id="kpi-tr-val">—</div>
+        <div class="kpi-sub" id="kpi-tr-sub">en cours</div>
+      </div>
+      <div class="kpi info" id="kpi-messages" onclick="switchScreen('messages')">
+        <div class="kpi-label">Messages</div>
+        <div class="kpi-val" id="kpi-msg-val">—</div>
+        <div class="kpi-sub" id="kpi-msg-sub">non lus</div>
+      </div>
+      <div class="kpi ok" id="kpi-capacite" onclick="switchScreen('capacite')">
+        <div class="kpi-label">Capacité</div>
+        <div class="kpi-val" id="kpi-cap-val">—</div>
+        <div class="kpi-sub" id="kpi-cap-sub">occupation</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><span>Décisions récentes</span><span class="count" id="dec-count">0</span></div>
+      <div id="dec-list">
+        <div class="load">Chargement…</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><span>Derniers événements</span></div>
+      <div id="events-list">
+        <div class="load">Chargement…</div>
+      </div>
+    </div>
+
+    <a class="desktop-link" href="/">↗ Passer à la vue bureau</a>
+  </div>
+
+  <!-- SCREEN : INCIDENTS -->
+  <div class="screen" id="scr-incidents">
+    <div class="card">
+      <div class="card-h"><span>Incidents actifs</span><span class="count" id="inc-count">0</span></div>
+      <div id="inc-list"><div class="load">Chargement…</div></div>
+    </div>
+  </div>
+
+  <!-- SCREEN : MESSAGES -->
+  <div class="screen" id="scr-messages">
+    <div class="card">
+      <div class="card-h"><span>Boîte de réception</span><span class="count" id="msg-count">0</span></div>
+      <div id="msg-list"><div class="load">Chargement…</div></div>
+    </div>
+  </div>
+
+  <!-- SCREEN : CAPACITÉ -->
+  <div class="screen" id="scr-capacite">
+    <div class="card">
+      <div class="card-h"><span>Capacité par pôle</span></div>
+      <div id="cap-list"><div class="load">Chargement…</div></div>
+    </div>
+  </div>
+
+  <!-- SCREEN : PROFIL -->
+  <div class="screen" id="scr-profil">
+    <div class="card">
+      <div class="card-h"><span>Session</span></div>
+      <div class="dfield">
+        <div class="dfield-label">Utilisateur</div>
+        <div class="dfield-value" id="p-user">—</div>
+      </div>
+      <div class="dfield">
+        <div class="dfield-label">Rôle</div>
+        <div class="dfield-value" id="p-role">—</div>
+      </div>
+      <div class="dfield">
+        <div class="dfield-label">Établissement</div>
+        <div class="dfield-value" id="p-etab">—</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><span>Actions</span></div>
+      <div class="dactions">
+        <button onclick="refreshAll()">↻ Rafraîchir les données</button>
+        <button onclick="window.location.href='/'">↗ Vue bureau complète</button>
+        <button onclick="doLogout()" style="color:var(--red)">Se déconnecter</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-align:center">
+        SCRIBE mobile v2.3.101 · <span id="p-server-version">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<nav class="tabbar">
+  <button class="tab-btn active" data-screen="accueil" onclick="switchScreen('accueil')">
+    <span class="ic">🏠</span>Accueil
+  </button>
+  <button class="tab-btn" data-screen="incidents" onclick="switchScreen('incidents')">
+    <span class="ic">📋</span>Incidents
+    <span class="tabbadge" id="tb-inc" style="display:none"></span>
+  </button>
+  <button class="tab-btn" data-screen="messages" onclick="switchScreen('messages')">
+    <span class="ic">✉️</span>Messages
+    <span class="tabbadge" id="tb-msg" style="display:none"></span>
+  </button>
+  <button class="tab-btn" data-screen="capacite" onclick="switchScreen('capacite')">
+    <span class="ic">🛏</span>Capacité
+    <span class="tabbadge" id="tb-cap" style="display:none"></span>
+  </button>
+  <button class="tab-btn" data-screen="profil" onclick="switchScreen('profil')">
+    <span class="ic">👤</span>Profil
+  </button>
+</nav>
+
+<!-- DRAWER -->
+<div class="drawer" id="drawer" onclick="if(event.target===this)closeDrawer()">
+  <div class="drawer-inner" id="drawer-inner"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// SCRIBE mobile — état global
+let authToken = null;
+let currentUser = null;
+let cache = {};  // cache dashboard pour mode offline
+const CACHE_KEY = 'scribe_mobile_cache';
+
+// ───── Authentification ────────────────────────────────────────────────
+function showLogin(err) {
+  document.getElementById('login-overlay').classList.remove('hidden');
+  const eel = document.getElementById('log-err');
+  if (eel) eel.textContent = err || '';
+}
+function hideLogin() { document.getElementById('login-overlay').classList.add('hidden'); }
+
+async function doLogin(ev) {
+  if (ev) ev.preventDefault();
+  const user = document.getElementById('log-user').value.trim();
+  const pwd = document.getElementById('log-pwd').value;
+  if (!user || !pwd) return;
+  try {
+    const r = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user, password: pwd })
+    });
+    if (!r.ok) {
+      showLogin('Identifiants incorrects');
+      return;
+    }
+    const d = await r.json();
+    authToken = d.token || d.access_token;
+    currentUser = d.user || null;
+    localStorage.setItem('scribe_token', authToken);
+    if (currentUser) localStorage.setItem('scribe_user', JSON.stringify(currentUser));
+    hideLogin();
+    renderProfile();
+    await refreshAll();
+  } catch (e) {
+    showLogin('Erreur réseau');
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('scribe_token');
+  localStorage.removeItem('scribe_user');
+  authToken = null; currentUser = null;
+  showLogin();
+}
+
+async function tryAutoLogin() {
+  // 1. autotoken en query string (SSO animateur)
+  const urlParams = new URLSearchParams(window.location.search);
+  const autoToken = urlParams.get('autotoken');
+  if (autoToken) {
+    authToken = autoToken;
+    localStorage.setItem('scribe_token', autoToken);
+    window.history.replaceState({}, '', window.location.pathname);
+  } else {
+    // 2. token localStorage d'une session antérieure
+    authToken = localStorage.getItem('scribe_token');
+  }
+  if (!authToken) { showLogin(); return false; }
+  try {
+    const r = await fetch('/api/v1/auth/me', { headers: authHeaders() });
+    if (!r.ok) { showLogin(); return false; }
+    currentUser = await r.json();
+    localStorage.setItem('scribe_user', JSON.stringify(currentUser));
+    hideLogin();
+    renderProfile();
+    return true;
+  } catch (e) {
+    // Hors réseau mais token probable : on laisse l'app démarrer en mode cache
+    try { currentUser = JSON.parse(localStorage.getItem('scribe_user') || 'null'); } catch(e){}
+    if (currentUser) { hideLogin(); renderProfile(); return true; }
+    showLogin();
+    return false;
+  }
+}
+
+function authHeaders() {
+  return authToken ? { 'Authorization': 'Bearer ' + authToken } : {};
+}
+
+// ───── Navigation onglets ─────────────────────────────────────────────
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const scr = document.getElementById('scr-' + name);
+  if (scr) scr.classList.add('active');
+  const btn = document.querySelector('.tab-btn[data-screen="' + name + '"]');
+  if (btn) btn.classList.add('active');
+  // Actions spécifiques à l'ouverture
+  if (name === 'messages') markMessagesViewed();
+  window.scrollTo(0, 0);
+}
+
+// ───── Rafraîchissement données ──────────────────────────────────────
+async function api(url) {
+  try {
+    const r = await fetch(url, { headers: authHeaders() });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch (e) { throw e; }
+}
+
+function renderProfile() {
+  if (!currentUser) return;
+  document.getElementById('hdr-sigle').textContent = currentUser.username || '';
+  document.getElementById('p-user').textContent =
+    (currentUser.display_name || currentUser.username || '') +
+    (currentUser.username ? ' (' + currentUser.username + ')' : '');
+  document.getElementById('p-role').textContent = currentUser.role || '—';
+  document.getElementById('p-etab').textContent = currentUser.etablissement || '—';
+}
+
+async function refreshAll() {
+  showToast('Rafraîchissement…', 'info');
+  const [incidents, messages, decisions, capacite, transferts] = await Promise.all([
+    api('/api/v1/sitrep/history').catch(() => cache.incidents || []),
+    api('/api/v1/messagerie').catch(() => cache.messages || []),
+    api('/api/v1/cellule/decisions').catch(() => cache.decisions || []),
+    api('/api/v1/capacite/referentiel').catch(() => cache.capacite || []),
+    api('/api/v1/transferts').catch(() => cache.transferts || []),
+  ]);
+  cache = { incidents, messages, decisions, capacite, transferts, ts: Date.now() };
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch(e){}
+
+  renderKPIs();
+  renderIncidents();
+  renderMessages();
+  renderDecisions();
+  renderEvents();
+  renderCapacite();
+  renderBadges();
+  showToast('Données à jour', 'ok');
+}
+
+function loadFromCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    if (c && c.incidents) {
+      cache = c;
+      renderKPIs(); renderIncidents(); renderMessages();
+      renderDecisions(); renderEvents(); renderCapacite();
+      renderBadges();
+    }
+  } catch(e){}
+}
+
+// ───── RENDER : KPIs accueil ─────────────────────────────────────────
+function renderKPIs() {
+  const inc = cache.incidents || [];
+  const incActifs = inc.filter(i => i.status !== 'RÉSOLU' && i.status !== 'ARCHIVÉ');
+  document.getElementById('kpi-inc-val').textContent = incActifs.length;
+  const critiques = incActifs.filter(i => (i.urgency||0) >= 3).length;
+  document.getElementById('kpi-inc-sub').textContent = critiques ? critiques + ' critique(s)' : 'actifs';
+
+  const msg = cache.messages || [];
+  const nonLus = msg.filter(m => !m.lu).length;
+  document.getElementById('kpi-msg-val').textContent = nonLus;
+  document.getElementById('kpi-msg-sub').textContent = msg.length + ' au total';
+
+  const tr = cache.transferts || [];
+  const trActifs = tr.filter(t => t.statut !== 'TERMINE' && t.statut !== 'ANNULE');
+  document.getElementById('kpi-tr-val').textContent = trActifs.length;
+
+  const cap = cache.capacite || [];
+  const avec = cap.filter(u => u.derniere_declaration);
+  if (avec.length) {
+    let tot = 0, occ = 0;
+    avec.forEach(u => {
+      const d = u.derniere_declaration;
+      const h = (d.lits_h_occupes || 0);
+      const f = (d.lits_f_occupes || 0);
+      const z = (d.lits_z_occupes || 0);
+      const maxLits = u.capacite_max_lits || (h+f+z) || 0;
+      tot += maxLits;
+      occ += h + f + z;
+    });
+    const pct = tot ? Math.round(occ*100/tot) : 0;
+    const kpi = document.getElementById('kpi-capacite');
+    const val = document.getElementById('kpi-cap-val');
+    val.textContent = pct + '%';
+    kpi.classList.remove('ok','warn','danger');
+    if (pct >= 90) kpi.classList.add('danger');
+    else if (pct >= 75) kpi.classList.add('warn');
+    else kpi.classList.add('ok');
+    document.getElementById('kpi-cap-sub').textContent = occ + ' / ' + tot + ' lits';
+  }
+}
+
+// ───── RENDER : Incidents ────────────────────────────────────────────
+function renderIncidents() {
+  const inc = cache.incidents || [];
+  const active = inc.filter(i => i.status !== 'RÉSOLU' && i.status !== 'ARCHIVÉ');
+  document.getElementById('inc-count').textContent = active.length;
+
+  const list = document.getElementById('inc-list');
+  if (!active.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-ic">✓</div><div class="empty-msg">Aucun incident actif</div></div>';
+    return;
+  }
+  list.innerHTML = active.map(i => {
+    const u = i.urgency || 0;
+    const cls = 'u' + u;
+    const fait = (i.fait || i.description || '').substring(0, 120);
+    const when = formatTime(i.created_at);
+    const type = i.type_crise || '';
+    return `
+      <div class="row" onclick="openIncident(${i.id})">
+        <span class="row-dot ${cls}"></span>
+        <div class="row-body">
+          <div class="row-title">${esc(fait)}${fait.length >= 120 ? '…' : ''}</div>
+          <div class="row-sub">${esc(type)} · ${esc(i.unite_fonctionnelle||'')} · ${when}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openIncident(id) {
+  const inc = (cache.incidents||[]).find(x => x.id === id);
+  if (!inc) return;
+  const u = inc.urgency || 0;
+  const clsText = ['Info','Vigilance','Alerte','Critique','Urgence vitale'];
+  const html = `
+    <div class="drawer-h">
+      <div class="drawer-title">Incident #${inc.id}</div>
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+    <div class="dfield">
+      <div class="dfield-label">Niveau</div>
+      <div class="dfield-value">${clsText[u] || u}</div>
+    </div>
+    <div class="dfield">
+      <div class="dfield-label">Fait</div>
+      <div class="dfield-value">${esc(inc.fait || inc.description || '')}</div>
+    </div>
+    <div class="dfield">
+      <div class="dfield-label">Type</div>
+      <div class="dfield-value">${esc(inc.type_crise || '—')}</div>
+    </div>
+    <div class="dfield">
+      <div class="dfield-label">Unité</div>
+      <div class="dfield-value">${esc(inc.unite_fonctionnelle || '—')}</div>
+    </div>
+    <div class="dfield">
+      <div class="dfield-label">Déclarant</div>
+      <div class="dfield-value">${esc(inc.declarant_nom || '—')}</div>
+    </div>
+    <div class="dfield">
+      <div class="dfield-label">Statut</div>
+      <div class="dfield-value">${esc(inc.status || '—')}</div>
+    </div>
+    <div class="dfield">
+      <div class="dfield-label">Date</div>
+      <div class="dfield-value">${formatFull(inc.created_at)}</div>
+    </div>
+  `;
+  openDrawer(html);
+}
+
+// ───── RENDER : Messages ─────────────────────────────────────────────
+function renderMessages() {
+  const msg = cache.messages || [];
+  document.getElementById('msg-count').textContent = msg.length;
+  const list = document.getElementById('msg-list');
+  if (!msg.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-ic">📭</div><div class="empty-msg">Aucun message</div></div>';
+    return;
+  }
+  list.innerHTML = msg.slice(0, 50).map(m => {
+    const unread = !m.lu;
+    const from = m.expediteur_nom || m.expediteur_username || '?';
+    const sub = m.sujet || '(sans sujet)';
+    const when = formatTime(m.created_at);
+    return `
+      <div class="row" onclick="openMessage(${m.id})">
+        <span class="row-dot ${unread ? 'u3' : ''}"></span>
+        <div class="row-body">
+          <div class="row-title" style="${unread ? 'font-weight:700' : 'font-weight:500'}">${esc(sub)}</div>
+          <div class="row-sub">${esc(from)} · ${when}</div>
+        </div>
+        ${unread ? '<span class="row-badge unread">NEW</span>' : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function openMessage(id) {
+  const m = (cache.messages||[]).find(x => x.id === id);
+  if (!m) return;
+  const html = `
+    <div class="drawer-h">
+      <div class="drawer-title">${esc(m.sujet || '(sans sujet)')}</div>
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+    <div class="dfield">
+      <div class="dfield-label">De</div>
+      <div class="dfield-value">${esc(m.expediteur_nom || m.expediteur_username || '?')}</div>
+    </div>
+    <div class="dfield">
+      <div class="dfield-label">Date</div>
+      <div class="dfield-value">${formatFull(m.created_at)}</div>
+    </div>
+    <div class="dfield">
+      <div class="dfield-label">Message</div>
+      <div class="dfield-value">${esc(m.contenu || '')}</div>
+    </div>
+  `;
+  openDrawer(html);
+  // Marquer comme lu
+  fetch('/api/v1/messagerie/' + id + '/lire', {
+    method: 'PUT', headers: authHeaders()
+  }).catch(() => {});
+  m.lu = true;
+  renderMessages();
+  renderKPIs();
+  renderBadges();
+}
+
+function markMessagesViewed() {
+  // Appelée à l'ouverture de l'onglet Messages — le badge s'efface
+  (cache.messages||[]).forEach(m => {});
+}
+
+// ───── RENDER : Décisions ────────────────────────────────────────────
+function renderDecisions() {
+  const dec = cache.decisions || [];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const recent = dec.filter(d => {
+    if (!d.timestamp) return false;
+    return new Date(d.timestamp) >= today;
+  }).slice(0, 5);
+  document.getElementById('dec-count').textContent = recent.length;
+
+  const list = document.getElementById('dec-list');
+  if (!recent.length) {
+    list.innerHTML = '<div class="empty" style="padding:20px"><div class="empty-msg" style="font-size:12px">Aucune décision aujourd\'hui</div></div>';
+    return;
+  }
+  list.innerHTML = recent.map(d => {
+    const quoi = (d.decision || d.contenu || '').substring(0, 100);
+    const par = d.prise_par_nom || d.auteur_nom || '—';
+    return `
+      <div class="row">
+        <span class="row-dot u2"></span>
+        <div class="row-body">
+          <div class="row-title" style="font-size:12px">${esc(quoi)}</div>
+          <div class="row-sub">${esc(par)} · ${formatTime(d.timestamp)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ───── RENDER : Derniers événements (accueil) ────────────────────────
+function renderEvents() {
+  // Fusion incidents + décisions + messages, triés par date desc, top 5
+  const items = [];
+  (cache.incidents||[]).slice(0, 10).forEach(i => {
+    items.push({
+      t: i.created_at,
+      title: (i.fait||i.description||'').substring(0,80),
+      sub: '📋 ' + (i.type_crise||'INCIDENT'),
+      cls: 'u' + (i.urgency||0),
+    });
+  });
+  (cache.decisions||[]).slice(0, 10).forEach(d => {
+    items.push({
+      t: d.timestamp,
+      title: (d.decision||d.contenu||'').substring(0,80),
+      sub: '🏛 DÉCISION · ' + (d.prise_par_nom||d.auteur_nom||''),
+      cls: 'u2',
+    });
+  });
+  items.sort((a, b) => new Date(b.t) - new Date(a.t));
+  const top = items.slice(0, 5);
+  const list = document.getElementById('events-list');
+  if (!top.length) {
+    list.innerHTML = '<div class="empty" style="padding:20px"><div class="empty-msg" style="font-size:12px">Aucun événement récent</div></div>';
+    return;
+  }
+  list.innerHTML = top.map(it => `
+    <div class="row">
+      <span class="row-dot ${it.cls}"></span>
+      <div class="row-body">
+        <div class="row-title" style="font-size:12px">${esc(it.title)}</div>
+        <div class="row-sub">${esc(it.sub)} · ${formatTime(it.t)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ───── RENDER : Capacité ─────────────────────────────────────────────
+function renderCapacite() {
+  const cap = cache.capacite || [];
+  const list = document.getElementById('cap-list');
+  if (!cap.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-msg">Pas de référentiel de capacité</div></div>';
+    return;
+  }
+  // Grouper par pôle
+  const pole = {};
+  cap.forEach(u => {
+    const p = u.pole || 'Autre';
+    if (!pole[p]) pole[p] = { tot: 0, occ: 0, unites: [] };
+    const d = u.derniere_declaration;
+    if (d) {
+      const h = (d.lits_h_occupes || 0);
+      const f = (d.lits_f_occupes || 0);
+      const z = (d.lits_z_occupes || 0);
+      const maxLits = u.capacite_max_lits || (h+f+z) || 0;
+      pole[p].tot += maxLits;
+      pole[p].occ += h + f + z;
+    }
+    pole[p].unites.push(u);
+  });
+  const poles = Object.keys(pole).sort();
+  list.innerHTML = poles.map(p => {
+    const g = pole[p];
+    const pct = g.tot ? Math.round(g.occ * 100 / g.tot) : 0;
+    let barCls = '';
+    if (pct >= 95) barCls = 'crit';
+    else if (pct >= 85) barCls = 'alert';
+    else if (pct >= 75) barCls = 'warn';
+    // Alertes textuelles
+    const alertes = g.unites.filter(u => {
+      const d = u.derniere_declaration;
+      if (!d) return false;
+      const degr = ['tension','critique','ferme','insuffisant','degrade','hs'];
+      if (degr.indexOf(d.statut_lits) >= 0) return true;
+      if (degr.indexOf(d.statut_rh) >= 0) return true;
+      if (degr.indexOf(d.statut_materiel) >= 0) return true;
+      if (d.alerte_lits || d.alerte_rh || d.alerte_materiel) return true;
+      return false;
+    }).length;
+    return `
+      <div class="cap-row">
+        <div class="cap-row-h">
+          <span class="cap-nom">${esc(p)}</span>
+          <span class="cap-pct">${pct}%</span>
+        </div>
+        <div class="cap-bar-wrap">
+          <div class="cap-bar ${barCls}" style="width:${Math.min(pct,100)}%"></div>
+        </div>
+        <div class="cap-sub">
+          ${g.occ} / ${g.tot} lits · ${g.unites.length} UF
+          ${alertes ? ' · <span style="color:var(--red);font-weight:700">⚠ ' + alertes + ' alerte(s)</span>' : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ───── Badges onglets bottom ─────────────────────────────────────────
+function renderBadges() {
+  // Incidents actifs
+  const incActifs = (cache.incidents||[]).filter(i => i.status !== 'RÉSOLU' && i.status !== 'ARCHIVÉ').length;
+  toggleBadge('tb-inc', incActifs);
+  // Messages non lus
+  const nonLus = (cache.messages||[]).filter(m => !m.lu).length;
+  toggleBadge('tb-msg', nonLus);
+  // Capacité : alertes
+  const alertes = (cache.capacite||[]).filter(u => {
+    const d = u.derniere_declaration;
+    if (!d) return false;
+    const degr = ['tension','critique','ferme','insuffisant','degrade','hs'];
+    if (degr.indexOf(d.statut_lits) >= 0) return true;
+    if (degr.indexOf(d.statut_rh) >= 0) return true;
+    if (degr.indexOf(d.statut_materiel) >= 0) return true;
+    if (d.alerte_lits || d.alerte_rh || d.alerte_materiel) return true;
+    return false;
+  }).length;
+  toggleBadge('tb-cap', alertes);
+}
+
+function toggleBadge(id, n) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (n > 0) { el.textContent = n > 99 ? '99+' : n; el.style.display = 'inline-block'; }
+  else el.style.display = 'none';
+}
+
+// ───── Drawer / Toast ────────────────────────────────────────────────
+function openDrawer(html) {
+  document.getElementById('drawer-inner').innerHTML = html;
+  document.getElementById('drawer').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+let toastTimer = null;
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + (type || '') + ' show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+// ───── Utilitaires ───────────────────────────────────────────────────
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function formatTime(ts) {
+  if (!ts) return '—';
+  try {
+    const d = new Date(ts);
+    const now = new Date();
+    const diff = (now - d) / 1000;
+    if (diff < 60) return 'à l\'instant';
+    if (diff < 3600) return Math.floor(diff/60) + ' min';
+    if (diff < 86400) return Math.floor(diff/3600) + ' h';
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+  } catch (e) { return '—'; }
+}
+
+function formatFull(ts) {
+  if (!ts) return '—';
+  try {
+    return new Date(ts).toLocaleString('fr-FR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  } catch (e) { return ts; }
+}
+
+// ───── Online/Offline ────────────────────────────────────────────────
+function updateOnlineState() {
+  const off = !navigator.onLine;
+  document.getElementById('offline-banner').classList.toggle('show', off);
+  document.getElementById('hdr-dot').classList.toggle('off', off);
+}
+window.addEventListener('online', () => { updateOnlineState(); refreshAll(); });
+window.addEventListener('offline', updateOnlineState);
+
+// ───── Pull-to-refresh simple (swipe down en haut de page) ────────────
+let touchStartY = 0, pulling = false;
+document.addEventListener('touchstart', e => {
+  if (window.scrollY === 0) touchStartY = e.touches[0].clientY;
+}, {passive: true});
+document.addEventListener('touchmove', e => {
+  const dy = e.touches[0].clientY - touchStartY;
+  if (dy > 80 && window.scrollY === 0 && !pulling) {
+    pulling = true;
+    showToast('↻ Rafraîchissement', 'info');
+    refreshAll();
+  }
+}, {passive: true});
+document.addEventListener('touchend', () => { pulling = false; });
+
+// ───── Boot ──────────────────────────────────────────────────────────
+(async function boot() {
+  loadFromCache();  // affichage immédiat du cache pour perception vitesse
+  updateOnlineState();
+  const logged = await tryAutoLogin();
+  if (logged) {
+    await refreshAll();
+    // Auto-refresh périodique (60s)
+    setInterval(() => {
+      if (navigator.onLine) refreshAll();
+    }, 60000);
+  }
+  // Récupérer la version serveur pour affichage profil
+  fetch('/health').then(r => r.json()).then(d => {
+    const el = document.getElementById('p-server-version');
+    if (el && d.version) el.textContent = 'serveur v' + d.version;
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>

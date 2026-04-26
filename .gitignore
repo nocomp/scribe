@@ -1,0 +1,191 @@
+# ─── SCRIBE — .gitignore pour release publique ────────────────────────
+# Tout ce qui ne doit JAMAIS finir sur GitHub est filtré ici.
+# Ton workspace local garde tout pour le dev ; seul ce qui passe ce
+# filtre est inclus dans les zips _public et les commits Git.
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+.pyre/
+.pytype/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+*.egg
+build/
+dist/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environnements virtuels
+venv/
+env/
+.venv/
+.env/
+ENV/
+
+# Bases de données SQLite (état runtime)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+scribe.db
+scribe_*.db
+exo_*.db
+
+# Logs et fichiers runtime
+*.log
+logs/
+*.pid
+*.out
+*.err
+
+# Fichiers JSON runtime du collecteur (état d'exercice)
+collecteur/collecteur_admin.json
+collecteur/collecteur_transferts.json
+collecteur/collecteur_incidents.json
+collecteur/collecteur_decisions.json
+collecteur/collecteur_sessions.json
+collecteur/etablissements.json
+collecteur_exercice/collecteur_exo_*.json
+collecteur_exercice/etablissements_exo.json
+collecteur_exercice/messages_inter_exo.json
+
+# Archives et exports utilisateur
+archives/
+exports/
+uploads/
+*.zip
+!docs/**/*.zip
+
+# État i18n runtime
+app/lang/_current.json
+
+# Config statique générée à l'init (contient secrets fédération)
+app/static/config.js
+
+# ─── CONFIGURATIONS SPÉCIFIQUES À MON DÉPLOIEMENT — NE PAS PUBLIER ────
+
+# CHAG (Centre Hospitalier Annecy-Genevois)
+config_chag*.xml
+config_exo_chag*.xml
+setup_capacite_chag.py
+setup_chag.py
+seed_uf_chag.py
+uf_chag_reference.json
+LANCER_CHAG.bat
+LANCER_GHTAD38.bat
+LANCER_GHTLMB.bat
+LANCER_GHTSAV.bat
+
+# Arc Alpin (exercice régional)
+config_arc_alpin*.xml
+config_*arc_alpin*.xml
+lancer_arc_alpin.sh
+LANCER_ARC_ALPIN.bat
+pre_enrol_arc_alpin.py
+
+# G7 (scénario CHAG) — tous les fichiers spécifiques
+config_g7*.xml
+config_*g7*.xml
+lancer_g7.sh
+setup_g7_*.py
+setup_capacite_g7.py
+pre_enrol_g7.py
+setup_g7_hdleman.py
+setup_g7_hpmb.py
+config_exo_clinique_demo.xml
+
+# Pré-enrôlement spécifique Arc Alpin (déploiement perso)
+pre_enrol_arc_alpin.py
+
+# Scripts spécifiques démo locale (pas génériques, doublon de lancer_exercice.sh)
+lancer_demo.sh
+setup_capacite_g7.py
+setup_g7_*.py
+pre_enrol_g7.py
+pre_enrol_exercice.py
+setup_exercice_g7.py
+
+# Configurations de production (toutes variantes)
+config_*_prod.xml
+lancer_*_prod.sh
+*_PROD.bat
+
+# Clinique Saint-Benoît de Montrelay (démo 2)
+config_csbm*.xml
+LANCER_CSBM.bat
+
+# ─── SECRETS — AUCUN DE CES FICHIERS NE DOIT FUITER ─────────────────
+.env
+.env.*
+!.env.example
+*_secret*
+*_token*
+*.key
+*.pem
+*.crt
+*.cer
+*.pfx
+*.p12
+secrets/
+albert_token.txt
+albert_*.txt
+clef_api*.txt
+api_keys.json
+
+# Docker volumes locaux
+docker-volumes/
+.docker/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Documentation interne / brouillons (pas pour publication)
+NOTES_PERSO.md
+TODO_HERVE.md
+brouillons/
+drafts/
+
+# Builds antérieurs (workspace de dev)
+scribe_v2[0-9][0-9][0-9]/
+scribe_v2[0-9][0-9][0-9].zip
+scribe_v2[0-9][0-9][0-9]_public.zip
+backup_*/
+old_*/
+
+# Scripts de pré-enrolement spécifiques à mes exercices CHAG/Arc Alpin
+# (contiennent les tokens fédération en clair)
+pre_enrol_exercice.py
+setup_g7_*.py
+import_comptes.py
+config_exo_*.xml
+config_exo_*.example.xml
+!config_exo_demo.xml.example
+
+# Configs personnelles utilisateur (l'utilisateur doit créer son config.xml
+# depuis config.xml.example)
+config.xml
+!config.xml.example

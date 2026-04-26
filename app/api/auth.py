@@ -1,0 +1,531 @@
+"""
+api/auth.py — Authentification SCRIBE v2.0.0
+Comptes locaux (pas LDAP) : admin crée les directeurs via /admin
+JWT + bcrypt + rate limiting
+"""
+import os, secrets, time
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
+from typing import Optional, List
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from jose import jwt, JWTError
+from passlib.context import CryptContext
+
+from app.database import get_db
+from app.models import User, Notification
+
+router   = APIRouter()
+security = HTTPBearer(auto_error=False)
+
+# SECRET_KEY : depuis env var en prod, sinon dérivée de façon déterministe
+# depuis le répertoire de travail (évite l'invalidation des tokens au redémarrage)
+def _derive_secret() -> str:
+    """Clé déterministe basée sur le chemin absolu du projet.
+    Stable entre redémarrages, unique par installation, sans fichier supplémentaire.
+    En production, toujours définir SCRIBE_SECRET dans l'environnement."""
+    import hashlib, pathlib
+    base = str(pathlib.Path(__file__).resolve().parent.parent.parent)
+    return hashlib.sha256(f"scribe-v2-{base}".encode()).hexdigest()
+
+SECRET_KEY = os.getenv("SCRIBE_SECRET") or _derive_secret()
+ALGORITHM  = "HS256"
+TOKEN_TTL  = 72  # heures — 3 jours (adapté aux crises G7 longues)
+
+# Credentials admin depuis variables d'environnement (jamais en dur en prod)
+ADMIN_USER = os.getenv("SCRIBE_ADMIN_USER", "dircrise")
+ADMIN_PASS = os.getenv("SCRIBE_ADMIN_PASS", "Scribe2026!")
+
+# ── Hachage bcrypt (remplace SHA-256 sans sel) ────────────────────────────────
+_pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def _hash(pw: str) -> str:
+    """Hache avec bcrypt. Migration transparente depuis SHA-256."""
+    return _pwd_ctx.hash(pw)
+
+def _verify(pw: str, hashed: str) -> bool:
+    """Vérifie bcrypt ET accepte les anciens hashes SHA-256 (migration)."""
+    try:
+        return _pwd_ctx.verify(pw, hashed)
+    except Exception:
+        # Fallback SHA-256 pour migration transparente des anciens comptes
+        import hashlib
+        return hashlib.sha256(pw.encode()).hexdigest() == hashed
+
+# ── Rate limiting login (en mémoire, sans dépendance externe) ─────────────────
+_login_attempts: dict = defaultdict(list)  # ip → [timestamps]
+_LOGIN_MAX   = 10   # tentatives max
+_LOGIN_WINDOW = 60  # secondes
+_LOCKOUT     = 300  # lockout 5 min après dépassement
+
+def _check_rate_limit(ip: str):
+    now = time.time()
+    attempts = _login_attempts[ip]
+    # Nettoyer les anciennes tentatives
+    attempts = [t for t in attempts if now - t < _LOGIN_WINDOW]
+    _login_attempts[ip] = attempts
+    if len(attempts) >= _LOGIN_MAX:
+        oldest = attempts[0]
+        wait = int(_LOCKOUT - (now - oldest))
+        if wait > 0:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Trop de tentatives. Réessayez dans {wait}s.",
+                headers={"Retry-After": str(wait)}
+            )
+    attempts.append(now)
+
+
+# ── Helpers ──────────────────────────────────────────────
+
+def _make_token(user_id: int, username: str, role: str) -> str:
+    exp = datetime.now(timezone.utc) + timedelta(hours=TOKEN_TTL)
+    return jwt.encode({"sub": str(user_id), "username": username, "role": role, "exp": exp}, SECRET_KEY, algorithm=ALGORITHM)
+
+def _decode_token(token: str) -> dict:
+    return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+# v2315 — Alias publics pour que le module MFA puisse réutiliser
+# le même mécanisme de token/hash sans dupliquer.
+create_access_token = _make_token
+decode_token        = _decode_token
+verify_password     = _verify
+
+def get_current_user(
+    creds: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    if not creds:
+        return None
+    try:
+        payload = _decode_token(creds.credentials)
+        uid = int(payload["sub"])
+        return db.query(User).filter(User.id == uid, User.active == True).first()
+    except (JWTError, Exception):
+        return None
+
+def require_admin(user: Optional[User] = Depends(get_current_user)):
+    if not user or user.role != "admin":  # seul le groupe admin a accès
+        raise HTTPException(status_code=403, detail="Accès admin requis")
+    return user
+
+
+# ── Schémas ──────────────────────────────────────────────
+
+class LoginIn(BaseModel):
+    username: str
+    password: str
+
+class UserCreate(BaseModel):
+    username:     str
+    display_name: str
+    password:     str
+    role:         str = "collaborateur"
+    perimetre:    Optional[str] = None
+
+class UserOut(BaseModel):
+    id: int; username: str; display_name: str; role: str
+    perimetre: Optional[str]; active: bool
+    # v2315 — Exposer l'état MFA pour la gestion admin
+    mfa_enabled: Optional[bool] = False
+    class Config: from_attributes = True
+
+class UserUpdate(BaseModel):
+    display_name: Optional[str] = None
+    password:     Optional[str] = None
+    role:         Optional[str] = None
+    perimetre:    Optional[str] = None
+    active:       Optional[bool] = None
+
+
+# ── Initialisation compte admin ──────────────────────────
+
+def ensure_admin(db: Session):
+    """Crée ou synchronise le compte admin. Hash bcrypt toujours à jour."""
+    existing = db.query(User).filter(User.username == ADMIN_USER).first()
+    if not existing:
+        admin = User(
+            username=ADMIN_USER,
+            display_name="Directeur de Crise",
+            role="admin",
+            hashed_password=_hash(ADMIN_PASS),
+            active=True
+        )
+        db.add(admin)
+        db.commit()
+    else:
+        # Migrer SHA-256 → bcrypt si le hash n'est pas encore bcrypt
+        if not existing.hashed_password.startswith("$2"):
+            existing.hashed_password = _hash(ADMIN_PASS)
+            db.commit()
+
+
+# ── Endpoints ────────────────────────────────────────────
+
+@router.get("/login-config")
+def login_config():
+    """Textes configurables de la mire de login. Public, sans auth."""
+    import os, json, pathlib
+    from config import LOGIN
+
+    subtitle = LOGIN["subtitle"]
+    try:
+        cfg_js = os.environ.get(
+            "SCRIBE_CONFIG_JS",
+            str(pathlib.Path(__file__).resolve().parent.parent.parent / "app" / "static" / "config.js")
+        )
+        if pathlib.Path(cfg_js).exists():
+            raw = pathlib.Path(cfg_js).read_text(encoding="utf-8")
+            start = raw.find("const SCRIBE_CONFIG = ") + len("const SCRIBE_CONFIG = ")
+            cfg = json.loads(raw[start:raw.rfind(";")])
+            nom = cfg.get("etablissement", {}).get("nom", "")
+            if nom:
+                subtitle = f"{nom} — Crisis OS"
+    except Exception:
+        pass
+
+    return {
+        "subtitle":    subtitle,
+        "footer_text": LOGIN["footer_text"],
+        "credit":      LOGIN["credit"],
+    }
+
+@router.post("/login")
+def login(request: Request, body: LoginIn, db: Session = Depends(get_db)):
+    # Rate limiting par IP
+    client_ip = getattr(request.client, "host", "unknown")
+    _check_rate_limit(client_ip)
+    # S'assurer que le compte admin existe et a un hash bcrypt
+    ensure_admin(db)
+    user = db.query(User).filter(User.username == body.username, User.active == True).first()
+    # Message d'erreur identique (évite l'énumération de comptes)
+    if not user or not _verify(body.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Identifiants incorrects")
+    # Migrer SHA-256 → bcrypt à la prochaine connexion réussie
+    if not user.hashed_password.startswith("$2"):
+        user.hashed_password = _hash(body.password)
+        db.commit()
+
+    # v2315 — Si MFA activé, ne pas renvoyer le JWT final directement.
+    # Émettre un mfa_token courte durée (5 min) que le client devra
+    # échanger contre un vrai JWT via POST /api/v1/mfa/verify après
+    # avoir fourni un code TOTP ou de backup.
+    if bool(getattr(user, "mfa_enabled", False)):
+        import time
+        mfa_payload = {
+            "sub": str(user.id),
+            "username": user.username,
+            "scope": "mfa_pending",   # marque ce JWT comme "pas encore valide pour l'API"
+            "exp": int(time.time()) + 300,  # 5 minutes
+        }
+        mfa_token = jwt.encode(mfa_payload, SECRET_KEY, algorithm=ALGORITHM)
+        return {
+            "require_mfa": True,
+            "mfa_token": mfa_token,
+            "username": user.username,  # rappel pour UI, pas sensible
+        }
+
+    token = _make_token(user.id, user.username, user.role)
+    # Vider les tentatives en cas de succès
+    _login_attempts.pop(client_ip, None)
+    return {"token": token, "user": {"id": user.id, "username": user.username,
+            "display_name": user.display_name, "role": user.role, "perimetre": user.perimetre,
+            "must_change_password": bool(getattr(user, "must_change_password", False))}}
+
+@router.get("/me")
+def me(user: Optional[User] = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="Non authentifié")
+    return {"id": user.id, "username": user.username, "display_name": user.display_name,
+            "role": user.role, "perimetre": user.perimetre,
+            "must_change_password": bool(getattr(user, "must_change_password", False))}
+
+@router.get("/users", response_model=List[UserOut])
+def list_users(user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Liste tous les utilisateurs actifs — accessible à tout utilisateur authentifié (nécessaire pour la messagerie)."""
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentification requise")
+    return db.query(User).filter(User.active == True).order_by(User.display_name).all()
+
+@router.post("/users", response_model=UserOut)
+def create_user(body: UserCreate, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    if db.query(User).filter(User.username == body.username).first():
+        raise HTTPException(status_code=409, detail="Nom d'utilisateur déjà pris")
+    u = User(username=body.username, display_name=body.display_name,
+             role=body.role, hashed_password=_hash(body.password),  # bcrypt
+             perimetre=body.perimetre, active=True)
+    db.add(u); db.commit(); db.refresh(u)
+    return u
+
+@router.put("/users/{uid}", response_model=UserOut)
+def update_user(uid: int, body: UserUpdate, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    u = db.query(User).filter(User.id == uid).first()
+    if not u: raise HTTPException(404, "Utilisateur non trouvé")
+    if body.display_name is not None: u.display_name = body.display_name
+    if body.password     is not None: u.hashed_password = _hash(body.password)
+    if body.role         is not None: u.role = body.role
+    if body.perimetre    is not None: u.perimetre = body.perimetre
+    if body.active       is not None: u.active = body.active
+    db.commit(); db.refresh(u); return u
+
+@router.delete("/users/{uid}")
+def delete_user(uid: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    u = db.query(User).filter(User.id == uid).first()
+    if not u: raise HTTPException(404, "Utilisateur non trouvé")
+    db.delete(u); db.commit()
+    return {"status": "deleted"}
+
+# v2315 — Réinitialisation MFA par un admin (cas de perte de téléphone).
+# L'utilisateur perd son setup MFA et devra refaire la configuration
+# complète (nouveau QR, nouveau téléphone) lors de sa prochaine connexion.
+# Les codes de backup existants sont supprimés. L'admin ne peut pas
+# réinitialiser son propre MFA par cette route (prévention d'auto-lockout) ;
+# pour désactiver le sien il utilise /mfa/disable avec son mot de passe.
+@router.post("/users/{uid}/mfa-reset")
+def admin_mfa_reset(uid: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    u = db.query(User).filter(User.id == uid).first()
+    if not u: raise HTTPException(404, "Utilisateur non trouvé")
+    if u.id == admin.id:
+        raise HTTPException(400, "Utilise /mfa/disable pour ton propre compte (password requis)")
+    u.mfa_enabled = False
+    u.mfa_secret = None
+    u.mfa_backup_codes = None
+    db.commit()
+    return {"ok": True, "username": u.username, "message": "MFA réinitialisé — l'utilisateur devra refaire la configuration"}
+
+# ── NOTIFICATIONS ────────────────────────────────────────
+
+@router.get("/notifications")
+def get_notifications(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user: raise HTTPException(401)
+    notifs = db.query(Notification).filter(
+        Notification.user_id == user.id
+    ).order_by(Notification.timestamp.desc()).limit(50).all()
+    return [{"id": n.id, "titre": n.titre, "message": n.message,
+             "type_notif": n.type_notif, "incident_id": n.incident_id,
+             "task_id": n.task_id, "lu": n.lu,
+             "timestamp": n.timestamp.isoformat() if n.timestamp else None}
+            for n in notifs]
+
+@router.get("/notifications/unread-count")
+def unread_count(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user: return {"count": 0}
+    c = db.query(Notification).filter(Notification.user_id == user.id, Notification.lu == False).count()
+    return {"count": c}
+
+@router.put("/notifications/{nid}/read")
+def mark_read(nid: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user: raise HTTPException(401)
+    n = db.query(Notification).filter(Notification.id == nid, Notification.user_id == user.id).first()
+    if n: n.lu = True; db.commit()
+    return {"status": "ok"}
+
+@router.put("/notifications/read-all")
+def mark_all_read(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user: raise HTTPException(401)
+    db.query(Notification).filter(Notification.user_id == user.id, Notification.lu == False).update({"lu": True})
+    db.commit()
+    return {"status": "ok"}
+
+
+# ── Helper global : notifier les directeurs concernés ────
+
+def notify_incident(db: Session, incident, action: str = "INCIDENT"):
+    """Hook appelé à la création d'un incident.
+
+    v2.3.88 — Ne crée PLUS de notification inbox pour les incidents.
+    Auparavant, chaque incident créait une Notification inbox pour tous
+    les directeurs → pollution massive de l'inbox, confusion avec les
+    vrais messages internes (messagerie).
+
+    Maintenant :
+    - Les incidents apparaissent dans l'onglet INCIDENTS (badge sur le bouton).
+    - L'inbox ne contient que les vrais messages (messagerie, mentions chat,
+      décisions à valider).
+    - Les canaux multi-canal (mail/push/SMS) du plugin notifications prennent
+      le relais pour alerter les personnes hors SCRIBE.
+
+    Cette fonction est gardée comme hook vide pour compatibilité, au cas où
+    du code ailleurs l'importerait. Si on a besoin d'hooks par-incident
+    (webhook externe, ARS, etc.), c'est ici qu'on les ajoutera.
+    """
+    # Noop volontaire — voir docstring.
+    # Les canaux de notification sont désormais gérés par le plugin
+    # notifications (app/api/sitrep.py appelle dispatcher.notify_sync).
+    return
+
+
+@router.get("/annuaire-messagerie")
+def annuaire_messagerie(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retourne tous les utilisateurs actifs pour l'annuaire de messagerie."""
+    users = db.query(User).filter(User.active == True).order_by(User.display_name).all()
+    result = []
+    for u in users:
+        if u.id == (current_user.id if current_user else -1):
+            continue
+        # Extraire le site depuis le username (convention: service_demo_SITE ou service_SITE)
+        import re
+        site_match = re.search(r'_demo_(.+)$', u.username) or re.search(r'_([a-z0-9]{3,14})$', u.username)
+        site_tag = site_match.group(1) if site_match else ""
+        result.append({
+            "id": u.id,
+            "username": u.username,
+            "display_name": u.display_name or u.username,
+            "role": u.role,
+            "site_tag": site_tag,
+        })
+    return result
+
+
+@router.post("/heartbeat")
+def heartbeat(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Ping de présence — appelé toutes les 30s par le frontend."""
+    if not current_user:
+        raise HTTPException(401)
+    from app.models import UserOnlineStatus
+    from datetime import datetime, timezone
+    existing = db.query(UserOnlineStatus).filter_by(user_id=current_user.id).first()
+    now = datetime.now(timezone.utc)
+    if existing:
+        existing.last_seen = now
+        existing.username = current_user.username
+    else:
+        db.add(UserOnlineStatus(
+            user_id=current_user.id,
+            username=current_user.username,
+            last_seen=now,
+        ))
+    db.commit()
+    return {"ok": True}
+
+
+@router.get("/annuaire-messagerie")
+def annuaire_messagerie(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Annuaire complet avec statut en ligne pour la messagerie interne."""
+    from app.models import UserOnlineStatus
+    from datetime import datetime, timezone
+    import re as _re
+
+    users = db.query(User).filter(User.active == True).order_by(User.display_name).all()
+
+    # Récupérer les statuts en ligne
+    statuses = {s.user_id: s.last_seen for s in db.query(UserOnlineStatus).all()}
+    now = datetime.now(timezone.utc)
+
+    result = []
+    for u in users:
+        if u.id == (current_user.id if current_user else -1):
+            continue
+        # Extraire site tag depuis username
+        m = _re.search(r'_demo_(.+)$', u.username) or _re.search(r'_([a-z0-9_]{3,20})$', u.username)
+        if m:
+            site_tag = m.group(1)
+        elif u.username in ('dircrise', 'admin') or u.role in ('admin', 'directeur'):
+            # Compte admin/direction : tag = sigle de l'établissement courant
+            import os as _os, json as _json, pathlib as _pl
+            try:
+                cfg_js = _os.environ.get("SCRIBE_CONFIG_JS", "")
+                if cfg_js and _pl.Path(cfg_js).exists():
+                    raw = _pl.Path(cfg_js).read_text(encoding="utf-8")
+                    start = raw.find("const SCRIBE_CONFIG = ") + len("const SCRIBE_CONFIG = ")
+                    _cfg = _json.loads(raw[start:raw.rfind(";")])
+                    site_tag = (_cfg.get("etablissement",{}).get("sigle","") or "").lower()
+                else:
+                    site_tag = "direction"
+            except Exception:
+                site_tag = "direction"
+        else:
+            site_tag = ""
+
+        # Extraire service depuis display_name ou username
+        dn = u.display_name or u.username
+        service = dn.split(" — ")[0] if " — " in dn else dn
+
+        # Statut en ligne
+        last = statuses.get(u.id)
+        inactivity_label = ""
+        if last is None:
+            online = "never"
+        else:
+            try:
+                delta = (now - last).total_seconds()
+            except TypeError:
+                from datetime import timezone as _tz
+                last_aware = last.replace(tzinfo=_tz.utc) if last.tzinfo is None else last
+                delta = (now - last_aware).total_seconds()
+
+            if delta < 120:
+                online = "online"          # vert : actif maintenant
+                inactivity_label = "En ligne"
+            elif delta < 86400:
+                online = "today"           # bleu : connecté aujourd'hui
+                # Calculer le label d'inactivité
+                if delta < 3600:
+                    mins = int(delta // 60)
+                    inactivity_label = f"Inactif depuis {mins}min"
+                else:
+                    hrs = int(delta // 3600)
+                    mins = int((delta % 3600) // 60)
+                    inactivity_label = f"Inactif depuis {hrs}h{mins:02d}"
+            else:
+                online = "offline"         # gris : jamais ou > 24h
+                inactivity_label = ""
+
+        result.append({
+            "id": u.id,
+            "username": u.username,
+            "display_name": u.display_name or u.username,
+            "service": service,
+            "role": u.role,
+            "site_tag": site_tag,
+            "online": online,
+            "inactivity_label": inactivity_label,
+        })
+    return result
+
+
+@router.get("/annuaire-public")
+def annuaire_public(db: Session = Depends(get_db)):
+    """Annuaire public de l'établissement — pas d'auth requise, pour la messagerie inter-GHT.
+    Ne retourne que les infos non-sensibles."""
+    import re as _re, os as _os, json as _json, pathlib as _pl
+    # Lire le sigle depuis config.js
+    sigle = "?"
+    try:
+        cfg_js = _os.environ.get("SCRIBE_CONFIG_JS", "")
+        if cfg_js and _pl.Path(cfg_js).exists():
+            raw = _pl.Path(cfg_js).read_text(encoding="utf-8")
+            start = raw.find("const SCRIBE_CONFIG = ") + len("const SCRIBE_CONFIG = ")
+            _cfg = _json.loads(raw[start:raw.rfind(";")])
+            sigle = (_cfg.get("etablissement",{}).get("sigle","") or "?").upper()
+            nom_etab = (_cfg.get("etablissement",{}).get("nom","") or sigle)
+    except Exception:
+        nom_etab = sigle
+
+    users = db.query(User).filter(User.active == True).order_by(User.display_name).all()
+    result = []
+    for u in users:
+        m = _re.search(r'_demo_(.+)$', u.username) or _re.search(r'_([a-z0-9_]{3,20})$', u.username)
+        site_tag = m.group(1) if m else sigle.lower()
+        service = (u.display_name or u.username).split(" — ")[0]
+        result.append({
+            "display_name": u.display_name or u.username,
+            "username": u.username,
+            "service": service,
+            "role": u.role,
+            "site_tag": site_tag,
+            "ght_sigle": sigle,
+            "ght_nom": nom_etab,
+        })
+    return {"sigle": sigle, "nom": nom_etab, "contacts": result}

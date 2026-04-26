@@ -1,0 +1,2844 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SCRIBE — Animateur Exercice</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="alternate icon" type="image/png" href="/static/logo-scribe.png">
+<style>
+:root{--blue:#003189;--red:#e1000f;--green:#059669;--orange:#d97706;--purple:#7c3aed;
+  --bg:#f0f2f5;--s:#fff;--s2:#f1f5f9;--bd:#e2e8f0;--tx:#0f172a;--mu:#64748b;--mo:monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx);overflow:hidden}
+#banner{background:var(--red);color:#fff;font-family:var(--mo);font-size:11px;font-weight:700;
+  text-align:center;padding:7px;letter-spacing:2px;display:flex;align-items:center;justify-content:center;gap:16px}
+#banner-clock{font-size:15px;font-weight:900;letter-spacing:3px;font-family:var(--mo)}
+#banner-status{opacity:.9}
+.topbar{background:var(--blue);color:#fff;padding:8px 16px;display:flex;align-items:center;gap:12px}
+.topbar img{height:26px}
+.topbar h1{font-family:var(--mo);font-size:12px;font-weight:700;letter-spacing:1px}
+.topbar-time{margin-left:auto;font-family:var(--mo);font-size:10px;opacity:.7}
+/* Tabs */
+.tab-bar{display:flex;background:var(--blue);border-bottom:2px solid rgba(255,255,255,.2)}
+.tab-btn{font-family:var(--mo);font-size:10px;padding:9px 18px;border:none;background:none;
+  color:rgba(255,255,255,.6);cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+.tab-btn:hover{color:#fff}
+.tab-btn.active{color:#fff;border-bottom-color:#fff;font-weight:700}
+.tab-pane{display:none;height:calc(100vh - 98px);overflow-y:auto;padding:16px}
+.tab-pane.active{display:block}
+/* Cards */
+.card{background:var(--s);border-radius:8px;border:1px solid var(--bd);padding:14px;margin-bottom:12px}
+.card-title{font-family:var(--mo);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--mu);margin-bottom:10px;text-transform:uppercase}
+/* Instances grid */
+.inst-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:12px}
+.inst-card{background:var(--s);border-radius:7px;border:1px solid var(--bd);padding:12px}
+.inst-sigle{font-family:var(--mo);font-size:14px;font-weight:700}
+.inst-port{font-family:var(--mo);font-size:9px;color:var(--mu)}
+.inst-status{display:flex;align-items:center;gap:6px;margin-top:6px}
+.dot{width:9px;height:9px;border-radius:50%}
+.dot-green{background:#22c55e}.dot-red{background:#ef4444}.dot-orange{background:#f59e0b}.dot-grey{background:#94a3b8}
+.niveau{font-family:var(--mo);font-size:8px;padding:2px 6px;border-radius:3px;font-weight:700}
+.n-VERT{background:#dcfce7;color:#15803d}.n-ORANGE{background:#fef3c7;color:#d97706}
+.n-ROUGE{background:#fee2e2;color:#dc2626}.n-INCONNU{background:#f1f5f9;color:#94a3b8}
+.inst-link{display:inline-block;margin-top:7px;font-family:var(--mo);font-size:9px;
+  color:var(--blue);text-decoration:none;border:1px solid var(--blue);border-radius:3px;padding:3px 8px}
+.inst-link:hover{background:var(--blue);color:#fff}
+/* Boutons */
+.btn{font-family:var(--mo);font-size:10px;padding:8px 16px;border-radius:5px;border:none;cursor:pointer;font-weight:700;transition:all .15s}
+.btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{opacity:.85}
+.btn-red{background:var(--red);color:#fff}.btn-red:hover{opacity:.85}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{opacity:.85}
+.btn-orange{background:var(--orange);color:#fff}.btn-orange:hover{opacity:.85}
+.btn-ghost{background:var(--s2);color:var(--tx);border:1px solid var(--bd)}.btn-ghost:hover{background:var(--bd)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+/* Scénarios */
+.sc-card{border:1px solid var(--bd);border-radius:7px;padding:12px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+.sc-card:hover,.sc-card.selected{border-color:var(--blue);background:rgba(0,49,137,.04)}
+.sc-card.selected{background:rgba(0,49,137,.08)}
+.sc-titre{font-weight:700;font-size:13px}
+.sc-meta{font-family:var(--mo);font-size:9px;color:var(--mu);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+.badge{display:inline-block;font-family:var(--mo);font-size:8px;padding:2px 7px;border-radius:10px;font-weight:700;margin-top:4px}
+.b-san{background:#dcfce7;color:#15803d}.b-cyber{background:#dbeafe;color:#1d4ed8}
+.b-fac{background:#f0fdf4;color:#16a34a}.b-moy{background:#fef3c7;color:#d97706}
+.b-dif{background:#fee2e2;color:#dc2626}.b-exp{background:#f3e8ff;color:#7c3aed}
+/* Stimuli */
+.stim-item{display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:6px;
+  border:1px solid var(--bd);margin-bottom:7px;transition:all .2s}
+.stim-item.done{background:#f0fdf4;border-color:#86efac}
+.stim-item.active{background:#fefce8;border-color:#fde047;animation:pulse 2s infinite}
+.stim-item.error{background:#fef2f2;border-color:#fca5a5}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+.stim-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.sd-pending{background:#e2e8f0}.sd-done{background:var(--green)}
+.sd-active{background:var(--orange);animation:pulse 1s infinite}.sd-error{background:var(--red)}
+.stim-body{flex:1;min-width:0}
+.stim-titre{font-size:12px;font-weight:700}
+.stim-meta{font-family:var(--mo);font-size:9px;color:var(--mu);margin-top:2px}
+.stim-anim{font-size:11px;color:var(--mu);margin-top:4px;font-style:italic;display:none}
+.stim-item.selected .stim-anim{display:block}
+.btn-inject{font-family:var(--mo);font-size:9px;padding:3px 10px;background:var(--orange);
+  color:#fff;border:none;border-radius:3px;cursor:pointer;margin-top:5px}
+.btn-inject:hover{opacity:.85}
+/* Contrôles exercice */
+.ctrl-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.stat-card{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:10px 14px;text-align:center;min-width:80px}
+.stat-val{font-size:22px;font-weight:900;color:var(--blue);font-family:var(--mo)}
+.stat-lbl{font-family:var(--mo);font-size:8px;color:var(--mu);text-transform:uppercase;margin-top:2px}
+/* Sites selector */
+.sites-row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.site-chip{font-family:var(--mo);font-size:10px;padding:5px 12px;border-radius:20px;
+  border:1px solid var(--bd);cursor:pointer;transition:all .15s;user-select:none}
+.site-chip:hover{border-color:var(--blue)}
+.site-chip.on{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
+/* v2186a — variantes par catégorie pour la génération IA */
+.chip-row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0;padding:8px;
+  background:var(--s2);border:1px solid var(--bd);border-radius:6px}
+.chip-purple{font-family:var(--mo);font-size:10px;padding:5px 12px;border-radius:20px;
+  border:1px solid var(--bd);cursor:pointer;transition:all .15s;user-select:none;color:var(--tx)}
+.chip-purple:hover{border-color:#a78bfa}
+.chip-purple.on{background:#7c3aed;color:#fff;border-color:#7c3aed;font-weight:700}
+.chip-green{font-family:var(--mo);font-size:10px;padding:5px 12px;border-radius:20px;
+  border:1px solid var(--bd);cursor:pointer;transition:all .15s;user-select:none;color:var(--tx)}
+.chip-green:hover{border-color:#10b981}
+.chip-green.on{background:#059669;color:#fff;border-color:#059669;font-weight:700}
+.chip-orange{font-family:var(--mo);font-size:10px;padding:5px 12px;border-radius:20px;
+  border:1px solid var(--bd);cursor:pointer;transition:all .15s;user-select:none;color:var(--tx)}
+.chip-orange:hover{border-color:#f59e0b}
+.chip-orange.on{background:#d97706;color:#fff;border-color:#d97706;font-weight:700}
+.chip-counter{font-family:var(--mo);font-size:9px;color:var(--mu);margin-left:auto;align-self:center}
+/* Forms */
+.form-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.form-row label{font-family:var(--mo);font-size:9px;color:var(--mu);text-transform:uppercase}
+.form-row input,.form-row select,.form-row textarea{font-family:var(--mo);font-size:11px;
+  padding:8px 10px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--tx)}
+.form-row textarea{resize:vertical;min-height:70px}
+/* Bilan */
+.bilan-note{font-size:36px;font-weight:900;color:var(--blue);font-family:var(--mo)}
+.bilan-item{padding:5px 10px;border-left:3px solid var(--bd);margin-bottom:5px;font-size:12px}
+.bi-fort{border-color:var(--green)}.bi-axe{border-color:var(--orange)}.bi-rec{border-color:var(--red)}
+/* Login */
+#login-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;
+  align-items:center;justify-content:center;z-index:1000}
+.login-box{background:var(--s);border-radius:10px;padding:28px;width:300px;
+  display:flex;flex-direction:column;gap:12px;text-align:center}
+.login-box img{height:50px;margin:0 auto}
+.login-box h2{font-family:var(--mo);font-size:12px;font-weight:700;color:var(--blue)}
+.login-box input{font-family:var(--mo);font-size:12px;padding:9px;border:1px solid var(--bd);
+  border-radius:5px;text-align:center}
+.login-box button{font-family:var(--mo);font-size:11px;padding:10px;background:var(--blue);
+  color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700}
+.login-box button:hover{opacity:.85}
+#login-err{color:var(--red);font-family:var(--mo);font-size:10px;display:none}
+/* Toast */
+#toast{position:fixed;bottom:14px;right:14px;font-family:var(--mo);font-size:11px;
+  padding:8px 14px;border-radius:5px;display:none;z-index:9999;max-width:400px}
+.t-ok{background:#dcfce7;color:#15803d;border:1px solid #86efac}
+.t-err{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}
+.t-info{background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+.spin{animation:sp .8s linear infinite;display:inline-block}
+.filter-btn{font-family:var(--mo);font-size:9px;padding:4px 10px;border-radius:12px;
+  border:1px solid var(--bd);background:var(--s);cursor:pointer;color:var(--mu);transition:all .15s}
+.filter-btn:hover{border-color:var(--blue);color:var(--blue)}
+.filter-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
+@keyframes sp{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.ia-loading{text-align:center;padding:20px;font-family:var(--mo);font-size:11px;color:var(--mu)}
+
+/* ── Bilan temps réel (v2183) ────────────────────────────────────────── */
+.b-kpi{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:10px 12px}
+.b-kpi-label{font-family:var(--mo);font-size:8px;letter-spacing:1px;color:var(--mu);text-transform:uppercase;margin-bottom:4px}
+.b-kpi-val{font-size:22px;font-weight:700;color:var(--blue);font-family:var(--mo);line-height:1.1}
+#bilan-table tbody tr{border-bottom:1px solid var(--bd);transition:background .12s}
+#bilan-table tbody tr:hover{background:var(--s2)}
+#bilan-table td{padding:7px 6px}
+#bilan-table td:first-child,#bilan-table th:first-child{padding-left:10px}
+.b-niv{font-family:var(--mo);font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.5px}
+.b-niv-CRITIQUE{background:rgba(239,68,68,.15);color:#dc2626}
+.b-niv-CRISE{background:rgba(249,115,22,.15);color:#c2410c}
+.b-niv-ALERTE{background:rgba(245,158,11,.15);color:#b45309}
+.b-niv-VEILLE{background:rgba(96,165,250,.15);color:#1e40af}
+.b-niv-NOMINAL{background:rgba(74,222,128,.15);color:#15803d}
+.b-niv-INCONNU{background:var(--s2);color:var(--mu)}
+.b-state{display:inline-block;width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.b-state-online{background:#22c55e;box-shadow:0 0 5px #22c55e}
+.b-state-offline{background:#ef4444}
+.b-alert{font-family:var(--mo);font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700}
+.b-alert-silent{background:rgba(245,158,11,.18);color:#b45309}
+.b-alert-ok{color:var(--mu);background:transparent}
+.b-alert-down{background:rgba(239,68,68,.18);color:#dc2626}
+
+/* ── Modal détail scénario ─────────────────────────────────────────────── */
+#sc-detail-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
+  z-index:9999;align-items:center;justify-content:center;padding:20px}
+#sc-detail-modal.open{display:flex}
+.scd-box{background:var(--s);border-radius:10px;width:920px;max-width:98vw;
+  max-height:92vh;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.scd-header{padding:14px 20px;background:linear-gradient(135deg,var(--blue),#0050c7);color:#fff;
+  display:flex;align-items:center;gap:14px;flex-shrink:0}
+.scd-header-icon{font-size:28px;line-height:1}
+.scd-header-text{flex:1;min-width:0}
+.scd-header-title{font-size:16px;font-weight:700;line-height:1.25;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scd-header-sub{font-family:var(--mo);font-size:9px;letter-spacing:1px;opacity:.85;margin-top:3px}
+.scd-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:30px;height:30px;
+  border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0}
+.scd-close:hover{background:rgba(255,255,255,.28)}
+.scd-body{flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:16px}
+.scd-section{display:flex;flex-direction:column;gap:6px}
+.scd-section-title{font-family:var(--mo);font-size:9px;font-weight:700;letter-spacing:1.5px;
+  color:var(--mu);text-transform:uppercase;border-bottom:1px solid var(--bd);padding-bottom:4px}
+.scd-desc{font-size:13px;line-height:1.6;color:var(--tx)}
+.scd-meta-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.scd-meta-pill{background:var(--s2);border:1px solid var(--bd);border-radius:6px;
+  padding:7px 10px;font-size:11px;display:flex;align-items:center;gap:6px}
+.scd-meta-pill b{font-size:13px;color:var(--blue);font-weight:700}
+.scd-obj-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:4px}
+.scd-obj-list li{padding:6px 10px;background:var(--s2);border-left:3px solid var(--blue);
+  border-radius:0 4px 4px 0;font-size:12px;line-height:1.5}
+.scd-acteurs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.scd-acteur{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:9px 11px}
+.scd-acteur-sigle{font-family:var(--mo);font-size:10px;font-weight:700;color:var(--blue);
+  letter-spacing:1px;margin-bottom:2px}
+.scd-acteur-nom{font-size:12px;font-weight:600;margin-bottom:4px}
+.scd-acteur-role{font-family:var(--mo);font-size:9px;color:var(--mu);text-transform:uppercase;letter-spacing:.5px}
+.scd-acteur-joueurs{margin-top:6px;padding-top:5px;border-top:1px dashed var(--bd);font-size:11px;line-height:1.5}
+.scd-acteur-joueurs div{color:var(--mu)}
+.scd-acteur-joueurs b{color:var(--tx);font-weight:600}
+.scd-timeline{position:relative;padding:0 0 0 24px}
+.scd-timeline::before{content:'';position:absolute;left:9px;top:4px;bottom:4px;
+  width:2px;background:linear-gradient(to bottom,var(--blue),var(--bd))}
+.scd-stim{position:relative;padding:8px 10px 10px 14px;background:var(--s2);
+  border:1px solid var(--bd);border-radius:6px;margin-bottom:7px}
+.scd-stim::before{content:'';position:absolute;left:-18px;top:14px;width:12px;height:12px;
+  border-radius:50%;background:var(--blue);border:2px solid var(--s);
+  box-shadow:0 0 0 1px var(--blue)}
+.scd-stim-head{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
+.scd-stim-time{font-family:var(--mo);font-size:10px;font-weight:700;color:var(--blue);
+  background:#dbeafe;padding:2px 7px;border-radius:10px;letter-spacing:.5px}
+.scd-stim-type{font-family:var(--mo);font-size:9px;padding:1px 6px;border-radius:3px;
+  font-weight:700;letter-spacing:.5px}
+.scd-stim-type.incident{background:#fee2e2;color:#b91c1c}
+.scd-stim-type.message{background:#dbeafe;color:#1e40af}
+.scd-stim-type.transfert{background:#fef3c7;color:#b45309}
+.scd-stim-type.chat{background:#ede9fe;color:#6d28d9}
+.scd-stim-type.capacite{background:#dcfce7;color:#15803d}
+.scd-stim-type.decision{background:#ffedd5;color:#c2410c}
+.scd-stim-cible{font-family:var(--mo);font-size:9px;color:var(--mu);padding:1px 6px;
+  background:var(--s);border:1px solid var(--bd);border-radius:3px}
+.scd-stim-fait{font-size:12px;line-height:1.5;color:var(--tx)}
+.scd-footer{padding:12px 20px;background:var(--s2);border-top:1px solid var(--bd);
+  display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:10px}
+.scd-footer-left{font-family:var(--mo);font-size:10px;color:var(--mu)}
+.scd-btn-cancel{font-family:var(--mo);font-size:11px;padding:8px 16px;background:var(--s);
+  border:1px solid var(--bd);border-radius:5px;color:var(--mu);cursor:pointer;font-weight:600}
+.scd-btn-cancel:hover{background:var(--bd)}
+.scd-btn-use{font-family:var(--mo);font-size:11px;padding:8px 22px;background:var(--blue);
+  border:1px solid var(--blue);border-radius:5px;color:#fff;cursor:pointer;font-weight:700;
+  letter-spacing:.5px}
+.scd-btn-use:hover{opacity:.9}
+.adhoc-preset-btn{
+  font-family:var(--mo);font-size:9px;padding:4px 8px;border-radius:3px;
+  border:1px solid var(--bd);background:var(--s);color:var(--tx);
+  cursor:pointer;transition:all .12s;
+}
+.adhoc-preset-btn:hover{
+  background:linear-gradient(135deg,rgba(249,115,22,.15),rgba(220,38,38,.15));
+  border-color:#f97316;color:#fb923c;
+}
+</style>
+</head>
+<body>
+<div id="login-overlay">
+  <div class="login-box">
+    <img src="/static/logo-scribe.png" onerror="this.style.display='none'">
+    <h2>SUPERVISION EXERCICE</h2>
+    <div style="font-family:var(--mo);font-size:10px;color:var(--mu)">Port 8565 — Animateur</div>
+    <input id="inp-login" placeholder="Identifiant" value="animateur">
+    <input id="inp-pwd" type="password" placeholder="Mot de passe">
+    <button onclick="doLogin()">CONNEXION</button>
+    <div id="login-err">Identifiants incorrects</div>
+  </div>
+</div>
+
+<div id="banner">
+  <span>🎯 MODE EXERCICE — SUPERVISION COLLECTEUR — PORT 8565</span>
+  <span id="banner-clock">--:--</span>
+  <span id="banner-status">AUCUN EXERCICE EN COURS</span>
+</div>
+<div class="topbar">
+  <img src="/static/logo-scribe.png" onerror="this.style.display='none'">
+  <h1>SCRIBE — ANIMATEUR EXERCICE ARC ALPIN</h1>
+  <span class="topbar-time" id="topbar-time"></span>
+</div>
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('supervision',this)">📡 SUPERVISION</button>
+  <button class="tab-btn" onclick="showTab('scenarios',this)">📋 SCÉNARIOS</button>
+  <button class="tab-btn" onclick="showTab('exercice',this)">🎮 EXERCICE</button>
+  <button class="tab-btn" onclick="showTab('bilan',this)">📊 BILAN</button>
+</div>
+
+<!-- ── TAB SUPERVISION ── -->
+<div id="tab-supervision" class="tab-pane active">
+  <div class="inst-grid" id="inst-grid">
+    <div style="font-family:monospace;font-size:10px;color:var(--mu)">Chargement...</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Fédération exercice</div>
+    <div style="font-family:var(--mo);font-size:10px;color:var(--mu)">
+      Les instances en rouge ● n'ont pas encore pushé (attendre 30s après le démarrage).
+      Cliquez "🖥 Afficher" pour voir une instance ici (connexion automatique avec dircrise/Exercice2026!).
+    </div>
+  </div>
+
+  <!-- Panel iframe instance -->
+  <div id="inst-panel" style="display:none;background:var(--s);border:2px solid var(--blue);border-radius:8px;overflow:hidden;margin-top:8px">
+    <div style="background:var(--blue);color:#fff;padding:8px 14px;display:flex;align-items:center;justify-content:space-between">
+      <span id="inst-panel-title" style="font-family:var(--mo);font-size:11px;font-weight:700"></span>
+      <div style="display:flex;gap:8px">
+        <button id="btn-inst-external" onclick="openInstExternal()" style="font-family:var(--mo);font-size:9px;padding:3px 8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:3px;cursor:pointer">↗ Nouvel onglet</button>
+        <button onclick="closeInstPanel()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:16px">✕</button>
+      </div>
+    </div>
+    <iframe id="inst-iframe" style="width:100%;height:600px;border:none" src="about:blank"></iframe>
+  </div>
+
+  <!-- v2312 — Vue pédagogique : statuts publics de chaque site exercice.
+       Permet à l'animateur d'observer comment les joueurs utilisent
+       leur page de statut public (fonction stratégique). Rafraîchi
+       toutes les 30s. -->
+  <div class="card" id="statuts-publics-card" style="margin-top:12px">
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+      <span>📣 Statuts publics des sites <span style="font-family:var(--mo);font-size:9px;color:var(--mu);font-weight:normal">— vue pédagogique animateur</span></span>
+      <button onclick="loadStatutsPublics()" style="font-family:var(--mo);font-size:9px;padding:3px 10px;background:transparent;border:1px solid var(--bd);color:var(--mu);border-radius:3px;cursor:pointer">↻ Rafraîchir</button>
+    </div>
+    <div style="font-family:var(--mo);font-size:10px;color:var(--mu);margin-bottom:8px">
+      Chaque site dispose d'une page de statut publique (ex: <code>/status</code>) que
+      les joueurs peuvent publier ou non en temps réel. C'est une fonction
+      stratégique à observer : un site en crise doit savoir quand et comment
+      communiquer vers l'extérieur.
+    </div>
+    <div id="statuts-publics-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px">
+      <div style="font-family:var(--mo);font-size:10px;color:var(--mu);grid-column:1/-1">Chargement…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB SCÉNARIOS ── -->
+<div id="tab-scenarios" class="tab-pane">
+  <!-- Barre d'actions -->
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+    <button class="btn btn-blue" onclick="openGenIA()">✨ Nouveau scénario</button>
+    <button class="btn btn-ghost" onclick="triggerImportJSON()">📥 Importer scénario</button>
+    <button class="btn btn-ghost" onclick="triggerImportXML()">📂 Scénario XML</button>
+    <div style="position:relative;display:inline-block">
+      <button class="btn btn-ghost" onclick="toggleTemplatesMenu(event)" id="btn-templates">⬇ Modèles ▾</button>
+      <div id="templates-menu" style="display:none;position:absolute;top:100%;left:0;background:var(--s);border:1px solid var(--bd);border-radius:5px;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:100;min-width:180px;margin-top:2px">
+        <button class="tpl-item" onclick="downloadTemplateFormat('xml')" style="display:block;width:100%;text-align:left;padding:7px 12px;background:none;border:none;cursor:pointer;font-family:var(--mo);font-size:10px;color:var(--tx);border-bottom:1px solid var(--bd)">📄 Modèle XML</button>
+        <button class="tpl-item" onclick="downloadTemplateFormat('json')" style="display:block;width:100%;text-align:left;padding:7px 12px;background:none;border:none;cursor:pointer;font-family:var(--mo);font-size:10px;color:var(--tx);border-bottom:1px solid var(--bd)">📄 Modèle JSON</button>
+        <button class="tpl-item" onclick="downloadTemplateFormat('csv')" style="display:block;width:100%;text-align:left;padding:7px 12px;background:none;border:none;cursor:pointer;font-family:var(--mo);font-size:10px;color:var(--tx);border-bottom:1px solid var(--bd)">📊 Modèle CSV</button>
+        <button class="tpl-item" onclick="downloadTemplateFormat('xlsx')" style="display:block;width:100%;text-align:left;padding:7px 12px;background:none;border:none;cursor:pointer;font-family:var(--mo);font-size:10px;color:var(--tx)">📗 Modèle XLSX</button>
+      </div>
+    </div>
+    <button class="btn btn-ghost" onclick="loadScenarios()">🔄 Actualiser</button>
+    <input type="file" id="xml-import-input" accept=".xml" style="display:none" onchange="importXMLFile(this)">
+    <input type="file" id="json-import-input" accept=".json" style="display:none" onchange="importJSONFile(this)">
+  </div>
+
+  <!-- Filtres bibliothèque -->
+  <div style="background:var(--s2);border:1px solid var(--bd);border-radius:7px;padding:10px 14px;margin-bottom:12px">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="font-family:var(--mo);font-size:9px;color:var(--mu);font-weight:700">FILTRES</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="filter-type-group">
+        <button class="filter-btn active" data-filter="type" data-val="all" onclick="applyFilter(this,'type','all')">Tous</button>
+        <button class="filter-btn" data-filter="type" data-val="SANITAIRE" onclick="applyFilter(this,'type','SANITAIRE')">🏥 Sanitaire</button>
+        <button class="filter-btn" data-filter="type" data-val="CYBER" onclick="applyFilter(this,'type','CYBER')">💻 Cyber</button>
+        <button class="filter-btn" data-filter="type" data-val="MIXTE" onclick="applyFilter(this,'type','MIXTE')">⚡ Mixte</button>
+        <button class="filter-btn" data-filter="type" data-val="RH" onclick="applyFilter(this,'type','RH')">👥 RH</button>
+        <button class="filter-btn" data-filter="type" data-val="TERTIAIRE" onclick="applyFilter(this,'type','TERTIAIRE')">🏨 Tertiaire</button>
+      </div>
+      <div style="width:1px;height:20px;background:var(--bd)"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="filter-complexite-group">
+        <button class="filter-btn active" data-filter="complexite" data-val="all" onclick="applyFilter(this,'complexite','all')">Toutes</button>
+        <button class="filter-btn" data-filter="complexite" data-val="FACILE" onclick="applyFilter(this,'complexite','FACILE')">Facile</button>
+        <button class="filter-btn" data-filter="complexite" data-val="MOYEN" onclick="applyFilter(this,'complexite','MOYEN')">Moyen</button>
+        <button class="filter-btn" data-filter="complexite" data-val="DIFFICILE" onclick="applyFilter(this,'complexite','DIFFICILE')">Difficile</button>
+        <button class="filter-btn" data-filter="complexite" data-val="EXPERT" onclick="applyFilter(this,'complexite','EXPERT')">Expert</button>
+      </div>
+      <div style="margin-left:auto">
+        <input id="search-scenarios" placeholder="Rechercher..." oninput="filterScenarios()"
+          style="font-family:var(--mo);font-size:10px;padding:5px 10px;border:1px solid var(--bd);border-radius:5px;background:var(--s)">
+      </div>
+    </div>
+    <div id="filter-summary" style="font-family:var(--mo);font-size:9px;color:var(--mu);margin-top:6px"></div>
+  </div>
+
+  <!-- Grille scénarios -->
+  <div id="scenarios-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">
+    <div style="font-family:monospace;font-size:10px;color:var(--mu)">Chargement...</div>
+  </div>
+
+  <!-- Formulaire génération IA -->
+  <div id="gen-ia-form" class="card" style="display:none;margin-top:14px">
+    <div class="card-title">✨ Créer un nouveau scénario d'exercice</div>
+
+    <!-- v2192 — Identité du scénario EN PREMIER. Nom obligatoire, catégorie
+         et tags pour faciliter la recherche dans la bibliothèque. -->
+    <div style="background:var(--s);border:1px solid #0050c7;border-radius:7px;padding:10px 14px;margin-bottom:14px">
+      <div style="font-family:var(--mo);font-size:9px;color:#0050c7;font-weight:700;letter-spacing:.5px;margin-bottom:6px">IDENTITÉ DU SCÉNARIO</div>
+      <div class="form-row">
+        <label>Nom du scénario * <span style="font-weight:400;color:var(--mu);font-size:9px">(affiché dans la bibliothèque, soyez explicite)</span></label>
+        <input id="ia-nom-scenario" type="text" placeholder="Ex: Hémorragie post-partum + saturation maternité" maxlength="120">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px">
+        <div class="form-row">
+          <label>Catégorie</label>
+          <select id="ia-categorie">
+            <option value="sanitaire">🏥 Sanitaire</option>
+            <option value="cyber">💻 Cyber</option>
+            <option value="mixte">⚡ Mixte</option>
+            <option value="rh">👥 RH / Continuité</option>
+            <option value="tertiaire">🏨 Tertiaire / Logistique</option>
+            <option value="custom">🏷 Personnalisé</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Tags <span style="font-weight:400;color:var(--mu);font-size:9px">(séparés par des virgules, pour la recherche)</span></label>
+          <input id="ia-tags" type="text" placeholder="Ex: maternité, transfert, SAMU, hémorragie">
+        </div>
+      </div>
+    </div>
+
+    <div style="font-family:var(--mo);font-size:9px;color:var(--mu);font-weight:700;letter-spacing:.5px;margin-bottom:6px;border-bottom:1px solid var(--bd);padding-bottom:6px">PARAMÈTRES DE GÉNÉRATION IA</div>
+    <div class="form-row">
+      <label>Sujet / contexte clinique *</label>
+      <textarea id="ia-sujet" placeholder="Ex: Femme enceinte hémorragie au bloc + prématuré. Saturation maternité CHANGE. Coordination SAMU et transfert vers GHTLMB nécessaires."></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      <div class="form-row"><label>Durée exercice</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="ia-duree-j" style="flex:0 0 auto;width:70px">
+            <option value="0" selected>0 j</option>
+            <option value="1">1 j</option>
+            <option value="2">2 j</option>
+          </select>
+          <select id="ia-duree-h" style="flex:0 0 auto;width:70px">
+            <option value="0" selected>0 h</option>
+            <option value="1">1 h</option><option value="2">2 h</option>
+            <option value="3">3 h</option><option value="4">4 h</option>
+            <option value="6">6 h</option><option value="8">8 h</option>
+            <option value="12">12 h</option>
+          </select>
+          <select id="ia-duree-m" style="flex:0 0 auto;width:80px">
+            <option value="0">0 min</option>
+            <option value="15">15 min</option>
+            <option value="30" selected>30 min</option>
+            <option value="45">45 min</option>
+          </select>
+          <input id="ia-duree" type="hidden" value="30">
+        </div>
+      </div>
+      <div class="form-row"><label>Durée réelle simulée</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="ia-dureereel-j" style="flex:0 0 auto;width:70px">
+            <option value="0" selected>0 j</option>
+            <option value="1">1 j</option>
+            <option value="2">2 j</option>
+            <option value="3">3 j</option>
+          </select>
+          <select id="ia-dureereel-h" style="flex:0 0 auto;width:70px">
+            <option value="0">0 h</option>
+            <option value="1">1 h</option><option value="2">2 h</option>
+            <option value="4" selected>4 h</option><option value="6">6 h</option>
+            <option value="8">8 h</option><option value="12">12 h</option>
+            <option value="24">24 h</option>
+          </select>
+          <select id="ia-dureereel-m" style="flex:0 0 auto;width:80px">
+            <option value="0" selected>0 min</option>
+            <option value="15">15 min</option>
+            <option value="30">30 min</option>
+            <option value="45">45 min</option>
+          </select>
+          <input id="ia-duree-reel" type="hidden" value="240">
+        </div>
+      </div>
+      <!-- v2.3.90 — recalcul auto des champs cachés ia-duree et ia-duree-reel -->
+      <script>
+      (function(){
+        function recomputeDurees(){
+          var j1 = parseInt(document.getElementById('ia-duree-j').value,10)||0;
+          var h1 = parseInt(document.getElementById('ia-duree-h').value,10)||0;
+          var m1 = parseInt(document.getElementById('ia-duree-m').value,10)||0;
+          var j2 = parseInt(document.getElementById('ia-dureereel-j').value,10)||0;
+          var h2 = parseInt(document.getElementById('ia-dureereel-h').value,10)||0;
+          var m2 = parseInt(document.getElementById('ia-dureereel-m').value,10)||0;
+          var total1 = j1*1440 + h1*60 + m1;
+          var total2 = j2*1440 + h2*60 + m2;
+          if (total1 <= 0) total1 = 30;   // défaut plancher
+          if (total2 <= 0) total2 = 240;
+          document.getElementById('ia-duree').value = total1;
+          document.getElementById('ia-duree-reel').value = total2;
+        }
+        ['ia-duree-j','ia-duree-h','ia-duree-m',
+         'ia-dureereel-j','ia-dureereel-h','ia-dureereel-m'].forEach(function(id){
+          var el = document.getElementById(id);
+          if (el) el.addEventListener('change', recomputeDurees);
+        });
+        recomputeDurees();
+      })();
+      </script>
+      <div class="form-row"><label>Type de crise</label>
+        <select id="ia-type">
+          <option value="SANITAIRE">🏥 Sanitaire</option>
+          <option value="CYBER">💻 Cyber pur</option>
+          <option value="MIXTE">⚡ Mixte</option>
+          <option value="RH">👥 RH / Continuité de service</option>
+          <option value="TERTIAIRE">🏨 Accueil / Logistique</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Complexité</label>
+        <select id="ia-complexite">
+          <option value="FACILE">Facile — peu de stimuli, crise simple</option>
+          <option value="MOYEN" selected>Moyen — crise évoluant, décisions multiples</option>
+          <option value="DIFFICILE">Difficile — incidents en cascade, arbitrages</option>
+          <option value="EXPERT">Expert — crise majeure, saturation</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Nombre de participants</label><input id="ia-nb-joueurs" type="number" value="4" min="1" max="20"></div>
+      <div class="form-row"><label>Nombre de stimuli</label><input id="ia-nb-stimuli" type="number" value="8" min="3" max="20"></div>
+    </div>
+
+    <!-- v2186a — Sélecteurs visuels (chips) à la place des <select multiple> -->
+    <div class="form-row">
+      <label>Stimuli externes (cocher les acteurs externes à intégrer)
+        <span class="chip-counter" id="ia-ext-counter"></span>
+      </label>
+      <div class="chip-row" id="ia-stimuli-ext-chips" onclick="_iaUpdateCounters()">
+        <div class="chip-orange" data-v="samu" onclick="toggleChip(this)">🚑 SAMU / Régulation</div>
+        <div class="chip-orange" data-v="prefecture" onclick="toggleChip(this)">🏛 Préfecture / ARS</div>
+        <div class="chip-orange" data-v="medias" onclick="toggleChip(this)">📰 Médias / Presse</div>
+        <div class="chip-orange" data-v="famille" onclick="toggleChip(this)">👨‍👩‍👧 Familles / Patients</div>
+        <div class="chip-orange" data-v="cert_sante" onclick="toggleChip(this)">🛡 CERT Santé / ANSSI</div>
+        <div class="chip-orange" data-v="ght_voisin" onclick="toggleChip(this)">🏥 Établissement voisin (hors GHT)</div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>Valeurs métiers à travailler (cocher les compétences ciblées)
+        <span class="chip-counter" id="ia-val-counter"></span>
+      </label>
+      <div class="chip-row" id="ia-valeurs-chips" onclick="_iaUpdateCounters()">
+        <div class="chip-purple on" data-v="coordination" onclick="toggleChip(this)">🤝 Coordination inter-services</div>
+        <div class="chip-purple on" data-v="communication" onclick="toggleChip(this)">📢 Communication de crise</div>
+        <div class="chip-purple" data-v="decision" onclick="toggleChip(this)">⚖ Prise de décision sous pression</div>
+        <div class="chip-purple" data-v="transfert" onclick="toggleChip(this)">🚑 Gestion des transferts</div>
+        <div class="chip-purple" data-v="capacite" onclick="toggleChip(this)">🛏 Gestion des capacités</div>
+        <div class="chip-purple" data-v="continuite" onclick="toggleChip(this)">⚙ Continuité de service</div>
+        <div class="chip-purple" data-v="cyber_response" onclick="toggleChip(this)">🛡 Réponse cyber (CERT)</div>
+        <div class="chip-purple" data-v="rh" onclick="toggleChip(this)">👥 Gestion RH urgente</div>
+        <div class="chip-purple" data-v="ethique" onclick="toggleChip(this)">⚕ Éthique / Choix priorisation</div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>Services supports impliqués (cocher ceux qui doivent jouer un rôle)
+        <span class="chip-counter" id="ia-svc-counter"></span>
+      </label>
+      <div class="chip-row" id="ia-services-chips" onclick="_iaUpdateCounters()">
+        <div class="chip-green" data-v="imagerie" onclick="toggleChip(this)">📷 Imagerie / Radiologie</div>
+        <div class="chip-green" data-v="labo" onclick="toggleChip(this)">🧪 Laboratoire</div>
+        <div class="chip-green" data-v="pharmacie" onclick="toggleChip(this)">💊 Pharmacie</div>
+        <div class="chip-green" data-v="bloc" onclick="toggleChip(this)">⚕ Bloc opératoire</div>
+        <div class="chip-green" data-v="sterilisation" onclick="toggleChip(this)">🧼 Stérilisation</div>
+        <div class="chip-green" data-v="dsi" onclick="toggleChip(this)">💻 DSI / Informatique</div>
+        <div class="chip-green" data-v="biomed" onclick="toggleChip(this)">🔧 Biomédical</div>
+        <div class="chip-green" data-v="securite" onclick="toggleChip(this)">🛡 Sécurité / Gardiennage</div>
+        <div class="chip-green" data-v="restauration" onclick="toggleChip(this)">🍽 Restauration / Hôtellerie</div>
+        <div class="chip-green" data-v="transport" onclick="toggleChip(this)">🚐 Transport / Brancardage</div>
+        <div class="chip-green" data-v="lingerie" onclick="toggleChip(this)">👕 Lingerie / Linge</div>
+        <div class="chip-green" data-v="dechets" onclick="toggleChip(this)">🗑 Évacuation déchets DASRI</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Perturbations fonctionnelles (pannes, indisponibilités...)</label>
+      <input id="ia-perturbations" placeholder="Ex: SIH indisponible, scanner en panne, DPI inaccessible, téléphonie fixe coupée">
+    </div>
+    <div class="form-row">
+      <label>Sites participants</label>
+      <div class="sites-row" id="ia-sites-sel">
+        <div class="site-chip on" data-s="CHAG" onclick="toggleChip(this)">CHANGE</div>
+        <div class="site-chip" data-s="GHTLMB" onclick="toggleChip(this)">GHTLMB</div>
+        <div class="site-chip" data-s="CHRUMILLY" onclick="toggleChip(this)">CHRUMILLY</div>
+        <div class="site-chip" data-s="HDLEMAN" onclick="toggleChip(this)">HDLEMAN</div>
+        <div class="site-chip" data-s="HPMB" onclick="toggleChip(this)">HPMB</div>
+        <div class="site-chip" data-s="CHB" onclick="toggleChip(this)">CHB</div>
+        <div class="site-chip" data-s="CHPG" onclick="toggleChip(this)">CHPG</div>
+      </div>
+    </div>
+    <div id="ia-loading" class="ia-loading" style="display:none"><span class="spin">⏳</span> SCRIBE génère votre scénario (30-60s)...</div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-blue" id="btn-gen" onclick="submitGenIA()">🤖 Générer</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('gen-ia-form').style.display='none'">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB EXERCICE ── -->
+<div id="tab-exercice" class="tab-pane">
+  <!-- Panneau joueurs prêts -->
+  <div class="card" id="prets-card">
+    <div class="card-title" style="display:flex;justify-content:space-between">
+      <span>✋ JOUEURS PRÊTS</span>
+      <button onclick="resetPrets()" style="font-family:var(--mo);font-size:8px;padding:2px 8px;background:none;border:1px solid var(--bd);border-radius:3px;cursor:pointer;color:var(--mu)">Réinitialiser</button>
+    </div>
+    <div id="prets-list" style="display:flex;gap:8px;flex-wrap:wrap;min-height:30px">
+      <span style="font-family:var(--mo);font-size:10px;color:var(--mu)">En attente de déclarations...</span>
+    </div>
+    <div id="prets-info" style="font-family:var(--mo);font-size:9px;color:var(--mu);margin-top:6px"></div>
+  </div>
+
+  <!-- Contrôles -->
+  <div class="card">
+    <div class="card-title">Contrôle de l'exercice</div>
+    <div id="no-sc-msg" style="font-family:var(--mo);font-size:10px;color:var(--mu);padding:6px 0">
+      ← Sélectionnez un scénario dans l'onglet SCÉNARIOS puis choisissez les sites participants
+    </div>
+    <div id="sc-selected" style="display:none">
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px">
+        <div style="flex:1">
+          <div id="sc-sel-titre" style="font-weight:700;font-size:14px;margin-bottom:4px"></div>
+          <div id="sc-sel-desc" style="font-size:11px;color:var(--mu)"></div>
+        </div>
+        <button onclick="document.getElementById('sc-resume-panel').style.display=document.getElementById('sc-resume-panel').style.display==='none'?'block':'none'" class="btn btn-ghost" style="font-size:9px">📋 Résumé / Configurer</button>
+      </div>
+      <!-- Panel résumé + toggle stimuli -->
+      <div id="sc-resume-panel" style="display:none;background:var(--s2);border:1px solid var(--bd);border-radius:7px;padding:12px;margin-bottom:12px">
+        <div style="font-family:var(--mo);font-size:9px;font-weight:700;color:var(--mu);margin-bottom:8px">STIMULI — Cliquer pour activer/désactiver</div>
+        <div id="stimuli-toggle-list" style="display:flex;flex-direction:column;gap:5px"></div>
+        <div style="margin-top:10px;font-family:var(--mo);font-size:9px;color:var(--mu)">
+          Objectifs : <span id="sc-sel-objectifs" style="color:var(--tx)"></span>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Sites participants</label>
+        <div class="sites-row" id="exo-sites-sel">
+          <div class="site-chip on" data-s="CHAG" onclick="toggleChip(this)">CHANGE</div>
+          <div class="site-chip on" data-s="GHTLMB" onclick="toggleChip(this)">GHTLMB</div>
+          <div class="site-chip" data-s="CHRUMILLY" onclick="toggleChip(this)">CHRUMILLY</div>
+          <div class="site-chip" data-s="HDLEMAN" onclick="toggleChip(this)">HDLEMAN</div>
+          <div class="site-chip" data-s="HPMB" onclick="toggleChip(this)">HPMB</div>
+          <div class="site-chip" data-s="CHB" onclick="toggleChip(this)">CHB</div>
+          <div class="site-chip" data-s="CHPG" onclick="toggleChip(this)">CHPG</div>
+        </div>
+      </div>
+    </div>
+    <div class="ctrl-row" style="margin-top:10px">
+      <button class="btn btn-green" id="btn-start" onclick="startExercice()" disabled>▶ DÉMARRER</button>
+      <button class="btn btn-orange" id="btn-pause" onclick="pauseExercice()" disabled>⏸ PAUSE</button>
+      <button class="btn btn-red" id="btn-stop" onclick="stopExercice()" disabled>⏹ ARRÊTER</button>
+      <button class="btn" style="background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none" onclick="openAdhocModal()" title="Créer et envoyer un stimulus à la volée pour déstabiliser les équipes">⚡ Stimulus manuel</button>
+      <button class="btn" style="background:#7c3aed;color:#fff;border:none" onclick="confirmResetAll()" title="Efface TOUT : incidents, transferts, messages, décisions — sur toutes les instances ET le collecteur">🧹 RESET TOUT</button>
+      <button class="btn btn-ghost" onclick="openInjectionLog()" title="Diagnostic : voir ce que les instances ont vraiment répondu aux stimuli">🔍 Logs</button>
+      <div class="stat-card"><div class="stat-val" id="stat-time">--:--</div><div class="stat-lbl">Temps</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-done">0</div><div class="stat-lbl">Injectés</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">Stimuli</div></div>
+    </div>
+    <div id="tokens-status" style="font-family:var(--mo);font-size:9px;color:var(--mu)"></div>
+  </div>
+
+  <!-- v2201 — Modal éditeur de stimulus ad-hoc -->
+  <div id="adhoc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;align-items:center;justify-content:center" onclick="if(event.target===this)closeAdhocModal()">
+    <div style="background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:20px;max-width:650px;width:92%;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:15px">
+        <div style="font-family:var(--mo);font-size:13px;font-weight:700;color:var(--tx)">⚡ Stimulus manuel — déstabilisation</div>
+        <button onclick="closeAdhocModal()" style="background:none;border:none;color:var(--mu);cursor:pointer;font-size:18px">✕</button>
+      </div>
+      <div style="font-family:var(--mo);font-size:10px;color:var(--mu);margin-bottom:12px;line-height:1.5">
+        Créez un stimulus qui n'est pas dans le scénario pour tester la réactivité<br>(ex: pénurie essence, sabotage, afflux inattendu…). Envoyé immédiatement à la cible.
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu);display:block;margin-bottom:3px">Type</label>
+          <select id="adhoc-type" onchange="adhocOnTypeChange()" style="width:100%;padding:5px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+            <option value="message">💬 Message chat (canal général-local)</option>
+            <option value="incident">🚨 Incident</option>
+            <option value="transfert">🚑 Transfert patient</option>
+            <option value="decision">📋 Décision à prendre</option>
+            <!-- v2309 — Stimuli systémiques qui modifient l'état de
+                 l'hôpital simulé (capacité, brancardage). Plus puissants
+                 que les stimuli déclaratifs : le directeur de crise voit
+                 ses indicateurs bouger en temps réel et doit réagir. -->
+            <option value="capacite">🛏 Tension capacité (lits/RH/matériel)</option>
+            <option value="brancardage">🧑‍🦽 Mission brancardage</option>
+          </select>
+        </div>
+        <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu);display:block;margin-bottom:3px">Cible (site)</label>
+          <select id="adhoc-cible" style="width:100%;padding:5px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px"></select>
+        </div>
+      </div>
+
+      <div style="margin-top:10px"><label style="font-family:var(--mo);font-size:9px;color:var(--mu);display:block;margin-bottom:3px">Titre (optionnel — visible par l'animateur seulement)</label>
+        <input type="text" id="adhoc-titre" placeholder="Ex: Pénurie carburant SMUR" style="width:100%;padding:5px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+      </div>
+
+      <!-- Zone spécifique selon type -->
+      <div id="adhoc-fields-message" class="adhoc-fields" style="margin-top:10px">
+        <label style="font-family:var(--mo);font-size:9px;color:var(--mu);display:block;margin-bottom:3px">Contenu du message</label>
+        <textarea id="adhoc-msg-contenu" rows="3" placeholder="Ex: ARS Auvergne-Rhône-Alpes nous informe d'une pénurie de carburant impactant les transports sanitaires…" style="width:100%;padding:5px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px;resize:vertical"></textarea>
+      </div>
+
+      <div id="adhoc-fields-incident" class="adhoc-fields" style="margin-top:10px;display:none">
+        <div style="margin-bottom:10px">
+          <label style="font-family:var(--mo);font-size:9px;color:var(--mu);display:block;margin-bottom:4px">⚡ Presets rapides (clic pour pré-remplir)</label>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            <button type="button" onclick="adhocPresetIncident('cyber_dpi')" class="adhoc-preset-btn">💻 Panne DPI</button>
+            <button type="button" onclick="adhocPresetIncident('cyber_ransomware')" class="adhoc-preset-btn">🔒 Ransomware</button>
+            <button type="button" onclick="adhocPresetIncident('afflux')" class="adhoc-preset-btn">🚑 Afflux urgences</button>
+            <button type="button" onclick="adhocPresetIncident('panne_elec')" class="adhoc-preset-btn">⚡ Panne électrique</button>
+            <button type="button" onclick="adhocPresetIncident('penurie_med')" class="adhoc-preset-btn">💊 Rupture médoc</button>
+            <button type="button" onclick="adhocPresetIncident('rh_manque')" class="adhoc-preset-btn">👥 Manque RH</button>
+            <button type="button" onclick="adhocPresetIncident('nrbc')" class="adhoc-preset-btn">☣️ NRBC</button>
+            <button type="button" onclick="adhocPresetIncident('incendie')" class="adhoc-preset-btn">🔥 Incendie</button>
+          </div>
+        </div>
+        <label style="font-family:var(--mo);font-size:9px;color:var(--mu);display:block;margin-bottom:3px">Fait (visible par les joueurs)</label>
+        <textarea id="adhoc-inc-fait" rows="2" placeholder="Ex: Panne électrique au bâtiment B — groupes de secours défaillants" style="width:100%;padding:5px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px;resize:vertical"></textarea>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Urgence (1-4)</label>
+            <select id="adhoc-inc-urgency" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+              <option value="1">1 - Info</option><option value="2">2 - Vigilance</option><option value="3" selected>3 - Alerte</option><option value="4">4 - Critique</option>
+            </select>
+          </div>
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Type</label>
+            <select id="adhoc-inc-type" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+              <option>CYBER</option><option>SANITAIRE</option><option>MIXTE</option><option>TECHNIQUE</option><option>RH</option><option>TERTIAIRE</option>
+            </select>
+          </div>
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Déclarant</label>
+            <input type="text" id="adhoc-inc-declarant" placeholder="Technicien, IDE…" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+          </div>
+        </div>
+        <div style="margin-top:8px"><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Unité fonctionnelle <span style="color:var(--mu)">(recommandé pour affichage dans le bon pôle SOINS)</span></label>
+          <select id="adhoc-inc-uf" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+            <option value="">— Aucune (non rattaché à un pôle) —</option>
+            <option value="URGENCES">URGENCES</option>
+            <option value="SOINS CRITIQUES">SOINS CRITIQUES (réa, USI)</option>
+            <option value="CHIRURGIE ANESTHESIE">CHIRURGIE ANESTHESIE (blocs)</option>
+            <option value="MEDECINE">MEDECINE (cardio, pneumo…)</option>
+            <option value="CARDIOVASCULAIRE">CARDIOVASCULAIRE</option>
+            <option value="FME">FME (maternité, pédiatrie)</option>
+            <option value="CANCEROLOGIE">CANCEROLOGIE</option>
+            <option value="GERIATRIE">GERIATRIE</option>
+            <option value="SANTE MENTALE">SANTE MENTALE</option>
+            <option value="MEDICO-TECHNIQUE ET REEDUCATION">MEDICO-TECHNIQUE (labo, imagerie, pharma)</option>
+            <option value="SUPPORT">SUPPORT (DSI, logistique, direction)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="adhoc-fields-transfert" class="adhoc-fields" style="margin-top:10px;display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Unité origine</label>
+            <input type="text" id="adhoc-tr-origine" placeholder="Urgences, Maternité…" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+          </div>
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Établissement destination</label>
+            <select id="adhoc-tr-dest" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+              <option value="CHAG">CHANGE</option><option value="GHTLMB">GHTLMB</option><option value="CHRUMILLY">CHRUMILLY</option><option value="HDLEMAN">HDLEMAN</option><option value="HPMB">HPMB</option><option value="CHB">CHB</option><option value="CHPG">CHPG</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Motif</label>
+            <input type="text" id="adhoc-tr-motif" placeholder="Saturation, spécialité…" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+          </div>
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Transport / Urgence / ETA</label>
+            <div style="display:flex;gap:4px">
+              <select id="adhoc-tr-transport" style="flex:1;padding:4px;font-family:var(--mo);font-size:10px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px"><option>SMUR</option><option>VSAV</option><option>VSL</option><option>HÉLICO</option></select>
+              <select id="adhoc-tr-urgence" style="flex:1;padding:4px;font-family:var(--mo);font-size:10px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px"><option>IMMEDIAT</option><option>URGENT</option><option>PROGRAMMÉ</option></select>
+              <input type="number" id="adhoc-tr-eta" value="30" min="5" max="180" style="width:55px;padding:4px;font-family:var(--mo);font-size:10px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px" title="ETA en minutes">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="adhoc-fields-decision" class="adhoc-fields" style="margin-top:10px;display:none">
+        <label style="font-family:var(--mo);font-size:9px;color:var(--mu);display:block;margin-bottom:3px">Décision à prendre</label>
+        <textarea id="adhoc-dec-contenu" rows="3" placeholder="Ex: Arbitrer entre continuer les interventions programmées ou basculer en mode dégradé…" style="width:100%;padding:5px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px;resize:vertical"></textarea>
+      </div>
+
+      <!-- v2309 — Stimulus capacité : crée des tensions réalistes sur les
+           lits, RH et matériel d'un service. Le plus puissant des
+           stimuli systémiques : les indicateurs basculent au rouge et
+           l'équipe DOIT réagir (report chirurgies, transferts, renforts).
+           Les presets couvrent les cas terrain les plus fréquents. -->
+      <div id="adhoc-fields-capacite" class="adhoc-fields" style="margin-top:10px;display:none">
+        <div style="margin-bottom:10px">
+          <label style="font-family:var(--mo);font-size:9px;color:var(--mu);display:block;margin-bottom:4px">⚡ Presets rapides (clic pour pré-remplir)</label>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            <button type="button" onclick="adhocPresetCapacite('saturation_ortho')" class="adhoc-preset-btn">🛏 Ortho saturée</button>
+            <button type="button" onclick="adhocPresetCapacite('saturation_rea')" class="adhoc-preset-btn">🚨 Réa saturée</button>
+            <button type="button" onclick="adhocPresetCapacite('ferme_bloc')" class="adhoc-preset-btn">🔒 Bloc fermé</button>
+            <button type="button" onclick="adhocPresetCapacite('rh_manque_inf')" class="adhoc-preset-btn">👩‍⚕️ Manque IDE</button>
+            <button type="button" onclick="adhocPresetCapacite('rh_renfort')" class="adhoc-preset-btn">➕ Renfort arrivé</button>
+            <button type="button" onclick="adhocPresetCapacite('preter_coursier')" class="adhoc-preset-btn">🏃 Coursiers prêtables</button>
+            <button type="button" onclick="adhocPresetCapacite('mat_panne_imag')" class="adhoc-preset-btn">📸 Imagerie HS</button>
+            <button type="button" onclick="adhocPresetCapacite('retour_normal')" class="adhoc-preset-btn">✅ Retour normal</button>
+          </div>
+        </div>
+        <!-- v2309-hotfix — Multi-sélection d'unités : dropdown chargé
+             dynamiquement depuis le référentiel capacité de l'instance
+             cible + "+" pour ajouter plusieurs unités. Le stimulus est
+             ensuite dispatché sur chaque unité sélectionnée (une
+             déclaration par unité). Très utile pour simuler une bascule
+             simultanée de plusieurs services.
+             Champ input libre conservé en dessous comme fallback pour
+             les cas où l'unité n'est pas encore dans le référentiel. -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <label style="font-family:var(--mo);font-size:9px;color:var(--mu);display:block;margin-bottom:3px">Unités cibles (multi-sélection)</label>
+            <div style="display:flex;gap:4px">
+              <select id="adhoc-cap-unite-picker" style="flex:1;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+                <option value="">— Chargement…</option>
+              </select>
+              <button type="button" onclick="adhocAddCapaciteUnite()"
+                      title="Ajouter cette unité à la liste"
+                      style="padding:4px 10px;font-family:var(--mo);font-size:11px;background:rgba(99,102,241,.15);border:1px solid #6366f1;color:#818cf8;border-radius:4px;cursor:pointer;font-weight:700">+</button>
+            </div>
+            <div id="adhoc-cap-unites-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;min-height:18px"></div>
+            <input type="text" id="adhoc-cap-unite" placeholder="Ou saisir un nom libre si absent du référentiel" style="width:100%;padding:4px;font-family:var(--mo);font-size:10px;background:var(--s);border:1px solid var(--bd);color:var(--mu);border-radius:4px;margin-top:6px">
+          </div>
+          <div>
+            <label style="font-family:var(--mo);font-size:9px;color:var(--mu);display:block;margin-bottom:3px">Rédacteur</label>
+            <input type="text" id="adhoc-cap-redacteur" placeholder="Cadre, Surveillant…" value="Stimulus animateur" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Statut lits</label>
+            <select id="adhoc-cap-statut-lits" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+              <option value="normal">normal</option>
+              <option value="tension">tension</option>
+              <option value="critique">critique</option>
+              <option value="ferme">fermé</option>
+            </select>
+          </div>
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Statut RH</label>
+            <select id="adhoc-cap-statut-rh" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+              <option value="complet">complet</option>
+              <option value="tension">tension</option>
+              <option value="insuffisant">insuffisant</option>
+              <option value="degrade">dégradé</option>
+            </select>
+          </div>
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Statut matériel</label>
+            <select id="adhoc-cap-statut-mat" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+              <option value="ok">ok</option>
+              <option value="degrade">dégradé</option>
+              <option value="hs">HS</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Besoin renfort (agents manquants)</label>
+            <input type="number" id="adhoc-cap-renfort" min="0" value="0" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+          </div>
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Agents prêtables (coursiers, renforts dispo)</label>
+            <input type="number" id="adhoc-cap-preter" min="0" value="0" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+          </div>
+        </div>
+        <div style="margin-top:8px"><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Commentaire (contexte pour les joueurs)</label>
+          <textarea id="adhoc-cap-commentaire" rows="2" placeholder="Ex: 3 patients en attente d'admission, 0 lit disponible. Un patient polytrauma attendu dans 20 min." style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px;resize:vertical"></textarea>
+        </div>
+      </div>
+
+      <!-- v2309 — Stimulus brancardage : crée une mission de transport.
+           Utile pour simuler les afflux, priorités P1 simultanées,
+           coordination inter-services, ou tensions avec équipements
+           (ascenseurs HS, couloir fermé). -->
+      <div id="adhoc-fields-brancardage" class="adhoc-fields" style="margin-top:10px;display:none">
+        <div style="margin-bottom:10px">
+          <label style="font-family:var(--mo);font-size:9px;color:var(--mu);display:block;margin-bottom:4px">⚡ Presets rapides</label>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">
+            <button type="button" onclick="adhocPresetBrancardage('urg_polytrauma')" class="adhoc-preset-btn">🚨 Polytrauma P1</button>
+            <button type="button" onclick="adhocPresetBrancardage('urg_scanner')" class="adhoc-preset-btn">📸 Scan urgent</button>
+            <button type="button" onclick="adhocPresetBrancardage('bloc_prog')" class="adhoc-preset-btn">🔪 Bloc programmé</button>
+            <button type="button" onclick="adhocPresetBrancardage('sortie_rea')" class="adhoc-preset-btn">⬇ Sortie Réa</button>
+            <button type="button" onclick="adhocPresetBrancardage('deces_morgue')" class="adhoc-preset-btn">⚰ Vers morgue</button>
+            <button type="button" onclick="adhocPresetBrancardage('analyses_labo')" class="adhoc-preset-btn">🧪 Analyses labo</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">UF origine</label>
+            <input type="text" id="adhoc-br-origine" placeholder="Urgences, Réa, Bloc…" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+          </div>
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">UF destination</label>
+            <input type="text" id="adhoc-br-destination" placeholder="Imagerie, Réa, Ortho…" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Priorité</label>
+            <select id="adhoc-br-priorite" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+              <option value="P1">P1 — Urgence vitale</option>
+              <option value="P2" selected>P2 — Urgent</option>
+              <option value="P3">P3 — Programmé</option>
+            </select>
+          </div>
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Type transport</label>
+            <select id="adhoc-br-type-transport" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+              <option value="BRANCARD" selected>Brancard</option>
+              <option value="LIT">Lit</option>
+              <option value="FAUTEUIL">Fauteuil</option>
+              <option value="MARCHE">Marche</option>
+            </select>
+          </div>
+          <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Référence patient</label>
+            <input type="text" id="adhoc-br-ref" placeholder="IPP, pseudonyme exo" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+          </div>
+        </div>
+        <div style="margin-top:8px"><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Motif médical</label>
+          <input type="text" id="adhoc-br-motif" placeholder="Ex: Scanner urgent post-chute, Intervention programmée genou" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+        </div>
+        <div style="margin-top:8px"><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Commentaire (contexte animateur)</label>
+          <input type="text" id="adhoc-br-commentaire" placeholder="Ex: 3e mission P1 en 10 min, équipe saturée" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <label style="font-family:var(--mo);font-size:9px;color:var(--mu);display:block;margin-bottom:3px">Description animateur (mémo privé, non envoyé aux joueurs)</label>
+        <input type="text" id="adhoc-desc-anim" placeholder="Ex: Destabilisation liée à la crise carburant actuelle" style="width:100%;padding:5px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:15px;justify-content:flex-end">
+        <button class="btn btn-ghost" onclick="closeAdhocModal()">Annuler</button>
+        <button class="btn" style="background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none" onclick="submitAdhoc()">⚡ Envoyer maintenant</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- v2202 — Modal log injection (diagnostic) -->
+  <div id="injlog-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;align-items:center;justify-content:center" onclick="if(event.target===this)closeInjectionLog()">
+    <div style="background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:20px;max-width:900px;width:95%;max-height:85vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-family:var(--mo);font-size:13px;font-weight:700;color:var(--tx)">🔍 Log d'injection — 100 dernières entrées</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="refreshInjectionLog()" style="font-size:10px;padding:3px 8px">🔄 Rafraîchir</button>
+          <button class="btn btn-ghost" onclick="closeInjectionLog()" style="font-size:12px;padding:3px 8px">✕</button>
+        </div>
+      </div>
+      <div style="font-family:var(--mo);font-size:10px;color:var(--mu);margin-bottom:10px">
+        Permet de diagnostiquer quand un stimulus est vert côté animateur mais n'arrive pas côté joueur :<br>
+        vérifier le <b>status HTTP</b> (200/201 = OK), le <b>salon_id</b> ciblé, et surtout la <b>réponse</b> de l'instance.
+      </div>
+      <div id="injlog-content" style="font-family:var(--mo);font-size:10px;max-height:65vh;overflow-y:auto"></div>
+    </div>
+  </div>
+
+  <!-- Timeline stimuli -->
+  <div class="card">
+    <div class="card-title">⚡ Stimuli — Cliquer pour injecter manuellement</div>
+    <div id="stimuli-list">
+      <div style="font-family:monospace;font-size:10px;color:var(--mu);text-align:center;padding:20px">
+        Sélectionnez et démarrez un exercice pour voir les stimuli
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB BILAN ── -->
+<div id="tab-bilan" class="tab-pane">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="card-title" style="margin:0">📊 Bilan temps réel</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="bilan-clock" style="font-family:var(--mo);font-size:10px;color:var(--mu)">—</span>
+        <button class="btn btn-blue" onclick="refreshBilan()" style="font-size:9px;padding:4px 10px">↻ Actualiser</button>
+      </div>
+    </div>
+
+    <!-- KPI globaux -->
+    <div id="bilan-kpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:14px">
+      <div class="b-kpi"><div class="b-kpi-label">Sites en ligne</div><div class="b-kpi-val" id="b-online">—</div></div>
+      <div class="b-kpi"><div class="b-kpi-label">Incidents ouverts</div><div class="b-kpi-val" id="b-inc">—</div></div>
+      <div class="b-kpi"><div class="b-kpi-label">Critiques (urg≥3)</div><div class="b-kpi-val" id="b-crit" style="color:var(--red)">—</div></div>
+      <div class="b-kpi"><div class="b-kpi-label">Transferts actifs</div><div class="b-kpi-val" id="b-tr">—</div></div>
+      <div class="b-kpi"><div class="b-kpi-label">Sites silencieux &gt;5min</div><div class="b-kpi-val" id="b-silent" style="color:var(--orange)">—</div></div>
+    </div>
+
+    <!-- Tableau par site -->
+    <div style="overflow-x:auto;border:1px solid var(--bd);border-radius:6px">
+      <table id="bilan-table" style="width:100%;border-collapse:collapse;font-family:var(--mo);font-size:10px">
+        <thead style="background:var(--s2);position:sticky;top:0">
+          <tr>
+            <th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--bd);font-weight:700">Site</th>
+            <th style="text-align:center;padding:8px 6px;border-bottom:1px solid var(--bd);font-weight:700">État</th>
+            <th style="text-align:center;padding:8px 6px;border-bottom:1px solid var(--bd);font-weight:700">Niveau</th>
+            <th style="text-align:center;padding:8px 6px;border-bottom:1px solid var(--bd);font-weight:700">Incidents</th>
+            <th style="text-align:center;padding:8px 6px;border-bottom:1px solid var(--bd);font-weight:700">Critiques</th>
+            <th style="text-align:center;padding:8px 6px;border-bottom:1px solid var(--bd);font-weight:700">Cyber</th>
+            <th style="text-align:center;padding:8px 6px;border-bottom:1px solid var(--bd);font-weight:700">Transferts</th>
+            <th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--bd);font-weight:700">Dernière activité</th>
+            <th style="text-align:center;padding:8px 6px;border-bottom:1px solid var(--bd);font-weight:700">Alerte</th>
+          </tr>
+        </thead>
+        <tbody id="bilan-tbody">
+          <tr><td colspan="9" style="text-align:center;padding:20px;color:var(--mu)">Chargement…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Bilan IA (post-exercice) -->
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--bd)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-family:var(--mo);font-size:10px;font-weight:700;color:var(--mu);letter-spacing:1px">📝 BILAN POST-EXERCICE (IA)</div>
+        <button class="btn btn-blue" onclick="generateBilan()" style="font-size:9px;padding:4px 10px">📥 Télécharger le rapport HTML</button>
+      </div>
+      <div id="bilan-content" style="font-family:var(--mo);font-size:10px;color:var(--mu);padding:10px">
+        Cliquez sur "Télécharger le rapport" en fin d'exercice pour générer un rapport HTML
+        autonome avec chronologie, KPIs par site, radar de compétences et scénario idéal.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal détail scénario -->
+<div id="sc-detail-modal" onclick="if(event.target===this)closeScenarioDetail()">
+  <div class="scd-box">
+    <div class="scd-header">
+      <div class="scd-header-icon" id="scd-icon">📋</div>
+      <div class="scd-header-text">
+        <div class="scd-header-title" id="scd-titre">—</div>
+        <div class="scd-header-sub" id="scd-sub">—</div>
+      </div>
+      <button class="scd-close" onclick="closeScenarioDetail()" title="Fermer">✕</button>
+    </div>
+    <div class="scd-body" id="scd-body">
+      <div style="text-align:center;padding:40px;font-family:var(--mo);font-size:11px;color:var(--mu)">Chargement...</div>
+    </div>
+    <div class="scd-footer">
+      <div class="scd-footer-left" id="scd-footer-meta">—</div>
+      <div style="display:flex;gap:8px">
+        <button class="scd-btn-cancel" onclick="closeScenarioDetail()">Fermer</button>
+        <button class="scd-btn-use" id="scd-btn-use" onclick="useScenarioFromModal()">✓ Utiliser ce scénario</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var _tok = localStorage.getItem('exo_anim_token') || '';
+var _selectedScenario = null;
+var _scenarioMap = {};
+var _allScenarios = [];
+var _joueursPrets = {};
+var _activeFilters = {type:'all',complexite:'all'};
+var _statusInterval = null;
+var _clockInterval = null;
+var _exoRunning = false;
+
+// ── Utils ──────────────────────────────────────────────────────────────────────
+function api(url,opts){
+  opts=opts||{};opts.headers=opts.headers||{};
+  opts.headers['Authorization']='Bearer '+_tok;
+  if(opts.body&&!opts.headers['Content-Type'])opts.headers['Content-Type']='application/json';
+  return fetch(url,opts);
+}
+function toast(msg,type){
+  var el=document.getElementById('toast');
+  el.textContent=msg;el.className='t-'+(type||'ok');el.style.display='block';
+  clearTimeout(el._t);el._t=setTimeout(function(){el.style.display='none';},5000);
+}
+function toggleChip(el){el.classList.toggle('on');}
+function getChips(containerId){
+  return Array.from(document.querySelectorAll('#'+containerId+' .site-chip.on'))
+    .map(function(e){return e.dataset.s;});
+}
+function showTab(id,btn){
+  document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  var pane=document.getElementById('tab-'+id);
+  if(pane) pane.classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(id==='scenarios') loadScenarios();
+  if(id==='supervision') loadSupervision();
+  if(id==='bilan') startBilanRefresh();
+  else stopBilanRefresh();
+}
+
+// ── Bilan temps réel (v2183) ─────────────────────────────────────────────────
+var _bilanTimer = null;
+
+function startBilanRefresh(){
+  refreshBilan();
+  if (_bilanTimer) clearInterval(_bilanTimer);
+  _bilanTimer = setInterval(refreshBilan, 5000);  // refresh 5s en mode bilan actif
+}
+function stopBilanRefresh(){
+  if (_bilanTimer) { clearInterval(_bilanTimer); _bilanTimer = null; }
+}
+
+function refreshBilan(){
+  api('/api/summary').then(function(r){return r.ok?r.json():[];}).then(function(sites){
+    renderBilan(sites);
+  }).catch(function(){
+    document.getElementById('bilan-tbody').innerHTML =
+      '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--red)">Erreur de chargement</td></tr>';
+  });
+}
+
+function renderBilan(sites){
+  if(!Array.isArray(sites) || !sites.length){
+    document.getElementById('bilan-tbody').innerHTML =
+      '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--mu)">Aucune donnée — aucun site n\'a encore poussé son état</td></tr>';
+    return;
+  }
+  var now = Date.now();
+  var SILENCE_MS = 5 * 60 * 1000;  // 5 minutes
+  var DOWN_MS    = 10 * 60 * 1000; // 10 minutes
+
+  // KPI globaux
+  var nOnline=0, totInc=0, totCrit=0, totTr=0, nSilent=0;
+  sites.forEach(function(s){
+    if(s.online) nOnline++;
+    totInc += (s.nb_incidents_actifs || 0);
+    totTr  += (s.nb_transferts_actifs || 0);
+    if((s.niveau_global==='CRISE'||s.niveau_global==='CRITIQUE')) totCrit++;
+    var ms = _bilanLastMs(s.timestamp);
+    if(s.online && ms !== null && (now - ms) > SILENCE_MS) nSilent++;
+  });
+  document.getElementById('b-online').textContent  = nOnline + '/' + sites.length;
+  document.getElementById('b-inc').textContent     = totInc;
+  document.getElementById('b-crit').textContent    = totCrit;
+  document.getElementById('b-tr').textContent      = totTr;
+  document.getElementById('b-silent').textContent  = nSilent;
+  document.getElementById('bilan-clock').textContent =
+    'mis à jour ' + new Date().toLocaleTimeString('fr-FR');
+
+  // Tableau par site
+  var rows = sites.map(function(s){
+    var ms = _bilanLastMs(s.timestamp);
+    var lastTxt = ms === null ? '—' : _agoTxt(now - ms);
+    var alertCls, alertTxt;
+    if(!s.online){
+      alertCls='b-alert b-alert-down'; alertTxt='⚠ HORS LIGNE';
+    } else if(ms !== null && (now - ms) > SILENCE_MS){
+      alertCls='b-alert b-alert-silent'; alertTxt='⏳ SILENCE > 5min';
+    } else {
+      alertCls='b-alert b-alert-ok'; alertTxt='—';
+    }
+
+    var nivClean = (s.niveau_global || 'INCONNU').replace(/[^A-Z]/g,'');
+    var nivBadge = '<span class="b-niv b-niv-'+ nivClean +'">'+ (s.niveau_global || 'INCONNU') +'</span>';
+
+    // KPIs détaillés depuis le payload originel (push fédération)
+    var etab = (typeof _bilanRaw !== 'undefined' && _bilanRaw[s.sigle]) || {};
+    var kpis = etab.kpis || {};
+    var nbCrit = kpis.incidents_critiques || kpis.incidents_crise || 0;
+    var nbCyber = kpis.cyber || 0;
+
+    return '<tr>' +
+      '<td><b>'+ s.sigle +'</b><div style="font-size:8px;color:var(--mu)">port '+ s.port +'</div></td>' +
+      '<td style="text-align:center"><span class="b-state '+ (s.online?'b-state-online':'b-state-offline') +'" title="'+ (s.online?'En ligne':'Hors ligne') +'"></span></td>' +
+      '<td style="text-align:center">'+ nivBadge +'</td>' +
+      '<td style="text-align:center;font-weight:700">'+ (s.nb_incidents_actifs || 0) +'</td>' +
+      '<td style="text-align:center;color:'+ (nbCrit>0?'#dc2626':'var(--mu)') +'">'+ nbCrit +'</td>' +
+      '<td style="text-align:center;color:'+ (nbCyber>0?'#1d4ed8':'var(--mu)') +'">'+ nbCyber +'</td>' +
+      '<td style="text-align:center">'+ (s.nb_transferts_actifs || 0) +'</td>' +
+      '<td>'+ lastTxt +'</td>' +
+      '<td style="text-align:center"><span class="'+ alertCls +'">'+ alertTxt +'</span></td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('bilan-tbody').innerHTML = rows;
+}
+
+function _bilanLastMs(ts){
+  if(!ts) return null;
+  try { return new Date(ts).getTime(); } catch(e) { return null; }
+}
+function _agoTxt(ms){
+  if(ms < 0) ms = 0;
+  var s = Math.floor(ms/1000);
+  if(s < 60) return 'il y a ' + s + 's';
+  var m = Math.floor(s/60);
+  if(m < 60) return 'il y a ' + m + ' min';
+  var h = Math.floor(m/60);
+  return 'il y a ' + h + 'h' + (m%60).toString().padStart(2,'0');
+}
+
+// ── Login ──────────────────────────────────────────────────────────────────────
+function doLogin(){
+  var login=document.getElementById('inp-login').value;
+  var pwd=document.getElementById('inp-pwd').value;
+  fetch('/api/ui/login',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({login:login,password:pwd})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){
+      _tok=d.token;localStorage.setItem('exo_anim_token',_tok);
+      document.getElementById('login-overlay').style.display='none';
+      init();
+    } else {document.getElementById('login-err').style.display='block';}
+  });
+}
+document.getElementById('inp-pwd').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+function init(){
+  loadSupervision();
+  loadScenarios();
+  startStatusPolling();
+  setInterval(function(){
+    var now=new Date();
+    document.getElementById('topbar-time').textContent=now.toLocaleTimeString('fr-FR');
+  },1000);
+}
+
+// ── Supervision ────────────────────────────────────────────────────────────────
+function loadSupervision(){
+  // Charger supervision + états prêts en parallèle
+  Promise.all([
+    api('/api/summary').then(function(r){return r.ok?r.json():[];}),
+    api('/api/exercice/prets').then(function(r){return r.ok?r.json():{};}).catch(function(){return {};})
+  ]).then(function(results){
+    var list=results[0], prets=results[1];
+    _joueursPrets=prets;
+    var grid=document.getElementById('inst-grid');
+    grid.innerHTML=list.map(function(e){
+      var niv=e.niveau_global||'INCONNU';
+      var estPret=prets&&prets[e.sigle];
+      var estOnline=e.online;
+      // Couleur dot : vert=prêt, orange=online mais pas prêt, rouge=offline
+      var dotCls=estPret?'dot-green':(estOnline?'dot-orange':'dot-red');
+      var dotTitle=estPret?'Prêt — '+prets[e.sigle].username:(estOnline?'En ligne':'Hors ligne');
+      // Bordure carte : verte si prêt
+      var cardStyle=estPret?'border:2px solid #22c55e;background:#f0fdf4;':
+                    (estOnline?'border:1px solid var(--bd);':'border:1px solid #fca5a5;background:#fff5f5;');
+      var pretBadge=estPret?'<span style="font-family:var(--mo);font-size:9px;padding:2px 8px;background:#22c55e;color:#fff;border-radius:10px;font-weight:700;margin-left:6px">✓ PRÊT</span>':'';
+      return '<div class="inst-card" style="'+cardStyle+'">'+
+        '<div style="display:flex;align-items:center">'+
+          '<div class="inst-sigle">'+e.sigle+'</div>'+pretBadge+
+        '</div>'+
+        '<div class="inst-port">:'+e.port+'</div>'+
+        '<div class="inst-status">'+
+          '<div class="dot '+dotCls+'" title="'+dotTitle+'"></div>'+
+          '<span class="niveau n-'+niv+'">'+niv+'</span>'+
+          '<span style="font-family:var(--mo);font-size:9px;color:var(--mu)">'+
+            (e.nb_incidents_actifs||0)+' inc.</span>'+
+        '</div>'+
+        (estPret?'<div style="font-family:var(--mo);font-size:9px;color:#15803d;margin-top:3px">'+prets[e.sigle].username+' — prêt</div>':'')+
+        '<div style="display:flex;gap:5px;margin-top:7px">'+
+          '<button class="inst-link" data-sigle="'+e.sigle+'" data-port="'+e.port+'" onclick="openInstPanel(this.dataset.sigle,parseInt(this.dataset.port))">🖥 Afficher</button>'+
+          '<button class="inst-link" data-sigle="'+e.sigle+'" data-port="'+e.port+'" onclick="openSiteSSO(this.dataset.sigle,parseInt(this.dataset.port))" title="Ouvre l\'instance dans un nouvel onglet avec connexion automatique (v2312)">↗ Nouvel onglet</button>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+  });
+}
+
+// ── Scénarios ──────────────────────────────────────────────────────────────────
+function renderScenarioCards(list){
+  var el=document.getElementById('scenarios-list');
+  if(!list||!list.length){
+    el.innerHTML='<div style="grid-column:1/-1;font-family:monospace;font-size:10px;color:var(--mu);text-align:center;padding:30px">Aucun scenario</div>';
+    return;
+  }
+  var BTYPE={'SANITAIRE':'#dcfce7:#15803d','CYBER':'#dbeafe:#1d4ed8','MIXTE':'#fef3c7:#d97706','RH':'#f3e8ff:#7c3aed','TERTIAIRE':'#ffedd5:#c2410c'};
+  var BCX={'FACILE':'#f0fdf4:#16a34a','MOYEN':'#fef3c7:#d97706','DIFFICILE':'#fee2e2:#dc2626','EXPERT':'#f3e8ff:#7c3aed'};
+  // v2194 — Escape HTML pour titres/filenames qui peuvent contenir des
+  // caractères spéciaux (apostrophes dans titres Albert, etc.)
+  var _esc=function(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');};
+  el.innerHTML=list.map(function(s){
+    var sel=(_selectedScenario&&_selectedScenario.filename===s.filename)?' selected':'';
+    var tc=(BTYPE[s.type_crise]||'#f1f5f9:#64748b').split(':');
+    var cx=(BCX[s.complexite]||'#f1f5f9:#64748b').split(':');
+    var icons={SANITAIRE:'🏥',CYBER:'💻',MIXTE:'⚡',RH:'👥',TERTIAIRE:'🏨'};
+    var ic=icons[s.type_crise]||'📋';
+    var fn=_esc(s.filename);
+    return '<div class="sc-card'+sel+'" data-fn="'+fn+'" onclick="selectScenarioByFile(this.dataset.fn)" id="sc-'+fn+'">'+
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;gap:4px">'+
+        '<div class="sc-titre" style="flex:1;min-width:0">'+ic+' '+_esc(s.titre)+'</div>'+
+        '<div style="display:flex;gap:2px;flex-shrink:0">'+
+          '<button data-fn="'+fn+'" onclick="event.stopPropagation();exportScenario(this.dataset.fn)" style="background:none;border:none;cursor:pointer;color:var(--mu);font-size:13px" title="Télécharger le JSON">💾</button>'+
+          '<button data-fn="'+fn+'" onclick="event.stopPropagation();deleteScenario(this.dataset.fn)" style="background:none;border:none;cursor:pointer;color:var(--mu);font-size:13px" title="Supprimer">🗑</button>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:5px;margin-bottom:7px">'+
+        '<span style="font-family:var(--mo);font-size:8px;padding:2px 7px;border-radius:10px;background:'+tc[0]+';color:'+tc[1]+';font-weight:700">'+_esc(s.type_crise)+'</span>'+
+        '<span style="font-family:var(--mo);font-size:8px;padding:2px 7px;border-radius:10px;background:'+cx[0]+';color:'+cx[1]+';font-weight:700">'+_esc(s.complexite)+'</span>'+
+      '</div>'+
+      '<div class="sc-meta" style="margin-bottom:8px">'+
+        '<span>&#9200; '+(s.duree_min|0)+'min</span>'+
+        '<span>&#9889; '+(s.nb_stimuli|0)+' stimuli</span>'+
+        '<span>&#128205; '+(s.nb_sites|0||1)+' site(s)</span>'+
+      '</div>'+
+      '<button class="btn btn-blue" style="font-size:9px;padding:4px 10px;width:100%" data-fn="'+fn+'" onclick="event.stopPropagation();useScenarioByFile(this.dataset.fn)">Utiliser</button>'+
+    '</div>';
+  }).join('');
+}
+
+function filterScenarios(){
+  var search=(document.getElementById('search-scenarios')||{}).value||'';
+  search=search.toLowerCase();
+  var filtered=_allScenarios.filter(function(s){
+    var typeOk=_activeFilters.type==='all'||s.type_crise===_activeFilters.type;
+    var cxOk=_activeFilters.complexite==='all'||s.complexite===_activeFilters.complexite;
+    var searchOk=!search||s.titre.toLowerCase().includes(search)||(s.description||'').toLowerCase().includes(search);
+    return typeOk&&cxOk&&searchOk;
+  });
+  renderScenarioCards(filtered);
+  var sumEl=document.getElementById('filter-summary');
+  if(sumEl) sumEl.textContent=filtered.length+' scenario'+(filtered.length>1?'s':'')+' affiche'+(filtered.length>1?'s':'');
+}
+
+function applyFilter(btn,filterType,val){
+  _activeFilters[filterType]=val;
+  var group=document.getElementById('filter-'+filterType+'-group');
+  if(group) group.querySelectorAll('.filter-btn').forEach(function(b){b.classList.toggle('active',b.dataset.val===val);});
+  filterScenarios();
+}
+
+function loadScenarios(){
+  api('/api/exercice/scenarios').then(function(r){return r.ok?r.json():[];})
+  .then(function(list){
+    _scenarioMap={};
+    list.forEach(function(s){_scenarioMap[s.filename]=s;});
+    _allScenarios=list;
+    filterScenarios();
+  });
+}
+
+function selectScenario(sJson){
+  var s=JSON.parse(sJson);
+  _selectedScenario=s;
+  document.querySelectorAll('.sc-card').forEach(function(c){c.classList.remove('selected');});
+  var el=document.getElementById('sc-'+s.filename);
+  if(el) el.classList.add('selected');
+}
+
+
+function selectScenarioByFile(filename){
+  var s=_scenarioMap[filename]; if(!s) return;
+  _selectedScenario=s;
+  document.querySelectorAll('.sc-card').forEach(function(c){c.classList.remove('selected');});
+  var card=document.getElementById('sc-'+filename);
+  if(card) card.classList.add('selected');
+  // Ouvrir le modal de détail
+  openScenarioDetail(filename);
+}
+
+// ── Modal détail scénario ──────────────────────────────────────────────────
+var _scdActiveFile = null;  // filename du scénario en cours d'affichage dans le modal
+
+function openScenarioDetail(filename){
+  var s = _scenarioMap[filename];
+  if(!s){ _toast('Scénario introuvable','err'); return; }
+  _scdActiveFile = filename;
+  var modal = document.getElementById('sc-detail-modal');
+  if(!modal) return;
+
+  // Pré-remplir le header avec ce qu'on a déjà
+  var icons = {SANITAIRE:'🏥',CYBER:'💻',MIXTE:'⚡',RH:'👥',TERTIAIRE:'🏨'};
+  document.getElementById('scd-icon').textContent = icons[s.type_crise] || '📋';
+  document.getElementById('scd-titre').textContent = s.titre || 'Scénario';
+  document.getElementById('scd-sub').textContent =
+    (s.type_crise||'—') + ' · ' + (s.complexite||'—') + ' · ' + (s.duree_min||'?') + ' min · ' +
+    (s.nb_stimuli||0) + ' stimuli';
+  document.getElementById('scd-footer-meta').textContent = filename;
+  document.getElementById('scd-body').innerHTML =
+    '<div style="text-align:center;padding:40px;font-family:var(--mo);font-size:11px;color:var(--mu)">' +
+    '<span style="display:inline-block;width:18px;height:18px;border:2px solid var(--mu);' +
+    'border-top-color:var(--blue);border-radius:50%;animation:sp 0.8s linear infinite;' +
+    'margin-right:8px;vertical-align:middle"></span>Chargement du scénario…</div>';
+  modal.classList.add('open');
+
+  // Charger le JSON complet
+  api('/api/exercice/scenarios/'+encodeURIComponent(filename))
+  .then(function(r){ return r.ok ? r.json() : null; })
+  .then(function(data){
+    if(!data){
+      document.getElementById('scd-body').innerHTML =
+        '<div style="text-align:center;padding:30px;color:var(--red)">Erreur de chargement</div>';
+      return;
+    }
+    renderScenarioDetail(data);
+  }).catch(function(){
+    document.getElementById('scd-body').innerHTML =
+      '<div style="text-align:center;padding:30px;color:var(--red)">Erreur réseau</div>';
+  });
+}
+
+function renderScenarioDetail(data){
+  var meta = data.meta || {};
+  var stimuli = (data.stimuli||[]).slice().sort(function(a,b){return (a.t_min||0)-(b.t_min||0);});
+  var acteurs = data.acteurs || [];
+
+  var html = '';
+
+  // Description + sujet
+  if(meta.description || meta.sujet){
+    html += '<div class="scd-section">' +
+      '<div class="scd-section-title">🎯 Contexte</div>' +
+      '<div class="scd-desc">' + _esc(meta.description || '') + '</div>';
+    if(meta.sujet && meta.sujet !== meta.description){
+      html += '<div class="scd-desc" style="margin-top:6px;font-style:italic;color:var(--mu)">' +
+        _esc(meta.sujet) + '</div>';
+    }
+    html += '</div>';
+  }
+
+  // Meta
+  html += '<div class="scd-section"><div class="scd-section-title">📊 Caractéristiques</div>' +
+    '<div class="scd-meta-grid">' +
+      _metaPill('⏱ Durée jeu', (meta.duree_min||'?') + ' min') +
+      _metaPill('⏳ Durée réelle simulée', (meta.duree_reel_min||'?') + ' min') +
+      _metaPill('⚡ Compression', 'x' + (meta.ratio_compression||1)) +
+      _metaPill('🎚 Complexité', meta.complexite || '—') +
+      _metaPill('🏥 Type', meta.type_crise || '—') +
+      _metaPill('⚡ Stimuli', (stimuli.length||0)) +
+      _metaPill('🏢 Établissements', acteurs.length) +
+    '</div></div>';
+
+  // Objectifs pédagogiques
+  if(meta.objectifs_pedagogiques && meta.objectifs_pedagogiques.length){
+    html += '<div class="scd-section"><div class="scd-section-title">🎓 Objectifs pédagogiques</div>' +
+      '<ul class="scd-obj-list">' +
+      meta.objectifs_pedagogiques.map(function(o){ return '<li>' + _esc(o) + '</li>'; }).join('') +
+      '</ul></div>';
+  }
+
+  // Acteurs / joueurs — v2312 — avec état d'activation de chaque site
+  if(acteurs.length){
+    html += '<div class="scd-section"><div class="scd-section-title">👥 Acteurs &amp; joueurs <span style="font-family:var(--mo);font-size:9px;color:var(--mu);font-weight:normal">— état des instances requises</span></div>' +
+      '<div id="scd-acteurs-status" style="font-family:var(--mo);font-size:10px;color:var(--mu);margin-bottom:8px">Vérification en cours…</div>' +
+      '<div class="scd-acteurs">' +
+      acteurs.map(function(a){
+        var joueurs = (a.joueurs||[]).map(function(j){
+          return '<div><b>' + _esc(j.display_name||j.username||'?') + '</b> — ' +
+            _esc(j.role_exercice||'') + '</div>';
+        }).join('');
+        var port = a.port || 0;
+        return '<div class="scd-acteur" data-sigle="' + _esc(a.sigle||'') + '" data-port="' + port + '" id="scd-act-' + _esc(a.sigle||'x') + '">' +
+          '<div class="scd-acteur-sigle">' + _esc(a.sigle||'?') +
+            '<span class="scd-act-state" style="float:right;font-family:var(--mo);font-size:9px;font-weight:700;color:var(--mu)">⏳</span>' +
+          '</div>' +
+          '<div class="scd-acteur-nom">' + _esc(a.nom_etablissement||a.sigle||'?') + '</div>' +
+          '<div class="scd-acteur-role">' + _esc(a.role||'—') + (port?' · port '+port:'') + '</div>' +
+          (joueurs ? '<div class="scd-acteur-joueurs">' + joueurs + '</div>' : '') +
+          '<div class="scd-act-actions" style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap"></div>' +
+        '</div>';
+      }).join('') +
+      '</div></div>';
+    // Après le render, vérifier l'état des instances
+    setTimeout(function(){ checkActeursState(acteurs); }, 100);
+  }
+
+  // Déroulé chronologique des stimuli
+  if(stimuli.length){
+    html += '<div class="scd-section"><div class="scd-section-title">⏱ Déroulé — ' + stimuli.length + ' stimuli</div>' +
+      '<div class="scd-timeline">' +
+      stimuli.map(function(s){
+        var p = s.payload || {};
+        var texte = p.fait || p.contenu || p.message || p.titre || '(Action ' + (s.type||'?') + ')';
+        if(typeof texte === 'object') texte = JSON.stringify(texte);
+        return '<div class="scd-stim">' +
+          '<div class="scd-stim-head">' +
+            '<span class="scd-stim-time">T+' + (s.t_min||0) + ' min</span>' +
+            '<span class="scd-stim-type ' + (s.type||'incident') + '">' + (s.type||'—') + '</span>' +
+            '<span class="scd-stim-cible">→ ' + _esc(s.cible||'?') + '</span>' +
+            '<span style="font-family:var(--mo);font-size:9px;color:var(--mu);margin-left:auto">' +
+              _esc(s.id||'') + '</span>' +
+          '</div>' +
+          '<div class="scd-stim-fait">' + _esc(String(texte).substring(0,300)) +
+            (String(texte).length>300?'…':'') + '</div>' +
+        '</div>';
+      }).join('') +
+      '</div></div>';
+  }
+
+  document.getElementById('scd-body').innerHTML = html ||
+    '<div style="text-align:center;padding:30px;color:var(--mu)">Scénario vide</div>';
+}
+
+function _metaPill(label, value){
+  return '<div class="scd-meta-pill"><span>' + label + ' :</span> <b>' + _esc(String(value)) + '</b></div>';
+}
+
+function _esc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function closeScenarioDetail(){
+  var modal = document.getElementById('sc-detail-modal');
+  if(modal) modal.classList.remove('open');
+  _scdActiveFile = null;
+}
+
+function useScenarioFromModal(){
+  if(!_scdActiveFile) return;
+  var filename = _scdActiveFile;
+  closeScenarioDetail();
+  useScenarioByFile(filename);
+}
+
+// Fermeture au Escape
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape'){
+    var modal = document.getElementById('sc-detail-modal');
+    if(modal && modal.classList.contains('open')) closeScenarioDetail();
+  }
+});
+
+function useScenarioByFile(filename){
+  var s=_scenarioMap[filename]; if(!s) return;
+  useScenario(s);
+}
+var _disabledStimuli = {};
+
+function useScenario(s){
+  if(typeof s==='string') s=JSON.parse(s);
+  _selectedScenario=s;
+  _disabledStimuli={};
+  // Remplir le panel de résumé
+  var scSel=document.getElementById('sc-selected');
+  var noSc=document.getElementById('no-sc-msg');
+  var titreEl=document.getElementById('sc-sel-titre');
+  var descEl=document.getElementById('sc-sel-desc');
+  var objEl=document.getElementById('sc-sel-objectifs');
+  var btnStart=document.getElementById('btn-start');
+  if(scSel) scSel.style.display='block';
+  if(noSc) noSc.style.display='none';
+  if(titreEl) titreEl.textContent='📋 '+s.titre;
+  if(descEl) descEl.textContent=s.description||'';
+  if(btnStart) btnStart.disabled=false;
+  // Charger le scénario complet pour les stimuli
+  api('/api/exercice/scenarios/'+encodeURIComponent(s.filename))
+  .then(function(r){return r.ok?r.json():null;})
+  .then(function(data){
+    if(!data||!data.stimuli) return;
+    var stimuli=data.stimuli||[];
+    var objs=(data.meta&&data.meta.objectifs_pedagogiques)||[];
+    if(objEl) objEl.textContent=objs.join(' · ')||'-';
+    var el=document.getElementById('stimuli-toggle-list');
+    if(!el) return;
+    var ICONS={incident:'🚨',message:'✉️',transfert:'🚑',chat:'💬',decision:'📋',capacite:'🛏'};
+    // v2194 — Échappement cohérent avec renderStimuli
+    var _esc=function(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');};
+    el.innerHTML=stimuli.map(function(st){
+      var sid=_esc(st.id);
+      return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;background:var(--s);border:1px solid var(--bd)" id="toggle-'+sid+'">'+
+        '<input type="checkbox" id="cb-'+sid+'" data-sid="'+sid+'" checked onchange="toggleStimulus(this.dataset.sid,this.checked)" style="cursor:pointer">'+
+        '<span style="font-family:var(--mo);font-size:9px;min-width:30px;color:var(--mu)">T+'+(st.t_min|0)+'min</span>'+
+        '<span style="font-family:var(--mo);font-size:8px;background:var(--s2);padding:1px 5px;border-radius:3px">'+_esc(st.cible)+'</span>'+
+        '<span style="font-size:10px">'+(ICONS[st.type]||'⚡')+'</span>'+
+        '<span style="font-size:11px;flex:1">'+_esc(st.titre)+'</span>'+
+      '</div>';
+    }).join('');
+    // Mettre à jour le scénario sélectionné avec les stimuli complets
+    _selectedScenario.stimuli_complets=stimuli;
+  }).catch(function(){});
+  // Naviguer vers l'onglet exercice
+  var tabs=document.querySelectorAll('.tab-btn');
+  var exoBtn=null;
+  tabs.forEach(function(b){if(b.textContent.includes('EXERCICE'))exoBtn=b;});
+  if(exoBtn) showTab('exercice',exoBtn);
+  toast('Scenario selectionne : '+s.titre,'ok');
+}
+
+function toggleStimulus(id, enabled){
+  _disabledStimuli[id]=!enabled;
+  var row=document.getElementById('toggle-'+id);
+  if(row) row.style.opacity=enabled?'1':'0.4';
+}
+
+function deleteScenario(filename){
+  if(!confirm('Supprimer le scénario '+filename+' ?')) return;
+  api('/api/exercice/scenarios/'+encodeURIComponent(filename),{method:'DELETE'})
+    .then(function(r){
+      return r.json().then(function(d){return{ok:r.ok,d:d};});
+    })
+    .then(function(rr){
+      if(rr.ok){
+        toast('Scénario supprimé','ok');
+        // Si c'était le scénario sélectionné, le désélectionner
+        if(_selectedScenario && _selectedScenario.filename===filename){
+          _selectedScenario=null;
+          var scSel=document.getElementById('sc-selected');
+          var noSc=document.getElementById('no-sc-msg');
+          if(scSel) scSel.style.display='none';
+          if(noSc) noSc.style.display='block';
+          var btnStart=document.getElementById('btn-start');
+          if(btnStart) btnStart.disabled=true;
+        }
+        loadScenarios();
+      } else {
+        toast('Erreur suppression : '+(rr.d.detail||rr.d.error||'?'),'err');
+      }
+    })
+    .catch(function(e){ toast('Erreur réseau : '+e,'err'); });
+}
+
+function openGenIA(){
+  var el=document.getElementById('gen-ia-form');
+  var newDisplay = el.style.display==='none' ? 'block' : 'none';
+  el.style.display = newDisplay;
+  if (newDisplay === 'block'){
+    // v2202 — Reset complet du formulaire à chaque ouverture pour partir
+    // d'un formulaire vierge et ne pas donner l'illusion de voir "le
+    // dernier scénario créé".
+    try {
+      var textIds=['ia-sujet','ia-nom','ia-perturbations','ia-stimuli-ext-details'];
+      textIds.forEach(function(id){
+        var e=document.getElementById(id);
+        if(e) e.value='';
+      });
+      // Reset selects aux valeurs par défaut
+      var selDefaults={
+        'ia-type-crise':'CYBER',
+        'ia-complexite':'MOYEN',
+        'ia-duree':'60',
+        'ia-duree-reelle':'120',
+        'ia-nb-joueurs':'3',
+        'ia-nb-stimuli':'8',
+      };
+      Object.keys(selDefaults).forEach(function(id){
+        var e=document.getElementById(id);
+        if(e) e.value=selDefaults[id];
+      });
+      // Reset chips : enlever toutes les sélections
+      document.querySelectorAll('#gen-ia-form .chip-purple, #gen-ia-form .chip-green, #gen-ia-form .chip-orange')
+        .forEach(function(c){ c.classList.remove('on'); });
+      // Reset sites
+      document.querySelectorAll('#gen-ia-form .site-chip')
+        .forEach(function(c){ c.classList.remove('on'); });
+      // Reset stimuli externes (checkboxes / radios si présents)
+      var extNone=document.querySelector('#gen-ia-form input[name="stimuli-ext"][value="aucun"]');
+      if(extNone) extNone.checked=true;
+    } catch(e){}
+    _iaUpdateCounters();
+  }
+}
+
+// v2186a — Lit les chips cochés d'un container (commun aux 3 catégories IA)
+function _iaGetChips(containerId){
+  var el = document.getElementById(containerId);
+  if (!el) return [];
+  return Array.from(el.querySelectorAll('.chip-purple.on, .chip-green.on, .chip-orange.on'))
+    .map(function(c){ return c.dataset.v; });
+}
+function _iaUpdateCounters(){
+  // Petit délai pour laisser toggleChip terminer si déclenché par event bubbling
+  setTimeout(function(){
+    var nExt = _iaGetChips('ia-stimuli-ext-chips').length;
+    var nVal = _iaGetChips('ia-valeurs-chips').length;
+    var nSvc = _iaGetChips('ia-services-chips').length;
+    var elExt = document.getElementById('ia-ext-counter');
+    var elVal = document.getElementById('ia-val-counter');
+    var elSvc = document.getElementById('ia-svc-counter');
+    if (elExt) elExt.textContent = nExt + ' coché' + (nExt > 1 ? 's' : '');
+    if (elVal) elVal.textContent = nVal + ' coché' + (nVal > 1 ? 's' : '');
+    if (elSvc) elSvc.textContent = nSvc + ' coché' + (nSvc > 1 ? 's' : '');
+  }, 0);
+}
+
+function getMultiSelect(id){
+  var el=document.getElementById(id);
+  if(!el) return [];
+  return Array.from(el.selectedOptions).map(function(o){return o.value;});
+}
+function getAllOptions(id){
+  var el=document.getElementById(id);
+  if(!el) return [];
+  return Array.from(el.options).map(function(o){return o.value;});
+}
+function servicesMove(fromId,toId){
+  var from=document.getElementById('ia-services-'+fromId==='avail'?'avail':fromId);
+  var to=document.getElementById('ia-services-'+toId==='sel'?'':toId);
+  // Simplification : utiliser les IDs directement
+  var fromEl=fromId==='avail'?document.getElementById('ia-services-avail'):document.getElementById('ia-services');
+  var toEl=toId==='sel'?document.getElementById('ia-services'):document.getElementById('ia-services-avail');
+  if(!fromEl||!toEl) return;
+  Array.from(fromEl.selectedOptions).forEach(function(opt){
+    toEl.appendChild(opt.cloneNode(true));
+    fromEl.removeChild(opt);
+  });
+}
+function getServicesSelected(){
+  // v2186a — utilise les chips
+  return _iaGetChips('ia-services-chips');
+}
+
+function submitGenIA(){
+  // v2192 — Validation du nom (obligatoire, avant tout autre champ)
+  var nomEl = document.getElementById('ia-nom-scenario');
+  var nom = nomEl ? nomEl.value.trim() : '';
+  if(!nom){
+    toast('Le nom du scénario est obligatoire','err');
+    if(nomEl){ nomEl.focus(); nomEl.style.borderColor='#dc2626'; setTimeout(function(){nomEl.style.borderColor='';}, 2000); }
+    return;
+  }
+  var sujet=document.getElementById('ia-sujet').value.trim();
+  if(!sujet){toast('Décrivez le sujet','err');return;}
+  var categorie=(document.getElementById('ia-categorie')||{}).value||'sanitaire';
+  var tagsRaw=((document.getElementById('ia-tags')||{}).value||'').trim();
+  var tags = tagsRaw.split(',').map(function(t){return t.trim();}).filter(function(t){return t.length>0;});
+  var sites=getChips('ia-sites-sel');
+  // v2186a — lire les valeurs depuis les chips, plus depuis les <select multiple>
+  var valeurs = _iaGetChips('ia-valeurs-chips');
+  var services = _iaGetChips('ia-services-chips');
+  var stimuliExt = _iaGetChips('ia-stimuli-ext-chips');
+  // Compat backend : si rien coché → "none", sinon liste séparée par virgules
+  var ext = stimuliExt.length ? stimuliExt.join(',') : 'none';
+  var pert=document.getElementById('ia-perturbations')?document.getElementById('ia-perturbations').value:'';
+  var nbJoueurs=parseInt(document.getElementById('ia-nb-joueurs')?document.getElementById('ia-nb-joueurs').value:4)||4;
+  var nbStimuli=parseInt(document.getElementById('ia-nb-stimuli')?document.getElementById('ia-nb-stimuli').value:8)||8;
+  document.getElementById('ia-loading').style.display='block';
+  document.getElementById('btn-gen').disabled=true;
+  api('/api/exercice/generate',{method:'POST',body:JSON.stringify({
+    sujet:sujet,nb_sites:sites.length||1,sites:sites.length?sites:['CHAG'],
+    duree_exercice_min:parseInt(document.getElementById('ia-duree').value)||60,
+    duree_reel_min:parseInt(document.getElementById('ia-duree-reel').value)||240,
+    type_crise:document.getElementById('ia-type').value,
+    complexite:document.getElementById('ia-complexite').value,langue:'fr',
+    nb_joueurs:nbJoueurs,nb_stimuli:nbStimuli,
+    stimuli_externes:ext,valeurs_metiers:valeurs,
+    services_supports:services,perturbations:pert,
+    // v2192 — passer l'identité saisie au backend (appliquée APRÈS génération)
+    nom_scenario:nom, categorie:categorie, tags:tags,
+  })}).then(function(r){return r.json();})
+  .then(function(d){
+    document.getElementById('ia-loading').style.display='none';
+    document.getElementById('btn-gen').disabled=false;
+    if(d.ok){
+      toast('Scénario généré : '+((d.scenario&&d.scenario.meta)?d.scenario.meta.titre:''),'ok');
+      document.getElementById('gen-ia-form').style.display='none';
+      loadScenarios();
+    } else {toast('Erreur IA : '+(d.detail||d.error||'?'),'err');}
+  }).catch(function(e){
+    document.getElementById('ia-loading').style.display='none';
+    document.getElementById('btn-gen').disabled=false;
+    toast('Erreur réseau : '+e,'err');
+  });
+}
+
+// ── Exercice ───────────────────────────────────────────────────────────────────
+function startExercice(){
+  if(!_selectedScenario){toast('Sélectionnez un scénario','err');return;}
+  var sites=getChips('exo-sites-sel');
+  if(!sites.length){toast('Sélectionnez au moins un site','err');return;}
+  if(!confirm('Démarrer "'+_selectedScenario.titre+'" sur '+sites.join(', ')+'?\n\nLes stimuli seront injectés automatiquement selon le timing du scénario.')) return;
+  var disabled=Object.keys(_disabledStimuli).filter(function(k){return _disabledStimuli[k];});
+  api('/api/exercice/start',{method:'POST',body:JSON.stringify({
+    filename:_selectedScenario.filename,sites:sites,disabled_stimuli:disabled
+  })}).then(function(r){return r.json();})
+  .then(function(d){
+    if(d.ok){
+      toast('Exercice démarré ! Tokens OK : '+d.tokens_ok.join(', '),'ok');
+      document.getElementById('btn-start').disabled=true;
+      document.getElementById('btn-pause').disabled=false;
+      document.getElementById('btn-stop').disabled=false;
+    } else {toast('Erreur démarrage : '+(d.detail||'?'),'err');}
+  });
+}
+
+function pauseExercice(){
+  var paused=document.getElementById('btn-pause').textContent.includes('▶');
+  api('/api/exercice/'+(paused?'resume':'pause'),{method:'POST'})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.ok){
+      document.getElementById('btn-pause').textContent=paused?'⏸ PAUSE':'▶ REPRENDRE';
+      toast(paused?'Exercice repris':'Exercice en pause','info');
+    }
+  });
+}
+
+function stopExercice(){
+  if(!confirm('Arrêter l\'exercice en cours ?')) return;
+  api('/api/exercice/stop',{method:'POST'}).then(function(r){return r.json();})
+  .then(function(d){
+    if(d.ok){
+      toast('Exercice arrêté','info');
+      document.getElementById('btn-start').disabled=false;
+      document.getElementById('btn-pause').disabled=true;
+      document.getElementById('btn-stop').disabled=true;
+      document.getElementById('btn-pause').textContent='⏸ PAUSE';
+      updateBanner(null);
+    }
+  });
+}
+
+function injectManuel(id){
+  if(!confirm('Injecter le stimulus '+id+' maintenant ?')) return;
+  api('/api/exercice/inject/'+id,{method:'POST'})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.ok) toast('Stimulus '+id+' injecté','ok');
+    else toast('Erreur injection : '+(d.error||d.detail||'?'),'err');
+  });
+}
+
+// ── Status polling ─────────────────────────────────────────────────────────────
+function startStatusPolling(){
+  if(_statusInterval) clearInterval(_statusInterval);
+  _statusInterval=setInterval(refreshStatus,3000);
+  refreshStatus();
+  setInterval(loadSupervision,10000);
+  setInterval(loadPrets,5000);
+  loadPrets();
+}
+
+function loadPrets(){
+  api('/api/exercice/prets').then(function(r){return r.ok?r.json():{};})
+  .then(function(d){
+    var el=document.getElementById('prets-list');
+    var info=document.getElementById('prets-info');
+    if(!el) return;
+    var sites=Object.keys(d);
+    if(!sites.length){
+      el.innerHTML='<span style="font-family:var(--mo);font-size:10px;color:var(--mu)">En attente...</span>';
+      if(info) info.textContent='';
+      return;
+    }
+    el.innerHTML=sites.map(function(s){
+      return '<span style="font-family:var(--mo);font-size:10px;padding:4px 10px;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:12px;font-weight:700">✓ '+s+' ('+d[s].username+')</span>';
+    }).join('');
+    var selected=document.querySelectorAll('#exo-sites-sel .site-chip.on').length;
+    if(info) info.textContent=sites.length+'/'+selected+' site(s) prêt(s)';
+  });
+}
+
+function resetPrets(){
+  api('/api/exercice/prets',{method:'DELETE'}).then(function(){loadPrets();});
+}
+
+function refreshStatus(){
+  api('/api/exercice/status').then(function(r){return r.ok?r.json():null;})
+  .then(function(d){
+    if(!d) return;
+    updateBanner(d);
+    updateStats(d);
+    renderStimuli(d.stimuli||[]);
+    _exoRunning=d.running;
+    if(d.sites_actifs&&d.sites_actifs.length){
+      document.getElementById('tokens-status').textContent='Instances connectées : '+d.sites_actifs.join(', ');
+    }
+  });
+}
+
+function updateBanner(d){
+  var banner=document.getElementById('banner');
+  var clock=document.getElementById('banner-clock');
+  var status=document.getElementById('banner-status');
+  if(!d||!d.running){
+    banner.style.background='var(--red)';
+    clock.textContent='--:--';
+    status.textContent='AUCUN EXERCICE EN COURS';
+    return;
+  }
+  banner.style.background=d.paused?'var(--orange)':'var(--red)';
+  clock.textContent='T+'+d.t_elapsed_display;
+  status.textContent='🎯 '+d.scenario_titre+(d.paused?' — ⏸ PAUSE':'');
+}
+
+function updateStats(d){
+  document.getElementById('stat-time').textContent=d.t_elapsed_display||'--:--';
+  var done=(d.stimuli||[]).filter(function(s){return s.done;}).length;
+  var total=(d.stimuli||[]).length;
+  document.getElementById('stat-done').textContent=done;
+  document.getElementById('stat-total').textContent=total;
+}
+
+function renderStimuli(stimuli){
+  var el=document.getElementById('stimuli-list');
+  if(!stimuli.length){
+    el.innerHTML='<div style="font-family:monospace;font-size:10px;color:var(--mu);text-align:center;padding:20px">Démarrez un exercice pour voir les stimuli</div>';
+    return;
+  }
+  var ICONS={incident:'🚨',message:'✉️',transfert:'🚑',chat:'💬',decision:'📋',capacite:'🛏'};
+  // v2194 — Échappement HTML systématique pour éviter SyntaxError (index):1:N
+  // quand Albert produit des titres/descriptions avec guillemets, chevrons,
+  // ou autres caractères spéciaux qui cassent le parsing inline.
+  var _esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); };
+  el.innerHTML=stimuli.map(function(s){
+    var dotCls=s.done?'sd-done':(s.error?'sd-error':(s.t_restant_s===0&&!s.done?'sd-active':'sd-pending'));
+    var itemCls=s.done?'done':(s.error?'error':(s.t_restant_s===0&&!s.done?'active':''));
+    var tLabel=s.done?'✓ Injecté':(s.t_restant_s>0?'dans '+Math.floor(s.t_restant_s/60)+'min'+
+      (s.t_restant_s%60>0?' '+s.t_restant_s%60+'s':''):'En cours...');
+    var sid = _esc(s.id);
+    return '<div class="stim-item '+itemCls+'" onclick="this.classList.toggle(\'selected\')">'+
+      '<div class="stim-dot '+dotCls+'"></div>'+
+      '<div class="stim-body">'+
+        '<div class="stim-titre">'+(ICONS[s.type]||'⚡')+' ['+sid+'] '+_esc(s.titre)+'</div>'+
+        '<div class="stim-meta">T+'+(s.t_min|0)+'min → <strong>'+_esc(s.cible)+'</strong> ('+_esc(s.type)+') — '+tLabel+'</div>'+
+        (s.description_animateur?'<div class="stim-anim">📝 '+_esc(s.description_animateur)+'</div>':'')+
+        (s.action_attendue?'<div class="stim-anim">🎯 <strong>Attendu:</strong> '+_esc(s.action_attendue)+'</div>':'')+
+        (!s.done?'<button class="btn-inject" data-sid="'+sid+'" onclick="event.stopPropagation();injectManuel(this.dataset.sid)">Injecter maintenant</button>':'')+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ── Bilan ──────────────────────────────────────────────────────────────────────
+function triggerImportXML(){
+  document.getElementById('xml-import-input').click();
+}
+
+function importXMLFile(input){
+  var file=input.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var xml=e.target.result;
+    api('/api/exercice/scenarios/import-xml',{
+      method:'POST',
+      headers:{'Content-Type':'application/xml'},
+      body:xml
+    }).then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){toast('Scénario importé : '+d.scenario_id,'ok');loadScenarios();}
+      else{toast('Erreur import : '+(d.detail||'?'),'err');}
+    });
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+// v2192 — Export du scénario au format JSON SCRIBE natif.
+// Permet de sauvegarder localement un scénario (parade contre l'instabilité
+// d'Albert : une fois qu'un bon scénario existe, il est conservé même si
+// l'IA plante à l'avenir).
+function exportScenario(filename){
+  // v2197 — Chrome bloque les blob: URLs servis depuis http:// ("loaded over
+  // insecure connection"). On passe par une route backend qui sert le fichier
+  // directement avec Content-Disposition: attachment, plus de blob côté client.
+  var link = document.createElement('a');
+  link.href = '/api/exercice/scenarios/' + encodeURIComponent(filename) +
+              '/download?token=' + encodeURIComponent(_tok);
+  // Le backend pose déjà le bon nom de fichier via Content-Disposition,
+  // mais on propose aussi un fallback ici au cas où.
+  link.download = 'scenario_' + filename.replace(/\.json$/,'').slice(0, 50) + '.json';
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(function(){ document.body.removeChild(link); }, 200);
+  toast('Scénario téléchargé','ok');
+}
+
+// v2192 — Import depuis un fichier JSON SCRIBE natif (issu d'un export).
+// Validation structurelle minimale (meta + stimuli requis), POST vers la
+// route existante qui auto-génère un ID unique pour ne rien écraser.
+function triggerImportJSON(){
+  document.getElementById('json-import-input').click();
+}
+
+function importJSONFile(input){
+  var file = input.files[0]; if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var scenario;
+    try { scenario = JSON.parse(e.target.result); }
+    catch(err){ toast('Fichier JSON invalide : '+err.message,'err'); input.value=''; return; }
+    if (!scenario.meta || !Array.isArray(scenario.stimuli)) {
+      toast('Format invalide : meta + stimuli attendus','err');
+      input.value=''; return;
+    }
+    api('/api/exercice/scenarios',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(scenario)
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){
+        toast('Scénario importé : '+(scenario.meta.titre || d.id),'ok');
+        loadScenarios();
+      } else {
+        toast('Erreur import : '+(d.detail||d.error||'?'),'err');
+      }
+    })
+    .catch(function(e){ toast('Erreur réseau : '+e,'err'); });
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+function downloadTemplate(){
+  // Conservée pour compat rétro, pointe vers XML
+  downloadTemplateFormat('xml');
+}
+
+// v2204 — Presets rapides pour stimulus manuel incident
+function adhocPresetIncident(key){
+  var presets={
+    cyber_dpi:{
+      fait:"Le Dossier Patient Informatisé (DPI) est inaccessible depuis 15 minutes. Les services signalent des blocages, impossible de consulter les dossiers patients.",
+      urgency:3, type:"CYBER", declarant:"Technicien DSI", uf:"SUPPORT"
+    },
+    cyber_ransomware:{
+      fait:"Attaque ransomware détectée. Fichiers chiffrés avec extension .locked. Demande de rançon affichée sur plusieurs postes.",
+      urgency:4, type:"CYBER", declarant:"RSSI", uf:"SUPPORT"
+    },
+    afflux:{
+      fait:"Afflux massif aux urgences suite à un événement extérieur. 30+ patients en attente, saturation de l'accueil.",
+      urgency:3, type:"SANITAIRE", declarant:"IDE coordonnateur urgences", uf:"URGENCES"
+    },
+    panne_elec:{
+      fait:"Coupure électrique secteur principal. Groupes électrogènes de secours en démarrage. Durée estimée inconnue.",
+      urgency:4, type:"TECHNIQUE", declarant:"Services techniques", uf:"SUPPORT"
+    },
+    penurie_med:{
+      fait:"Rupture de stock critique sur médicament vital (à préciser). Pharmacie sollicite établissements voisins.",
+      urgency:2, type:"SANITAIRE", declarant:"Pharmacien", uf:"MEDICO-TECHNIQUE ET REEDUCATION"
+    },
+    rh_manque:{
+      fait:"Manque de personnel critique pour la prochaine garde. Recherche urgente de remplaçants.",
+      urgency:2, type:"RH", declarant:"Cadre de santé", uf:""
+    },
+    nrbc:{
+      fait:"Alerte NRBC — contamination suspectée sur patient admis aux urgences. Activation du circuit décontamination.",
+      urgency:4, type:"SANITAIRE", declarant:"Médecin urgentiste", uf:"URGENCES"
+    },
+    incendie:{
+      fait:"Alerte incendie déclenchée bâtiment principal. Évacuation des secteurs concernés en cours.",
+      urgency:4, type:"TECHNIQUE", declarant:"Agent sécurité", uf:"SUPPORT"
+    }
+  };
+  var p=presets[key];
+  if(!p) return;
+  document.getElementById('adhoc-inc-fait').value=p.fait;
+  document.getElementById('adhoc-inc-urgency').value=p.urgency;
+  document.getElementById('adhoc-inc-type').value=p.type;
+  document.getElementById('adhoc-inc-declarant').value=p.declarant;
+  document.getElementById('adhoc-inc-uf').value=p.uf;
+  if(!document.getElementById('adhoc-titre').value){
+    var titres={
+      cyber_dpi:"Panne DPI",cyber_ransomware:"Ransomware détecté",
+      afflux:"Afflux urgences",panne_elec:"Panne électrique",
+      penurie_med:"Rupture médicament",rh_manque:"Manque RH garde",
+      nrbc:"Alerte NRBC",incendie:"Alerte incendie"
+    };
+    document.getElementById('adhoc-titre').value=titres[key]||'';
+  }
+}
+
+// v2202 — Modal diagnostic log d'injection
+function openInjectionLog(){
+  document.getElementById('injlog-modal').style.display='flex';
+  refreshInjectionLog();
+}
+function closeInjectionLog(){
+  document.getElementById('injlog-modal').style.display='none';
+}
+function refreshInjectionLog(){
+  var c=document.getElementById('injlog-content');
+  c.innerHTML='<div style="text-align:center;color:var(--mu);padding:20px">⏳ Chargement…</div>';
+  api('/api/exercice/injection-log').then(function(r){return r.json();}).then(function(d){
+    var entries=(d.entries||[]).slice().reverse(); // plus récent en haut
+    if(!entries.length){
+      c.innerHTML='<div style="text-align:center;color:var(--mu);padding:30px">Aucune injection enregistrée encore. Démarrez un exercice et injectez un stimulus.</div>';
+      return;
+    }
+    function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    c.innerHTML=entries.map(function(e){
+      var statusColor=e.status==='OK'?'#16a34a':(e.status==='ERR'?'#dc2626':'#f97316');
+      var statusBg=e.status==='OK'?'rgba(22,163,74,.1)':(e.status==='ERR'?'rgba(220,38,38,.1)':'rgba(249,115,22,.1)');
+      var t=new Date(e.t).toLocaleTimeString('fr-FR');
+      return '<div style="border-left:3px solid '+statusColor+';background:'+statusBg+';padding:8px 12px;margin-bottom:5px;border-radius:0 4px 4px 0">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+          '<div><b style="color:'+statusColor+'">'+esc(e.status)+' HTTP '+esc(e.http)+'</b> · '+
+            '<b>'+esc(e.stimulus_id)+'</b> <span style="color:var(--mu)">('+esc(e.type)+')</span> → '+
+            '<b style="color:#1d4ed8">'+esc(e.cible)+'</b>'+
+          '</div>'+
+          '<span style="color:var(--mu);font-size:9px">'+esc(t)+'</span>'+
+        '</div>'+
+        (e.titre?'<div style="color:var(--tx);margin-bottom:3px">'+esc(e.titre)+'</div>':'')+
+        '<div style="color:var(--mu);font-size:9px;margin-bottom:3px">'+
+          '<b>Route:</b> '+esc(e.route||'-')+
+          (e.salon_id!=null?' · <b>salon_id:</b> '+esc(e.salon_id):'')+
+        '</div>'+
+        '<div style="background:var(--s);padding:5px 8px;border-radius:3px;font-size:9px;color:var(--tx);white-space:pre-wrap;word-break:break-all;max-height:80px;overflow-y:auto">'+
+          '<b>Réponse:</b> '+esc(e.response||'(vide)')+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }).catch(function(err){
+    c.innerHTML='<div style="color:#dc2626;padding:20px">Erreur chargement : '+err.message+'</div>';
+  });
+}
+
+// v2.3.90 — Reset complet : efface tout côté collecteur ET côté instances
+async function confirmResetAll(){
+  if(!confirm('⚠️ ATTENTION\n\nCette action va :\n'+
+              '• Effacer TOUS les incidents de toutes les instances SCRIBE\n'+
+              '• Effacer TOUS les transferts (locaux + fédérés)\n'+
+              '• Effacer TOUS les messages et notifications\n'+
+              '• Effacer TOUTES les décisions de crise\n'+
+              '• Effacer la main courante de chaque instance\n'+
+              '• Effacer l\'état du collecteur exercice\n\n'+
+              'Cette action est IRRÉVERSIBLE.\n\n'+
+              'Continuer ?')){
+    return;
+  }
+  if(!confirm('Dernière confirmation : TOUT effacer ?')) return;
+
+  var btn = event.target;
+  var prevTxt = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Reset en cours...';
+
+  try{
+    var r = await fetch('/api/exercice/reset-all', {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    if(!r.ok){
+      var body = await r.json().catch(()=>({detail:'erreur inconnue'}));
+      throw new Error(body.detail || ('HTTP '+r.status));
+    }
+    var result = await r.json();
+    alert('✓ Reset effectué\n\n'+
+          'Instances réinitialisées : '+(result.instances_ok||0)+'/'+(result.instances_total||0)+'\n'+
+          'Collecteur : '+(result.collecteur_cleaned ? 'OK' : 'partiel')+'\n\n'+
+          (result.errors && result.errors.length ? 'Avertissements:\n'+result.errors.join('\n') : ''));
+    // Recharger l'UI
+    loadStatus();
+    if(typeof loadScenarios === 'function') loadScenarios();
+  } catch(e){
+    alert('Erreur reset : '+e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prevTxt;
+  }
+}
+
+// v2201 — Éditeur de stimulus ad-hoc
+function openAdhocModal(){
+  // Peupler la liste des cibles avec les instances actuellement connectées
+  var sel=document.getElementById('adhoc-cible');
+  sel.innerHTML='';
+  // Récupérer depuis le dernier status ou la supervision en cache
+  var sites=[];
+  try {
+    var sup=document.querySelectorAll('#supervision-list [data-sigle]');
+    sup.forEach(function(el){
+      var sig=el.getAttribute('data-sigle');
+      if(sig && sites.indexOf(sig)===-1) sites.push(sig);
+    });
+  } catch(e){}
+  if(!sites.length){
+    // Fallback : lister toutes les instances G7 (le backend rejettera si non connectée)
+    sites=['CHAG','GHTLMB','CHRUMILLY','HDLEMAN','HPMB','CHB','CHPG'];
+  }
+  sites.forEach(function(s){
+    var opt=document.createElement('option');
+    opt.value=s; opt.textContent=s;
+    sel.appendChild(opt);
+  });
+  // Reset les champs
+  ['adhoc-titre','adhoc-msg-contenu','adhoc-inc-fait','adhoc-inc-declarant',
+   'adhoc-tr-origine','adhoc-tr-motif','adhoc-dec-contenu','adhoc-desc-anim',
+   'adhoc-cap-unite','adhoc-cap-commentaire',
+   'adhoc-br-origine','adhoc-br-destination','adhoc-br-ref','adhoc-br-motif','adhoc-br-commentaire'
+  ].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  // v2309-hotfix — Reset des tags multi-unités capacité
+  _adhocCapUnitesSelected = [];
+  _adhocRenderCapUnitesTags();
+  document.getElementById('adhoc-type').value='message';
+  adhocOnTypeChange();
+  document.getElementById('adhoc-modal').style.display='flex';
+}
+
+function closeAdhocModal(){
+  document.getElementById('adhoc-modal').style.display='none';
+}
+
+function adhocOnTypeChange(){
+  var t=document.getElementById('adhoc-type').value;
+  document.querySelectorAll('.adhoc-fields').forEach(function(el){ el.style.display='none'; });
+  var target=document.getElementById('adhoc-fields-'+t);
+  if(target) target.style.display='block';
+  // v2309-hotfix — Charger les unités du référentiel capacité de la
+  // cible sélectionnée quand on passe en mode "capacité". Permet la
+  // multi-sélection d'unités plutôt que la saisie manuelle.
+  if(t === 'capacite'){
+    adhocLoadCapaciteUnites();
+  }
+}
+
+// v2309-hotfix — Tags d'unités sélectionnées pour stimulus capacité
+var _adhocCapUnitesSelected = [];
+
+// Charger les unités du référentiel de la cible sélectionnée
+async function adhocLoadCapaciteUnites(){
+  var cible = document.getElementById('adhoc-cible').value;
+  var picker = document.getElementById('adhoc-cap-unite-picker');
+  if(!picker || !cible) return;
+  picker.innerHTML = '<option value="">— Chargement…</option>';
+  try{
+    // Passer par le collecteur qui relaye à l'instance cible
+    var r = await api('/api/exercice/unites-capacite?cible=' + encodeURIComponent(cible));
+    if(!r.ok){
+      picker.innerHTML = '<option value="">— Indisponible (saisie libre ci-dessous) —</option>';
+      return;
+    }
+    var d = await r.json();
+    var unites = d.unites || [];
+    if(!unites.length){
+      picker.innerHTML = '<option value="">— Aucune unité dans le référentiel —</option>';
+      return;
+    }
+    // Grouper par pôle
+    var byPole = {};
+    unites.forEach(function(u){
+      var p = u.pole || 'Autre';
+      if(!byPole[p]) byPole[p] = [];
+      byPole[p].push(u);
+    });
+    var html = '<option value="">— Sélectionner une unité —</option>';
+    Object.keys(byPole).sort().forEach(function(p){
+      html += '<optgroup label="' + p + '">';
+      byPole[p].forEach(function(u){
+        html += '<option value="' + (u.service_nom || '') + '">' + (u.service_nom || '?') + '</option>';
+      });
+      html += '</optgroup>';
+    });
+    picker.innerHTML = html;
+  }catch(e){
+    picker.innerHTML = '<option value="">— Erreur chargement —</option>';
+  }
+}
+
+function adhocAddCapaciteUnite(){
+  var picker = document.getElementById('adhoc-cap-unite-picker');
+  var libre = document.getElementById('adhoc-cap-unite');
+  var nom = (picker && picker.value) || (libre && libre.value.trim()) || '';
+  if(!nom) return;
+  if(_adhocCapUnitesSelected.indexOf(nom) >= 0) return;  // déjà dans la liste
+  _adhocCapUnitesSelected.push(nom);
+  _adhocRenderCapUnitesTags();
+  if(libre) libre.value = '';
+  if(picker) picker.value = '';
+}
+
+function _adhocRemoveCapaciteUnite(nom){
+  _adhocCapUnitesSelected = _adhocCapUnitesSelected.filter(function(n){ return n !== nom; });
+  _adhocRenderCapUnitesTags();
+}
+
+function _adhocRenderCapUnitesTags(){
+  var box = document.getElementById('adhoc-cap-unites-tags');
+  if(!box) return;
+  if(!_adhocCapUnitesSelected.length){
+    box.innerHTML = '<span style="font-family:var(--mo);font-size:9px;color:var(--mu);font-style:italic">Aucune unité sélectionnée — utilisez + ci-dessus ou saisie libre</span>';
+    return;
+  }
+  box.innerHTML = _adhocCapUnitesSelected.map(function(nom){
+    var safe = nom.replace(/'/g, "\\'");
+    return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:rgba(99,102,241,.15);border:1px solid #6366f1;border-radius:12px;font-family:var(--mo);font-size:10px;color:#818cf8">'
+      + nom.replace(/</g,'&lt;')
+      + '<button type="button" onclick="_adhocRemoveCapaciteUnite(\'' + safe + '\')" style="background:none;border:none;color:#818cf8;cursor:pointer;font-size:12px;padding:0;line-height:1">×</button></span>';
+  }).join('');
+}
+
+// v2309 — Presets stimuli capacité. Pré-remplissent les champs avec
+// des scénarios terrain réalistes pour que l'animateur n'ait qu'à
+// ajuster éventuellement l'unité et envoyer.
+function adhocPresetCapacite(key){
+  var presets={
+    saturation_ortho: {
+      unite:"Orthopédie",
+      statut_lits:"critique", statut_rh:"complet", statut_materiel:"ok",
+      besoin_renfort:0, peut_preter:0,
+      commentaire:"Plus de lits disponibles en Orthopédie. 2 patients en attente d'admission, un polytraumatisé attendu dans 20 min. Décisions urgentes : transfert, lit supplémentaire, ou admission en autre service.",
+      titre:"Orthopédie saturée — admissions bloquées",
+    },
+    saturation_rea: {
+      unite:"Réanimation",
+      statut_lits:"critique", statut_rh:"tension", statut_materiel:"ok",
+      besoin_renfort:1, peut_preter:0,
+      commentaire:"Réanimation saturée. 100% occupation, 1 patient ventilé stabilisé prêt à descendre. Besoin d'1 renfort IDE pour sécuriser les transferts internes.",
+      titre:"Réanimation saturée",
+    },
+    ferme_bloc: {
+      unite:"Bloc opératoire",
+      statut_lits:"ferme", statut_rh:"complet", statut_materiel:"hs",
+      besoin_renfort:0, peut_preter:0,
+      commentaire:"Bloc 2 fermé suite à contamination environnementale. Reprise prévue dans 4h après décontamination complète. Chirurgies programmées à reporter ou basculer sur Bloc 1.",
+      titre:"Bloc 2 fermé — contamination",
+    },
+    rh_manque_inf: {
+      unite:"Médecine",
+      statut_lits:"normal", statut_rh:"insuffisant", statut_materiel:"ok",
+      besoin_renfort:2, peut_preter:0,
+      commentaire:"2 IDE de nuit en arrêt maladie. Équipe réduite à 4 pour 28 lits. Risque de rupture de la qualité des soins. Rappel d'astreinte à envisager.",
+      titre:"Manque IDE en médecine — équipe à 4/6",
+    },
+    rh_renfort: {
+      unite:"Urgences",
+      statut_lits:"tension", statut_rh:"complet", statut_materiel:"ok",
+      besoin_renfort:0, peut_preter:0,
+      commentaire:"Médecin urgentiste rappelé en renfort depuis son domicile. Arrivée prévue dans 30 min. Équipe passera de 2 à 3 médecins — permettra de résorber l'attente.",
+      titre:"Renfort médecin urgentiste arrivé",
+    },
+    preter_coursier: {
+      unite:"Support",
+      statut_lits:"normal", statut_rh:"complet", statut_materiel:"ok",
+      besoin_renfort:0, peut_preter:2,
+      commentaire:"2 agents de service disponibles peuvent être prêtés temporairement pour courses urgentes (médicaments pharmacie, analyses labo, documents). Disponibilité 4h.",
+      titre:"Coursiers prêtables disponibles",
+    },
+    mat_panne_imag: {
+      unite:"Imagerie",
+      statut_lits:"normal", statut_rh:"complet", statut_materiel:"hs",
+      besoin_renfort:0, peut_preter:0,
+      commentaire:"Scanner HS depuis 15 min. Panne électronique. Réparation estimée 2h. IRM fonctionnelle. Reporter ou réorienter les patients vers CH voisin.",
+      titre:"Scanner HS — 2h estimation réparation",
+    },
+    retour_normal: {
+      unite:"",
+      statut_lits:"normal", statut_rh:"complet", statut_materiel:"ok",
+      besoin_renfort:0, peut_preter:0,
+      commentaire:"Situation revenue à la normale. Tous indicateurs au vert.",
+      titre:"Retour situation normale",
+    },
+  };
+  var p=presets[key];
+  if(!p) return;
+  if(p.unite) document.getElementById('adhoc-cap-unite').value=p.unite;
+  document.getElementById('adhoc-cap-statut-lits').value=p.statut_lits;
+  document.getElementById('adhoc-cap-statut-rh').value=p.statut_rh;
+  document.getElementById('adhoc-cap-statut-mat').value=p.statut_materiel;
+  document.getElementById('adhoc-cap-renfort').value=p.besoin_renfort;
+  document.getElementById('adhoc-cap-preter').value=p.peut_preter;
+  document.getElementById('adhoc-cap-commentaire').value=p.commentaire;
+  if(p.titre && !document.getElementById('adhoc-titre').value) {
+    document.getElementById('adhoc-titre').value=p.titre;
+  }
+}
+
+// v2309 — Presets stimuli brancardage.
+function adhocPresetBrancardage(key){
+  var presets={
+    urg_polytrauma: {
+      origine:"Urgences", destination:"Réanimation",
+      priorite:"P1", type:"LIT",
+      motif:"Polytraumatisé stabilisé — admission Réa urgente",
+      commentaire:"Priorité absolue, 2 brancardiers minimum, monitorage en cours",
+      titre:"Polytraumatisé → Réa P1",
+    },
+    urg_scanner: {
+      origine:"Urgences", destination:"Imagerie",
+      priorite:"P1", type:"BRANCARD",
+      motif:"Scanner crânien urgent — suspicion AVC",
+      commentaire:"",
+      titre:"Scanner crânien urgent",
+    },
+    bloc_prog: {
+      origine:"Chirurgie", destination:"Bloc opératoire",
+      priorite:"P3", type:"LIT",
+      motif:"Intervention programmée — prothèse genou",
+      commentaire:"Patient à jeun, prémédication faite",
+      titre:"Bloc programmé — prothèse genou",
+    },
+    sortie_rea: {
+      origine:"Réanimation", destination:"Médecine",
+      priorite:"P2", type:"LIT",
+      motif:"Transfert de surveillance — patient stabilisé",
+      commentaire:"Libère un lit de Réa",
+      titre:"Sortie Réa → Médecine",
+    },
+    deces_morgue: {
+      origine:"Médecine", destination:"Morgue",
+      priorite:"P3", type:"BRANCARD",
+      motif:"Transport post-mortem",
+      commentaire:"Procédure à respecter (famille présente)",
+      titre:"Transport vers morgue",
+    },
+    analyses_labo: {
+      origine:"Urgences", destination:"Laboratoire",
+      priorite:"P2", type:"MARCHE",
+      motif:"Transport d'échantillons urgents — bilan préop",
+      commentaire:"Coursier dédié, analyses à rendre dans 30 min",
+      titre:"Analyses labo urgentes",
+    },
+  };
+  var p=presets[key];
+  if(!p) return;
+  document.getElementById('adhoc-br-origine').value=p.origine;
+  document.getElementById('adhoc-br-destination').value=p.destination;
+  document.getElementById('adhoc-br-priorite').value=p.priorite;
+  document.getElementById('adhoc-br-type-transport').value=p.type;
+  document.getElementById('adhoc-br-motif').value=p.motif;
+  document.getElementById('adhoc-br-commentaire').value=p.commentaire;
+  if(p.titre && !document.getElementById('adhoc-titre').value) {
+    document.getElementById('adhoc-titre').value=p.titre;
+  }
+}
+
+function submitAdhoc(){
+  var type=document.getElementById('adhoc-type').value;
+  var cible=document.getElementById('adhoc-cible').value;
+  var titre=document.getElementById('adhoc-titre').value.trim();
+  var descAnim=document.getElementById('adhoc-desc-anim').value.trim();
+
+  var payload={};
+  if(type==='message'){
+    var c=document.getElementById('adhoc-msg-contenu').value.trim();
+    if(!c){ toast('Contenu du message requis','err'); return; }
+    payload.contenu=c;
+  } else if(type==='incident'){
+    var fait=document.getElementById('adhoc-inc-fait').value.trim();
+    if(!fait){ toast('Description du fait requise','err'); return; }
+    payload.fait=fait;
+    payload.urgency=parseInt(document.getElementById('adhoc-inc-urgency').value,10);
+    payload.type_crise=document.getElementById('adhoc-inc-type').value;
+    payload.declarant_nom=document.getElementById('adhoc-inc-declarant').value.trim() || 'Animateur';
+    // v2203 — UF pour rattachement au bon pôle SOINS
+    var uf=document.getElementById('adhoc-inc-uf').value;
+    if(uf) payload.unite_fonctionnelle=uf;
+  } else if(type==='transfert'){
+    payload.unite_origine=document.getElementById('adhoc-tr-origine').value.trim() || 'Urgences';
+    payload.etablissement_destination=document.getElementById('adhoc-tr-dest').value;
+    payload.motif=document.getElementById('adhoc-tr-motif').value.trim() || 'Transfert manuel';
+    payload.mode_transport=document.getElementById('adhoc-tr-transport').value;
+    payload.urgence=document.getElementById('adhoc-tr-urgence').value;
+    payload.eta_min=parseInt(document.getElementById('adhoc-tr-eta').value,10) || 30;
+  } else if(type==='decision'){
+    var d=document.getElementById('adhoc-dec-contenu').value.trim();
+    if(!d){ toast('Contenu de la décision requis','err'); return; }
+    payload.contenu=d;
+  } else if(type==='capacite'){
+    // v2309-hotfix — Stimulus capacité : peut maintenant cibler
+    // PLUSIEURS unités (multi-sélection). On construit la liste finale :
+    // unités sélectionnées via "+" (tags) + fallback saisie libre.
+    var unitesList = _adhocCapUnitesSelected.slice();
+    var libre = document.getElementById('adhoc-cap-unite').value.trim();
+    if(libre && unitesList.indexOf(libre) < 0) unitesList.push(libre);
+    if(!unitesList.length){
+      toast('Au moins une unité requise (bouton + ou saisie libre)','err'); return;
+    }
+    // On stocke la liste dans une variable à part — submitAdhoc va
+    // faire une boucle d'appels plutôt qu'un seul appel.
+    payload._multi_unites = unitesList;
+    payload.redacteur=document.getElementById('adhoc-cap-redacteur').value.trim() || 'Stimulus animateur';
+    payload.statut_lits=document.getElementById('adhoc-cap-statut-lits').value;
+    payload.statut_rh=document.getElementById('adhoc-cap-statut-rh').value;
+    payload.statut_materiel=document.getElementById('adhoc-cap-statut-mat').value;
+    payload.besoin_renfort=parseInt(document.getElementById('adhoc-cap-renfort').value,10) || 0;
+    payload.peut_preter=parseInt(document.getElementById('adhoc-cap-preter').value,10) || 0;
+    // Commentaire global : injecté aussi en commentaire_rh si statut_rh != complet
+    // pour que le message narratif remonte bien au joueur.
+    var com=document.getElementById('adhoc-cap-commentaire').value.trim();
+    if(com){
+      payload.commentaire_general=com;
+      if(payload.statut_rh!=='complet') payload.commentaire_rh=com;
+      if(payload.statut_lits!=='normal') payload.commentaire_lits=com;
+      if(payload.statut_materiel!=='ok') payload.commentaire_materiel=com;
+    }
+    // Alertes auto : si statut critique, on active l'alerte pour que le
+    // joueur voie un incident auto-créé (meilleure visibilité).
+    payload.alerte_lits=(payload.statut_lits==='critique' || payload.statut_lits==='ferme');
+    payload.alerte_rh=(payload.statut_rh==='insuffisant' || payload.statut_rh==='degrade');
+    payload.alerte_materiel=(payload.statut_materiel==='hs');
+  } else if(type==='brancardage'){
+    // v2309 — Stimulus brancardage : crée une mission de transport
+    // patient. Tension sur flux si P1 simultanés ou équipes saturées.
+    var origine=document.getElementById('adhoc-br-origine').value.trim();
+    var destination=document.getElementById('adhoc-br-destination').value.trim();
+    if(!origine || !destination){ toast('Origine et destination requises','err'); return; }
+    payload.uf_origine=origine;
+    payload.uf_destination=destination;
+    payload.priorite=document.getElementById('adhoc-br-priorite').value;
+    payload.type_transport=document.getElementById('adhoc-br-type-transport').value;
+    payload.ref_patient=document.getElementById('adhoc-br-ref').value.trim() || ('EXO-'+Date.now());
+    payload.motif=document.getElementById('adhoc-br-motif').value.trim() || 'Mission brancardage animateur';
+    var brCom=document.getElementById('adhoc-br-commentaire').value.trim();
+    if(brCom) payload.commentaire=brCom;
+  }
+
+  var btn=document.querySelector('#adhoc-modal button[onclick="submitAdhoc()"]');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Envoi…'; }
+
+  // v2309-hotfix — Multi-unités capacité : un appel par unité
+  if(type === 'capacite' && payload._multi_unites){
+    var unites = payload._multi_unites;
+    delete payload._multi_unites;
+    (async function(){
+      var ok = 0, erreurs = [];
+      for(var i = 0; i < unites.length; i++){
+        var u = unites[i];
+        var pl = Object.assign({}, payload);
+        pl.unite = u;
+        try{
+          var r = await api('/api/exercice/inject-adhoc', {
+            method: 'POST',
+            body: JSON.stringify({
+              type: type, cible: cible, titre: (titre || '') + ' — ' + u,
+              payload: pl,
+              description_animateur: descAnim, action_attendue: ''
+            })
+          });
+          var d = await r.json();
+          if(r.ok && d.ok){ ok++; } else {
+            erreurs.push(u + ' : ' + (d.detail || d.error || 'HTTP ' + r.status));
+          }
+        }catch(e){ erreurs.push(u + ' : ' + e.message); }
+      }
+      if(ok === unites.length){
+        toast('⚡ ' + ok + ' stimulus capacité envoyés (' + unites.join(', ') + ')', 'ok');
+        closeAdhocModal();
+        refreshStatus();
+      } else if(ok > 0){
+        toast('⚠ ' + ok + '/' + unites.length + ' OK — erreurs : ' + erreurs.slice(0, 2).join(' | '), 'err');
+      } else {
+        toast('Échec : ' + erreurs.slice(0, 2).join(' | '), 'err');
+      }
+      if(btn){ btn.disabled = false; btn.textContent = '⚡ Envoyer maintenant'; }
+    })();
+    return;
+  }
+
+  api('/api/exercice/inject-adhoc',{
+    method:'POST',
+    body:JSON.stringify({type:type, cible:cible, titre:titre, payload:payload,
+      description_animateur:descAnim, action_attendue:''})
+  })
+  .then(function(r){ return r.json().then(function(d){return{ok:r.ok,d:d,status:r.status};}); })
+  .then(function(rr){
+    if(rr.ok && rr.d.ok){
+      toast('⚡ Stimulus manuel envoyé à '+cible+' ('+(rr.d.stimulus_id||'')+')','ok');
+      closeAdhocModal();
+      refreshStatus();
+    } else {
+      var msg=(rr.d && (rr.d.detail||rr.d.error))||('HTTP '+rr.status);
+      toast('Échec envoi : '+msg,'err');
+    }
+  })
+  .catch(function(e){ toast('Erreur réseau : '+e.message,'err'); })
+  .finally(function(){
+    if(btn){ btn.disabled=false; btn.textContent='⚡ Envoyer maintenant'; }
+  });
+}
+
+// v2201 — Menu de téléchargement multi-format
+function toggleTemplatesMenu(e){
+  if(e) e.stopPropagation();
+  var menu=document.getElementById('templates-menu');
+  if(!menu) return;
+  var showing=menu.style.display==='block';
+  menu.style.display=showing?'none':'block';
+  if(!showing){
+    // Fermer le menu si clic ailleurs
+    setTimeout(function(){
+      document.addEventListener('click',function _h(){
+        menu.style.display='none';
+        document.removeEventListener('click',_h);
+      });
+    },50);
+  }
+}
+
+function downloadTemplateFormat(fmt){
+  var menu=document.getElementById('templates-menu');
+  if(menu) menu.style.display='none';
+  // Utiliser un <a> direct avec token en query (comme exportScenario)
+  var filename='TEMPLATE_SCENARIO.'+fmt;
+  var route='/api/exercice/template-'+fmt;
+  // La route exige auth Bearer header, mais <a href> ne peut pas l'envoyer.
+  // On fetch + blob (local, pas de blob:http: externe → pas bloqué Chrome).
+  fetch(route,{headers:{Authorization:'Bearer '+_tok}}).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.blob();
+  }).then(function(blob){
+    var link=document.createElement('a');
+    link.href=URL.createObjectURL(blob);
+    link.download=filename;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(function(){
+      URL.revokeObjectURL(link.href);
+      if(link.parentNode) link.parentNode.removeChild(link);
+    },200);
+    toast('Modèle '+fmt.toUpperCase()+' téléchargé','ok');
+  }).catch(function(e){
+    toast('Modèle '+fmt.toUpperCase()+' indisponible : '+e.message,'err');
+  });
+}
+
+function generateBilan(){
+  // v2185 — Génère un rapport HTML autonome téléchargeable via la route
+  // backend /api/exercice/rapport.html. Agrège stimuli, décisions, tâches,
+  // transferts de chaque instance et produit un HTML avec radar Chart.js.
+  var el=document.getElementById('bilan-content');
+  el.innerHTML='<div class="ia-loading"><span class="spin">⏳</span> Agrégation des données…</div>';
+
+  api('/api/exercice/rapport.html').then(function(r){
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    return r.blob();
+  }).then(function(blob){
+    // Téléchargement automatique
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'rapport_scribe_exercice_' +
+      new Date().toISOString().replace(/[:.]/g,'-').slice(0,16) + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    el.innerHTML =
+      '<div style="padding:14px;background:#dcfce7;border-left:3px solid #16a34a;border-radius:4px;font-size:11px">' +
+        '<b>✓ Rapport téléchargé</b><br>' +
+        '<span style="color:#555">Ouvrez le fichier HTML dans un navigateur pour consulter le radar de compétences, ' +
+        'la timeline chronologique et les KPIs par site.</span>' +
+      '</div>';
+    toast('Rapport HTML généré','ok');
+  }).catch(function(e){
+    el.innerHTML =
+      '<div style="padding:14px;background:#fee2e2;border-left:3px solid #dc2626;border-radius:4px;font-size:11px;color:#991b1b">' +
+        '<b>Erreur</b> lors de la génération : ' + (e.message || e) +
+      '</div>';
+    toast('Erreur génération rapport','err');
+  });
+}
+
+// ── Démarrage ──────────────────────────────────────────────────────────────────
+var _currentInstPort = null;
+
+function openInstPanel(sigle, port){
+  _currentInstPort = port;
+  var panel = document.getElementById('inst-panel');
+  var title = document.getElementById('inst-panel-title');
+  var iframe = document.getElementById('inst-iframe');
+  if(!panel) return;
+  panel.style.display = 'block';
+  title.textContent = '🖥 ' + sigle + ' — :' + port + ' (connexion automatique)';
+  iframe.src = 'about:blank';
+  // Auto-login côté collecteur (serveur → instance, pas de CORS)
+  api('/api/exercice/autologin?port='+port+'&sigle='+sigle)
+  .then(function(r){return r.ok?r.json():null;})
+  .then(function(d){
+    if(d && d.token){
+      var h = window.location.hostname;
+      iframe.src = 'http://'+h+':'+port+'/?autotoken='+encodeURIComponent(d.token);
+    } else {
+      iframe.src = 'http://'+window.location.hostname+':'+port+'/';
+      toast('Auto-login non disponible — connexion manuelle (dircrise/Exercice2026!)','info');
+    }
+  }).catch(function(){
+    iframe.src = 'http://'+window.location.hostname+':'+port+'/';
+  });
+  setTimeout(function(){panel.scrollIntoView({behavior:'smooth'});},200);
+}
+
+function closeInstPanel(){
+  var panel=document.getElementById('inst-panel');
+  var iframe=document.getElementById('inst-iframe');
+  if(panel) panel.style.display='none';
+  if(iframe) iframe.src='about:blank';
+  _currentInstPort=null;
+}
+
+// v2312 — openInstExternal avec SSO : plutôt que d'ouvrir une URL brute
+// qui force l'utilisateur à re-taper dircrise/Exercice2026!, on demande
+// au backend un token autologin et on passe par ?autotoken=XXX (le JS
+// de l'instance détecte ce paramètre et connecte automatiquement).
+async function openInstExternal(){
+  if(!_currentInstPort) return;
+  var port = _currentInstPort;
+  var sigle = '';
+  try {
+    var title = document.getElementById('inst-panel-title');
+    var m = title && title.textContent && title.textContent.match(/🖥 ([A-Z_]+) —/);
+    if(m) sigle = m[1];
+  } catch(e) {}
+  // Fallback : ouverture sans token si backend indispo
+  try {
+    var r = await api('/api/exercice/autologin?port='+port+'&sigle='+encodeURIComponent(sigle));
+    if (r.ok) {
+      var d = await r.json();
+      if (d && d.token) {
+        window.open(
+          'http://'+window.location.hostname+':'+port+'/?autotoken='+encodeURIComponent(d.token),
+          '_blank'
+        );
+        return;
+      }
+    }
+  } catch(e) {}
+  // Fallback sans SSO
+  window.open('http://'+window.location.hostname+':'+port+'/','_blank');
+  toast('Connexion manuelle requise (dircrise/Exercice2026!)','info');
+}
+
+// v2312 — Bouton universel "Afficher dans un nouvel onglet avec SSO"
+// appelé depuis les cartes de supervision (pas juste le panneau inst).
+async function openSiteSSO(sigle, port){
+  try {
+    var r = await api('/api/exercice/autologin?port='+port+'&sigle='+encodeURIComponent(sigle));
+    if (r.ok) {
+      var d = await r.json();
+      if (d && d.token) {
+        window.open(
+          'http://'+window.location.hostname+':'+port+'/?autotoken='+encodeURIComponent(d.token),
+          '_blank'
+        );
+        return;
+      }
+    }
+  } catch(e) {}
+  window.open('http://'+window.location.hostname+':'+port+'/','_blank');
+  toast('Connexion manuelle requise sur '+sigle+' (dircrise/Exercice2026!)','info');
+}
+
+// v2312 — Vérifier l'état des instances requises par le scénario affiché
+async function checkActeursState(acteurs){
+  var states = {up: 0, down: 0, nonLocal: 0};
+  var instancesUpBySigle = {};
+  try {
+    var r = await api('/api/exercice/instances-up');
+    if(r.ok){
+      var d = await r.json();
+      (d.instances || []).forEach(function(i){
+        instancesUpBySigle[(i.sigle||'').toUpperCase()] = i;
+      });
+    }
+  } catch(e){}
+
+  acteurs.forEach(function(a){
+    var sigle = (a.sigle||'').toUpperCase();
+    var port = a.port || 0;
+    var card = document.getElementById('scd-act-' + sigle);
+    if(!card) return;
+    var stateEl = card.querySelector('.scd-act-state');
+    var actionsEl = card.querySelector('.scd-act-actions');
+    if(!stateEl || !actionsEl) return;
+
+    var inst = instancesUpBySigle[sigle];
+    if(inst && inst.up){
+      // Instance active
+      states.up++;
+      stateEl.textContent = '● actif';
+      stateEl.style.color = '#15803d';
+      actionsEl.innerHTML =
+        '<button onclick="openInstPanel(\''+sigle+'\','+inst.port+')" style="font-family:var(--mo);font-size:9px;padding:3px 8px;background:transparent;border:1px solid var(--bd);color:var(--tx);border-radius:3px;cursor:pointer">🖥 Afficher</button>' +
+        '<button onclick="openSiteSSO(\''+sigle+'\','+inst.port+')" style="font-family:var(--mo);font-size:9px;padding:3px 8px;background:transparent;border:1px solid var(--bd);color:var(--tx);border-radius:3px;cursor:pointer">↗ Nouvel onglet</button>';
+    } else if(port){
+      // Port déclaré mais instance inactive (pas joignable)
+      states.down++;
+      stateEl.textContent = '✗ inactif';
+      stateEl.style.color = '#dc2626';
+      actionsEl.innerHTML =
+        '<span style="font-family:var(--mo);font-size:9px;color:#dc2626;padding:3px 6px;background:rgba(220,38,38,.08);border-radius:3px">Instance :'+port+' non joignable</span>';
+    } else {
+      // Acteur sans port → entité externe simulée (SAMU, ARS, CHU_GRENOBLE…)
+      states.nonLocal++;
+      stateEl.textContent = '~ externe';
+      stateEl.style.color = '#7c3aed';
+      actionsEl.innerHTML =
+        '<span style="font-family:var(--mo);font-size:9px;color:#7c3aed;padding:3px 6px;background:rgba(124,58,237,.08);border-radius:3px" title="Entité externe simulée via stimuli, pas d\'instance jouable">📡 Entité simulée</span>';
+    }
+  });
+
+  // Résumé en haut
+  var summary = document.getElementById('scd-acteurs-status');
+  if(summary){
+    var parts = [];
+    if(states.up)       parts.push('<span style="color:#15803d;font-weight:700">✓ '+states.up+' actif(s)</span>');
+    if(states.down)     parts.push('<span style="color:#dc2626;font-weight:700">✗ '+states.down+' inactif(s)</span>');
+    if(states.nonLocal) parts.push('<span style="color:#7c3aed;font-weight:700">~ '+states.nonLocal+' externe(s)</span>');
+    summary.innerHTML = parts.join(' · ') ||
+      '<span style="color:var(--mu)">Aucun acteur défini</span>';
+    if(states.down){
+      summary.innerHTML += '<div style="margin-top:4px;font-family:var(--mo);font-size:9px;color:#dc2626">⚠ Les instances inactives ne recevront pas les stimuli. Démarre-les avec <code>bash lancer_exercice.sh</code> ou retire-les du scénario.</div>';
+    }
+  }
+}
+
+// v2312 — Charger et afficher les statuts publics de chaque site
+// engagé dans l'exercice. Vue pédagogique animateur.
+async function loadStatutsPublics(){
+  var box = document.getElementById('statuts-publics-grid');
+  if(!box) return;
+  try {
+    var r = await api('/api/exercice/statuts-publics');
+    if(!r.ok){ box.innerHTML = '<div style="font-family:var(--mo);font-size:10px;color:var(--mu);grid-column:1/-1">Supervision non disponible</div>'; return; }
+    var d = await r.json();
+    if(!d.sites || !d.sites.length){
+      box.innerHTML = '<div style="font-family:var(--mo);font-size:10px;color:var(--mu);grid-column:1/-1">Aucun site dans l\'exercice courant</div>';
+      return;
+    }
+    var html = d.sites.map(function(s){
+      var statusColor = s.published ? '#15803d' : '#94a3b8';
+      var statusIcon = s.published ? '🟢' : '⚪';
+      var statusLabel = s.published ? 'PUBLIÉ' : 'Non publié';
+      var reach = s.reachable ? '' : '<span style="color:#dc2626;font-size:9px">⚠ instance injoignable</span>';
+      if(s.error){
+        return '<div style="background:var(--s);border:1px solid var(--bd);border-radius:6px;padding:10px">'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
+            '<span style="font-family:var(--mo);font-size:10px;font-weight:700;color:var(--tx)">'+s.sigle+'</span>'+
+            '<span style="font-family:var(--mo);font-size:9px;color:var(--mu)">:'+s.port+'</span>'+
+          '</div>'+
+          '<div style="font-family:var(--mo);font-size:9px;color:#dc2626">'+(s.error||'Erreur')+'</div>'+
+        '</div>';
+      }
+      return '<div style="background:var(--s);border:1px solid var(--bd);border-radius:6px;padding:10px;border-left:3px solid '+statusColor+'">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
+          '<span style="font-family:var(--mo);font-size:10px;font-weight:700;color:var(--tx)">'+s.sigle+'</span>'+
+          '<span style="font-family:var(--mo);font-size:9px;color:'+statusColor+';font-weight:700">'+statusIcon+' '+statusLabel+'</span>'+
+        '</div>'+
+        (s.published ? (
+          '<div style="font-family:var(--mo);font-size:9px;color:var(--mu);margin-bottom:3px">État : '+
+            '<span style="color:var(--tx);font-weight:700">'+(s.etat||'—')+'</span></div>'+
+          (s.message ? '<div style="font-family:var(--mo);font-size:9px;color:var(--tx);margin:4px 0;padding:4px 6px;background:rgba(0,0,0,.03);border-radius:3px;max-height:60px;overflow:hidden">'+
+            (s.message.length>180?s.message.slice(0,180)+'…':s.message)+'</div>' : '')+
+          '<div style="font-family:var(--mo);font-size:9px;color:var(--mu)">📋 '+(s.nb_chronologie||0)+' entrée(s) chronologie</div>'
+        ) : '<div style="font-family:var(--mo);font-size:9px;color:var(--mu);font-style:italic">Aucun statut publié — les joueurs n\'ont pas (encore) communiqué vers l\'extérieur.</div>')+
+        '<div style="margin-top:8px">'+
+          '<a href="http://'+window.location.hostname+':'+s.port+'/status" target="_blank" style="font-family:var(--mo);font-size:9px;color:var(--blue);text-decoration:none">↗ Voir la page publique</a>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+    box.innerHTML = html;
+  } catch(e){
+    box.innerHTML = '<div style="font-family:var(--mo);font-size:10px;color:#dc2626;grid-column:1/-1">Erreur chargement : '+e.message+'</div>';
+  }
+}
+
+// Rafraîchir les statuts publics en même temps que la supervision
+if (typeof _statutsPublicsInterval === 'undefined') {
+  var _statutsPublicsInterval = setInterval(function(){
+    if (document.getElementById('tab-supervision') &&
+        document.getElementById('tab-supervision').classList.contains('active')){
+      loadStatutsPublics();
+    }
+  }, 30000);
+  // Charger une première fois après 2s
+  setTimeout(loadStatutsPublics, 2000);
+}
+
+window.addEventListener('load',function(){
+  // v2198 — Ne tenter verify que si un token non vide est en localStorage.
+  // Le backend renvoie maintenant 200 {ok:true|false} pour ne pas polluer
+  // la console Chrome avec des 401 quand le token est expiré/absent.
+  if(_tok && _tok.length > 10){
+    fetch('/api/ui/verify',{headers:{Authorization:'Bearer '+_tok}})
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(d){
+      if(d && d.ok){
+        document.getElementById('login-overlay').style.display='none';
+        init();
+      } else {
+        // Token invalide/expiré — nettoyer et laisser l'overlay login visible
+        localStorage.removeItem('exo_anim_token');
+        _tok = '';
+      }
+    })
+    .catch(function(){/* réseau KO, l'overlay reste */});
+  }
+});
+</script>
+</body>
+</html>

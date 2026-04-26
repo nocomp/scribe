@@ -1,0 +1,2149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCRIBE v2.3.101 | Crisis OS</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="/api/config.js"></script>
+<link rel="stylesheet" href="/static/css/scribe.css">
+
+</head>
+<body>
+<div id="exo-mode-banner" style="display:none">
+  <span>🎯 MODE EXERCICE — SCRIBE SIMULATION — DONNÉES NON RÉELLES</span>
+  <span id="exo-sigle-label" style="font-size:10px;opacity:.8"></span>
+  <button id="exo-pret-btn" onclick="declareJoueurPret()">✋ Me déclarer PRÊT</button>
+</div>
+<script src="/static/js/scribe.js"></script>
+
+<header id="main-header" style="display:none">
+  <div class="header-top">
+  <div class="brand">
+    <img src="/static/logo-scribe.png" alt="SCRIBE" style="height:30px;width:auto;flex-shrink:0">
+    <span style="font-family:var(--mono);font-weight:300;font-size:9px;color:rgba(255,255,255,.6);letter-spacing:1px">v2.3.101</span>
+    <span id="etab-sigle" style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.8);margin-left:4px;letter-spacing:1px;padding:1px 6px;background:rgba(255,255,255,.15);border-radius:3px"></span>
+  </div>
+  <div class="header-right">
+    <div id="incident-level" class="green">SITUATION NORMALE</div>
+    <div class="clock" id="clock">--:--:--</div>
+    <a href="https://resana.numerique.gouv.fr/" target="_blank" class="visio-btn" style="background:rgba(99,102,241,.12);color:#a5b4fc;border-color:#6366f1">🔒 RESANA</a>
+    <a href="https://lasuite.numerique.gouv.fr/" target="_blank" class="visio-btn" style="background:rgba(34,211,238,.1);color:#67e8f9;border-color:#0891b2">🇫🇷 LA SUITE</a>
+    <button class="notif-btn" id="notif-toggle" onclick="event.stopPropagation();toggleNotifPanel()" type="button">🔔 <span id="notif-count-txt">Inbox</span><span class="notif-badge" id="notif-badge">0</span></button>
+    <button class="user-chip" id="user-chip" onclick="toggleUserMenu()"><span class="role-dot" id="role-dot"></span><span id="current-user-name">...</span> ▾</button>
+    <div id="user-menu" style="display:none;position:absolute;top:100%;right:0;min-width:200px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:1000;padding:4px 0;font-family:var(--mono);font-size:10px">
+      <div style="padding:8px 14px;border-bottom:1px solid var(--border);color:var(--muted);font-size:9px" id="user-menu-info">—</div>
+      <button onclick="openChangePassword();toggleUserMenu()" style="display:block;width:100%;text-align:left;padding:8px 14px;background:none;border:none;color:var(--text);cursor:pointer" onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background='none'">🔑 Changer le mot de passe</button>
+      <button onclick="showAdminPanel();toggleUserMenu()" id="user-menu-admin" style="display:none;width:100%;text-align:left;padding:8px 14px;background:none;border:none;color:var(--text);cursor:pointer" onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background='none'">⚙️ Admin</button>
+      <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+      <button onclick="doLogout()" style="display:block;width:100%;text-align:left;padding:8px 14px;background:none;border:none;color:#f87171;cursor:pointer" onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background='none'">↪ Se déconnecter</button>
+    </div>
+    <span id="ia-badge" style="display:none;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;background:var(--surface2);color:var(--muted2);border:1px solid var(--border2);cursor:default;letter-spacing:.5px"></span>
+    <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" title="Basculer clair/sombre">🌙</button>
+    <button id="header-admin-btn" onclick="showAdminPanel()" title="Panneau d'administration"
+      style="display:none;font-family:var(--mono);font-size:10px;padding:3px 9px;background:rgba(0,49,137,.15);color:#7ba4f8;border:1px solid #3d5fa0;border-radius:4px;cursor:pointer;font-weight:700">
+      ⚙ ADMIN
+    </button>
+    <button style="font-family:var(--mono);font-size:10px;padding:3px 9px;background:rgba(0,49,137,.2);color:#7ba4f8;border:1px solid #3d5fa0;border-radius:4px;cursor:pointer;font-weight:700" onclick="archiverCrise()" title="Archiver la crise dans un ZIP">📦 ARCHIVER</button>
+    <button style="font-family:var(--mono);font-size:10px;padding:3px 9px;background:rgba(239,68,68,.15);color:#f87171;border:1px solid #ef4444;border-radius:4px;cursor:pointer;font-weight:700" onclick="resetTableauDeBord()" title="Remettre le tableau de bord à zéro">🔄 NOUVEAU</button>
+    <button id="hdr-admin-btn" onclick="showAdminPanel()" title="Administration SCRIBE" aria-label="Administration"
+      style="display:none;padding:4px 10px;background:rgba(0,49,137,.15);border:1px solid #3d5fa0;border-radius:4px;cursor:pointer;color:#7ba4f8;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.5px;transition:background .15s"
+      onmouseover="this.style.background='rgba(0,49,137,.35)'"
+      onmouseout="this.style.background='rgba(0,49,137,.15)'">⚙ ADMIN</button>
+    <button onclick="doLogout()" title="Se déconnecter" aria-label="Se déconnecter"
+      style="padding:4px 8px;background:transparent;border:1px solid var(--border2);border-radius:4px;cursor:pointer;color:var(--muted);display:flex;align-items:center;gap:5px;transition:color .15s,border-color .15s"
+      onmouseover="this.style.color='#f87171';this.style.borderColor='#ef4444'"
+      onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border2)'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      <span style="font-family:var(--mono);font-size:9px">Quitter</span>
+    </button>
+  </div>
+  </div><!-- /.header-top -->
+  <nav class="tabs" id="main-nav" style="display:none">
+    <button class="tab-btn active" onclick="openTab('tab-dashboard',this)" id="tab-btn-dashboard" data-i18n-label="nav.dashboard" data-i18n-icon="🏠">🏠 TABLEAU DE BORD</button>
+    <button class="tab-btn" id="tab-btn-incidents" onclick="openTab('tab-veille',this)" data-i18n-label="nav.veille" data-i18n-icon="📋">📋 INCIDENTS<span id="incidents-badge" style="display:none;background:#dc2626;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <button class="tab-btn"        onclick="openTab('tab-soins',this)" id="tab-btn-soins" data-i18n-label="nav.soins" data-i18n-icon="🏥">🏥 SOINS</button>
+    <button class="tab-btn"        onclick="openTab('tab-capacite',this)" id="tab-btn-capacite" data-i18n-label="nav.capacite" data-i18n-icon="🛏">🛏 CAPACITÉ<span id="capacite-badge" style="display:none;background:#dc2626;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <button class="tab-btn"        onclick="openTab('tab-transferts',this)" id="tab-btn-transferts" data-i18n-label="nav.transferts" data-i18n-icon="🚑">🚑 TRANSFERTS<span id="transfert-badge" style="display:none;background:#f97316;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <button class="tab-btn"        onclick="openTab('tab-cellule',this)" id="tab-btn-cellule" data-i18n-label="nav.cellule" data-i18n-icon="🏛️">🏛️ CELLULE<span id="cellule-badge" style="display:none;background:#0ea5e9;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <button class="tab-btn"        onclick="openTab('tab-kanban',this)" id="tab-btn-kanban" data-i18n-label="nav.kanban" data-i18n-icon="📋">📋 KANBAN<span id="kanban-badge" style="display:none;background:#7c3aed;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <button class="tab-btn"        onclick="openTab('tab-communique',this)" id="tab-btn-communique" data-i18n-label="nav.communique" data-i18n-icon="📢">📢 COMMUNIQUÉ<span id="communique-badge" style="display:none;background:#f59e0b;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <button class="tab-btn"        onclick="openTab('tab-releve',this)" id="tab-btn-releve" data-i18n-label="nav.releve" data-i18n-icon="🔄">🔄 RELÈVE</button>
+    <button class="tab-btn"        onclick="openTab('tab-annuaire',this)" id="tab-btn-annuaire" data-i18n-label="nav.annuaire" data-i18n-icon="📞">📞 ANNUAIRE</button>
+    <button class="tab-btn"        onclick="openTab('tab-analyse',this)" id="tab-btn-analyse" data-i18n-label="nav.analyse" data-i18n-icon="🔬">🔬 ANALYSE</button>
+    <button class="tab-btn"        onclick="openTab('tab-rex',this)" id="tab-btn-rex" data-i18n-label="nav.rex" data-i18n-icon="📊">📊 REX</button>
+    <button class="tab-btn"        onclick="openTab('tab-messagerie',this)" id="tab-btn-messagerie" data-i18n-label="nav.messagerie" data-i18n-icon="✉️">✉️ MESSAGERIE<span id="msg-badge" style="display:none;background:#ef4444;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <!-- v2307 — Onglet INTER-GHT masqué par défaut. Le plugin inter_ght est
+         désactivé depuis cette version (le chat natif couvre le besoin).
+         Le bouton reste dans le DOM pour que l'auto-découverte puisse le
+         ré-afficher si un admin réactive le plugin via l'admin → Plugins. -->
+    <button class="tab-btn" style="display:none" onclick="openTab('tab-declarations',this)" id="tab-btn-declarations">📡 INTER-GHT<span id="ight-badge" style="display:none;margin-left:4px;background:#7c3aed;color:#fff;border-radius:8px;padding:0 5px;font-size:9px"></span></button>
+  </nav>
+</header>
+
+<!-- ══════════════════ LOGIN OVERLAY ══════════════════ -->
+<div id="login-overlay" style="display:flex">
+  <div class="login-box">
+    <div class="login-logo" style="padding:8px 0"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:60px;object-fit:contain;display:block;margin:0 auto"></div>
+    <div class="login-sub" id="login-subtitle">VOTRE ÉTABLISSEMENT — CRISIS OS</div>
+    <div class="login-field"><label>Identifiant</label><input type="text" id="login-user" placeholder="dircrise" autocomplete="username"></div>
+    <div class="login-field"><label>Mot de passe</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn-login" onclick="doLogin()">CONNEXION</button>
+    <div class="login-err" id="login-err">Identifiants incorrects</div>
+    <div id="login-footer" style="font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center;margin-top:4px">Réseau parallèle — Accès restreint</div>
+    <div style="text-align:center;font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.25);margin-top:8px;letter-spacing:1px">Designed by Hervé PELLARIN</div>
+    <div id="login-credit" style="font-family:var(--mono);font-size:8px;color:var(--muted);text-align:center;margin-top:6px;opacity:.6">Designed by Hervé PELLARIN</div>
+  </div>
+</div>
+<div id="app-content" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0">
+
+<!-- ══════════════════ TAB DASHBOARD ══════════════════════ -->
+    <div id="tab-dashboard" class="tab-content active" style="flex-direction:column;overflow-y:auto;overflow-x:hidden;background:var(--bg)">
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:12px;max-width:1400px;width:100%;margin:0 auto">
+
+        <!-- Ligne 1 : 4 compteurs -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;border-left:3px solid #003189;cursor:pointer" onclick="openTab('tab-veille',document.getElementById('tab-btn-incidents')||document.querySelectorAll('.tab-btn')[1])">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;text-transform:uppercase">Incidents actifs</div>
+            <div style="font-family:var(--mono);font-size:32px;font-weight:700;color:var(--text)" id="db-incidents">—</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px" id="db-incidents-sub"></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;border-left:3px solid #d97706;cursor:pointer" onclick="openTab('tab-capacite',document.getElementById('tab-btn-capacite'))">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;text-transform:uppercase">Capacité globale</div>
+            <div style="font-family:var(--mono);font-size:32px;font-weight:700;color:var(--text)" id="db-capacite">—</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px" id="db-capacite-sub"></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;border-left:3px solid #7c3aed;cursor:pointer" onclick="openTab('tab-soins',document.getElementById('tab-btn-soins'))">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;text-transform:uppercase">Transferts en cours</div>
+            <div style="font-family:var(--mono);font-size:32px;font-weight:700;color:var(--text)" id="db-transferts">—</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px" id="db-transferts-sub"></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;border-left:3px solid #16a34a;cursor:pointer" onclick="openTab('tab-messagerie',document.getElementById('tab-btn-messagerie'))">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;text-transform:uppercase">Messages non lus</div>
+            <div style="font-family:var(--mono);font-size:32px;font-weight:700;color:var(--text)" id="db-messages">—</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px" id="db-messages-sub"></div>
+          </div>
+        </div>
+
+        <!-- Ligne 2 : capacité par pôle + état G7 -->
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">Capacité par pôle</div>
+            <div id="db-poles" style="display:flex;flex-direction:column;gap:7px"></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">Arc Alpin G7</div>
+            <div id="db-g7" style="display:flex;flex-direction:column;gap:6px"></div>
+          </div>
+        </div>
+
+        <!-- Ligne 3 : main courante + tâches + messages -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:10px;text-transform:uppercase">Main courante récente</div>
+            <div id="db-mc" style="display:flex;flex-direction:column;gap:7px"></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:10px;text-transform:uppercase">Tâches critiques</div>
+            <div id="db-tasks" style="display:flex;flex-direction:column;gap:7px"></div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:10px;text-transform:uppercase">Messages récents</div>
+            <div id="db-msgs" style="display:flex;flex-direction:column;gap:7px"></div>
+          </div>
+        </div>
+
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-align:right">
+          Mise à jour : <span id="db-lastupdate">—</span> · Rafraîchissement auto 30s
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════ TAB INCIDENTS ══════════════════════ -->
+<div id="tab-veille" class="tab-content">
+  <aside class="entry-col">
+    <div class="form-section">
+      <h3>🚨 Déclaration d'incident</h3>
+
+      <div class="field">
+        <label>Type de crise</label>
+        <div class="selector-row" id="crise-selector">
+          <button class="sel-btn sel-active" data-crise="CYBER"     onclick="selectCrise(this)">🛡️ CYBER</button>
+          <button class="sel-btn"            data-crise="SANITAIRE" onclick="selectCrise(this)">🏥 SANITAIRE</button>
+          <button class="sel-btn"            data-crise="MIXTE"     onclick="selectCrise(this)">⚠️ MIXTE</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Directeur de crise</label>
+        <select id="directeur_crise"><option value="">-- Sélectionner --</option></select>
+      </div>
+
+      <div class="form-row">
+        <div class="field" style="flex:1"><label>Site</label>
+          <select id="site_id" onchange="loadUF()"><option value="">-- Site --</option></select>
+        </div>
+        <div class="field" style="flex:1;position:relative"><label>Unité Fonct.</label>
+          <div style="display:flex;gap:4px;align-items:center">
+            <div style="position:relative;flex:1">
+              <input type="text" id="uf_search" placeholder="Code ou nom UF..." autocomplete="off"
+                oninput="filterUFList()" onfocus="showUFDropdown()" onkeydown="ufKeyNav(event)"
+                style="padding-right:26px;width:100%;box-sizing:border-box">
+              <span onclick="clearUF()" style="position:absolute;right:7px;top:50%;transform:translateY(-50%);color:var(--muted);cursor:pointer;font-size:12px">✕</span>
+              <div id="uf-dropdown" style="display:none;position:absolute;z-index:500;top:100%;left:0;right:0;max-height:180px;overflow-y:auto;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.4)"></div>
+            </div>
+            <button type="button" onclick="ufAddCurrent()" title="Ajouter cette UF"
+              style="flex-shrink:0;width:26px;height:26px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;line-height:1">＋</button>
+          </div>
+          <!-- Tags UF sélectionnées -->
+          <div id="uf-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px"></div>
+          <input type="hidden" id="unite_fonctionnelle">
+        </div>
+      </div>
+
+      <div class="field"><label>Déclarant</label>
+        <input type="text" id="declarant_nom" placeholder="Nom du déclarant" list="acteurs-generiques" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label>Niveau d'urgence</label>
+        <div class="selector-row" id="urgency-selector">
+          <button class="sel-btn sel-active" data-val="1" onclick="selectUrgency(this)">1 VEILLE</button>
+          <button class="sel-btn"            data-val="2" onclick="selectUrgency(this)">2 ALERTE</button>
+          <button class="sel-btn"            data-val="3" onclick="selectUrgency(this)">3 CRISE</button>
+          <button class="sel-btn"            data-val="4" onclick="selectUrgency(this)">4 CRITIQUE</button>
+        </div>
+      </div>
+
+      <div class="field" style="background:var(--surface2);padding:8px 10px;border-radius:5px;border:1px solid var(--border)">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin:0">
+          <input type="checkbox" id="impact_fonctionnel" style="margin-top:3px;flex-shrink:0">
+          <span>
+            <b style="font-size:12px">⚙ Impact fonctionnel / opérationnel</b>
+            <span style="display:block;font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4">
+              Cocher si l'incident dégrade le fonctionnement du service (panne équipement,
+              SI indisponible, locaux inaccessibles, effectifs insuffisants). À NE PAS cocher
+              pour les événements cliniques / patient (urgence vitale, afflux, complication).
+            </span>
+          </span>
+        </label>
+      </div>
+
+      <div class="field"><label>Fait — Quoi ?</label>
+        <textarea id="fait" placeholder="Description factuelle..." rows="3"></textarea>
+      </div>
+      <div class="field"><label>Analyse — Impact ?</label>
+        <textarea id="analyse" placeholder="Systèmes/services affectés..." rows="2"></textarea>
+      </div>
+      <div class="field"><label>Moyens engagés</label>
+        <textarea id="moyens_engages" placeholder="Ressources déployées..." rows="2"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="field" style="flex:1"><label>Intervenant</label>
+          <input type="text" id="intervenant_nom" placeholder="Nom" list="acteurs-generiques" autocomplete="off">
+        </div>
+        <div class="field" style="flex:1"><label>Contact</label>
+          <input type="text" id="intervenant_contact" placeholder="Tél">
+        </div>
+      </div>
+
+      <div class="jalons-form">
+        <div class="jalons-form-title">⏱ Jalons de résolution</div>
+        <div class="jalon-presets">
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Passé d'ordinateur">Passé d'ordi</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="DSI contacté">DSI contacté</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="RSSI alerté">RSSI alerté</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Cellule activée">Cellule activée</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="CERT Santé notifié">CERT Santé</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Isolation réseau">Isolation réseau</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Sauvegarde vérifiée">Sauvegarde OK</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Retour à la normale">Retour normal</button>
+        </div>
+        <div class="jalon-custom-input">
+          <input type="text" id="jalon-custom" placeholder="Jalon personnalisé...">
+          <button class="jalon-add-btn" onclick="addCustomJalon()">+ Ajouter</button>
+        </div>
+        <div class="jalon-tags" id="jalon-tags"></div>
+        <div class="field" style="margin-top:7px">
+          <label>Résolution estimée dans</label>
+          <select id="resolution-hours">
+            <option value="">-- Durée --</option>
+            <option value="0.5">30 min</option><option value="1">1 heure</option>
+            <option value="2">2 heures</option><option value="4">4 heures</option>
+            <option value="8">8 heures</option><option value="24">24 heures</option>
+            <option value="48">48 heures</option><option value="72">72 heures</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:7px">
+        <label>📎 Pièces jointes</label>
+        <input type="file" id="attachments-input" multiple>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px">Captures, logs, documents...</div>
+      </div>
+
+      <div class="btn-row" style="position:sticky;bottom:0;background:var(--surface);padding:8px 0 4px;margin-top:4px;border-top:1px solid var(--border);z-index:10">
+        <button class="btn-primary" onclick="submitIncident()">📡 DIFFUSER</button>
+        <button class="btn-ai"      onclick="askAlbertForm()">🤖 ASSISTANT IA</button>
+        <button style="font-family:var(--mono);font-size:9px;padding:4px 10px;background:rgba(0,207,255,.1);border:1px solid rgba(0,207,255,.3);border-radius:4px;color:var(--cyan);cursor:pointer" onclick="openNotifyModal()">✉️ NOTIFIER</button>
+      </div>
+    </div>
+  </aside>
+
+  <section class="view-col">
+    <div id="map"></div>
+    <div id="map-resize-handle"></div>
+          <div class="kpi-bar">
+      <div class="kpi blue"><div class="kpi-val" id="kpi-total">0</div><div class="kpi-label">Total</div></div>
+      <div class="kpi red"><div class="kpi-val" id="kpi-critical">0</div><div class="kpi-label">Critiques</div></div>
+      <div class="kpi amber"><div class="kpi-val" id="kpi-open">0</div><div class="kpi-label">Ouverts</div></div>
+      <div class="kpi green"><div class="kpi-val" id="kpi-cyber">0</div><div class="kpi-label">Cyber</div></div>
+      <div class="kpi purple"><div class="kpi-val" id="kpi-sani">0</div><div class="kpi-label">Sanitaire</div></div>
+    </div>
+    <div id="global-albert-bar">
+      <button class="btn-global-albert" id="btn-global-albert" onclick="askAlbertGlobal()">🧠 ANALYSE IA</button>
+      <a class="btn-export" href="/api/v1/sitrep/export-csv" download>📥 EXPORT CSV</a>
+      <!-- Tabs statut avec compteurs -->
+      <div id="status-tabs" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+        <button class="status-tab active" data-status="" onclick="setStatusTab(this,'')">
+          Actifs <span class="stab-count" id="stab-count-"></span>
+        </button>
+        <button class="status-tab" data-status="SIGNALÉ" onclick="setStatusTab(this,'SIGNALÉ')">
+          Signalé <span class="stab-count" id="stab-count-SIGNALÉ"></span>
+        </button>
+        <button class="status-tab" data-status="ANALYSE" onclick="setStatusTab(this,'ANALYSE')">
+          Analyse <span class="stab-count" id="stab-count-ANALYSE"></span>
+        </button>
+        <button class="status-tab" data-status="RÉSOLUTION" onclick="setStatusTab(this,'RÉSOLUTION')">
+          Résolution <span class="stab-count" id="stab-count-RÉSOLUTION"></span>
+        </button>
+        <button class="status-tab" data-status="RÉSOLU" onclick="setStatusTab(this,'RÉSOLU')">
+          Résolu <span class="stab-count" id="stab-count-RÉSOLU"></span>
+        </button>
+        <button class="status-tab" data-status="ARCHIVÉ" onclick="setStatusTab(this,'ARCHIVÉ')">
+          Archivé <span class="stab-count" id="stab-count-ARCHIVÉ"></span>
+        </button>
+      </div>
+      <span id="global-status-txt" style="display:none">Analyse de situation — tous les incidents ouverts + décisions</span>
+      <button id="btn-toggle-global" onclick="toggleGlobalPanel()">▲ Réduire</button>
+    </div>
+    <div id="global-albert-panel" onclick="if(event.target===this)closeGlobalPanel()">
+      <div id="global-albert-inner">
+        <div class="gap-header">
+          <span class="gap-title">🧠 Analyse Globale — Assistant IA</span>
+          <span class="gap-level" id="gap-level"></span>
+          <button onclick="closeGlobalPanel()" style="margin-left:auto;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px" title="Fermer">✕</button>
+        </div>
+        <div class="gap-body" id="gap-body"></div>
+        <div style="display:flex;gap:6px;padding:8px 12px;border-top:1px solid rgba(159,122,234,.2);flex-shrink:0">
+          <input id="gap-question" type="text" placeholder="Poser une question de suivi à SCRIBE…" style="flex:1;font-family:var(--mono);font-size:9px;padding:5px 8px;background:var(--surface2);border:1px solid rgba(159,122,234,.3);border-radius:4px;color:var(--text)" onkeydown="if(event.key==='Enter')askAlbertFollowUp('global')">
+          <button onclick="askAlbertFollowUp('global')" style="font-family:var(--mono);font-size:9px;padding:5px 12px;background:rgba(159,122,234,.2);border:1px solid rgba(159,122,234,.4);border-radius:4px;color:#c4b5fd;cursor:pointer">↩ Envoyer</button>
+        </div>
+      </div>
+    </div>
+    <div class="filter-bar">
+      <select id="f-site" onchange="applyFilters()"><option value="">Tous sites</option></select>
+      <select id="f-directeur" onchange="applyFilters()"><option value="">Tous directeurs</option></select>
+      <select id="f-urgency" onchange="applyFilters()">
+        <option value="">Toutes urgences</option>
+        <option value="1">1 Veille</option><option value="2">2 Alerte</option>
+        <option value="3">3 Crise</option><option value="4">4 Critique</option>
+      </select>
+      <!-- f-status géré par les tabs ci-dessus -->
+      <input type="hidden" id="f-status" value="">
+      <select id="f-type" onchange="applyFilters()">
+        <option value="">Tous types</option>
+        <option value="CYBER">Cyber</option><option value="SANITAIRE">Sanitaire</option><option value="MIXTE">Mixte</option>
+      </select>
+      <button class="btn-filter" onclick="resetFilters()">✕</button>
+    </div>
+    <div id="timeline"></div>
+  </section>
+</div>
+
+<!-- ══════════════════ TAB SOINS ═══════════════════════ -->
+<div id="tab-soins" class="tab-content">
+  <div class="soins-header">
+    <h2>🏥 Cartographie de Situation — Soins</h2>
+    <button class="btn-soins-albert" onclick="askAlbertSoins()">🧠 Analyse capacitaire SCRIBE</button>
+    <span style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:8px" id="soins-last-update"></span>
+  </div>
+  <div class="soins-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted2)">Opérationnel</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted2)">Mode dégradé</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted2)">Impact critique</span></div>
+    <button id="btn-ambulance-layer" onclick="toggleAmbulanceLayer()" style="margin-left:auto;font-family:var(--mono);font-size:9px;padding:3px 10px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer" title="Afficher/masquer les transferts EN COURS sur la carte">🚑 Transferts</button>
+  </div>
+  <!-- Layout principal : carte + panneaux latéraux -->
+  <div style="flex:1;display:flex;overflow:hidden;min-height:0">
+    <!-- Colonne gauche : services + timeline -->
+    <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0">
+      <div class="transverses-section" id="transverses-section"></div>
+      <div class="soins-grid" id="soins-grid" style="padding:0 14px 14px 14px"></div>
+    </div>
+    <!-- Colonne droite : carte carrée + liste transferts -->
+    <div style="width:420px;min-width:380px;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--border);overflow:hidden">
+      <!-- Carte -->
+      <!-- Carte soins (miroir de la carte principale) -->
+      <div id="map-soins" style="width:100%;height:380px;flex-shrink:0"></div>
+      <!-- Liste transferts EN COURS liés à ce site -->
+      <div style="flex:1;overflow-y:auto;background:var(--surface2);border-top:1px solid var(--border)">
+        <div style="padding:6px 10px;font-family:var(--mono);font-size:8px;letter-spacing:1px;color:var(--muted2);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <span>🚑 TRANSFERTS EN COURS</span>
+          <span id="soins-tr-count" style="color:var(--muted)"></span>
+        </div>
+        <div id="soins-tr-list" style="padding:6px"></div>
+      </div>
+    </div>
+    <!-- Panel Albert latéral escamotable -->
+    <div id="soins-albert-panel" style="display:none;width:380px;min-width:340px;border-left:2px solid var(--purple);background:var(--surface2);flex-direction:column;flex-shrink:0">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span style="font-family:var(--mono);font-size:10px;letter-spacing:2px;color:#c084fc;text-transform:uppercase;flex:1">🧠 Analyse SCRIBE</span>
+        <span id="soins-albert-level" style="font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:3px"></span>
+        <button onclick="closeSoinsAlbert()" style="font-family:var(--mono);font-size:11px;padding:3px 8px;background:var(--surface3);color:var(--muted2);border:1px solid var(--border2);border-radius:4px;cursor:pointer">✕ Fermer</button>
+      </div>
+      <div id="soins-albert-body" style="flex:1;overflow-y:auto;padding:12px;font-family:var(--mono);font-size:11px;color:var(--muted2);white-space:pre-line;line-height:1.7"></div>
+      <div style="padding:8px 14px;border-top:1px solid var(--border);font-family:var(--mono);font-size:9px;color:var(--muted)" id="soins-albert-source"></div>
+      <div style="display:flex;gap:6px;padding:8px 12px;border-top:1px solid rgba(159,122,234,.2);flex-shrink:0">
+        <input id="soins-albert-question" type="text" placeholder="Question de suivi…" style="flex:1;font-family:var(--mono);font-size:9px;padding:5px 8px;background:var(--surface2);border:1px solid rgba(159,122,234,.3);border-radius:4px;color:var(--text)" onkeydown="if(event.key==='Enter')askAlbertFollowUp('soins')">
+        <button onclick="askAlbertFollowUp('soins')" style="font-family:var(--mono);font-size:9px;padding:5px 10px;background:rgba(159,122,234,.2);border:1px solid rgba(159,122,234,.4);border-radius:4px;color:#c4b5fd;cursor:pointer">↩</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TIMELINE PROJECTION ── -->
+  <div class="soins-timeline" id="soins-timeline">
+    <div class="tl-header">
+      <span class="tl-title">📅 Projection de retour à la normale</span>
+      <span class="tl-now-label">Maintenant ▶</span>
+      <span class="tl-eta-global tl-eta-unknown" id="tl-eta-global">— Aucun ETA disponible</span>
+    </div>
+    <div class="tl-track-wrap" id="tl-track-wrap">
+      <div class="tl-rail">
+        <div class="tl-rail-filled" id="tl-rail-filled" style="width:0%"></div>
+      </div>
+      <div class="tl-cursor" id="tl-cursor"></div>
+      <!-- Pins injectés dynamiquement -->
+    </div>
+    <div class="tl-ticks" id="tl-ticks"></div>
+    <div class="tl-legend-row">
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#f87171;border-color:#f87171"></div>Critique (U4)</div>
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#fb923c;border-color:#fb923c"></div>Grave (U3)</div>
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#fbbf24;border-color:#fbbf24"></div>Modéré (U2)</div>
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#60a5fa;border-color:#60a5fa"></div>Info (U1)</div>
+      <div class="tl-legend-item" style="margin-left:auto;color:var(--muted);font-size:9px">◀ Glisser pour projeter dans le temps ▶</div>
+    </div>
+  </div>
+
+</div><!-- /tab-soins -->
+
+<!-- ══════════════════ TAB CELLULE ══════════════════════ -->
+<div id="tab-cellule" class="tab-content">
+  <div class="cellule-col">
+    <div class="col-header"><h2>👥 Registre des présences</h2></div>
+    <div class="col-body" id="presence-list"><div class="empty-state">Aucune présence</div></div>
+    <div class="col-footer">
+      <div class="form-row" style="margin-bottom:5px">
+        <input type="text" id="p-nom"  placeholder="Nom de l'acteur" style="flex:1">
+        <input type="text" id="p-role" placeholder="Rôle/Fonction"   style="flex:1">
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <button class="btn-success" style="flex:1" onclick="logPresence('ENTRÉE')">▶ ENTRÉE</button>
+        <button class="btn-danger"  style="flex:1" onclick="logPresence('SORTIE')">◀ SORTIE</button>
+      </div>
+    </div>
+  </div>
+  <div class="cellule-col">
+    <div class="col-header"><h2>⚖️ Chronologie décisionnelle</h2></div>
+    <div class="col-body" id="decision-list"><div class="empty-state">Aucune décision</div></div>
+    <div class="col-footer">
+      <div class="field" style="margin-bottom:4px"><input type="text" id="d-responsable" placeholder="Responsable"></div>
+      <div class="field" style="margin-bottom:4px">
+        <select id="d-base">
+          <option value="Plan Blanc">Plan Blanc</option><option value="ORSAN">ORSAN</option>
+          <option value="PCA">PCA</option>
+          <option value="Décision direction">Décision direction</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:5px">
+        <textarea id="d-texte" placeholder="Décision prise..." rows="3"></textarea>
+      </div>
+      <button class="btn-primary" style="width:100%" onclick="saveDecision()">⚖️ ACTER</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB TRANSFERTS ═══════════════════════ -->
+<div id="tab-transferts" class="tab-content" style="flex-direction:column;overflow:hidden">
+  <!-- Bandeau RGPD -->
+  <div style="background:rgba(239,68,68,.1);border-bottom:1px solid rgba(239,68,68,.3);padding:6px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <span style="font-family:var(--mono);font-size:9px;color:#ef4444;font-weight:700">🔒 DONNÉES DE SANTÉ — ACCÈS RESTREINT</span>
+    <span style="font-family:var(--mono);font-size:8px;color:var(--muted)">Les données nominatives (nom, prénom, IPP, DDN) ne remontent jamais vers le collecteur territorial.</span>
+  </div>
+  <!-- Toolbar -->
+  <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0">
+    <span style="font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--muted2)">🚑 TRANSFERTS PATIENTS</span>
+    <button onclick="trOpenForm()" style="font-family:var(--mono);font-size:9px;padding:4px 12px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">+ Nouveau transfert</button>
+    <select id="tr-filter-statut" onchange="trRender()" style="font-family:var(--mono);font-size:9px;padding:3px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+      <option value="">Tous statuts</option>
+      <option value="EN_PREPARATION">En préparation</option>
+      <option value="EN_COURS">En cours</option>
+      <option value="ARRIVE">Arrivé</option>
+      <option value="ANNULE">Annulé</option>
+    </select>
+    <select id="tr-filter-site" onchange="trRender()" style="font-family:var(--mono);font-size:9px;padding:3px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+      <option value="">Tous sites</option>
+    </select>
+    <span id="tr-count" style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:auto"></span>
+  </div>
+  <!-- Kanban 4 colonnes -->
+  <div style="display:flex;flex:1;overflow:hidden;gap:0">
+    <div class="tr-col" id="tr-col-EN_PREPARATION" style="flex:1;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
+      <div style="padding:8px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:#fbbf24;background:var(--surface)">⏳ EN PRÉPARATION <span id="tr-n-EN_PREPARATION" style="color:var(--muted);font-weight:400"></span></div>
+      <div id="tr-list-EN_PREPARATION" class="tr-list"></div>
+    </div>
+    <div class="tr-col" id="tr-col-EN_COURS" style="flex:1;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
+      <div style="padding:8px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:#60a5fa;background:var(--surface)">🚑 EN COURS <span id="tr-n-EN_COURS" style="color:var(--muted);font-weight:400"></span></div>
+      <div id="tr-list-EN_COURS" class="tr-list"></div>
+    </div>
+    <div class="tr-col" id="tr-col-ARRIVE" style="flex:1;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
+      <div style="padding:8px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:#4ade80;background:var(--surface)">✅ ARRIVÉ <span id="tr-n-ARRIVE" style="color:var(--muted);font-weight:400"></span></div>
+      <div id="tr-list-ARRIVE" class="tr-list"></div>
+    </div>
+    <div class="tr-col" id="tr-col-ANNULE" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <div style="padding:8px 12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted);background:var(--surface)">✕ ANNULÉ <span id="tr-n-ANNULE" style="color:var(--muted);font-weight:400"></span></div>
+      <div id="tr-list-ANNULE" class="tr-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL NOTIFICATION MESSAGERIE ══ -->
+<div id="notify-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:480px;max-width:95vw;overflow:hidden">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)">✉️ NOTIFIER UN CORRESPONDANT</span>
+      <button onclick="closeNotifyModal()" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted)" id="notify-context"></div>
+      <div>
+        <label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:4px">SITE / SERVICE</label>
+        <select id="notify-site" onchange="notifyFilterUsers()" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+          <option value="">— Tous les sites —</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:4px">DESTINATAIRE</label>
+        <select id="notify-dest" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+          <option value="">— Sélectionner —</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:4px">MESSAGE</label>
+        <textarea id="notify-msg" rows="3" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+      </div>
+    </div>
+    <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+      <button onclick="closeNotifyModal()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Annuler</button>
+      <button onclick="notifySend()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:#2563eb;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:700">Envoyer ✉️</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL NOUVEAU TRANSFERT ══ -->
+<div class="modal-overlay" id="tr-modal" style="display:none;align-items:flex-start;justify-content:center;padding-top:52px;overflow-y:auto" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:640px;max-width:96vw;max-height:calc(100vh - 80px);display:flex;flex-direction:column;overflow:hidden;margin-bottom:16px">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)" id="tr-modal-title">🚑 Nouveau transfert</span>
+        <span style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:10px" id="tr-modal-meta"></span>
+      </div>
+      <button onclick="document.getElementById('tr-modal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:14px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px">
+      <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:4px;padding:6px 10px;font-family:var(--mono);font-size:8px;color:#ef4444">
+        🔒 DONNÉES DE SANTÉ — Ces informations ne quittent pas cet établissement.
+      </div>
+      <input type="hidden" id="tr-edit-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">NOM *</label>
+          <input id="tr-nom" type="text" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)"></div>
+        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">PRÉNOM *</label>
+          <input id="tr-prenom" type="text" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)"></div>
+        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">NOM DE JEUNE FILLE</label>
+          <input id="tr-njf" type="text" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)"></div>
+        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">DATE DE NAISSANCE</label>
+          <input id="tr-ddn" type="date" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)"></div>
+        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">IPP</label>
+          <input id="tr-ipp" type="text" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)" placeholder="Identifiant patient permanent"></div>
+      </div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:2px 0">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted2);font-weight:700;letter-spacing:1px">ORIGINE</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">SITE ORIGINE *</label>
+          <select id="tr-etab-orig" onchange="trLoadUfOrig()" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+            <option value="">— Sélectionner le site —</option>
+          </select></div>
+        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">SERVICE ORIGINE *</label>
+          <select id="tr-uf-orig" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+            <option value="">— Sélectionner le site d'abord —</option>
+          </select></div>
+      </div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted2);font-weight:700;letter-spacing:1px">DESTINATION</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">SITE DESTINATION *</label>
+          <select id="tr-etab-dest" onchange="trLoadUfDest()" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+            <option value="">— Sélectionner le site —</option>
+          </select></div>
+        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">SERVICE DESTINATION *</label>
+          <select id="tr-uf-dest" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+            <option value="">— Sélectionner le site d'abord —</option>
+          </select>
+          <div id="tr-uf-dest-manual-wrap" style="display:none;margin-top:4px">
+            <input id="tr-uf-dest-manual" type="text" placeholder="Saisir le service de destination..." style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+          </div></div>
+      </div>
+      <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">REDACTEUR *</label>
+        <input id="tr-redacteur" type="text" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:4px;color:var(--muted2)" placeholder="Compte connecté" readonly></div>
+      <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">🕐 HEURE D'ARRIVÉE ESTIMÉE (ETA)</label>
+        <input id="tr-eta" type="datetime-local" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:2px">Optionnel — décompte activé quand le transfert passe EN COURS</div></div>
+      <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">COMMENTAIRE</label>
+        <textarea id="tr-comment" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);min-height:50px;resize:vertical"></textarea></div>
+    </div>
+    <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0">
+      <button onclick="document.getElementById('tr-modal').style.display='none'" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Annuler</button>
+      <button onclick="trSave()" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">✓ Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB RELÈVE ═══════════════════════ -->
+<div id="tab-releve" class="tab-content">
+  <div class="cellule-col" style="max-width:340px">
+    <div class="col-header"><h2>🔄 Nouvelle consigne</h2></div>
+    <div class="col-footer" style="border-top:none;border-bottom:1px solid var(--border)">
+      <div class="field" style="margin-bottom:4px"><label>Pour qui ?</label>
+        <input type="text" id="r-pour" placeholder="Reprenant">
+      </div>
+      <div class="field" style="margin-bottom:7px"><label>Consigne</label>
+        <textarea id="r-texte" placeholder="Actions en attente, vigilances..." rows="6"></textarea>
+      </div>
+      <button class="btn-primary" style="width:100%" onclick="sendConsigne()">📤 TRANSMETTRE</button>
+    </div>
+  </div>
+  <div class="cellule-col">
+    <div class="col-header"><h2>📋 Journal de relève</h2></div>
+    <div class="col-body" id="consigne-list"><div class="empty-state">Aucune consigne</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB ANNUAIRE ════════════════════ -->
+<div id="tab-annuaire" class="tab-content">
+  <div class="annuaire-layout">
+    <div class="annuaire-sidebar">
+      <div class="annuaire-sidebar-header"><h3>📞 Annuaire</h3></div>
+      <button class="ann-mode-btn active" onclick="switchAnnuaire('normal',this)">📗 Téléphonie normale</button>
+      <button class="ann-mode-btn"        onclick="switchAnnuaire('secours',this)">🚨 Téléphonie de secours</button>
+      <button class="ann-mode-btn"        onclick="switchAnnuaire('messagerie',this)" id="ann-btn-messagerie">✉️ Contacts messagerie</button>
+      <div style="margin-top:auto;padding:10px 12px;font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.6;border-top:1px solid var(--border)">
+        <b style="color:var(--muted2)">SECOURS (cyber/IPBX)</b><br>
+        • Seuls les fixes de secours fonctionnent<br>
+        • Faire le 9 pour le standard<br>
+        • Précéder d'un 0 pour l'extérieur<br>
+        • DECT Wi-Fi = hors service
+      </div>
+    </div>
+    <div class="annuaire-content">
+      <!-- Pane messagerie -->
+      <div id="ann-pane-messagerie" style="display:none;flex-direction:column;height:100%;overflow:hidden">
+        <div style="padding:7px 12px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap">
+          <input type="text" id="ann-msg-search" placeholder="🔍 Rechercher..." oninput="annMsgFilter()" style="flex:1;min-width:100px;font-family:var(--mono);font-size:11px;padding:5px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+          <select id="ann-msg-site-filter" onchange="annMsgFilter()" style="font-family:var(--mono);font-size:10px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+            <option value="">Tous les sites</option>
+          </select>
+          <div style="font-family:var(--mono);font-size:8px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#4ade80;margin-right:3px"></span>En ligne</span>
+            <span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#60a5fa;margin-right:3px"></span>Connecté aujourd'hui</span>
+            <span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#6b7280;margin-right:3px"></span>Hors ligne</span>
+          </div>
+        </div>
+        <div id="ann-msg-list" style="flex:1;overflow-y:auto;padding:6px"></div>
+      </div>
+      <!-- Pane normal/secours -->
+      <div id="ann-pane-classic">
+      <div class="ann-search-bar">
+        <input type="text" id="ann-search" placeholder="🔍 Rechercher un service, un numéro..." oninput="filterAnnuaire()">
+      </div>
+      <div class="annuaire-list" id="annuaire-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ NOTIF PANEL ══════════════════════ -->
+<div id="notif-panel">
+  <div class="np-header">
+    <span class="np-title">🔔 Inbox</span>
+    <button style="font-family:var(--mono);font-size:9px;padding:2px 7px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);border-radius:3px;cursor:pointer" onclick="markAllRead()">Tout lire</button>
+    <span class="np-close" onclick="toggleNotifPanel()">✕</span>
+  </div>
+  <div class="np-list" id="notif-list"><div class="empty-state">Aucune notification</div></div>
+  <div class="np-actions">
+    <span style="font-family:var(--mono);font-size:9px;color:var(--muted)" id="np-count-info"></span>
+  </div>
+</div>
+
+<!-- ══════════════════ ADMIN PANEL ═════════════════════ -->
+<div id="admin-panel">
+  <div class="admin-box">
+    <!-- Header admin -->
+    <div style="display:flex;align-items:center;gap:14px;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0">
+      <img src="/static/logo-scribe.png" style="height:28px">
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text)">ADMINISTRATION — SCRIBE</span>
+      <span id="admin-version-badge" style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:4px"></span>
+      <div style="flex:1"></div>
+      <!-- v2307-hotfix — Bouton retour tableau de bord bien visible.
+           Avant : seul un petit "✕ Fermer" discret, facile à rater.
+           Maintenant : bouton primaire explicite + raccourci clavier Échap. -->
+      <button onclick="closeAdminPanel()"
+              style="font-family:var(--mono);font-size:10px;padding:7px 16px;background:rgba(99,102,241,.15);border:1px solid #6366f1;border-radius:4px;color:#818cf8;cursor:pointer;font-weight:700">
+        ← Retour au tableau de bord
+      </button>
+      <button onclick="closeAdminPanel()"
+              title="Fermer (Échap)"
+              style="font-family:var(--mono);font-size:11px;padding:5px 10px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">
+        ✕
+      </button>
+    </div>
+    <!-- Corps : sidebar + contenu -->
+    <div style="display:flex;flex:1;overflow:hidden">
+      <!-- Sidebar navigation -->
+      <div class="admin-sidebar">
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:2px;padding:8px 16px 4px">GESTION</div>
+        <button class="admin-sidebar-btn active" id="admin-nav-users" onclick="adminShowSection('users',this)">👥 Utilisateurs</button>
+        <button class="admin-sidebar-btn" id="admin-nav-plugins" onclick="adminShowSection('plugins',this)">🧩 Plugins</button>
+        <button class="admin-sidebar-btn" id="admin-nav-notifications" onclick="adminShowSection('notifications',this)">🔔 Notifications</button>
+        <!-- v2307-hotfix — Section "Contenu & scénarios" retirée : la
+             génération de scénario est maintenant intégrée au flow
+             d'archivage de crise (checkbox dans le modal archiver),
+             approche beaucoup plus naturelle. La section admin était
+             un doublon désormais inutile. Code backend préservé. -->
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:2px;padding:16px 16px 4px">CONFIGURATION</div>
+        <button class="admin-sidebar-btn" id="admin-nav-apis" onclick="adminShowSection('apis',this)">⚙ APIs & IA</button>
+        <button class="admin-sidebar-btn" id="admin-nav-network" onclick="adminShowSection('network',this)">🌐 Réseau</button>
+        <button class="admin-sidebar-btn" id="admin-nav-lang" onclick="adminShowSection('lang',this)">🌍 Langue</button>
+        <button class="admin-sidebar-btn" id="admin-nav-mfa" onclick="adminShowSection('mfa',this)">🔐 Sécurité MFA</button>
+        <button class="admin-sidebar-btn" id="admin-nav-fed" onclick="adminShowSection('fed',this)">📡 Fédération</button>
+      </div>
+      <!-- Contenu principal -->
+      <div class="admin-main">
+
+        <!-- SECTION : Utilisateurs -->
+        <div id="admin-section-users">
+          <h2 style="font-family:var(--mono);font-size:13px;font-weight:700;margin:0 0 20px;color:var(--text)">👥 Gestion des utilisateurs</h2>
+          <div class="admin-section">
+            <h3>Comptes actifs</h3>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <button onclick="adminSelectAllUsers()" style="font-family:var(--mono);font-size:9px;padding:3px 10px;background:transparent;border:1px solid var(--border2);border-radius:3px;color:var(--muted);cursor:pointer">Tout sélectionner</button>
+            <button onclick="adminDeleteSelected()" style="font-family:var(--mono);font-size:9px;padding:3px 10px;background:rgba(239,68,68,.1);border:1px solid #ef4444;border-radius:3px;color:#f87171;cursor:pointer">🗑 Supprimer la sélection</button>
+            <span id="admin-select-count" style="font-family:var(--mono);font-size:9px;color:var(--muted)"></span>
+          </div>
+          <div id="admin-user-list"><div style="color:var(--muted);font-size:11px">Chargement...</div></div>
+          </div>
+          <div class="admin-section" id="create-user-section">
+            <h3>Créer un compte</h3>
+            <div class="admin-form-grid">
+              <div class="admin-field"><label>Identifiant</label><input type="text" id="nu-username" placeholder="ex: jdupont"></div>
+              <div class="admin-field"><label>Nom affiché</label><input type="text" id="nu-display" placeholder="ex: M. Dupont"></div>
+              <div class="admin-field"><label>Mot de passe</label><input type="password" id="nu-pass" placeholder="••••••••"></div>
+              <div class="admin-field"><label>Groupe</label>
+                <select id="nu-role">
+                  <option value="collaborateur">Collaborateur (directeur, cadre...)</option>
+                  <option value="soignant">Soignant (accès lecture+saisie)</option>
+                  <option value="admin">Admin (accès total)</option>
+                </select>
+              </div>
+              <div class="admin-field" style="grid-column:1/-1"><label>Périmètre (optionnel)</label><input type="text" id="nu-perimetre" placeholder="ex: CANCEROLOGIE, DNA, ANNECY..."></div>
+            </div>
+            <button class="btn-primary" style="margin-top:12px;font-size:11px" onclick="createUser()">+ Créer le compte</button>
+          </div>
+          <div class="admin-section" id="admin-setpw-section" style="display:none">
+            <h3>🔑 Changer le mot de passe</h3>
+            <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px">Cliquer sur un compte dans la liste ci-dessus pour le sélectionner, puis saisir le nouveau mot de passe deux fois.</p>
+            <div style="font-family:var(--mono);font-size:10px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;margin-bottom:12px">
+              Compte sélectionné : <strong id="setpw-selected-name" style="color:var(--text)">— cliquer sur un compte —</strong>
+              <input type="hidden" id="setpw-user-id">
+            </div>
+            <div class="admin-form-grid">
+              <div class="admin-field"><label>Nouveau mot de passe</label>
+                <input type="password" id="setpw-new" placeholder="••••••••" oninput="adminCheckPw()">
+              </div>
+              <div class="admin-field"><label>Confirmer le mot de passe</label>
+                <input type="password" id="setpw-confirm" placeholder="••••••••" oninput="adminCheckPw()">
+              </div>
+            </div>
+            <div id="setpw-match" style="font-family:var(--mono);font-size:10px;margin-bottom:8px;height:16px"></div>
+            <button class="btn-primary" id="setpw-btn" style="font-size:11px;opacity:.5" onclick="adminSetPassword()" disabled>Attribuer le mot de passe</button>
+            <span id="setpw-result" style="font-family:var(--mono);font-size:10px;margin-left:12px"></span>
+          </div>
+          <div class="admin-section" id="import-users-section">
+            <h3>Import de comptes (Excel)</h3>
+            <input type="file" id="import-users-file" accept=".xlsx,.xls">
+            <button class="btn-sm blue" style="margin-top:8px" onclick="importComptes()">Importer</button>
+            <a href="/api/v1/auth/comptes-modele" class="btn-sm" style="margin-left:8px;text-decoration:none">Télécharger modèle</a>
+          </div>
+        </div>
+
+        <!-- SECTION : Plugins -->
+        <div id="admin-section-plugins" style="display:none">
+          <h2 style="font-family:var(--mono);font-size:13px;font-weight:700;margin:0 0 20px;color:var(--text)">🧩 Gestion des plugins</h2>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:12px">Les modifications prennent effet au prochain redémarrage de l&#39;instance.</div>
+          <div id="admin-plugins-list"><div style="color:var(--muted);font-size:11px">Chargement...</div></div>
+          <button onclick="loadAdminPlugins()" style="font-family:var(--mono);font-size:9px;padding:5px 14px;margin-top:12px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">🔄 Actualiser</button>
+          <div class="admin-section" style="margin-top:24px">
+            <h3>📦 Ajouter un plugin</h3>
+            <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px">
+              Un plugin SCRIBE est un dossier ZIP contenant <code>plugin.py</code> et <code>api.py</code>.<br>
+              Après upload, le plugin apparaît dans la liste et peut être activé. Redémarrage requis.
+            </p>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <input type="file" id="plugin-upload-file" accept=".zip" style="font-family:var(--mono);font-size:10px">
+              <button onclick="adminUploadPlugin()" style="font-family:var(--mono);font-size:10px;padding:5px 16px;background:#003189;color:#fff;border:none;border-radius:4px;cursor:pointer">⬆ Uploader</button>
+            </div>
+            <div id="plugin-upload-result" style="font-family:var(--mono);font-size:10px;margin-top:8px"></div>
+          </div>
+        </div>
+
+        <!-- SECTION : Notifications -->
+        <!-- v2305 — Plugin notifications intégré dans l'admin via iframe.
+             L'UI reste maintenue dans plugins/notifications/notifications.html
+             mais est accessible depuis le menu admin principal au lieu d'une
+             URL séparée /api/v1/notifications/ui. Philosophie CMS : tout est
+             centralisé sous /admin. -->
+        <div id="admin-section-notifications" style="display:none">
+          <h2 style="font-family:var(--mono);font-size:13px;font-weight:700;margin:0 0 20px;color:var(--text)">🔔 Notifications multi-canal</h2>
+          <iframe id="admin-notifs-iframe"
+                  src="about:blank"
+                  style="width:100%;height:calc(100vh - 180px);border:1px solid var(--border);border-radius:6px;background:var(--surface)"></iframe>
+        </div>
+
+        <!-- SECTION : Contenu & scénarios -->
+        <!-- v2.3.101 (v2306) — Génération de scénarios rejouables depuis une
+             crise passée. L'admin choisit la fenêtre temporelle, les
+             catégories à inclure, l'anonymisation ; SCRIBE produit un JSON
+             immédiatement utilisable par le collecteur d'exercice.
+             Usage typique : valider annuellement que les mesures de
+             remédiation mises en place depuis une crise réelle tiennent
+             bien la route lors d'un rejouage. -->
+        <div id="admin-section-content" style="display:none">
+          <h2 style="font-family:var(--mono);font-size:13px;font-weight:700;margin:0 0 20px;color:var(--text)">📼 Contenu & scénarios d'exercice</h2>
+
+          <div class="admin-section">
+            <h3>🎬 Générer un scénario depuis une crise passée</h3>
+            <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 0 14px;line-height:1.6">
+              Transforme le déroulé réel d'une crise (incidents, messages, transferts)
+              en un scénario rejouable. Utile pour <strong>valider les mesures de remédiation</strong>
+              mises en place depuis la crise initiale, former les nouveaux entrants,
+              ou alimenter une bibliothèque de cas.
+            </p>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div>
+                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">TITRE DU SCÉNARIO</label>
+                <input type="text" id="scen-titre"
+                       placeholder="ex: REX Ransomware 2026-04 — rejouage annuel"
+                       style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
+              </div>
+              <div>
+                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">SIGLE CIBLE</label>
+                <input type="text" id="scen-cible" value="CHAG"
+                       style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
+              </div>
+            </div>
+
+            <div style="margin-bottom:12px">
+              <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">DESCRIPTION (optionnelle)</label>
+              <textarea id="scen-description" rows="2"
+                        placeholder="But pédagogique, contexte, objectifs..."
+                        style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px;resize:vertical"></textarea>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div>
+                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">DEPUIS (optionnel)</label>
+                <input type="datetime-local" id="scen-since"
+                       style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
+              </div>
+              <div>
+                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">JUSQU'À (optionnel)</label>
+                <input type="datetime-local" id="scen-until"
+                       style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div>
+                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">TYPE DE CRISE</label>
+                <select id="scen-type"
+                        style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
+                  <option value="CYBER">Cyber</option>
+                  <option value="SANITAIRE">Sanitaire</option>
+                  <option value="TECHNIQUE">Technique</option>
+                  <option value="MIXTE" selected>Mixte</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">COMPLEXITÉ</label>
+                <select id="scen-complexite"
+                        style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
+                  <option value="FACILE">Facile</option>
+                  <option value="MOYEN" selected>Moyen</option>
+                  <option value="DIFFICILE">Difficile</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-bottom:12px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:4px">
+              <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">ÉVÉNEMENTS À INCLURE</div>
+              <label style="font-family:var(--mono);font-size:10px;color:var(--text);display:inline-block;margin-right:16px">
+                <input type="checkbox" id="scen-inc-incidents" checked> Incidents
+              </label>
+              <label style="font-family:var(--mono);font-size:10px;color:var(--text);display:inline-block;margin-right:16px">
+                <input type="checkbox" id="scen-inc-messages" checked> Messages entrants
+              </label>
+              <label style="font-family:var(--mono);font-size:10px;color:var(--text);display:inline-block;margin-right:16px">
+                <input type="checkbox" id="scen-inc-transferts" checked> Transferts
+              </label>
+              <label style="font-family:var(--mono);font-size:10px;color:var(--text);display:inline-block;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;width:100%">
+                <input type="checkbox" id="scen-anonymize" checked>
+                <strong>Anonymiser</strong> (masque noms, tél, email, NIR, IPP — recommandé pour partage)
+              </label>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+              <button onclick="scenPreview()"
+                      style="font-family:var(--mono);font-size:10px;padding:8px 16px;background:var(--surface);border:1px solid var(--border2);border-radius:4px;color:var(--text);cursor:pointer">
+                🔍 Aperçu événements
+              </button>
+              <button onclick="scenGenerate()"
+                      style="font-family:var(--mono);font-size:10px;padding:8px 16px;background:rgba(99,102,241,.15);border:1px solid #6366f1;border-radius:4px;color:#818cf8;cursor:pointer;font-weight:700">
+                🎬 Générer le scénario
+              </button>
+              <button onclick="scenDownload()"
+                      style="font-family:var(--mono);font-size:10px;padding:8px 16px;background:rgba(16,185,129,.15);border:1px solid #10b981;border-radius:4px;color:#34d399;cursor:pointer;font-weight:700">
+                ⬇ Télécharger JSON
+              </button>
+            </div>
+
+            <div id="scen-result" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:10px"></div>
+          </div>
+
+          <div class="admin-section">
+            <h3>📚 Bibliothèque de scénarios</h3>
+            <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 0 10px">
+              Les scénarios disponibles dans <code>scenarios/</code>. Pour importer un
+              scénario généré ou partagé, le déposer dans ce dossier.
+            </p>
+            <div id="scen-lib-list" style="font-family:var(--mono);font-size:10px;color:var(--muted)">Chargement…</div>
+          </div>
+        </div>
+
+        <!-- SECTION : APIs & IA -->
+        <div id="admin-section-apis" style="display:none">
+          <h2 style="font-family:var(--mono);font-size:13px;font-weight:700;margin:0 0 20px;color:var(--text)">⚙ APIs & Assistant IA</h2>
+          <div class="admin-section">
+            <h3>🤖 Fournisseur IA actif</h3>
+            <div id="admin-ia-info"><div style="color:var(--muted);font-size:11px">Chargement...</div></div>
+            <div style="margin-top:14px">
+              <h3 style="font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--border)">Fournisseurs disponibles</h3>
+              <div id="admin-ia-providers"><div style="color:var(--muted);font-size:11px">Chargement...</div></div>
+              <p style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:10px">
+                Pour changer de fournisseur : définir <code>SCRIBE_IA_PROVIDER</code>, <code>SCRIBE_IA_KEY</code>, <code>SCRIBE_IA_MODEL</code> avant de démarrer l'instance.
+              </p>
+            </div>
+          </div>
+          <div class="admin-section">
+            <h3>🗺️ Routing ambulances</h3>
+            <div id="admin-routing-info"><div style="color:var(--muted);font-size:11px">Chargement...</div></div>
+            <p style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:10px">
+              Changer via <code>SCRIBE_ROUTING_ENGINE</code> (osrm_public | osrm_local | openrouteservice | graphhopper | valhalla)
+            </p>
+          </div>
+        </div>
+
+        <!-- SECTION : Réseau -->
+        <div id="admin-section-network" style="display:none">
+          <h2 style="font-family:var(--mono);font-size:13px;font-weight:700;margin:0 0 20px;color:var(--text)">🌐 Configuration réseau</h2>
+          <div id="admin-network-info"><div style="color:var(--muted);font-size:11px">Chargement...</div></div>
+        </div>
+
+        <!-- SECTION : Langue & localisation -->
+        <!-- v2307 — Sélecteur de langue façon WordPress. L'admin choisit
+             la langue par défaut ; la bascule est immédiate pour les
+             utilisateurs au prochain chargement de page. 8 langues
+             disponibles à date (fr, en, de, es, it, nl, pl, pt). -->
+        <div id="admin-section-lang" style="display:none">
+          <h2 style="font-family:var(--mono);font-size:13px;font-weight:700;margin:0 0 20px;color:var(--text)">🌍 Langue & localisation</h2>
+          <div class="admin-section">
+            <h3>Langue par défaut de l'instance</h3>
+            <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 0 14px;line-height:1.6">
+              Cette langue sera appliquée à tous les utilisateurs de l'instance
+              au prochain chargement de page. Toutes les langues disponibles ont
+              été traduites à 100%.
+            </p>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+              <label style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px">LANGUE ACTIVE</label>
+              <select id="lang-select"
+                      style="padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;min-width:200px">
+                <option value="">Chargement…</option>
+              </select>
+              <button onclick="applyAdminLang()"
+                      style="font-family:var(--mono);font-size:10px;padding:8px 16px;background:rgba(99,102,241,.15);border:1px solid #6366f1;border-radius:4px;color:#818cf8;cursor:pointer;font-weight:700">
+                💾 Appliquer
+              </button>
+            </div>
+            <div id="lang-apply-result" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:8px"></div>
+          </div>
+          <div class="admin-section">
+            <h3>ℹ À propos de l'internationalisation</h3>
+            <p style="font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.7">
+              SCRIBE est multilingue par design. Les fichiers de traduction sont
+              au format JSON dans <code>app/lang/</code>. Pour ajouter une nouvelle
+              langue, créer un fichier <code>app/lang/XX.json</code> en copiant
+              la structure de <code>fr.json</code> et en traduisant les valeurs.
+              Les chaînes de l'interface sont marquées avec <code>data-i18n="section.cle"</code>
+              et résolues côté client via la fonction <code>t()</code>.
+            </p>
+          </div>
+        </div>
+
+        <!-- SECTION : Sécurité MFA -->
+        <!-- v2315 — Gestion MFA TOTP : l'admin peut
+             (a) voir qui a activé son MFA
+             (b) forcer une réinitialisation (perte de téléphone)
+             (c) activer son propre MFA depuis ici
+             Le flux utilisateur normal (activation personnelle) passe
+             aussi par cette section. Compatible Google Authenticator,
+             Aegis, 2FAS, FreeOTP, Microsoft Authenticator. -->
+        <div id="admin-section-mfa" style="display:none">
+          <h2 style="font-family:var(--mono);font-size:13px;font-weight:700;margin:0 0 20px;color:var(--text)">🔐 Sécurité — Authentification à double facteur</h2>
+
+          <!-- Bloc 1 : MFA de l'utilisateur courant -->
+          <div class="admin-section">
+            <h3>🔑 Mon authentification</h3>
+            <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 0 14px;line-height:1.6">
+              Active l'authentification à double facteur (TOTP) sur ton compte.
+              Compatible avec Google Authenticator, Aegis, 2FAS, FreeOTP,
+              Microsoft Authenticator, etc. 10 codes de backup sont fournis à
+              l'activation — garde-les au chaud (coffre-fort, gestionnaire de mot
+              de passe) pour te récupérer si tu perds ton téléphone.
+            </p>
+            <div id="mfa-self-status" style="font-family:var(--mono);font-size:11px;padding:10px;background:var(--surface2);border-radius:4px;margin-bottom:10px">
+              Chargement…
+            </div>
+            <div id="mfa-self-actions" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+          </div>
+
+          <!-- Bloc 2 : Supervision des MFA (admin uniquement) -->
+          <div class="admin-section" id="mfa-admin-block" style="display:none">
+            <h3>👥 MFA des utilisateurs</h3>
+            <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 0 14px;line-height:1.6">
+              Vue globale du MFA par utilisateur. Tu peux réinitialiser le MFA
+              d'un utilisateur qui a perdu son téléphone — il devra alors refaire
+              le setup (scanner un nouveau QR code).
+            </p>
+            <div id="mfa-users-list" style="font-family:var(--mono);font-size:10px">
+              Chargement…
+            </div>
+          </div>
+
+          <!-- Bloc 3 : À propos -->
+          <div class="admin-section">
+            <h3>ℹ À propos du MFA TOTP</h3>
+            <p style="font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.7">
+              Le TOTP (Time-based One-Time Password, RFC 6238) génère un code à
+              6 chiffres qui change toutes les 30 secondes. Le secret est stocké
+              chiffré côté serveur et jamais exposé après l'activation. Les codes
+              de backup sont utilisables une seule fois chacun et permettent la
+              récupération si le téléphone est indisponible. Le MFA est
+              <strong>recommandé</strong> pour tous les comptes admin/collaborateur,
+              particulièrement ceux exposés à Internet.
+            </p>
+          </div>
+        </div>
+
+        <!-- SECTION : Fédération -->
+        <div id="admin-section-fed" style="display:none">
+          <h2 style="font-family:var(--mono);font-size:13px;font-weight:700;margin:0 0 20px;color:var(--text)">📡 Fédération &amp; Collecteurs</h2>
+
+          <div class="admin-section">
+            <h3>Synchronisation</h3>
+            <div id="fed-status-box" style="font-family:var(--mono);font-size:9px;padding:12px;background:var(--surface2);border-radius:6px;border:1px solid var(--border2);line-height:1.8">
+              <span style="color:var(--muted)">Cliquer Actualiser...</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+              <button onclick="loadFedStatusPanel()" style="font-family:var(--mono);font-size:9px;padding:5px 12px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">🔄 Actualiser</button>
+              <button onclick="adminFedPause()" style="font-family:var(--mono);font-size:9px;padding:5px 12px;background:rgba(251,191,36,.1);border:1px solid #fbbf24;border-radius:4px;color:#fbbf24;cursor:pointer">⏸ Suspendre</button>
+              <button onclick="adminFedResume()" style="font-family:var(--mono);font-size:9px;padding:5px 12px;background:rgba(74,222,128,.1);border:1px solid #4ade80;border-radius:4px;color:#4ade80;cursor:pointer">▶ Reprendre</button>
+              <button onclick="adminFedReload()" style="font-family:var(--mono);font-size:9px;padding:5px 12px;background:rgba(96,165,250,.1);border:1px solid #60a5fa;border-radius:4px;color:#60a5fa;cursor:pointer">⚡ Recharger sans redémarrage</button>
+            </div>
+            <div id="fed-sync-result" style="font-family:var(--mono);font-size:9px;margin-top:6px"></div>
+          </div>
+
+          <div class="admin-section">
+            <h3>Collecteur actif</h3>
+            <div id="fed-current-config" style="font-family:var(--mono);font-size:10px;padding:10px;background:var(--surface2);border-radius:6px;border:1px solid var(--border2);line-height:1.8">
+              <span style="color:var(--muted)">Chargement...</span>
+            </div>
+          </div>
+
+          <div class="admin-section">
+            <h3>Supervisions sortantes</h3>
+            <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px">
+              Chaque entrée est un collecteur vers lequel cette instance pousse ses données.
+              Modifications appliquées <strong>immédiatement</strong> sans redémarrage.
+            </p>
+            <!-- v2307-hotfix — Le backend ne supporte aujourd'hui qu'UN SEUL
+                 collecteur à la fois. Les entrées supplémentaires sont
+                 ignorées au save, ce qui créait une UX trompeuse (les
+                 collecteurs ajoutés disparaissaient après "Enregistrer").
+                 Clarifié par le disclaimer ci-dessous. Pour plusieurs
+                 collecteurs → roadmap v2308+ (modèle étendu multi-collect). -->
+            <p style="font-family:var(--mono);font-size:9px;color:#fbbf24;margin-bottom:10px;padding:6px 10px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:4px">
+              ⚠ Note v2307 : Une seule supervision active à la fois dans cette version.
+              Seul le premier collecteur de la liste sera sauvegardé.
+              Support multi-collecteurs prévu dans une prochaine version.
+            </p>
+            <div id="fed-collectors-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+            <button onclick="adminAddCollectorRow()" style="font-family:var(--mono);font-size:9px;padding:4px 12px;background:transparent;border:1px solid #003189;border-radius:4px;color:#7ba4f8;cursor:pointer">+ Ajouter un collecteur</button>
+            <div style="margin-top:14px;display:flex;align-items:center;gap:12px">
+              <button onclick="adminSaveFedConfig()" style="font-family:var(--mono);font-size:10px;padding:6px 18px;background:#003189;color:#fff;border:none;border-radius:4px;cursor:pointer">💾 Enregistrer et appliquer</button>
+              <span id="fed-save-result" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span>
+            </div>
+          </div>
+
+        </div>
+
+      </div><!-- /.admin-main -->
+    </div><!-- /flex -->
+  </div><!-- /.admin-box -->
+</div><!-- /#admin-panel -->
+
+<!-- ══════════════════ TAB KANBAN ══════════════════════ -->
+<div id="tab-kanban" class="tab-content">
+  <div class="kanban-header">
+    <h2>📋 Tableau de bord opérationnel — Kanban</h2>
+    <button class="btn-new-task" onclick="openTaskModal()">+ Nouvelle tâche</button>
+    <span style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:8px">Glisser-déposer pour déplacer</span>
+  </div>
+  <div class="kanban-board" id="kanban-board">
+    <div class="kanban-col" data-col="BACKLOG">
+      <div class="kanban-col-header" style="border-top:3px solid var(--muted)">
+        <span class="kanban-col-title">📥 Backlog</span>
+        <span class="kanban-col-count" id="cnt-BACKLOG">0</span>
+      </div>
+      <div class="kanban-cards" id="col-BACKLOG" ondragover="onDragOver(event,'BACKLOG')" ondrop="onDrop(event,'BACKLOG')" ondragleave="onDragLeave(event)"></div>
+      <button class="kanban-add-btn" onclick="openTaskModal(null,'BACKLOG')">+ Ajouter une tâche</button>
+    </div>
+    <div class="kanban-col" data-col="EN_COURS">
+      <div class="kanban-col-header" style="border-top:3px solid #3b82f6">
+        <span class="kanban-col-title" style="color:#60a5fa">▶ En cours</span>
+        <span class="kanban-col-count" id="cnt-EN_COURS">0</span>
+      </div>
+      <div class="kanban-cards" id="col-EN_COURS" ondragover="onDragOver(event,'EN_COURS')" ondrop="onDrop(event,'EN_COURS')" ondragleave="onDragLeave(event)"></div>
+      <button class="kanban-add-btn" onclick="openTaskModal(null,'EN_COURS')">+ Ajouter une tâche</button>
+    </div>
+    <div class="kanban-col" data-col="EN_ATTENTE">
+      <div class="kanban-col-header" style="border-top:3px solid var(--amber)">
+        <span class="kanban-col-title" style="color:#fbbf24">⏸ En attente</span>
+        <span class="kanban-col-count" id="cnt-EN_ATTENTE">0</span>
+      </div>
+      <div class="kanban-cards" id="col-EN_ATTENTE" ondragover="onDragOver(event,'EN_ATTENTE')" ondrop="onDrop(event,'EN_ATTENTE')" ondragleave="onDragLeave(event)"></div>
+      <button class="kanban-add-btn" onclick="openTaskModal(null,'EN_ATTENTE')">+ Ajouter une tâche</button>
+    </div>
+    <div class="kanban-col" data-col="TERMINÉ">
+      <div class="kanban-col-header" style="border-top:3px solid var(--green)">
+        <span class="kanban-col-title" style="color:#4ade80">✓ Terminé</span>
+        <span class="kanban-col-count" id="cnt-TERMINÉ">0</span>
+      </div>
+      <div class="kanban-cards" id="col-TERMINÉ" ondragover="onDragOver(event,'TERMINÉ')" ondrop="onDrop(event,'TERMINÉ')" ondragleave="onDragLeave(event)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TAB REX ══════════════════════════ -->
+<div id="tab-rex" class="tab-content">
+  <div class="rex-header">
+    <h2>📊 Retour d'Expérience (REX)</h2>
+    <button class="btn-new-rex" onclick="openRexModal()">+ Nouveau REX</button>
+    <a class="btn-export" href="/api/v1/sitrep/export-csv" download style="margin-left:auto">📥 Export CSV incidents</a>
+  </div>
+  <div class="rex-body" id="rex-body">
+    <div class="rex-stats-grid" id="rex-stats-grid">
+      <div class="rex-kpi"><div class="rex-kpi-val" id="rex-total">—</div><div class="rex-kpi-label">REX Total</div></div>
+      <div class="rex-kpi"><div class="rex-kpi-val" id="rex-mttr" style="color:#fbbf24">—</div><div class="rex-kpi-label">MTTR Moyen</div></div>
+      <div class="rex-kpi"><div class="rex-kpi-val" id="rex-mttd" style="color:#f87171">—</div><div class="rex-kpi-label">MTTD Moyen</div></div>
+      <div class="rex-kpi"><div class="rex-kpi-val" id="rex-jalons-pct" style="color:#4ade80">—</div><div class="rex-kpi-label">Jalons % complétés</div></div>
+    </div>
+    <div class="rex-chart-row">
+      <div class="rex-chart-box" style="flex:1.5">
+        <div class="rex-chart-title">Incidents par type</div>
+        <div class="rex-bar-wrap" id="rex-by-type"></div>
+      </div>
+      <div class="rex-chart-box" style="flex:1">
+        <div class="rex-chart-title">Dernières fiches REX</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted)" id="rex-recent-list">Aucune fiche</div>
+      </div>
+    </div>
+    <div class="rex-chart-box" id="rex-incident-import-section">
+      <div class="rex-chart-title">Générer REX depuis un incident</div>
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <div class="admin-field" style="flex:1"><label>Incident à analyser</label>
+          <select id="rex-inc-id">
+            <option value="">— Sélectionner un incident —</option>
+          </select>
+        </div>
+        <button class="btn-new-rex" onclick="genRexFromIncident()">🔄 Pré-remplir REX</button>
+        <a id="dl-rapport-btn" style="display:none" class="btn-export" href="#">📄 Télécharger rapport DOCX</a>
+      </div>
+    </div>
+    <div class="rex-list" id="rex-list"><div class="empty-state">Aucune fiche REX — créez-en une via le bouton ci-dessus</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════ TASK MODAL ══════════════════════ -->
+<div id="task-modal">
+  <div class="task-modal-box">
+    <div class="task-modal-header">
+      <span style="font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);flex:1" id="task-modal-title">Nouvelle tâche</span>
+      <button class="btn-sm" onclick="closeTaskModal()">✕</button>
+    </div>
+    <div class="task-modal-body">
+      <div class="admin-field"><label>Titre</label><input type="text" id="tm-titre" placeholder="Description courte de la tâche"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="admin-field"><label>Assigné à</label><input type="text" id="tm-assignee" placeholder="ex: jdupont"></div>
+        <div class="admin-field"><label>Priorité</label>
+          <select id="tm-priorite">
+            <option value="4">🔴 4 — Critique</option>
+            <option value="3">🟠 3 — Haute</option>
+            <option value="2" selected>🟡 2 — Normale</option>
+            <option value="1">🟢 1 — Basse</option>
+          </select>
+        </div>
+        <div class="admin-field"><label>Colonne</label>
+          <select id="tm-colonne">
+            <option value="BACKLOG">Backlog</option>
+            <option value="EN_COURS">En cours</option>
+            <option value="EN_ATTENTE">En attente</option>
+            <option value="TERMINÉ">Terminé</option>
+          </select>
+        </div>
+        <div class="admin-field"><label>Lié à l'incident</label>
+          <select id="tm-incident">
+            <option value="">— Aucun —</option>
+          </select>
+        </div>
+      </div>
+      <div class="admin-field"><label>Description</label><textarea id="tm-desc" rows="3" placeholder="Détails, contexte..."></textarea></div>
+      <div class="admin-field"><label>Échéance</label><input type="datetime-local" id="tm-due"></div>
+    </div>
+    <div class="task-modal-footer">
+      <button style="font-family:var(--mono);font-size:9px;padding:4px 10px;background:rgba(0,207,255,.1);border:1px solid rgba(0,207,255,.3);border-radius:4px;color:var(--cyan);cursor:pointer;margin-right:auto" onclick="openNotifyModal('Kanban — '+(document.getElementById('tm-titre')?.value||''), 'Une tâche vous concerne : '+(document.getElementById('tm-titre')?.value||'')+'. Vérifiez KANBAN.')">✉️ Notifier</button>
+      <button class="btn-sm" onclick="closeTaskModal()">Annuler</button>
+      <button class="btn-primary" style="padding:6px 18px;flex:unset" onclick="saveTask()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ REX MODAL ══════════════════════ -->
+<div id="rex-modal">
+  <div class="rex-modal-box">
+    <div class="admin-header">
+      <span class="admin-title">📊 Nouvelle fiche REX</span>
+      <button class="btn-sm" onclick="closeRexModal()">✕</button>
+    </div>
+    <div class="rex-modal-body">
+
+      <div class="rex-wizard-step">
+        <div class="rex-wizard-step-title"><span class="rex-wizard-step-num">1</span>Informations générales</div>
+        <div class="rex-natural-field">
+          <label>Quel incident analysez-vous ?</label>
+          <input type="text" id="rex-titre" placeholder="ex: Panne serveur imagerie médicale — nuit du 10 mars">
+          <span class="hint">Nommez l'événement de façon simple et mémorable</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div class="rex-natural-field" style="flex:1;min-width:120px">
+            <label>Type de crise</label>
+            <select id="rex-type">
+              <option value="CYBER">🛡️ Cyber / Informatique</option>
+              <option value="SANITAIRE">🏥 Sanitaire / Soins</option>
+              <option value="MIXTE">⚠️ Mixte</option>
+            </select>
+          </div>
+          <div class="rex-natural-field" style="flex:1;min-width:140px">
+            <label>Rédigé par</label>
+            <input type="text" id="rex-redacteur" placeholder="Votre nom / fonction">
+          </div>
+        </div>
+      </div>
+
+      <div class="rex-wizard-step">
+        <div class="rex-wizard-step-title"><span class="rex-wizard-step-num">2</span>Chronologie — Combien de temps ?</div>
+        <div class="rex-natural-field">
+          <label>⏱ Quand avez-vous su qu'il y avait un problème ? <small style="color:var(--muted)">(délai depuis le début réel)</small></label>
+          <div class="rex-duration-row">
+            <input type="number" id="rex-mttd-h" placeholder="0" min="0" style="width:60px">
+            <span style="color:var(--muted);font-family:var(--mono);font-size:11px">h</span>
+            <input type="number" id="rex-mttd-m" placeholder="0" min="0" max="59" style="width:60px">
+            <span style="color:var(--muted);font-family:var(--mono);font-size:11px">min</span>
+            <span class="hint" style="margin:0">après le début de l'incident</span>
+          </div>
+        </div>
+        <div class="rex-natural-field">
+          <label>🔧 Combien de temps pour résoudre le problème ?</label>
+          <div class="rex-duration-row">
+            <input type="number" id="rex-mttr-h" placeholder="0" min="0" style="width:60px">
+            <span style="color:var(--muted);font-family:var(--mono);font-size:11px">h</span>
+            <input type="number" id="rex-mttr-m" placeholder="0" min="0" max="59" style="width:60px">
+            <span style="color:var(--muted);font-family:var(--mono);font-size:11px">min</span>
+            <span class="hint" style="margin:0">du début à la résolution</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div class="rex-natural-field" style="flex:1;min-width:100px">
+            <label>🏥 Combien de services impactés ?</label>
+            <input type="number" id="rex-poles" value="0" min="0">
+          </div>
+          <div class="rex-natural-field" style="flex:1;min-width:100px">
+            <label>⚖️ Décisions prises en cellule</label>
+            <input type="number" id="rex-decisions" value="0" min="0">
+          </div>
+          <div class="rex-natural-field" style="flex:1;min-width:100px">
+            <label>✅ Étapes réalisées / prévues</label>
+            <div style="display:flex;gap:4px;align-items:center">
+              <input type="number" id="rex-jd" value="0" min="0" style="width:55px">
+              <span style="color:var(--muted);font-size:11px">sur</span>
+              <input type="number" id="rex-jt" value="0" min="0" style="width:55px">
+            </div>
+          </div>
+        </div>
+        <!-- champs cachés pour compatibilité backend -->
+        <input type="hidden" id="rex-duree">
+        <input type="hidden" id="rex-mttd-in">
+        <input type="hidden" id="rex-mttr-in">
+      </div>
+
+      <div class="rex-wizard-step">
+        <div class="rex-wizard-step-title"><span class="rex-wizard-step-num">3</span>Bilan — Ce qu'on retient</div>
+        <div class="rex-natural-field">
+          <label>👍 Qu'est-ce qui a bien fonctionné ? <span class="hint" style="display:inline">(un point par ligne)</span></label>
+          <textarea id="rex-pos" rows="2" placeholder="La cellule de crise a été rapidement activée&#10;Les sauvegardes étaient disponibles&#10;..."></textarea>
+        </div>
+        <div class="rex-natural-field">
+          <label>👎 Qu'est-ce qui peut être amélioré ? <span class="hint" style="display:inline">(un point par ligne)</span></label>
+          <textarea id="rex-amelio" rows="2" placeholder="La procédure n'était pas connue de tous&#10;Délai de communication trop long&#10;..."></textarea>
+        </div>
+        <div class="rex-natural-field">
+          <label>🎯 Quelles actions concrètes pour ne pas répéter ? <span class="hint" style="display:inline">(un point par ligne)</span></label>
+          <textarea id="rex-actions" rows="2" placeholder="Former les cadres de nuit à la procédure P12&#10;Tester les sauvegardes chaque trimestre&#10;..."></textarea>
+        </div>
+        <div class="rex-natural-field">
+          <label>📖 Message principal à retenir de cet incident</label>
+          <textarea id="rex-lecons" rows="2" placeholder="En résumé, ce qu'il faut retenir pour les prochains exercices..."></textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="task-modal-footer">
+      <button class="btn-sm" onclick="closeRexModal()">Annuler</button>
+      <button class="btn-primary" style="padding:6px 18px;flex:unset" onclick="saveRex()">💾 Enregistrer REX</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- v2.3.101 — Génération QR code pour statut public (onglet Communiqué) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<!-- ══════════════════ TAB COMMUNIQUÉ ══════════════════ -->
+<div id="tab-communique" class="tab-content" style="flex-direction:column">
+  <!-- Sélecteur site — barre fine en haut -->
+  <div style="display:flex;align-items:center;gap:8px;padding:5px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;font-family:var(--mono);font-size:9px;color:var(--muted)">
+    <span>📢 Communiqué pour :</span>
+    <select id="comm-etab-select" style="font-family:var(--mono);font-size:9px;background:var(--surface2);color:var(--text);border:1px solid var(--border2);border-radius:3px;padding:2px 6px;cursor:pointer;max-width:300px" onchange="onCommEtabChange(this.value)">
+      <option value="">-- chargement --</option>
+    </select>
+    <span id="comm-etab-info" style="color:var(--muted2);font-size:8px;font-style:italic"></span>
+  </div>
+  <div class="communique-wrap" style="flex:1;overflow:hidden">
+
+    <!-- Éditeur gauche -->
+    <div class="communique-editor" id="comm-editor">
+      <span id="comm-site-context" style="display:none"></span>
+
+      <div class="communique-section">
+        <h3>Niveau global</h3>
+        <div class="niveau-btns">
+          <button class="niveau-btn" onclick="setNiveau('OPERATIONNEL',this)">✓ Opérationnel</button>
+          <button class="niveau-btn" onclick="setNiveau('PERTURBE',this)">⚠ Perturbé</button>
+          <button class="niveau-btn" onclick="setNiveau('INCIDENT_MAJEUR',this)">✕ Incident majeur</button>
+          <button class="niveau-btn" onclick="setNiveau('MAINTENANCE',this)">↻ Maintenance</button>
+        </div>
+      </div>
+
+      <div class="communique-section">
+        <h3>Message officiel</h3>
+        <textarea id="comm-message" rows="3" placeholder="2-3 phrases décrivant la situation pour le public (prestataires, journalistes, partenaires)..."
+          style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:10px;padding:7px 9px;border-radius:4px;resize:none;line-height:1.6"
+          onchange="saveStatus()"></textarea>
+      </div>
+
+      <div class="communique-section">
+        <h3>Services SI</h3>
+        <div id="comm-si-list"></div>
+      </div>
+
+      <div class="communique-section">
+        <h3>Prise en charge patients</h3>
+        <div id="comm-pec-list"></div>
+      </div>
+
+      <div class="communique-section">
+        <h3>Questions fréquentes</h3>
+        <div id="comm-faq-list"></div>
+      </div>
+
+      <div class="communique-section">
+        <h3>Chronologie publique</h3>
+        <div class="chron-add">
+          <textarea id="comm-chron-new" placeholder="Ajouter un point de situation..."></textarea>
+          <button class="btn-primary" style="font-size:10px;padding:5px 10px;white-space:nowrap" onclick="addChronEntry()">+ Ajouter</button>
+        </div>
+        <div id="comm-chron-list" style="margin-top:8px"></div>
+      </div>
+
+      <div class="publish-bar">
+        <div class="publish-status" id="comm-publish-status">
+          <span class="published-dot off" id="comm-pub-dot"></span>
+          <span id="comm-pub-label">Non publié — accès /status non disponible</span>
+        </div>
+        <button class="btn-publish off" id="comm-pub-btn" onclick="togglePublish()">Publier</button>
+        <a href="/status" target="_blank" class="btn-secondary" style="font-family:var(--mono);font-size:10px;padding:5px 10px;text-decoration:none">↗ Voir</a>
+      </div>
+    </div>
+
+    <!-- Prévisualisation droite -->
+    <div class="communique-preview">
+      <div class="preview-frame" id="comm-preview">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;padding:40px 0">Prévisualisation…</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════ TAB ANALYSE / DEBRIEFING ══════════════════ -->
+<div id="tab-analyse" class="tab-content">
+  <div class="analyse-wrap">
+
+    <!-- ═══ ZONE CHARGEMENT — style La Suite Numérique ═══ -->
+    <div class="az-upload-bar">
+      <div class="az-upload-col">
+        <div class="az-upload-label">
+          <span class="az-upload-badge az-badge-a">A</span>
+          Crise à analyser
+        </div>
+        <div class="az-drop" id="drop-a"
+          ondragover="event.preventDefault();this.classList.add('az-drag-over')"
+          ondragleave="this.classList.remove('az-drag-over')"
+          ondrop="handleDrop(event,'a')">
+          <div class="az-drop-cloud" id="drop-a-icon">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
+              <path d="M24 32V20M24 20L19 25M24 20L29 25" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M38 34a6 6 0 0 0-3-11.22A10 10 0 1 0 14 30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="az-drop-title" id="drop-a-title">Déposez votre archive ici</div>
+          <div class="az-drop-sub">Fichier ZIP exporté depuis SCRIBE<br><em>Export Main Courante</em> ou <em>Archiver</em></div>
+          <button class="az-btn-browse" onclick="event.stopPropagation();document.getElementById('file-a').click()">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+            Parcourir les fichiers
+          </button>
+          <div class="az-drop-hint">Format .zip · Max 50 Mo</div>
+          <!-- État chargé -->
+          <div class="az-loaded" id="drop-a-loaded" style="display:none">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" style="color:#1a7f3c"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            <span id="drop-a-name">archive.zip</span>
+            <button onclick="event.stopPropagation();clearArchive('a')" class="az-clear-btn">✕</button>
+          </div>
+        </div>
+        <input type="file" id="file-a" accept=".zip" style="display:none" onchange="loadArchive(this.files[0],'a')">
+      </div>
+
+      <div class="az-upload-col">
+        <div class="az-upload-label">
+          <span class="az-upload-badge az-badge-b">B</span>
+          Comparaison <span class="az-optional">(optionnel)</span>
+        </div>
+        <div class="az-drop az-drop-b" id="drop-b"
+          ondragover="event.preventDefault();this.classList.add('az-drag-over')"
+          ondragleave="this.classList.remove('az-drag-over')"
+          ondrop="handleDrop(event,'b')">
+          <div class="az-drop-cloud">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" width="40" height="40">
+              <path d="M24 32V20M24 20L19 25M24 20L29 25" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M38 34a6 6 0 0 0-3-11.22A10 10 0 1 0 14 30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="az-drop-title">Même scénario rejoué</div>
+          <div class="az-drop-sub">Comparer deux gestions d'une crise<br>pour mesurer la progression</div>
+          <button class="az-btn-browse az-btn-b" onclick="event.stopPropagation();document.getElementById('file-b').click()">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+            Parcourir les fichiers
+          </button>
+          <div class="az-drop-hint">Format .zip · Max 50 Mo</div>
+          <div class="az-loaded az-loaded-b" id="drop-b-loaded" style="display:none">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" style="color:#7c3aed"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            <span id="drop-b-name">archive.zip</span>
+            <button onclick="event.stopPropagation();clearArchive('b')" class="az-clear-btn">✕</button>
+          </div>
+        </div>
+        <input type="file" id="file-b" accept=".zip" style="display:none" onchange="loadArchive(this.files[0],'b')">
+      </div>
+
+      <!-- Actions -->
+      <div class="az-actions">
+        <button class="az-btn-primary" onclick="exportDebriefDocx()" id="btn-debrief-export" style="display:none">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd"/></svg>
+          Rapport DOCX
+        </button>
+        <button class="az-btn-ghost" onclick="resetAnalyse()">Effacer tout</button>
+        <button onclick="toggleDebugLog()" style="font-family:var(--mono);font-size:9px;padding:4px 8px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer" title="Afficher les logs">📋 Logs</button>
+      </div>
+    </div>
+    <!-- Console de logs -->
+    <div id="az-debug-log" style="display:none;padding:8px 16px;background:#0a0d14;border-bottom:1px solid var(--border);flex-shrink:0;max-height:120px;overflow-y:auto">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:4px;display:flex;justify-content:space-between">
+        <span>📋 CONSOLE ANALYSE</span>
+        <button onclick="document.getElementById('az-log-content').innerHTML=''" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:9px">Effacer</button>
+      </div>
+      <div id="az-log-content" style="font-family:var(--mono);font-size:9px;color:#4ade80;line-height:1.6"></div>
+    </div>
+
+    <!-- ═══ BARRE DE PROGRESSION + RÉSUMÉ ═══ -->
+    <div class="az-progress-bar" id="az-progress-bar" style="display:none">
+      <div class="az-progress-inner">
+        <div class="az-progress-track"><div class="az-progress-fill" id="az-progress-fill"></div></div>
+        <div class="az-progress-label" id="az-progress-label">Lecture en cours...</div>
+      </div>
+    </div>
+
+    <!-- Résumé validation -->
+    <div class="az-summary" id="az-summary" style="display:none">
+      <div class="az-summary-title" id="az-summary-title">✓ Archive lue</div>
+      <div class="az-metrics-grid" id="az-metrics-grid"></div>
+      <button class="az-btn-primary az-btn-start" id="az-btn-start" onclick="startAnalyse()">
+        Démarrer l'analyse →
+      </button>
+    </div>
+
+    <!-- ═══ MÉTRIQUES CALCULÉES ═══ -->
+    <div class="analyse-metrics" id="analyse-metrics" style="display:none">
+      <div class="amet"><div class="amet-val" id="mv-duree">—</div><div class="amet-lbl">Durée crise</div><div class="amet-delta" id="md-duree"></div></div>
+      <div class="amet"><div class="amet-val" id="mv-incidents">—</div><div class="amet-lbl">Incidents</div><div class="amet-delta" id="md-incidents"></div></div>
+      <div class="amet"><div class="amet-val" id="mv-mtta">—</div><div class="amet-lbl">Délai activation cellule</div><div class="amet-delta" id="md-mtta"></div></div>
+      <div class="amet"><div class="amet-val" id="mv-mttc">—</div><div class="amet-lbl">Délai 1er communiqué</div><div class="amet-delta" id="md-mttc"></div></div>
+      <div class="amet"><div class="amet-val" id="mv-decisions">—</div><div class="amet-lbl">Décisions</div><div class="amet-delta" id="md-decisions"></div></div>
+      <div class="amet"><div class="amet-val" id="mv-kanban">—</div><div class="amet-lbl">Taux kanban</div><div class="amet-delta" id="md-kanban"></div></div>
+      <div class="amet"><div class="amet-val" id="mv-jalons">—</div><div class="amet-lbl">Jalons validés</div><div class="amet-delta" id="md-jalons"></div></div>
+      <div class="amet"><div class="amet-val" id="mv-participants">—</div><div class="amet-lbl">Participants max</div><div class="amet-delta" id="md-participants"></div></div>
+    </div>
+
+    <!-- ═══ CORPS ═══ -->
+    <div class="analyse-body">
+      <div class="analyse-left">
+        <!-- Vide -->
+        <div class="analyse-empty" id="analyse-empty">
+          <div class="analyse-empty-icon">🔬</div>
+          <div style="font-size:13px;font-family:var(--head);font-weight:600;margin-bottom:6px">Analysez votre crise</div>
+          <div style="font-size:11px;max-width:340px;text-align:center;line-height:1.7;color:var(--muted)">
+            Chargez une archive ZIP pour rejouer la crise,<br>analyser les décisions et identifier les axes d'amélioration.
+          </div>
+        </div>
+        <!-- Toolbar -->
+        <div class="analyse-toolbar" id="analyse-toolbar" style="display:none">
+          <span style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px">FILTRES :</span>
+          <button class="afilter on" data-cat="INCIDENT" onclick="toggleFilter(this)">🔴 Incidents</button>
+          <button class="afilter on" data-cat="DÉCISION" onclick="toggleFilter(this)">🟠 Décisions</button>
+          <button class="afilter on" data-cat="PRÉSENCE" onclick="toggleFilter(this)">🔵 Cellule</button>
+          <button class="afilter on" data-cat="KANBAN" onclick="toggleFilter(this)">🟡 Kanban</button>
+          <button class="afilter on" data-cat="RELÈVE" onclick="toggleFilter(this)">⚪ Relève</button>
+          <button class="afilter on" data-cat="COMMUNIQUÉ" onclick="toggleFilter(this)">📢 Communiqués</button>
+          <button class="afilter on" data-cat="REX" onclick="toggleFilter(this)">📊 REX</button>
+          <button class="afilter on" data-cat="MESSAGE" onclick="toggleFilter(this)">✉️ Messages</button>
+          <button class="afilter on" data-cat="TRANSFERT" onclick="toggleFilter(this)">🚑 Transferts</button>
+          <button class="afilter on" data-cat="NOTIFICATION" onclick="toggleFilter(this)">🔔 Notifs</button>
+          <button style="font-family:var(--mono);font-size:9px;padding:3px 10px;background:rgba(99,102,241,.2);border:1px solid #6366f1;border-radius:4px;color:#a5b4fc;cursor:pointer" onclick="loadAnalyseLive()">⚡ Analyser session live</button>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+            <span style="font-family:var(--mono);font-size:8px;color:var(--muted)">ZOOM :</span>
+            <input type="range" id="frise-zoom" min="1" max="10" value="1" style="width:80px" oninput="renderFrise()">
+          </div>
+        </div>
+        <!-- Résultats analyse live -->
+        <div id="analyse-live-result" style="display:none;padding:12px 16px;background:var(--surface2);border-radius:6px;border:1px solid var(--border2);margin:0 0 4px;font-family:var(--mono);font-size:10px;line-height:1.7;color:var(--text);white-space:pre-wrap;max-height:260px;overflow-y:auto"></div>
+        <div id="analyse-live-followup" style="display:none;flex;gap:6px;padding:0 0 12px">
+          <input id="analyse-question" type="text" placeholder="Poser une question sur cette analyse…" style="flex:1;font-family:var(--mono);font-size:10px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)" onkeydown="if(event.key==='Enter')askAlbertFollowUp('analyse')">
+          <button onclick="askAlbertFollowUp('analyse')" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:rgba(159,122,234,.2);border:1px solid rgba(159,122,234,.4);border-radius:4px;color:#c4b5fd;cursor:pointer">↩ Envoyer</button>
+        </div>
+
+        <!-- Frise -->
+        <div class="frise-container" id="frise-container"><div id="frise-inner"></div></div>
+      </div>
+
+      <!-- Panneau droit -->
+      <div class="analyse-right">
+        <div class="adetail" id="adetail">
+          <div class="adetail-empty">← Cliquez sur un événement pour voir son détail et l'annoter</div>
+        </div>
+        <div class="albert-analyse">
+          <div class="albert-analyse-header">
+            🤖 ASSISTANT IA — ANALYSE DE CRISE
+            <button class="aquick" onclick="albertAnalyseSynth()" style="margin-left:auto">Synthèse séance</button>
+          </div>
+          <div class="aquick-list">
+            <button class="aquick" onclick="askAlbertQuick('Quel a été le délai entre le premier incident et la première décision cellule ?')">⏱ Délai réaction</button>
+            <button class="aquick" onclick="askAlbertQuick('Quels jalons n\'ont jamais été validés ?')">🎯 Jalons manquants</button>
+            <button class="aquick" onclick="askAlbertQuick('Y a-t-il eu un communiqué public dans les 30 premières minutes ?')">📢 Délai comm</button>
+            <button class="aquick" onclick="askAlbertQuick('Quelles tâches kanban sont restées bloquées ?')">📋 Kanban bloqué</button>
+            <button class="aquick" onclick="askAlbertQuick('Identifie les moments sans aucune action pendant plus de 20 minutes')">🔇 Silences</button>
+            <button class="aquick" onclick="askAlbertQuick('Quels acteurs ont pris le plus de décisions ?')">👥 Acteurs clés</button>
+          </div>
+          <div class="albert-analyse-chat" id="achat"></div>
+          <div class="albert-analyse-input">
+            <input id="achat-input" type="text" placeholder="Posez votre question sur cette crise..."
+              onkeydown="if(event.key==='Enter')sendAlbertAnalyse()">
+            <button class="btn-global-albert" style="padding:4px 10px" onclick="sendAlbertAnalyse()">▶</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ONGLET CAPACITÉ ══════════════════════════════════════════════════ -->
+<div id="tab-capacite" class="tab-content">
+  <div class="cap-wrap">
+
+    <!-- Filtres par site -->
+    <div class="cap-filters">
+      <button class="cap-site-btn active" data-site="all" id="cap-btn-all" onclick="capFilterSite(this)">Tous les sites</button>
+      <span id="cap-site-btns-dyn"></span>
+      <span id="cap-last-update" style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:8px"></span>
+      <button class="cap-synthese-btn" onclick="capToggleSynthese()">📊 Synthèse</button>
+      <button class="cap-synthese-btn" style="background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3)" onclick="capAlbertAnalyse()">◈ SCRIBE</button>
+    </div>
+
+    <!-- Bandeau silences -->
+    <div id="cap-silence-banner" class="cap-silence-banner" style="display:none"></div>
+
+    <!-- Vue GRILLE (défaut) -->
+    <div class="cap-grid" id="cap-grid"></div>
+
+    <!-- Panneau Albert CAPACITÉ -->
+    <div id="cap-albert-panel" style="display:none;flex-shrink:0;border-top:1px solid var(--border);padding:14px 16px;background:var(--surface)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-family:var(--mono);font-size:10px;font-weight:700;color:#c084fc;letter-spacing:1px">◈ ANALYSE ALBERT — CAPACITÉ</span>
+        <button onclick="document.getElementById('cap-albert-panel').style.display='none'" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px">✕</button>
+      </div>
+      <div id="cap-albert-result" style="font-family:var(--head);font-size:12px;color:var(--muted2);line-height:1.7;white-space:pre-line;min-height:40px">
+        Cliquez sur SCRIBE pour analyser la situation capacitaire actuelle…
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="cap-synthese-btn" style="background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3);font-size:11px" onclick="capAlbertQuestion('Quels services sont en tension ou en situation critique ? Que préconises-tu ?')">Tensions critiques</button>
+        <button class="cap-synthese-btn" style="background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3);font-size:11px" onclick="capAlbertQuestion('Y a-t-il des lits disponibles pour accueillir des patients supplémentaires ? Où ?')">Lits disponibles</button>
+        <button class="cap-synthese-btn" style="background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3);font-size:11px" onclick="capAlbertQuestion('Quelles actions RH urgentes recommandes-tu au vu des tensions de personnel ?')">RH urgentes</button>
+        <button class="cap-synthese-btn" style="background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3);font-size:11px" onclick="capAlbertQuestion('Fais une synthèse globale de la situation capacitaire et donne les recommandations prioritaires pour la cellule de crise.')">Synthèse globale</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input id="cap-albert-input" type="text" class="cap-textarea" style="min-height:unset;padding:6px 10px;flex:1"
+          placeholder="Question libre sur la capacité..." 
+          onkeydown="if(event.key==='Enter')capAlbertQuestion(this.value)">
+        <button class="cap-btn-valider" style="padding:6px 14px;white-space:nowrap" onclick="capAlbertQuestion(document.getElementById('cap-albert-input').value)">▶</button>
+      </div>
+    </div>
+
+    <!-- Vue SYNTHÈSE (toggle) -->
+    <div class="cap-synthese" id="cap-synthese-view" style="display:none">
+      <table class="cap-synth-table" id="cap-synth-table">
+        <thead>
+          <tr>
+            <th>Service</th><th>Pôle</th><th>Site</th>
+            <th>Capacité</th>
+            <th style="color:#60a5fa">♂ H</th>
+            <th style="color:#f472b6">♀ F</th>
+            <th style="color:#c084fc">⬡ I</th>
+            <th>Statut</th><th>Alerte</th><th>Déclaré</th>
+          </tr>
+        </thead>
+        <tbody id="cap-synth-body"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- Popup déclaration capacitaire -->
+<div class="cap-popup-overlay" id="cap-popup" style="display:none" onclick="capPopupClose(event)">
+  <div class="cap-popup" onclick="event.stopPropagation()">
+    <div class="cap-popup-header">
+      <div>
+        <div class="cap-popup-title" id="cap-popup-title">Déclaration</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px" id="cap-popup-sub"></div>
+      </div>
+      <button class="cap-popup-close" onclick="capPopupClose()">✕</button>
+    </div>
+    <div class="cap-popup-body">
+
+      <!-- Info référence -->
+      <div class="cap-ref-info" id="cap-ref-info"></div>
+
+      <!-- Point de déclaration -->
+      <div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px">POINT DE DÉCLARATION</div>
+        <div class="cap-point-select">
+          <button class="cap-point-btn active" data-point="matin" onclick="capSelectPoint(this)">🌅 Matin</button>
+          <button class="cap-point-btn" data-point="aprem" onclick="capSelectPoint(this)">☀ Après-midi</button>
+          <button class="cap-point-btn" data-point="soir" onclick="capSelectPoint(this)">🌙 Soir / Relève</button>
+        </div>
+      </div>
+
+      <!-- Déclarant -->
+      <div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px">CADRE DÉCLARANT</div>
+        <input id="cap-redacteur" type="text" class="cap-num-input" style="font-size:14px;text-align:left;padding:8px 12px"
+          placeholder="Prénom Nom du cadre">
+      </div>
+
+      <!-- SECTION LITS -->
+      <div class="cap-section">
+        <div class="cap-section-title">🛏 DISPONIBILITÉ DES LITS</div>
+        <div class="cap-lits-input-grid" id="cap-lits-grid">
+          <!-- Généré dynamiquement selon accept_H/F/I -->
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted)">Tension activée :</div>
+          <select id="cap-tension" class="cap-select" style="max-width:200px">
+            <option value="0">Aucune tension</option>
+            <option value="1">Tension niveau 1</option>
+            <option value="2">Tension niveau 2</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);white-space:nowrap">Statut global lits :</div>
+          <select id="cap-statut-lits" class="cap-select">
+            <option value="normal">✓ Disponibilité normale</option>
+            <option value="tension">⚠ Tension (&lt;20% lits libres)</option>
+            <option value="critique">🔴 Critique (&lt;5% ou fermetures)</option>
+            <option value="ferme">⛔ Fermé / hors service</option>
+          </select>
+        </div>
+        <label class="cap-alerte-check" id="cap-alerte-lits-lbl">
+          <input type="checkbox" id="cap-alerte-lits" onchange="capToggleAlerte('lits')">
+          <span class="cap-alerte-text">☐ <strong>Seuil d'alerte atteint</strong> — je le déclare à la cellule</span>
+        </label>
+        <textarea id="cap-comment-lits" class="cap-textarea" placeholder="Commentaire lits (optionnel)..."></textarea>
+      </div>
+
+      <!-- SECTION RH -->
+      <div class="cap-section">
+        <div class="cap-section-title">👥 RESSOURCES HUMAINES</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);white-space:nowrap">Statut RH :</div>
+          <select id="cap-statut-rh" class="cap-select">
+            <option value="complet">✓ Effectif complet</option>
+            <option value="tension">⚠ Tension (renforts en cours)</option>
+            <option value="critique">🔴 Critique (postes non couverts)</option>
+            <option value="insuffisant">⛔ Effectif insuffisant</option>
+          </select>
+        </div>
+        <label class="cap-alerte-check" id="cap-alerte-rh-lbl">
+          <input type="checkbox" id="cap-alerte-rh" onchange="capToggleAlerte('rh')">
+          <span class="cap-alerte-text">☐ <strong>Seuil d'alerte atteint</strong> — je le déclare à la cellule</span>
+        </label>
+        <textarea id="cap-comment-rh" class="cap-textarea" placeholder="Commentaire RH (optionnel)..."></textarea>
+      </div>
+
+      <!-- SECTION MATÉRIEL -->
+      <div class="cap-section">
+        <div class="cap-section-title">🔧 MATÉRIEL / ÉQUIPEMENTS</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);white-space:nowrap">Statut matériel :</div>
+          <select id="cap-statut-mat" class="cap-select">
+            <option value="ok">✓ Opérationnel</option>
+            <option value="degrade">⚠ Dégradé (équipement en panne)</option>
+            <option value="critique">🔴 Critique (équipement vital HS)</option>
+            <option value="hs">⛔ Hors service</option>
+          </select>
+        </div>
+        <label class="cap-alerte-check" id="cap-alerte-mat-lbl">
+          <input type="checkbox" id="cap-alerte-mat" onchange="capToggleAlerte('mat')">
+          <span class="cap-alerte-text">☐ <strong>Seuil d'alerte atteint</strong> — je le déclare à la cellule</span>
+        </label>
+        <textarea id="cap-comment-mat" class="cap-textarea" placeholder="Commentaire matériel (optionnel)..."></textarea>
+      </div>
+
+      <!-- Commentaire général -->
+      <div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px">📝 COMMENTAIRE GÉNÉRAL</div>
+        <textarea id="cap-comment-general" class="cap-textarea" style="min-height:60px"
+          placeholder="Situation générale du service, contexte, signalement particulier..."></textarea>
+      </div>
+
+      <!-- ── MODE DÉGRADÉ ─────────────────────────────────────────── -->
+      <div style="background:rgba(255,165,0,.08);border:1px solid rgba(255,165,0,.3);border-radius:6px;padding:12px 14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div>
+            <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:#f97316;letter-spacing:.5px">⚙️ MODE DÉGRADÉ</div>
+            <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:2px">Procédures dégradées activées sur ce service</div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <span id="cap-degrade-label" style="font-family:var(--mono);font-size:9px;color:var(--muted)">OFF</span>
+            <input type="checkbox" id="cap-mode-degrade" onchange="capToggleModeDegrade(this.checked)"
+              style="width:16px;height:16px;accent-color:#f97316;cursor:pointer">
+          </label>
+        </div>
+        <div id="cap-renfort-row" style="display:none;margin-top:8px">
+          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);display:block;margin-bottom:4px">👥 BESOIN DE RENFORT (nb personnes manquantes)</label>
+          <input type="number" id="cap-besoin-renfort" min="0" max="99" value="0"
+            style="width:80px;font-family:var(--mono);font-size:13px;font-weight:700;color:#f97316;background:var(--surface2);border:1px solid rgba(255,165,0,.4);border-radius:4px;padding:4px 8px;text-align:center"
+            placeholder="0">
+          <span style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-left:6px">coursiers, brancardiers, soignants…</span>
+        </div>
+      </div>
+
+      <!-- ── SOUPLESSE RH ───────────────────────────────────────────── -->
+      <div style="background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.2);border-radius:6px;padding:12px 14px">
+        <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--green);letter-spacing:.5px;margin-bottom:6px">🤝 JE PEUX PRÊTER</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="number" id="cap-peut-preter" min="0" max="99" value="0"
+            style="width:80px;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);background:var(--surface2);border:1px solid rgba(74,222,128,.3);border-radius:4px;padding:4px 8px;text-align:center"
+            placeholder="0">
+          <span style="font-family:var(--mono);font-size:8px;color:var(--muted);line-height:1.5">Nombre de personnes disponibles à mettre à disposition d'un autre service maintenant.<br><em>Évaluation subjective du cadre — pas une gestion RH.</em></span>
+        </div>
+      </div>
+
+    </div>
+    <div class="cap-popup-footer">
+      <button class="cap-btn-cancel" onclick="capPopupClose()">Annuler</button>
+      <button class="cap-btn-valider" onclick="capSubmitDeclaration()">✓ Valider et transmettre à la cellule</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ONGLET MESSAGERIE ══════════════════════════════════════════════════ -->
+<div id="tab-messagerie" class="tab-content" style="flex-direction:column;background:var(--bg)">
+
+  <!-- Toolbar -->
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0">
+    <span style="font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--muted2)">✉️ MESSAGERIE INTERNE</span>
+    <div style="display:flex;gap:4px;margin-left:8px">
+      <button class="msg-tab-btn active" id="msg-tab-reception" onclick="switchMsgBoite('reception',this)" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer">Réception</button>
+      <button class="msg-tab-btn" id="msg-tab-envoi" onclick="switchMsgBoite('envoi',this)" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer">Envoyés</button>
+    </div>
+    <div style="flex:1"></div>
+    <button onclick="msgOpenCompose()" style="font-family:var(--mono);font-size:9px;padding:4px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">✏️ Nouveau message</button>
+  </div>
+
+  <!-- Split : liste gauche + détail droite -->
+  <div style="display:flex;flex:1;overflow:hidden">
+
+    <!-- Liste messages -->
+    <div id="msg-list" style="width:340px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;background:var(--surface)">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:20px;text-align:center">Chargement…</div>
+    </div>
+
+    <!-- Détail message -->
+    <div id="msg-detail" style="flex:1;overflow-y:auto;padding:28px 36px;background:var(--bg)">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--muted)">
+        <span style="font-size:36px;opacity:.3">✉️</span>
+        <span style="font-family:var(--mono);font-size:10px;letter-spacing:1px">Sélectionnez un message</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Composer -->
+  <div id="msg-modal-compose" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:520px;max-width:95vw;overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)">✏️ NOUVEAU MESSAGE</span>
+        <button onclick="msgCloseCompose()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px">✕</button>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+        <!-- v2309-hotfix — Hint affiché quand on répond à un message externe
+             (ARS/CERT/SAMU/CHU...). Le destinataire d'origine n'est pas un
+             compte SCRIBE, donc la réponse doit être transmise à un collègue
+             interne pour validation avant envoi par canal officiel. -->
+        <div id="msg-compose-externe-hint"
+             style="display:none;padding:10px 12px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:5px;font-family:var(--mono);font-size:10px;line-height:1.5;color:#fbbf24"></div>
+        <div>
+          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:5px">SITE / SERVICE</label>
+          <select id="msg-compose-site" onchange="msgFilterUsers()" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text)">
+            <option value="">— Tous les sites —</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:5px">DESTINATAIRE</label>
+          <select id="msg-compose-dest" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text)">
+            <option value="">— Sélectionner un correspondant —</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:5px">OBJET</label>
+          <input id="msg-compose-sujet" type="text" placeholder="Objet du message" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:5px">MESSAGE</label>
+          <textarea id="msg-compose-body" rows="6" placeholder="Rédigez votre message…" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <button onclick="msgCloseCompose()" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Annuler</button>
+          <button onclick="msgSend()" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:#2563eb;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:700">Envoyer ✉️</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ONGLET INTER-GHT / DÉCLARATIONS ════════════════════════════════════ -->
+<div id="tab-declarations" class="tab-content" style="flex-direction:column;background:var(--bg)">
+
+  <!-- Toolbar -->
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap">
+    <span style="font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--muted2)">📡 COORDINATION INTER-GHT</span>
+    <div style="display:flex;gap:4px;margin-left:8px">
+      <button class="ight-tab-btn active" id="ight-tab-dem" onclick="switchIGHT('demandes',this)" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer">📤 Demandes inter-GHT</button>
+      <button class="ight-tab-btn" id="ight-tab-msgs" onclick="switchIGHT('messages',this)" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer">✉ Messages supervision</button>
+    </div>
+    <div style="flex:1"></div>
+    <button id="ight-btn-new" onclick="ightOpenNew()" style="font-family:var(--mono);font-size:9px;padding:4px 12px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">+ Nouvelle déclaration</button>
+  </div>
+
+  <!-- Contenu -->
+  <div style="flex:1;overflow:hidden;display:flex;gap:0">
+
+    <!-- Panneau gauche : liste -->
+    <div id="ight-list-pane" style="flex:1;overflow-y:auto;padding:14px">
+      <div id="ight-decl-pane">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:40px;text-align:center">Chargement…</div>
+      </div>
+      <div id="ight-dem-pane" style="display:none">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:40px;text-align:center">Chargement…</div>
+      </div>
+      <div id="ight-msgs-pane" style="display:none;flex-direction:column;gap:8px">
+        <div id="ight-msgs-list"><div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:40px;text-align:center">Cliquez sur l'onglet pour charger les messages inter-GHT du collecteur</div></div>
+      </div>
+    </div>
+
+    <!-- Panneau droite : aide contextuelle -->
+    <div style="width:260px;flex-shrink:0;border-left:1px solid var(--border);padding:18px 16px;background:var(--surface);overflow-y:auto">
+      <div style="font-family:var(--mono);font-size:9px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px">ℹ️ AIDE</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.7">
+        <p style="margin:0 0 10px"><strong style="color:var(--muted2)">Déclarations de situation</strong><br>Signalez une tension ou crise à votre GHT partenaire. Visible dans le collecteur territorial.</p>
+        <p style="margin:0 0 10px"><strong style="color:var(--muted2)">Demandes inter-GHT</strong><br>Sollicitez un autre établissement : transfert de patient, renfort RH, matériel, ressources.</p>
+        <p style="margin:0"><strong style="color:var(--muted2)">Niveaux de tension</strong><br>⚠️ Vigilance — 🔶 Tension — 🔴 Crise</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal : Nouvelle déclaration -->
+  <div id="ight-modal-decl" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:480px;max-width:95vw;overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)">📡 DÉCLARER UNE SITUATION</span>
+        <button onclick="ightCloseModal('ight-modal-decl')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px">✕</button>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">SITE CONCERNÉ *</label>
+            <input id="decl-site" type="text" placeholder="ex: Site Principal" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">UNITÉ / SERVICE</label>
+            <input id="decl-uf" type="text" placeholder="ex: Réanimation" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">TYPE DE CRISE</label>
+            <select id="decl-type" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+              <option value="sanitaire">Sanitaire</option>
+              <option value="cyber">Cyber</option>
+              <option value="tension_capacitaire">Tension capacitaire</option>
+              <option value="plan_blanc">Plan Blanc</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">NIVEAU DE TENSION</label>
+            <select id="decl-niveau" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+              <option value="1">⚠️ 1 — Vigilance</option>
+              <option value="2">🔶 2 — Tension</option>
+              <option value="3">🔴 3 — Crise</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">DESCRIPTION</label>
+          <textarea id="decl-desc" rows="3" placeholder="Décrivez la situation…" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+          <button onclick="ightCloseModal('ight-modal-decl')" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Annuler</button>
+          <button onclick="ightSubmitDecl()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:#0891b2;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:700">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal : Nouvelle demande inter-GHT -->
+  <div id="ight-modal-dem" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:480px;max-width:95vw;overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)">📤 NOUVELLE DEMANDE INTER-GHT</span>
+        <button onclick="ightCloseModal('ight-modal-dem')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px">✕</button>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">GHT ÉMETTEUR</label>
+            <input id="dem-emetteur" type="text" readonly style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface3);border:1px solid var(--border);border-radius:4px;color:var(--muted2);box-sizing:border-box;cursor:default">
+          </div>
+          <div>
+            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">GHT DESTINATAIRE</label>
+            <select id="dem-destinataire" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+              <option value="">📢 Tous les GHTs</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">TYPE DE DEMANDE</label>
+            <select id="dem-type" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+              <option value="sanitaire">Sanitaire</option>
+              <option value="cyber">Cyber</option>
+              <option value="transfert">Transfert patient</option>
+              <option value="ressources">Ressources / Matériel</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">UNITÉ CONCERNÉE</label>
+            <input id="dem-uf" type="text" placeholder="ex: Réanimation" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box">
+          </div>
+        </div>
+        <div>
+          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">DESCRIPTION *</label>
+          <textarea id="dem-desc" rows="3" placeholder="Décrivez votre demande…" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+          <button onclick="ightCloseModal('ight-modal-dem')" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Annuler</button>
+          <button onclick="ightSubmitDem()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:#0891b2;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:700">Envoyer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ JS CAPACITÉ ══════════════════════════════════════════════════════ -->
+
+<!-- ══ MODAL CHANGEMENT MOT DE PASSE OBLIGATOIRE ══════════════════════════ -->
+<div id="modal-forced-pw" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:99999;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:2px solid #f59e0b;border-radius:12px;width:420px;max-width:95vw;overflow:hidden">
+    <div style="padding:16px 20px;background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">🔐</span>
+      <div>
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:#f59e0b">CHANGEMENT DE MOT DE PASSE REQUIS</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px">Votre compte utilise un mot de passe temporaire. Veuillez le modifier avant de continuer.</div>
+      </div>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">MOT DE PASSE ACTUEL (temporaire)</label>
+        <input id="fpw-old" type="password" placeholder="Mot de passe temporaire" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">NOUVEAU MOT DE PASSE (min. 8 caractères)</label>
+        <input id="fpw-new" type="password" placeholder="Nouveau mot de passe" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">CONFIRMER LE NOUVEAU MOT DE PASSE</label>
+        <input id="fpw-confirm" type="password" placeholder="Confirmer" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);box-sizing:border-box" onkeydown="if(event.key==='Enter')submitForcedPw()">
+      </div>
+      <div id="fpw-err" style="display:none;font-family:var(--mono);font-size:10px;color:#f87171;padding:6px 8px;background:rgba(248,113,113,.1);border-radius:4px;border:1px solid rgba(248,113,113,.3)"></div>
+      <button onclick="submitForcedPw()" style="font-family:var(--mono);font-size:11px;padding:10px;background:#d97706;border:none;border-radius:5px;color:#fff;cursor:pointer;font-weight:700;margin-top:4px">
+        🔒 Définir mon nouveau mot de passe
+      </button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app-content -->
+
+<!-- v2184 — Modal SCRIBE par incident (avec bouton Convertir en actions) -->
+<div id="inc-albert-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9400;align-items:center;justify-content:center;padding:20px"
+     onclick="if(event.target===this)closeIncidentAlbertModal()">
+  <div style="background:var(--surface);border-radius:10px;width:780px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.4);border:1px solid var(--border)">
+    <div style="padding:14px 18px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;display:flex;align-items:center;gap:10px;border-radius:10px 10px 0 0">
+      <span style="font-size:22px">🤖</span>
+      <div style="flex:1;min-width:0">
+        <div id="iam-titre" style="font-size:13px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</div>
+        <div id="iam-meta" style="font-family:var(--mono);font-size:9px;opacity:.85;margin-top:2px">—</div>
+      </div>
+      <button onclick="closeIncidentAlbertModal()" style="background:rgba(255,255,255,.18);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <div id="iam-body" style="flex:1;overflow-y:auto;padding:14px 18px;font-size:12px;line-height:1.55;white-space:pre-wrap;color:var(--text)"></div>
+    <div style="padding:12px 18px;background:var(--surface2);border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;border-radius:0 0 10px 10px">
+      <button onclick="closeIncidentAlbertModal()" style="font-family:var(--mono);font-size:10px;padding:7px 14px;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer">Fermer</button>
+      <button onclick="incAlbertConvertToActions()" style="font-family:var(--mono);font-size:10px;padding:7px 16px;background:#16a34a;border:1px solid #16a34a;border-radius:5px;color:#fff;cursor:pointer;font-weight:700">✨ Convertir en actions pour cet incident</button>
+    </div>
+  </div>
+</div>
+
+<!-- v2183 — Modal "Convertir le rapport Albert en actions SCRIBE" -->
+<div id="acv-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9500;align-items:center;justify-content:center;padding:20px"
+     onclick="if(event.target===this)acvClose()">
+  <div style="background:var(--surface);border-radius:10px;width:780px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.4);border:1px solid var(--border)">
+    <div style="padding:14px 18px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;display:flex;align-items:center;gap:10px;border-radius:10px 10px 0 0">
+      <span style="font-size:20px">✨</span>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700">Convertir le rapport en actions SCRIBE</div>
+        <div style="font-family:var(--mono);font-size:9px;opacity:.85">Cocher / décocher les éléments à créer dans la cellule et le kanban</div>
+      </div>
+      <button onclick="acvClose()" style="background:rgba(255,255,255,.18);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <div id="acv-body" style="flex:1;overflow-y:auto;padding:14px 18px"></div>
+    <div style="padding:12px 18px;background:var(--surface2);border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;border-radius:0 0 10px 10px">
+      <div id="acv-summary" style="font-family:var(--mono);font-size:10px;color:var(--muted)">—</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="acvClose()" style="font-family:var(--mono);font-size:10px;padding:7px 14px;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer">Annuler</button>
+        <button onclick="acvCreateAll()" id="acv-btn-create" style="font-family:var(--mono);font-size:10px;padding:7px 16px;background:#16a34a;border:1px solid #16a34a;border-radius:5px;color:#fff;cursor:pointer;font-weight:700">✓ Créer les actions</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- v2183 — Liste d'acteurs génériques pour autocomplétion des champs
+     Déclarant / Intervenant. Peuplée au load avec une liste standard
+     hospitalière, étendue en mode exercice avec les joueurs du scénario
+     pour éviter de taper des noms pendant le jeu. -->
+<datalist id="acteurs-generiques"></datalist>
+
+</body>
+</html>

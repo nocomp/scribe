@@ -1,0 +1,155 @@
+{
+  "meta": {
+    "id": "example_mixte_panne_electrique_2026",
+    "titre": "DÉMO — Crise mixte : panne électrique + cyber",
+    "description": "Panne électrique générale à 6h30. Groupes de secours tardent. Pendant le black-out partiel, une attaque cyber est suspectée (coïncidence ou vecteur d'opportunité ?). L'équipe doit gérer deux crises simultanées.",
+    "sujet": "Panne électrique majeure + attaque cyber simultanée (multi-facettes)",
+    "duree_min": 60,
+    "duree_reel_min": 360,
+    "ratio_compression": 6.0,
+    "complexite": "DIFFICILE",
+    "type_crise": "TECHNIQUE",
+    "objectifs_pedagogiques": [
+      "Gérer deux crises simultanées (technique + cyber)",
+      "Prioriser les services vitaux (REA, bloc, urgences) en mode dégradé",
+      "Coordonner entre cellule technique et cellule cyber",
+      "Décider de l'isolement dans le contexte panne + cyber",
+      "Communication publique en situation confuse"
+    ],
+    "categorie": "mixte",
+    "tags": ["demo", "panne", "cyber", "mixte", "groupes_secours"],
+    "nb_stimuli": 10
+  },
+  "acteurs": [
+    {
+      "sigle": "CHAG",
+      "nom_etablissement": "Centre Hospitalier Annecy Genevois (CHAG)",
+      "role": "coordinateur",
+      "port": 8660,
+      "joueurs": [
+        {"username": "dircrise", "display_name": "Directeur de Crise"},
+        {"username": "techniq_chag", "display_name": "Directeur Technique"},
+        {"username": "rssi_chag", "display_name": "RSSI"}
+      ]
+    },
+    {"sigle": "CERT_SANTE", "nom_etablissement": "CERT Santé", "port": null, "joueurs": []},
+    {"sigle": "ENEDIS", "nom_etablissement": "Enedis", "port": null, "joueurs": []},
+    {"sigle": "ARS", "nom_etablissement": "ARS Auvergne-Rhône-Alpes", "port": null, "joueurs": []}
+  ],
+  "stimuli": [
+    {
+      "id": "S01", "t_min": 0, "type": "incident", "cible": "CHAG",
+      "titre": "⚡ PANNE ÉLECTRIQUE GÉNÉRALE",
+      "description_animateur": "Incident déclencheur à 6h30. Heure critique (relèves, petits déj patients, préparation blocs).",
+      "action_attendue": "Activer cellule de crise technique. Vérifier les groupes électrogènes.",
+      "payload": {
+        "fait": "Coupure électrique complète sur le bâtiment principal. Éclairage de secours actif. Groupes électrogènes : démarrage en cours sur site A, panne signalée sur groupe site B.",
+        "analyse": "Origine inconnue. Appel Enedis en cours. Priorité absolue : rétablissement alim REA et blocs.",
+        "urgency": 4, "type_crise": "TECHNIQUE", "impact_fonctionnel": true,
+        "unite_fonctionnelle": "TECHNIQUE"
+      }
+    },
+    {
+      "id": "S02", "t_min": 5, "type": "incident", "cible": "CHAG",
+      "titre": "🔴 Groupe secours site B en échec",
+      "description_animateur": "Aggravation : un des groupes de secours ne démarre pas. Situation critique pour ce bâtiment.",
+      "action_attendue": "Mobiliser prestataire, décider de transférer les patients critiques du site B.",
+      "payload": {
+        "fait": "Groupe électrogène du bâtiment B (EHPAD + SSR) refuse de démarrer. Batteries résiduelles : 30 minutes avant perte totale. 45 résidents concernés, dont 12 sous oxygénothérapie.",
+        "analyse": "Technique sur place. Cause probable : défaut carburant ou électronique de commande.",
+        "urgency": 4, "type_crise": "TECHNIQUE", "impact_fonctionnel": true,
+        "unite_fonctionnelle": "EHPAD"
+      }
+    },
+    {
+      "id": "S03", "t_min": 10, "type": "message", "cible": "CHAG",
+      "titre": "Enedis : intervention dans 90 min",
+      "description_animateur": "Enedis confirme une panne secteur. Intervention sous 90 minutes, rétablissement inconnu.",
+      "action_attendue": "Planifier 2-3h de mode dégradé minimum.",
+      "payload": {
+        "expediteur": "ENEDIS",
+        "sujet": "Panne confirmée secteur Annecy Centre",
+        "contenu": "Panne confirmée sur le transformateur 20kV du secteur Annecy Centre. Équipe technique engagée, arrivée sur site ~90 min. Rétablissement estimé 3-4h. Nous vous confirmerons dès que possible."
+      }
+    },
+    {
+      "id": "S04", "t_min": 18, "type": "incident", "cible": "CHAG",
+      "titre": "🔴 Activité réseau anormale détectée (EDR)",
+      "description_animateur": "Pendant la panne, une alerte cyber arrive. Coïncidence ou exploitation de la confusion ?",
+      "action_attendue": "Activer cellule cyber EN PARALLÈLE de la cellule technique.",
+      "payload": {
+        "fait": "EDR CrowdStrike signale des connexions sortantes suspectes vers une IP à l'étranger depuis plusieurs postes de travail. Tentative d'exfiltration suspectée.",
+        "analyse": "Le timing est suspect : pendant la panne, quand l'attention est focalisée sur le technique, l'attaquant peut exploiter la confusion.",
+        "urgency": 4, "type_crise": "CYBER", "impact_fonctionnel": true,
+        "unite_fonctionnelle": "SI"
+      }
+    },
+    {
+      "id": "S05", "t_min": 24, "type": "decision", "cible": "CHAG",
+      "titre": "DÉCISION : transfert 12 résidents EHPAD site B",
+      "description_animateur": "Décision cruciale : évacuer le site B avant épuisement batteries.",
+      "action_attendue": "Coordination avec brancardage, ambulances externes, établissements d'accueil.",
+      "payload": {
+        "contenu": "Transfert préventif des 12 résidents EHPAD sous O2 vers le bâtiment A (capacité disponible). Moyens : brancardage interne renforcé + SAMU si besoin.",
+        "responsable": "Directeur de Crise + Dir Soins",
+        "base_reglementaire": "Procédure évacuation partielle"
+      }
+    },
+    {
+      "id": "S06", "t_min": 30, "type": "message", "cible": "CHAG",
+      "titre": "CERT Santé : alerte secteur santé",
+      "description_animateur": "Le CERT Santé signale une vague d'attaques nationale. Contexte clarifie.",
+      "action_attendue": "Prendre la décision d'isoler ou pas, sachant qu'on a déjà la panne.",
+      "payload": {
+        "expediteur": "CERT_SANTE",
+        "sujet": "Campagne cyber en cours — vigilance maximale",
+        "contenu": "Nous observons une série d'attaques coordonnées contre plusieurs hôpitaux depuis cette nuit. Pensez à vérifier vos journaux EDR et à isoler les systèmes compromis. Nous restons à votre disposition."
+      }
+    },
+    {
+      "id": "S07", "t_min": 38, "type": "incident", "cible": "CHAG",
+      "titre": "Retour partiel alimentation (site A uniquement)",
+      "description_animateur": "Une partie de l'alim revient. Soulagement partiel, mais site B toujours en panne.",
+      "action_attendue": "Prioriser les services à remettre en route.",
+      "payload": {
+        "fait": "Alimentation rétablie sur bâtiment A (principal) suite à intervention Enedis et bascule sur secondaire. Site B toujours sur batteries décroissantes.",
+        "analyse": "Relance ordonnée : imagerie, biologie, SI (si pas isolé), systèmes administratifs en dernier.",
+        "urgency": 2, "type_crise": "TECHNIQUE", "impact_fonctionnel": false,
+        "unite_fonctionnelle": "TECHNIQUE"
+      }
+    },
+    {
+      "id": "S08", "t_min": 45, "type": "decision", "cible": "CHAG",
+      "titre": "DÉCISION : Stratégie de relance SI en contexte cyber",
+      "description_animateur": "Faut-il remonter le SI en sachant qu'on a des IOC cyber ? Dilemme technique.",
+      "action_attendue": "Décision avec arbitrage DSI/RSSI/Médecine.",
+      "payload": {
+        "contenu": "Décider de la stratégie de relance du SI : (1) remonter sans investigation = risque cyber, (2) isoler et investiguer = impact clinique prolongé. Proposition : relance SI avec monitoring EDR renforcé et segmentation réseau.",
+        "responsable": "Comité arbitrage : Dir Crise, DSI, RSSI, Dir Med",
+        "base_reglementaire": "Plan de Réponse aux Incidents"
+      }
+    },
+    {
+      "id": "S09", "t_min": 52, "type": "message", "cible": "CHAG",
+      "titre": "ARS : point situation consolidé",
+      "description_animateur": "L'ARS demande un bilan consolidé des deux crises.",
+      "action_attendue": "Produire un bilan croisé technique + cyber.",
+      "payload": {
+        "expediteur": "ARS",
+        "sujet": "Demande bilan consolidé 2 crises",
+        "contenu": "Compte tenu de la situation mixte (panne + cyber), nous avons besoin d'un bilan coordonné sous 30 minutes : impacts patients, services en mode dégradé, délais estimés de retour à la normale, besoins en renfort."
+      }
+    },
+    {
+      "id": "S10", "t_min": 58, "type": "decision", "cible": "CHAG",
+      "titre": "DÉCISION : communication publique coordonnée",
+      "description_animateur": "Comment parler de deux crises ? Transparence vs stabilité de la confiance publique.",
+      "action_attendue": "Communiqué unique, message coordonné avec ARS.",
+      "payload": {
+        "contenu": "Communication publique : un communiqué unique mentionnant la panne (cause Enedis, rétablie partiellement) sans mentionner explicitement la cyber-attaque en cours (pour ne pas donner de l'information exploitable à un attaquant). Coordination avec ARS.",
+        "responsable": "Directeur + Communication + ARS",
+        "base_reglementaire": "Procédure Communication de Crise"
+      }
+    }
+  ]
+}

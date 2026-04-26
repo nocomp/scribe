@@ -1,0 +1,160 @@
+{
+  "meta": {
+    "id": "example_afflux_victimes_2026",
+    "titre": "DÉMO — Afflux massif victimes (accident autoroutier)",
+    "description": "Carambolage autoroute A41 : 42 blessés dont 8 urgences absolues. L'équipe doit déclencher le Plan Blanc, mobiliser les blocs, coordonner avec SAMU 74, gérer les transferts vers les hôpitaux voisins.",
+    "sujet": "Accident d'autoroute A41 avec 42 victimes — afflux massif sur les urgences",
+    "duree_min": 60,
+    "duree_reel_min": 240,
+    "ratio_compression": 4.0,
+    "complexite": "DIFFICILE",
+    "type_crise": "SANITAIRE",
+    "objectifs_pedagogiques": [
+      "Déclencher le Plan Blanc dans le bon timing",
+      "Coordonner avec SAMU 74 pour la régulation",
+      "Organiser les transferts vers hôpitaux voisins",
+      "Gérer les capacités (blocs, réanimation, SAU)",
+      "Communiquer avec les familles et les médias"
+    ],
+    "categorie": "sanitaire",
+    "tags": ["demo", "afflux", "plan_blanc", "urgences"],
+    "nb_stimuli": 10
+  },
+  "acteurs": [
+    {
+      "sigle": "CHAG",
+      "nom_etablissement": "Centre Hospitalier Annecy Genevois (CHAG)",
+      "role": "coordinateur",
+      "port": 8660,
+      "joueurs": [
+        {"username": "dircrise", "display_name": "Directeur de Crise"},
+        {"username": "dirsoin_chag", "display_name": "Directeur des Soins"},
+        {"username": "samu_chag", "display_name": "Régulateur SAMU 74"}
+      ]
+    },
+    {"sigle": "SAMU74", "nom_etablissement": "SAMU 74", "port": null, "joueurs": []},
+    {"sigle": "ARS", "nom_etablissement": "ARS Auvergne-Rhône-Alpes", "port": null, "joueurs": []},
+    {"sigle": "PREFECTURE", "nom_etablissement": "Préfecture de Haute-Savoie", "port": null, "joueurs": []}
+  ],
+  "stimuli": [
+    {
+      "id": "S01", "t_min": 0, "type": "message", "cible": "CHAG",
+      "titre": "SAMU 74 : accident majeur A41",
+      "description_animateur": "Alerte initiale du SAMU. Pas encore de chiffres fermes.",
+      "action_attendue": "Accuser réception, préparer le SAU à l'afflux.",
+      "payload": {
+        "expediteur": "SAMU74",
+        "sujet": "Carambolage A41 — préalerte afflux massif",
+        "contenu": "Carambolage 15 véhicules sur l'A41 au niveau de Cruseilles. Estimation 30-50 victimes. Premier tri en cours sur site. Attendez-vous à un afflux dans les 20 minutes."
+      }
+    },
+    {
+      "id": "S02", "t_min": 5, "type": "incident", "cible": "CHAG",
+      "titre": "🚨 Afflux confirmé : 42 blessés annoncés",
+      "description_animateur": "Bilan confirmé. Moment crucial : déclencher le Plan Blanc ?",
+      "action_attendue": "Décision Plan Blanc. Mobilisation massive des équipes.",
+      "payload": {
+        "fait": "Bilan confirmé par SAMU 74 : 42 blessés dont 8 UA (urgences absolues), 15 UR (urgences relatives), 19 impliqués. Prise en charge sur site, début du transport H+10min.",
+        "analyse": "Le CHAG est le plus proche. Doit absorber la moitié des victimes au minimum.",
+        "urgency": 4, "type_crise": "SANITAIRE", "impact_fonctionnel": true,
+        "unite_fonctionnelle": "URGENCES"
+      }
+    },
+    {
+      "id": "S03", "t_min": 10, "type": "decision", "cible": "CHAG",
+      "titre": "DÉCISION : Déclenchement Plan Blanc",
+      "description_animateur": "Formaliser la décision dans SCRIBE.",
+      "action_attendue": "Tracer la décision avec responsable et base réglementaire.",
+      "payload": {
+        "contenu": "Déclenchement du Plan Blanc niveau 2 — mobilisation de toutes les équipes de rappel, ouverture de la salle de crise, bloc opératoire en alerte maximale.",
+        "responsable": "Directeur de garde",
+        "base_reglementaire": "Plan Blanc CHAG / CSP L.3131-7"
+      }
+    },
+    {
+      "id": "S04", "t_min": 15, "type": "incident", "cible": "CHAG",
+      "titre": "Arrivée 1ère vague : 8 victimes dont 3 UA",
+      "description_animateur": "Premières ambulances arrivent. Le tri commence au SAU.",
+      "action_attendue": "Organiser le tri, mobiliser les réas.",
+      "payload": {
+        "fait": "1ère vague arrivée SAU : 8 patients. 3 UA (polytrauma), 4 UR (fractures, plaies), 1 impliqué. Salle de déchoc occupée, 2 blocs d'urgence ouverts.",
+        "urgency": 3, "type_crise": "SANITAIRE", "impact_fonctionnel": true,
+        "unite_fonctionnelle": "SAU"
+      }
+    },
+    {
+      "id": "S05", "t_min": 22, "type": "transfert", "cible": "CHAG",
+      "titre": "Transfert UA vers CHU Grenoble (neurochir)",
+      "description_animateur": "Un des UA nécessite de la neurochirurgie que le CHAG ne peut pas faire. Transfert urgent.",
+      "action_attendue": "Valider le transfert, coordonner avec Grenoble.",
+      "payload": {
+        "etablissement_origine": "CHAG",
+        "etablissement_destination": "CHU Grenoble",
+        "unite_origine": "Réanimation",
+        "unite_destination": "Neurochirurgie",
+        "motif": "Traumatisme crânien sévère — indication NCH urgente",
+        "nom": "Patient UA-03",
+        "ipp": "AFFLUX-2026-03",
+        "statut": "EN_COURS",
+        "eta_min": 45
+      }
+    },
+    {
+      "id": "S06", "t_min": 28, "type": "incident", "cible": "CHAG",
+      "titre": "Saturation réanimation",
+      "description_animateur": "La réa est pleine. Décision : transférer des patients stables vers ailleurs ?",
+      "action_attendue": "Libérer des places (transfert inter-hospitalier des patients stables).",
+      "payload": {
+        "fait": "Réanimation CHAG saturée : 12/12 lits occupés. 2 nouveaux patients UA en attente d'admission.",
+        "analyse": "Options : (1) transfert des patients stables vers GHTLMB/CHANNECY, (2) activation surge capacity avec des lits de soins continus",
+        "urgency": 4, "type_crise": "SANITAIRE", "impact_fonctionnel": true,
+        "unite_fonctionnelle": "REA"
+      }
+    },
+    {
+      "id": "S07", "t_min": 35, "type": "message", "cible": "CHAG",
+      "titre": "ARS : demande point situation",
+      "description_animateur": "L'ARS entre dans la boucle. Elle doit être informée régulièrement.",
+      "action_attendue": "Envoyer point situation consolidé.",
+      "payload": {
+        "expediteur": "ARS",
+        "sujet": "Point situation urgent",
+        "contenu": "Merci de remonter dans les 15 minutes : nombre de victimes prises en charge, bloc(s) mobilisé(s), besoins en renfort médical ou en transfert inter-hospitalier."
+      }
+    },
+    {
+      "id": "S08", "t_min": 42, "type": "message", "cible": "CHAG",
+      "titre": "Préfecture : coordination cellule interministérielle",
+      "description_animateur": "La préfecture mobilise pour une coordination État.",
+      "action_attendue": "Désigner un interlocuteur préfecture, partager les informations clés.",
+      "payload": {
+        "expediteur": "PREFECTURE",
+        "sujet": "Cellule de crise départementale activée",
+        "contenu": "La cellule de crise départementale est activée. Nous avons besoin d'un bilan toutes les 30 minutes : nombre de blessés pris en charge, décédés, pronostic engagé, besoins spécifiques (sang, renfort, etc.)"
+      }
+    },
+    {
+      "id": "S09", "t_min": 48, "type": "incident", "cible": "CHAG",
+      "titre": "Familles présentes au SAU — cellule familles nécessaire",
+      "description_animateur": "Les familles arrivent. Il faut les accueillir séparément du flux médical.",
+      "action_attendue": "Ouvrir une cellule accueil familles dans l'auditorium.",
+      "payload": {
+        "fait": "Plus de 30 personnes (familles) se pressent à l'accueil SAU. Risque d'engorgement et de tension.",
+        "analyse": "Activer la procédure Cellule Accueil Familles : auditorium, psychologues, agents d'accueil.",
+        "urgency": 2, "type_crise": "SANITAIRE", "impact_fonctionnel": false,
+        "unite_fonctionnelle": "ACCUEIL"
+      }
+    },
+    {
+      "id": "S10", "t_min": 55, "type": "decision", "cible": "CHAG",
+      "titre": "DÉCISION : communiqué de presse consolidé",
+      "description_animateur": "Les médias appellent. Communiqué coordonné avec ARS et Préfecture.",
+      "action_attendue": "Rédaction + validation + diffusion.",
+      "payload": {
+        "contenu": "Communiqué officiel : bilan à H+1h, nombre de victimes prises en charge, remerciements aux équipes, demande de respect auprès des familles, numéro d'appel famille.",
+        "responsable": "Directeur + Communication",
+        "base_reglementaire": "Procédure Communication de Crise"
+      }
+    }
+  ]
+}

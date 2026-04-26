@@ -1,0 +1,257 @@
+{
+  "meta": {
+    "id": "example_tension_capacitaire",
+    "titre": "Tension capacitaire aiguë — afflux post-accident A41",
+    "description": "Scénario court (30 min) illustrant les nouveaux stimuli de tension capacitaire et brancardage. Suite à un accident de car scolaire sur l'A41, l'hôpital voit arriver 15 blessés et doit arbitrer ses capacités en temps réel : Orthopédie sature, Réanimation en tension, coursiers à déployer pour acheminer médicaments et analyses urgentes. Démontre les stimuli type=capacite et type=brancardage (v2309).",
+    "sujet": "Afflux massif — Gestion capacitaire temps réel",
+    "duree_min": 30,
+    "duree_reel_min": 120,
+    "ratio_compression": 4.0,
+    "complexite": "MOYEN",
+    "type_crise": "SANITAIRE",
+    "categorie": "sanitaire",
+    "objectifs_pedagogiques": [
+      "Identifier rapidement les services en tension capacitaire (lits, RH, matériel)",
+      "Prendre des décisions d'arbitrage : transferts, reports, renforts",
+      "Coordonner les flux de brancardage en situation de priorités concurrentes",
+      "Mobiliser les ressources humaines prêtables entre services (coursiers, renforts)",
+      "Anticiper les besoins logistiques (médicaments, analyses) en mode dégradé"
+    ],
+    "tags": [
+      "sanitaire",
+      "afflux",
+      "capacite",
+      "brancardage",
+      "v2309"
+    ],
+    "nb_stimuli": 12
+  },
+  "acteurs": [
+    {
+      "sigle": "CHAG",
+      "nom_etablissement": "Centre Hospitalier",
+      "role": "coordinateur",
+      "port": 8660,
+      "joueurs": []
+    },
+    {
+      "sigle": "SAMU",
+      "nom_etablissement": "SAMU 74",
+      "port": null,
+      "joueurs": []
+    },
+    {
+      "sigle": "ARS",
+      "nom_etablissement": "ARS AURA",
+      "port": null,
+      "joueurs": []
+    },
+    {
+      "sigle": "CHU_GRENOBLE",
+      "nom_etablissement": "CHU Grenoble",
+      "port": null,
+      "joueurs": []
+    }
+  ],
+  "stimuli": [
+    {
+      "id": "S01",
+      "t_min": 0,
+      "type": "message",
+      "cible": "CHAG",
+      "titre": "SAMU 74 — Alerte afflux massif",
+      "description_animateur": "Premier contact SAMU. Les joueurs doivent activer leur plan afflux massif.",
+      "action_attendue": "Activer cellule de crise, pré-positionner équipes",
+      "payload": {
+        "expediteur": "SAMU 74",
+        "sujet": "ALERTE — Accident car scolaire A41",
+        "contenu": "Accident de car scolaire entre Annecy et Frangy. 15 blessés dont 3 graves. Arrivée prévue dans 20 min. Répartition estimée : 3 en détresse vitale (→ Réa), 8 blessures orthopédiques (→ Ortho), 4 légers (→ Urgences). Merci de confirmer votre capacité d'accueil."
+      }
+    },
+    {
+      "id": "S02",
+      "t_min": 3,
+      "type": "capacite",
+      "cible": "CHAG",
+      "titre": "État capacitaire Orthopédie — avant afflux",
+      "description_animateur": "Référence pour mesurer la bascule à S06. Les joueurs voient que l'ortho est en capacité normale… pour quelques minutes.",
+      "action_attendue": "Prendre connaissance de l'état initial",
+      "payload": {
+        "unite": "ORTHO",
+        "redacteur": "Cadre Orthopédie",
+        "statut_lits": "normal",
+        "statut_rh": "complet",
+        "statut_materiel": "ok",
+        "commentaire_general": "4 lits disponibles, équipe complète jour/nuit"
+      }
+    },
+    {
+      "id": "S03",
+      "t_min": 5,
+      "type": "brancardage",
+      "cible": "CHAG",
+      "titre": "Préparation accueil — transport équipement",
+      "description_animateur": "Mission support pour pré-positionner brancards et monitorage.",
+      "action_attendue": "Organiser la logistique préalable",
+      "payload": {
+        "uf_origine": "Matériel central",
+        "uf_destination": "Urgences",
+        "priorite": "P2",
+        "type_transport": "BRANCARD",
+        "ref_patient": "MAT-PREPARATION",
+        "motif": "Acheminement brancards + monitorage (prépa afflux)",
+        "commentaire": "Mobiliser 2 brancardiers pour pré-position"
+      }
+    },
+    {
+      "id": "S04",
+      "t_min": 8,
+      "type": "incident",
+      "cible": "CHAG",
+      "titre": "Arrivée premiers blessés (1/15)",
+      "description_animateur": "Le premier lot arrive en avance. Tester la réactivité de l'accueil.",
+      "action_attendue": "Accueil SAU, tri, orientation",
+      "payload": {
+        "fait": "Arrivée SMUR 1 avec 3 premiers blessés (2 polytrauma, 1 blessure orthopédique). Plus tôt que prévu.",
+        "urgency": 4,
+        "type_crise": "SANITAIRE",
+        "unite_fonctionnelle": "URGENCES",
+        "declarant_nom": "Cadre SAU"
+      }
+    },
+    {
+      "id": "S05",
+      "t_min": 10,
+      "type": "brancardage",
+      "cible": "CHAG",
+      "titre": "Polytraumatisé → Réanimation (P1)",
+      "description_animateur": "Première tension sur les flux. Mission P1 urgente.",
+      "action_attendue": "Priorisation P1, affectation brancardiers",
+      "payload": {
+        "uf_origine": "Urgences",
+        "uf_destination": "Réanimation",
+        "priorite": "P1",
+        "type_transport": "LIT",
+        "ref_patient": "EXO-POLY-01",
+        "motif": "Polytraumatisé stabilisé — admission Réa urgente",
+        "commentaire": "Monitorage continu, 2 brancardiers minimum"
+      }
+    },
+    {
+      "id": "S06",
+      "t_min": 15,
+      "type": "capacite",
+      "cible": "CHAG",
+      "titre": "ORTHOPÉDIE — BASCULE CRITIQUE",
+      "description_animateur": "C'est LE moment clé du scénario : l'ortho passe au rouge. Le dir de crise doit voir son indicateur basculer et réagir : transférer, reporter, ou demander du renfort.",
+      "action_attendue": "Décision d'arbitrage : transfert CHU Grenoble, report chirurgies programmées, ou lits supplémentaires",
+      "payload": {
+        "unite": "ORTHO",
+        "redacteur": "Cadre Orthopédie",
+        "statut_lits": "critique",
+        "statut_rh": "tension",
+        "statut_materiel": "ok",
+        "alerte_lits": true,
+        "commentaire_lits": "SATURATION. 0 lit disponible. 4 patients orthopédiques en attente à l'accueil, 4 autres annoncés dans 10 min.",
+        "commentaire_rh": "Équipe débordée. Besoin renfort.",
+        "besoin_renfort": 2
+      }
+    },
+    {
+      "id": "S07",
+      "t_min": 18,
+      "type": "message",
+      "cible": "CHAG",
+      "titre": "CHU Grenoble — Proposition d'accueil",
+      "description_animateur": "Arbitrage stratégique. Le CHU propose d'accueillir en direct les blessés orthopédiques, bypass du tri local. Accepter libère l'ortho mais ajoute du transport.",
+      "action_attendue": "Arbitrer : accepter transferts directs CHU ou garder sur site ?",
+      "payload": {
+        "expediteur": "CHU Grenoble",
+        "sujet": "Capacité d'accueil — nous pouvons prendre vos cas ortho",
+        "contenu": "Bonjour, nous avons su pour l'accident de l'A41. Notre service d'orthopédie a 5 lits disponibles et une équipe de renfort prête. Si vous saturez, nous pouvons accueillir directement vos cas stables. Merci de nous dire rapidement combien de patients vous souhaitez nous transférer."
+      }
+    },
+    {
+      "id": "S08",
+      "t_min": 20,
+      "type": "capacite",
+      "cible": "CHAG",
+      "titre": "Équipe brancardage — Coursiers prêtables",
+      "description_animateur": "L'équipe brancardage a 2 agents disponibles pour les courses urgentes (pharmacie, labo, documents).",
+      "action_attendue": "Noter la disponibilité et l'utiliser pour S10 et S11",
+      "payload": {
+        "unite": "BRANCARDAGE",
+        "redacteur": "Cadre logistique",
+        "statut_lits": "normal",
+        "statut_rh": "complet",
+        "statut_materiel": "ok",
+        "peut_preter": 2,
+        "commentaire_general": "Suite à la crise, 2 brancardiers sont libérés pour courses urgentes (pharmacie, labo, documents). Disponibilité 3h."
+      }
+    },
+    {
+      "id": "S09",
+      "t_min": 22,
+      "type": "brancardage",
+      "cible": "CHAG",
+      "titre": "Second polytrauma → Réa (P1 simultané)",
+      "description_animateur": "Priorité P1 qui arrive en même temps qu'une autre. Tester la gestion des priorités concurrentes.",
+      "action_attendue": "Gérer 2 P1 simultanés",
+      "payload": {
+        "uf_origine": "Urgences",
+        "uf_destination": "Réanimation",
+        "priorite": "P1",
+        "type_transport": "LIT",
+        "ref_patient": "EXO-POLY-02",
+        "motif": "Second polytraumatisé — détresse respiratoire",
+        "commentaire": "2e mission P1 simultanée. Équipe brancardage déjà mobilisée sur POLY-01."
+      }
+    },
+    {
+      "id": "S10",
+      "t_min": 24,
+      "type": "incident",
+      "cible": "CHAG",
+      "titre": "Rupture stock adrénaline en Pharmacie centrale",
+      "description_animateur": "Tension logistique. Pharmacie indique rupture locale — utiliser les coursiers de S08 pour aller chercher ailleurs.",
+      "action_attendue": "Mobiliser coursiers pour approvisionnement externe",
+      "payload": {
+        "fait": "Pharmacie centrale : rupture stock adrénaline (5 ampoules restantes). Besoin urgent pour Réa (×2) et Urgences. Approvisionnement possible depuis Pharmacie CHU (30 min aller-retour) ou CH Hôpital du Léman (15 min).",
+        "urgency": 3,
+        "type_crise": "TECHNIQUE",
+        "unite_fonctionnelle": "MEDICO-TECHNIQUE ET REEDUCATION",
+        "declarant_nom": "Pharmacien"
+      }
+    },
+    {
+      "id": "S11",
+      "t_min": 26,
+      "type": "incident",
+      "cible": "CHAG",
+      "titre": "Laboratoire — Analyses urgentes à transporter",
+      "description_animateur": "Second événement logistique. Résultats labo externes à récupérer d'urgence. Coursier de S08 peut encore aider.",
+      "action_attendue": "Organiser transport échantillons avec ressources disponibles",
+      "payload": {
+        "fait": "Analyses sang préopératoire des blessés graves disponibles au labo externe (Annecy centre). Résultats nécessaires avant admission bloc. Transport requis dans les 20 min.",
+        "urgency": 3,
+        "type_crise": "SANITAIRE",
+        "unite_fonctionnelle": "MEDICO-TECHNIQUE ET REEDUCATION",
+        "declarant_nom": "Biologiste"
+      }
+    },
+    {
+      "id": "S12",
+      "t_min": 28,
+      "type": "message",
+      "cible": "CHAG",
+      "titre": "Point de situation ARS — T+30 min",
+      "description_animateur": "Fin d'exercice. L'ARS demande un bilan synthétique. Les joueurs doivent récapituler leurs actions.",
+      "action_attendue": "Produire bilan court : combien admis, combien transférés, état des services",
+      "payload": {
+        "expediteur": "ARS AURA",
+        "sujet": "Demande bilan T+30 — accident A41",
+        "contenu": "Merci de nous faire un point de situation synthétique : nombre de blessés admis par service, transferts effectués (et vers où), état de vos capacités actuelles (Ortho, Réa, Urgences), besoins d'appui régional pour les prochaines heures. Réponse attendue sous 15 min."
+      }
+    }
+  ]
+}

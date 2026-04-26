@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SCRIBE — Exercice de Crise</title>
+<style>
+:root {
+  --blue:#003189; --red:#e1000f; --green:#059669; --orange:#d97706;
+  --purple:#7c3aed; --bg:#f0f2f5; --s:#fff; --s2:#f1f5f9;
+  --bd:#e2e8f0; --tx:#0f172a; --mu:#64748b; --mo:monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+
+/* ── Bannière exercice ── */
+#exo-banner{
+  background:var(--red);color:#fff;font-family:var(--mo);font-size:11px;
+  font-weight:700;text-align:center;padding:6px;letter-spacing:2px;
+  display:flex;align-items:center;justify-content:center;gap:12px;
+}
+#exo-banner.inactive{background:#64748b}
+#banner-clock{font-size:14px;font-weight:900;letter-spacing:3px}
+
+/* ── Layout principal ── */
+#exo-root{display:flex;flex-direction:column;height:100%;overflow:hidden}
+#exo-body{flex:1;display:flex;overflow:hidden;gap:0}
+#col-left{width:320px;flex-shrink:0;border-right:1px solid var(--bd);display:flex;flex-direction:column;background:var(--s);overflow:hidden}
+#col-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#col-right{width:280px;flex-shrink:0;border-left:1px solid var(--bd);display:flex;flex-direction:column;background:var(--s);overflow:hidden}
+
+/* ── Sections communes ── */
+.section-hdr{padding:10px 14px;border-bottom:1px solid var(--bd);font-family:var(--mo);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--mu);background:var(--s2);display:flex;align-items:center;justify-content:space-between}
+.section-body{flex:1;overflow-y:auto;padding:10px}
+
+/* ── Tabs ── */
+.tab-bar{display:flex;border-bottom:1px solid var(--bd);background:var(--s2)}
+.tab-btn{font-family:var(--mo);font-size:9px;padding:8px 14px;border:none;background:none;cursor:pointer;color:var(--mu);border-bottom:2px solid transparent;transition:all .15s}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:700}
+.tab-pane{display:none;flex:1;overflow-y:auto;padding:12px}
+.tab-pane.active{display:block}
+
+/* ── Boutons ── */
+.btn{font-family:var(--mo);font-size:10px;padding:7px 14px;border-radius:5px;border:none;cursor:pointer;font-weight:700;transition:all .15s}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-blue:hover{opacity:.85}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{opacity:.85}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{opacity:.85}
+.btn-orange{background:var(--orange);color:#fff}
+.btn-orange:hover{opacity:.85}
+.btn-ghost{background:var(--s2);color:var(--tx);border:1px solid var(--bd)}
+.btn-ghost:hover{background:var(--bd)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Scénarios ── */
+.scenario-card{border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:10px;cursor:pointer;transition:all .15s}
+.scenario-card:hover{border-color:var(--blue);background:rgba(0,49,137,.04)}
+.scenario-card.selected{border-color:var(--blue);background:rgba(0,49,137,.08)}
+.sc-titre{font-weight:700;font-size:13px;margin-bottom:4px}
+.sc-meta{font-family:var(--mo);font-size:9px;color:var(--mu);display:flex;gap:10px;flex-wrap:wrap}
+.badge{display:inline-block;font-family:var(--mo);font-size:8px;padding:2px 6px;border-radius:10px;font-weight:700}
+.badge-sanitaire{background:#dcfce7;color:#15803d}
+.badge-cyber{background:#dbeafe;color:#1d4ed8}
+.badge-moyen{background:#fef3c7;color:#d97706}
+.badge-difficile{background:#fee2e2;color:#dc2626}
+.badge-expert{background:#f3e8ff;color:#7c3aed}
+
+/* ── Stimuli timeline ── */
+.stimulus-item{display:flex;align-items:flex-start;gap:8px;padding:8px;border-radius:6px;margin-bottom:6px;border:1px solid var(--bd);transition:all .2s}
+.stimulus-item.done{background:#dcfce7;border-color:#86efac;opacity:.7}
+.stimulus-item.active{background:#fef3c7;border-color:#fcd34d;animation:pulse 2s infinite}
+.stimulus-item.error{background:#fee2e2;border-color:#fca5a5}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.stim-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:2px}
+.stim-dot-pending{background:var(--bd)}
+.stim-dot-done{background:var(--green)}
+.stim-dot-active{background:var(--orange);animation:pulse 1s infinite}
+.stim-dot-error{background:var(--red)}
+.stim-info{flex:1;min-width:0}
+.stim-titre{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stim-meta{font-family:var(--mo);font-size:8px;color:var(--mu);margin-top:2px}
+.stim-actions{display:flex;gap:4px;margin-top:4px}
+.btn-inject{font-family:var(--mo);font-size:8px;padding:2px 8px;background:var(--orange);color:#fff;border:none;border-radius:3px;cursor:pointer}
+.btn-inject:hover{opacity:.85}
+
+/* ── Joueurs ── */
+.joueur-card{padding:8px 10px;border:1px solid var(--bd);border-radius:6px;margin-bottom:6px}
+.j-role{font-size:11px;font-weight:700}
+.j-meta{font-family:var(--mo);font-size:9px;color:var(--mu);margin-top:2px}
+.j-login{font-family:var(--mo);font-size:9px;background:var(--s2);padding:2px 6px;border-radius:3px;margin-top:4px;display:inline-block}
+
+/* ── Bilan ── */
+.bilan-section{margin-bottom:16px}
+.bilan-titre{font-family:var(--mo);font-size:9px;font-weight:700;letter-spacing:2px;color:var(--mu);margin-bottom:8px;text-transform:uppercase}
+.bilan-note{font-size:32px;font-weight:900;color:var(--blue)}
+.bilan-item{padding:5px 8px;border-left:3px solid var(--bd);margin-bottom:4px;font-size:12px}
+.bilan-item.fort{border-color:var(--green)}
+.bilan-item.axe{border-color:var(--orange)}
+.bilan-item.rec-haute{border-color:var(--red)}
+.bilan-item.rec-moy{border-color:var(--orange)}
+
+/* ── Formulaires ── */
+.form-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.form-row label{font-family:var(--mo);font-size:9px;color:var(--mu);text-transform:uppercase}
+.form-row input,.form-row select,.form-row textarea{
+  font-family:var(--mo);font-size:11px;padding:7px 10px;
+  background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--tx)
+}
+.form-row textarea{resize:vertical;min-height:60px}
+.sites-checkboxes{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.site-cb{display:flex;align-items:center;gap:4px;font-family:var(--mo);font-size:10px;padding:4px 8px;border:1px solid var(--bd);border-radius:4px;cursor:pointer;transition:all .15s}
+.site-cb:hover{border-color:var(--blue)}
+.site-cb.sel{background:rgba(0,49,137,.1);border-color:var(--blue);color:var(--blue);font-weight:700}
+
+/* ── Action log ── */
+.action-item{padding:5px 8px;border-left:3px solid var(--bd);margin-bottom:3px;font-size:11px}
+.action-item.INCIDENT_CREE{border-color:var(--red)}
+.action-item.DECISION{border-color:var(--blue)}
+.action-item.TRANSFERT{border-color:var(--orange)}
+.action-item.MESSAGE{border-color:var(--purple)}
+.action-t{font-family:var(--mo);font-size:9px;color:var(--mu);margin-right:6px}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:16px;right:16px;font-family:var(--mo);font-size:11px;padding:8px 14px;border-radius:5px;display:none;z-index:9999}
+#toast.ok{background:#dcfce7;color:#15803d;border:1px solid #86efac}
+#toast.err{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}
+#toast.info{background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd}
+
+/* ── Spinner ── */
+.spin{animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* ── Stat cards ── */
+.stats-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.stat-card{flex:1;min-width:70px;background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:8px;text-align:center}
+.stat-val{font-size:20px;font-weight:900;color:var(--blue)}
+.stat-lbl{font-family:var(--mo);font-size:8px;color:var(--mu);text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="exo-root">
+
+  <!-- Bannière MODE EXERCICE -->
+  <div id="exo-banner" class="inactive">
+    <span>🎯 SCRIBE — PLUGIN EXERCICE DE CRISE</span>
+    <span id="banner-clock">--:--</span>
+    <span id="banner-status">AUCUN EXERCICE EN COURS</span>
+  </div>
+
+  <div id="exo-body">
+
+    <!-- ── Col gauche : scénarios + joueurs ── -->
+    <div id="col-left">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="showTab('scenarios',this)">📋 SCÉNARIOS</button>
+        <button class="tab-btn" onclick="showTab('joueurs',this)">👥 JOUEURS</button>
+        <button class="tab-btn" onclick="showTab('sessions',this)">📁 SESSIONS</button>
+      </div>
+
+      <!-- Tab Scénarios -->
+      <div id="tab-scenarios" class="tab-pane active">
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+          <button class="btn btn-blue" onclick="openCreateScenario()">✚ Créer</button>
+          <button class="btn btn-ghost" onclick="openGenerateIA()">🤖 Générer IA</button>
+          <button class="btn btn-ghost" onclick="loadScenarios()" title="Actualiser">🔄</button>
+        </div>
+        <div id="scenarios-list"><div style="font-family:monospace;font-size:10px;color:var(--mu)">Chargement...</div></div>
+      </div>
+
+      <!-- Tab Joueurs -->
+      <div id="tab-joueurs" class="tab-pane">
+        <div id="joueurs-session-info" style="font-family:var(--mo);font-size:9px;color:var(--mu);margin-bottom:8px">Session : aucune</div>
+        <button class="btn btn-blue" onclick="openAddJoueur()" style="margin-bottom:10px;width:100%">✚ Ajouter un joueur</button>
+        <div id="joueurs-list"><div style="font-family:monospace;font-size:10px;color:var(--mu)">Démarrez une session pour gérer les joueurs</div></div>
+      </div>
+
+      <!-- Tab Sessions -->
+      <div id="tab-sessions" class="tab-pane">
+        <div id="sessions-list"><div style="font-family:monospace;font-size:10px;color:var(--mu)">Chargement...</div></div>
+      </div>
+    </div>
+
+    <!-- ── Col centre : contrôle exercice ── -->
+    <div id="col-main">
+      <div class="section-hdr">
+        <span>🎮 PANNEAU DE CONTRÔLE</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-green" id="btn-start" onclick="startExercice()" disabled>▶ DÉMARRER</button>
+          <button class="btn btn-ghost" id="btn-pause" onclick="pauseExercice()" disabled>⏸</button>
+          <button class="btn btn-red" id="btn-stop" onclick="stopExercice()" disabled>⏹ ARRÊTER</button>
+        </div>
+      </div>
+
+      <!-- Stats rapides -->
+      <div style="padding:12px;border-bottom:1px solid var(--bd)">
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-val" id="stat-elapsed">--</div><div class="stat-lbl">Temps</div></div>
+          <div class="stat-card"><div class="stat-val" id="stat-done">0</div><div class="stat-lbl">Injectés</div></div>
+          <div class="stat-card"><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">Total</div></div>
+          <div class="stat-card"><div class="stat-val" id="stat-sites">0</div><div class="stat-lbl">Sites</div></div>
+        </div>
+        <div id="scenario-actif-info" style="font-family:var(--mo);font-size:10px;color:var(--mu)">Sélectionnez un scénario et des sites pour démarrer</div>
+      </div>
+
+      <!-- Sites participants -->
+      <div style="padding:10px 12px;border-bottom:1px solid var(--bd)">
+        <div style="font-family:var(--mo);font-size:9px;color:var(--mu);margin-bottom:6px">SITES PARTICIPANTS</div>
+        <div class="sites-checkboxes" id="sites-sel">
+          <div class="site-cb sel" data-sigle="CHAG" onclick="toggleSite(this)">CHANGE</div>
+          <div class="site-cb" data-sigle="GHTLMB" onclick="toggleSite(this)">GHTLMB</div>
+          <div class="site-cb" data-sigle="CHRUMILLY" onclick="toggleSite(this)">CHRUMILLY</div>
+          <div class="site-cb" data-sigle="HDLEMAN" onclick="toggleSite(this)">HDLEMAN</div>
+          <div class="site-cb" data-sigle="HPMB" onclick="toggleSite(this)">HPMB</div>
+          <div class="site-cb" data-sigle="CHB" onclick="toggleSite(this)">CHB</div>
+          <div class="site-cb" data-sigle="CHPG" onclick="toggleSite(this)">CHPG</div>
+        </div>
+      </div>
+
+      <!-- Timeline des stimuli -->
+      <div class="section-hdr" style="margin-top:0">
+        <span>⚡ STIMULI</span>
+        <span id="stimuli-progress" style="font-family:var(--mo);font-size:9px"></span>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:10px" id="stimuli-timeline">
+        <div style="font-family:monospace;font-size:10px;color:var(--mu);text-align:center;padding:30px">Sélectionnez un scénario pour voir les stimuli</div>
+      </div>
+    </div>
+
+    <!-- ── Col droite : logs + bilan ── -->
+    <div id="col-right">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="showRightTab('logs',this)">📋 LOGS</button>
+        <button class="tab-btn" onclick="showRightTab('bilan',this)">📊 BILAN</button>
+      </div>
+
+      <div id="rtab-logs" class="tab-pane active">
+        <div id="action-log-list">
+          <div style="font-family:monospace;font-size:10px;color:var(--mu);text-align:center;padding:20px">Les actions des joueurs apparaîtront ici</div>
+        </div>
+      </div>
+
+      <div id="rtab-bilan" class="tab-pane">
+        <div style="margin-bottom:10px">
+          <button class="btn btn-blue" onclick="loadBilan()" style="width:100%">🤖 Générer le bilan IA</button>
+        </div>
+        <div id="bilan-content">
+          <div style="font-family:monospace;font-size:10px;color:var(--mu);text-align:center;padding:20px">Le bilan sera disponible après la fin de l'exercice</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal : Créer scénario manuellement -->
+<div id="modal-create" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--s);border-radius:10px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:var(--mo);font-size:11px;font-weight:700">NOUVEAU SCÉNARIO</span>
+      <button onclick="closeModal('modal-create')" style="background:none;border:none;cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div style="padding:18px;display:flex;flex-direction:column;gap:10px">
+      <div class="form-row"><label>Titre *</label><input id="cr-titre" placeholder="Exercice crise obstétricale G7"></div>
+      <div class="form-row"><label>Sujet / contexte</label><textarea id="cr-sujet" placeholder="Describe le sujet de la crise..."></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-row"><label>Durée exercice (min)</label><input id="cr-duree" type="number" value="60"></div>
+        <div class="form-row"><label>Durée réelle simulée (min)</label><input id="cr-duree-reel" type="number" value="240"></div>
+        <div class="form-row"><label>Type de crise</label>
+          <select id="cr-type"><option value="SANITAIRE">Sanitaire</option><option value="CYBER">Cyber</option><option value="MIXTE">Mixte</option></select>
+        </div>
+        <div class="form-row"><label>Complexité</label>
+          <select id="cr-complexite"><option value="FACILE">Facile</option><option value="MOYEN" selected>Moyen</option><option value="DIFFICILE">Difficile</option><option value="EXPERT">Expert</option></select>
+        </div>
+      </div>
+      <div class="form-row"><label>Contenu JSON complet</label><textarea id="cr-json" placeholder='{"meta":{...},"acteurs":[...],"stimuli":[...]}' style="min-height:120px;font-family:monospace;font-size:10px"></textarea></div>
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-create')">Annuler</button>
+      <button class="btn btn-blue" onclick="submitCreateScenario()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal : Générer via IA -->
+<div id="modal-ia" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--s);border-radius:10px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:var(--mo);font-size:11px;font-weight:700">🤖 GÉNÉRER UN SCÉNARIO VIA IA</span>
+      <button onclick="closeModal('modal-ia')" style="background:none;border:none;cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div style="padding:18px;display:flex;flex-direction:column;gap:10px">
+      <div class="form-row">
+        <label>Sujet / contexte clinique *</label>
+        <textarea id="ia-sujet" placeholder="Ex: Femme enceinte hémorragie au bloc + prématuré. Saturation de la maternité. Coordination SAMU nécessaire." style="min-height:80px"></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-row"><label>Durée exercice (min)</label><input id="ia-duree" type="number" value="60"></div>
+        <div class="form-row"><label>Durée réelle simulée (min)</label><input id="ia-duree-reel" type="number" value="240"></div>
+        <div class="form-row"><label>Type de crise</label>
+          <select id="ia-type"><option value="SANITAIRE">Sanitaire</option><option value="CYBER">Cyber</option><option value="MIXTE">Mixte</option></select>
+        </div>
+        <div class="form-row"><label>Complexité</label>
+          <select id="ia-complexite"><option value="FACILE">Facile</option><option value="MOYEN" selected>Moyen</option><option value="DIFFICILE">Difficile</option><option value="EXPERT">Expert</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Sites participants</label>
+        <div class="sites-checkboxes" id="ia-sites">
+          <div class="site-cb sel" data-sigle="CHAG">CHANGE</div>
+          <div class="site-cb" data-sigle="GHTLMB">GHTLMB</div>
+          <div class="site-cb" data-sigle="CHRUMILLY">CHRUMILLY</div>
+          <div class="site-cb" data-sigle="HDLEMAN">HDLEMAN</div>
+          <div class="site-cb" data-sigle="HPMB">HPMB</div>
+          <div class="site-cb" data-sigle="CHB">CHB</div>
+          <div class="site-cb" data-sigle="CHPG">CHPG</div>
+        </div>
+      </div>
+      <div id="ia-status" style="font-family:var(--mo);font-size:10px;color:var(--mu);display:none;text-align:center;padding:10px">
+        <span class="spin">⏳</span> Albert génère votre scénario...
+      </div>
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ia')">Annuler</button>
+      <button class="btn btn-blue" id="btn-ia-gen" onclick="submitGenerateIA()">🤖 Générer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal : Ajouter joueur -->
+<div id="modal-joueur" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--s);border-radius:10px;width:420px;max-width:95vw">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:var(--mo);font-size:11px;font-weight:700">AJOUTER UN JOUEUR</span>
+      <button onclick="closeModal('modal-joueur')" style="background:none;border:none;cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div style="padding:18px;display:flex;flex-direction:column;gap:10px">
+      <div class="form-row"><label>Nom affiché *</label><input id="j-display" placeholder="Dr Martin — Urgences CHANGE"></div>
+      <div class="form-row"><label>Identifiant (login) *</label><input id="j-username" placeholder="martin_exo"></div>
+      <div class="form-row"><label>Rôle dans l'exercice *</label><input id="j-role" placeholder="Médecin urgentiste CHANGE"></div>
+      <div class="form-row"><label>Site assigné</label>
+        <select id="j-site">
+          <option value="CHAG:8660">CHANGE (port 8660)</option>
+          <option value="GHTLMB:8661">GHTLMB (port 8661)</option>
+          <option value="CHRUMILLY:8662">CHRUMILLY (port 8662)</option>
+          <option value="HDLEMAN:8663">HDLEMAN (port 8663)</option>
+          <option value="HPMB:8664">HPMB (port 8664)</option>
+          <option value="CHB:8665">CHB (port 8665)</option>
+          <option value="CHPG:8666">CHPG (port 8666)</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Mot de passe temporaire</label><input id="j-pwd" value="Exercice2026!"></div>
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-joueur')">Annuler</button>
+      <button class="btn btn-blue" onclick="submitAddJoueur()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Token ─────────────────────────────────────────────────────────────────────
+var _tok = function() {
+  try {
+    var p = new URLSearchParams(window.location.search);
+    var t = p.get('token');
+    if (t) return t;
+    try { t = window.parent.localStorage.getItem('scribe_token'); if (t) return t; } catch(e) {}
+    return localStorage.getItem('scribe_token') || '';
+  } catch(e) { return ''; }
+};
+var _api = function(url, opts) {
+  opts = opts || {};
+  opts.headers = opts.headers || {};
+  opts.headers['Authorization'] = 'Bearer ' + _tok();
+  if (opts.body && !opts.headers['Content-Type']) opts.headers['Content-Type'] = 'application/json';
+  return fetch(url, opts);
+};
+var _toast = function(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg; el.className = type || 'ok'; el.style.display = 'block';
+  clearTimeout(el._t); el._t = setTimeout(function() { el.style.display = 'none'; }, 4000);
+};
+
+// ── État ──────────────────────────────────────────────────────────────────────
+var _selectedScenario = null;
+var _currentSession = null;
+var _statusInterval = null;
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+function showTab(id, btn) {
+  document.querySelectorAll('#col-left .tab-pane').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('#col-left .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'sessions') loadSessions();
+}
+function showRightTab(id, btn) {
+  document.querySelectorAll('#col-right .tab-pane').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('#col-right .tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('rtab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Sites ─────────────────────────────────────────────────────────────────────
+function toggleSite(el) { el.classList.toggle('sel'); updateStartBtn(); }
+function getSelectedSites() {
+  return Array.from(document.querySelectorAll('#sites-sel .site-cb.sel')).map(function(el) {
+    return el.dataset.sigle;
+  });
+}
+function toggleSiteInModal(el) { el.classList.toggle('sel'); }
+function getSelectedSitesFromModal(containerId) {
+  return Array.from(document.querySelectorAll('#' + containerId + ' .site-cb.sel')).map(function(el) {
+    return el.dataset.sigle;
+  });
+}
+// Rendre les cases IA modal cliquables
+document.querySelectorAll('#ia-sites .site-cb').forEach(function(el) {
+  el.onclick = function() { toggleSiteInModal(this); };
+});
+
+// ── Scénarios ─────────────────────────────────────────────────────────────────
+function loadScenarios() {
+  _api('/api/v1/exercice/scenarios').then(function(r) { return r.ok ? r.json() : []; })
+  .then(function(list) {
+    var el = document.getElementById('scenarios-list');
+    if (!list.length) {
+      el.innerHTML = '<div style="font-family:monospace;font-size:10px;color:var(--mu);text-align:center;padding:20px">Aucun scénario — créez-en un ou utilisez l\'IA</div>';
+      return;
+    }
+    el.innerHTML = list.map(function(s) {
+      var badgeCx = 'badge badge-' + (s.complexite || 'moyen').toLowerCase();
+      var badgeTy = 'badge badge-' + (s.type_crise || 'sanitaire').toLowerCase();
+      return '<div class="scenario-card" id="sc-' + s.scenario_id + '" onclick="selectScenario(' + JSON.stringify(s).replace(/'/g,"&#39;") + ')">' +
+        '<div class="sc-titre">' + s.titre + (s.genere_par_ia ? ' <span style="font-size:9px">🤖</span>' : '') + '</div>' +
+        '<div class="sc-meta">' +
+          '<span>⏱ ' + s.duree_min + 'min</span>' +
+          '<span>📍 ' + (s.nb_sites || 1) + ' site(s)</span>' +
+        '</div>' +
+        '<div style="margin-top:5px;display:flex;gap:4px">' +
+          '<span class="' + badgeTy + '">' + (s.type_crise || '') + '</span>' +
+          '<span class="' + badgeCx + '">' + (s.complexite || '') + '</span>' +
+        '</div>' +
+        (s.description ? '<div style="font-size:11px;color:var(--mu);margin-top:4px">' + s.description + '</div>' : '') +
+      '</div>';
+    }).join('');
+  });
+}
+
+function selectScenario(s) {
+  _selectedScenario = s;
+  document.querySelectorAll('.scenario-card').forEach(function(c) { c.classList.remove('selected'); });
+  var card = document.getElementById('sc-' + s.scenario_id);
+  if (card) card.classList.add('selected');
+  // Charger les stimuli dans la timeline
+  _api('/api/v1/exercice/scenarios/' + s.scenario_id).then(function(r) { return r.ok ? r.json() : null; })
+  .then(function(data) {
+    if (!data) return;
+    renderStimuliTimeline(data.scenario.stimuli || [], []);
+  });
+  document.getElementById('scenario-actif-info').textContent = '📋 ' + s.titre + ' — ' + s.duree_min + 'min';
+  updateStartBtn();
+}
+
+function updateStartBtn() {
+  var hasScenario = !!_selectedScenario;
+  var hasSites = getSelectedSites().length > 0;
+  var notRunning = !(_currentSession && ['EN_COURS','PAUSE'].includes(_currentSession.status));
+  document.getElementById('btn-start').disabled = !(hasScenario && hasSites && notRunning);
+}
+
+// ── Démarrer / Pause / Stop ───────────────────────────────────────────────────
+function startExercice() {
+  if (!_selectedScenario) return;
+  var sites = getSelectedSites();
+  if (!sites.length) { _toast('Sélectionnez au moins un site', 'err'); return; }
+  if (!confirm('Démarrer l\'exercice "' + _selectedScenario.titre + '" sur ' + sites.join(', ') + ' ?')) return;
+  _api('/api/v1/exercice/start', {
+    method: 'POST',
+    body: JSON.stringify({ scenario_id: _selectedScenario.scenario_id, sites_actifs: sites })
+  }).then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      _toast('Exercice démarré !', 'ok');
+      startStatusPolling();
+    } else {
+      _toast('Erreur : ' + (d.detail || 'inconnue'), 'err');
+    }
+  });
+}
+
+function pauseExercice() {
+  var running = _currentSession && _currentSession.status === 'EN_COURS';
+  var method = running ? 'pause' : 'resume';
+  _api('/api/v1/exercice/' + method, {method:'POST'}).then(function(r) { return r.json(); })
+  .then(function(d) { if (d.ok) _toast(running ? 'Pause' : 'Reprise', 'info'); });
+}
+
+function stopExercice() {
+  if (!confirm('Arrêter l\'exercice en cours ?')) return;
+  _api('/api/v1/exercice/stop', {method:'POST'}).then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      _toast('Exercice arrêté', 'info');
+      stopStatusPolling();
+      updateBanner(null);
+    }
+  });
+}
+
+// ── Polling status ────────────────────────────────────────────────────────────
+function startStatusPolling() {
+  if (_statusInterval) clearInterval(_statusInterval);
+  _statusInterval = setInterval(refreshStatus, 3000);
+  refreshStatus();
+}
+function stopStatusPolling() {
+  if (_statusInterval) clearInterval(_statusInterval);
+  _statusInterval = null;
+}
+
+function refreshStatus() {
+  _api('/api/v1/exercice/status').then(function(r) { return r.ok ? r.json() : null; })
+  .then(function(d) {
+    if (!d) return;
+    _currentSession = d.session;
+    updateBanner(d.session, d.injector);
+    updateControls(d.session);
+    updateStats(d.injector);
+    if (d.injector) renderStimuliTimeline(d.injector.stimuli_status || [], d.injector.stimuli_done || []);
+    loadActionLogs(d.session ? d.session.uid : null);
+  });
+}
+
+function updateBanner(session, inj) {
+  var banner = document.getElementById('exo-banner');
+  var clock = document.getElementById('banner-clock');
+  var status = document.getElementById('banner-status');
+  if (!session) {
+    banner.className = 'inactive';
+    clock.textContent = '--:--';
+    status.textContent = 'AUCUN EXERCICE EN COURS';
+    return;
+  }
+  banner.className = session.status === 'PAUSE' ? '' : '';
+  banner.style.background = session.status === 'PAUSE' ? 'var(--orange)' : 'var(--red)';
+  status.textContent = '🎯 ' + session.scenario_titre + ' — ' + session.status;
+  if (inj) {
+    var m = Math.floor(inj.t_elapsed_s / 60);
+    var s = inj.t_elapsed_s % 60;
+    clock.textContent = 'T+' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+}
+
+function updateControls(session) {
+  var running = session && session.status === 'EN_COURS';
+  var paused = session && session.status === 'PAUSE';
+  document.getElementById('btn-start').disabled = running || paused;
+  document.getElementById('btn-pause').disabled = !running && !paused;
+  document.getElementById('btn-stop').disabled = !running && !paused;
+  document.getElementById('btn-pause').textContent = paused ? '▶' : '⏸';
+  var siteCount = session ? (session.sites || []).length : 0;
+  document.getElementById('stat-sites').textContent = siteCount || '--';
+}
+
+function updateStats(inj) {
+  if (!inj) return;
+  var m = Math.floor(inj.t_elapsed_s / 60);
+  var s = inj.t_elapsed_s % 60;
+  document.getElementById('stat-elapsed').textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  document.getElementById('stat-done').textContent = inj.stimuli_done;
+  document.getElementById('stat-total').textContent = inj.stimuli_total;
+  document.getElementById('stimuli-progress').textContent = inj.stimuli_done + '/' + inj.stimuli_total;
+}
+
+// ── Timeline stimuli ──────────────────────────────────────────────────────────
+function renderStimuliTimeline(stimuli, done) {
+  var el = document.getElementById('stimuli-timeline');
+  if (!stimuli.length) {
+    el.innerHTML = '<div style="font-family:monospace;font-size:10px;color:var(--mu);text-align:center;padding:20px">Aucun stimulus dans ce scénario</div>';
+    return;
+  }
+  var TYPE_ICONS = {incident:'🚨',message:'✉️',transfert:'🚑',chat:'💬',capacite:'🛏',decision:'📋'};
+  el.innerHTML = stimuli.map(function(s) {
+    var isDone = s.done || (done && done.indexOf(s.id) >= 0);
+    var isError = s.error;
+    var dotCls = isDone ? 'stim-dot-done' : (isError ? 'stim-dot-error' : (s.t_restant_s === 0 && !isDone ? 'stim-dot-active' : 'stim-dot-pending'));
+    var itemCls = isDone ? 'done' : (isError ? 'error' : (s.t_restant_s === 0 && !isDone ? 'active' : ''));
+    var tRestant = '';
+    if (!isDone && s.t_restant_s > 0) {
+      tRestant = ' — dans ' + Math.floor(s.t_restant_s / 60) + 'min' + (s.t_restant_s % 60 > 0 ? ' ' + (s.t_restant_s % 60) + 's' : '');
+    }
+    return '<div class="stimulus-item ' + itemCls + '">' +
+      '<div class="stim-dot ' + dotCls + '"></div>' +
+      '<div class="stim-info">' +
+        '<div class="stim-titre">' + (TYPE_ICONS[s.type] || '⚡') + ' [' + s.id + '] ' + (s.titre || s.type) + '</div>' +
+        '<div class="stim-meta">T+' + s.t_min + 'min → ' + s.cible + tRestant + '</div>' +
+        (!isDone ? '<div class="stim-actions"><button class="btn-inject" onclick="injectManuel(\'' + s.id + '\')">Injecter maintenant</button></div>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function injectManuel(stimulusId) {
+  if (!confirm('Injecter le stimulus ' + stimulusId + ' maintenant ?')) return;
+  _api('/api/v1/exercice/inject/' + stimulusId, {method:'POST'})
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) { _toast('Stimulus ' + stimulusId + ' injecté', 'ok'); refreshStatus(); }
+    else { _toast('Erreur injection : ' + (d.error || ''), 'err'); }
+  });
+}
+
+// ── Logs actions ──────────────────────────────────────────────────────────────
+function loadActionLogs(sessionUid) {
+  if (!sessionUid) return;
+  // TODO: route à créer — pour l'instant afficher un placeholder
+  // On pourra faire un poll sur les MainCouranteLog avec filtre exercice
+}
+
+// ── Bilan ─────────────────────────────────────────────────────────────────────
+function loadBilan() {
+  if (!_currentSession) { _toast('Aucune session active ou terminée', 'err'); return; }
+  var el = document.getElementById('bilan-content');
+  el.innerHTML = '<div style="text-align:center;padding:20px"><span class="spin">⏳</span> Albert analyse l\'exercice...</div>';
+  _api('/api/v1/exercice/bilan/' + _currentSession.uid).then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (!d.ok) { el.innerHTML = '<div style="color:var(--red);font-family:monospace;font-size:10px;padding:12px">Erreur : ' + (d.error || '?') + '</div>'; return; }
+    var b = d.bilan;
+    el.innerHTML =
+      '<div class="bilan-section">' +
+        '<div class="bilan-note">' + (b.note_globale || '--') + '/10</div>' +
+        '<div style="font-size:12px;margin-top:6px">' + (b.synthese || '') + '</div>' +
+      '</div>' +
+      '<div class="bilan-section">' +
+        '<div class="bilan-titre">✅ Points forts</div>' +
+        (b.points_forts || []).map(function(p) { return '<div class="bilan-item fort">' + p + '</div>'; }).join('') +
+      '</div>' +
+      '<div class="bilan-section">' +
+        '<div class="bilan-titre">📈 Axes d\'amélioration</div>' +
+        (b.axes_amelioration || []).map(function(a) { return '<div class="bilan-item axe">' + a + '</div>'; }).join('') +
+      '</div>' +
+      '<div class="bilan-section">' +
+        '<div class="bilan-titre">💡 Recommandations</div>' +
+        (b.recommandations || []).map(function(r) {
+          return '<div class="bilan-item rec-' + (r.priorite === 'HAUTE' ? 'haute' : 'moy') + '"><strong>[' + r.priorite + '] ' + r.domaine + '</strong><br>' + r.action + '</div>';
+        }).join('') +
+      '</div>' +
+      '<div style="margin-top:10px">' +
+        '<button class="btn btn-ghost" style="width:100%" onclick="archiveSession()">📦 Archiver la session</button>' +
+      '</div>';
+  });
+}
+
+function archiveSession() {
+  if (!_currentSession) return;
+  if (!confirm('Archiver la session ' + _currentSession.uid + ' ?')) return;
+  _api('/api/v1/exercice/archive/' + _currentSession.uid, {method:'POST', body: JSON.stringify({})})
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) { _toast('Session archivée', 'ok'); _currentSession = null; updateBanner(null); }
+    else { _toast('Erreur archivage', 'err'); }
+  });
+}
+
+// ── Joueurs ───────────────────────────────────────────────────────────────────
+function loadJoueurs() {
+  if (!_currentSession) return;
+  _api('/api/v1/exercice/joueurs/' + _currentSession.uid).then(function(r) { return r.ok ? r.json() : []; })
+  .then(function(list) {
+    var el = document.getElementById('joueurs-list');
+    document.getElementById('joueurs-session-info').textContent = 'Session : ' + (_currentSession.scenario_titre || '?');
+    if (!list.length) {
+      el.innerHTML = '<div style="font-family:monospace;font-size:10px;color:var(--mu)">Aucun joueur — ajoutez des participants</div>';
+      return;
+    }
+    el.innerHTML = list.map(function(j) {
+      return '<div class="joueur-card">' +
+        '<div class="j-role">' + j.display_name + '</div>' +
+        '<div class="j-meta">' + j.role_exercice + ' — ' + j.sigle_site + ' :' + j.port_site + '</div>' +
+        '<div class="j-login">Login: ' + j.username + '</div>' +
+        '<button onclick="deleteJoueur(' + j.id + ')" style="font-family:var(--mo);font-size:8px;padding:2px 6px;background:none;border:1px solid var(--bd);border-radius:3px;cursor:pointer;color:var(--mu);margin-top:4px">Supprimer</button>' +
+      '</div>';
+    }).join('');
+  });
+}
+
+function openAddJoueur() {
+  if (!_currentSession) { _toast('Démarrez une session d\'abord', 'err'); return; }
+  document.getElementById('modal-joueur').style.display = 'flex';
+}
+
+function submitAddJoueur() {
+  var siteVal = document.getElementById('j-site').value.split(':');
+  var body = {
+    session_uid: _currentSession.uid,
+    username: document.getElementById('j-username').value.trim(),
+    display_name: document.getElementById('j-display').value.trim(),
+    role_exercice: document.getElementById('j-role').value.trim(),
+    sigle_site: siteVal[0],
+    port_site: parseInt(siteVal[1]),
+    password_tmp: document.getElementById('j-pwd').value || 'Exercice2026!',
+  };
+  if (!body.username || !body.display_name || !body.role_exercice) {
+    _toast('Remplissez tous les champs obligatoires', 'err'); return;
+  }
+  _api('/api/v1/exercice/joueurs', {method:'POST', body: JSON.stringify(body)})
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) { _toast('Joueur ajouté', 'ok'); closeModal('modal-joueur'); loadJoueurs(); }
+    else { _toast('Erreur : ' + (d.detail || ''), 'err'); }
+  });
+}
+
+function deleteJoueur(id) {
+  if (!confirm('Supprimer ce joueur ?')) return;
+  _api('/api/v1/exercice/joueurs/' + id, {method:'DELETE'}).then(function(r) {
+    if (r.ok) { _toast('Joueur supprimé', 'ok'); loadJoueurs(); }
+  });
+}
+
+// ── Sessions ──────────────────────────────────────────────────────────────────
+function loadSessions() {
+  _api('/api/v1/exercice/sessions').then(function(r) { return r.ok ? r.json() : []; })
+  .then(function(list) {
+    var el = document.getElementById('sessions-list');
+    if (!list.length) {
+      el.innerHTML = '<div style="font-family:monospace;font-size:10px;color:var(--mu);text-align:center;padding:20px">Aucune session</div>';
+      return;
+    }
+    el.innerHTML = list.map(function(s) {
+      var statusColor = {EN_COURS:'var(--green)',PAUSE:'var(--orange)',TERMINE:'var(--mu)',ARCHIVE:'var(--mu)'};
+      return '<div style="border:1px solid var(--bd);border-radius:6px;padding:10px;margin-bottom:8px">' +
+        '<div style="font-weight:700;font-size:12px">' + s.scenario_titre + '</div>' +
+        '<div style="font-family:var(--mo);font-size:9px;color:' + (statusColor[s.status] || 'var(--mu)') + '">' + s.status + '</div>' +
+        '<div style="font-family:var(--mo);font-size:9px;color:var(--mu)">' + (s.sites || []).join(', ') + '</div>' +
+        (s.status === 'TERMINE' && !s.archive ? '<button class="btn btn-ghost" style="margin-top:6px;font-size:9px" onclick="bilanSession(\'' + s.uid + '\')">📊 Bilan</button>' : '') +
+      '</div>';
+    }).join('');
+  });
+}
+
+function bilanSession(uid) {
+  _currentSession = {uid: uid};
+  showRightTab('bilan', document.querySelectorAll('.tab-btn')[1]);
+  loadBilan();
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function openCreateScenario() { document.getElementById('modal-create').style.display = 'flex'; }
+function openGenerateIA() { document.getElementById('modal-ia').style.display = 'flex'; }
+
+function submitCreateScenario() {
+  var jsonStr = document.getElementById('cr-json').value.trim();
+  var contenu;
+  try { contenu = JSON.parse(jsonStr); } catch(e) { _toast('JSON invalide', 'err'); return; }
+  var body = {
+    titre: document.getElementById('cr-titre').value.trim(),
+    sujet: document.getElementById('cr-sujet').value.trim(),
+    duree_min: parseInt(document.getElementById('cr-duree').value),
+    duree_reel_min: parseInt(document.getElementById('cr-duree-reel').value),
+    type_crise: document.getElementById('cr-type').value,
+    complexite: document.getElementById('cr-complexite').value,
+    contenu_json: contenu,
+  };
+  if (!body.titre) { _toast('Titre obligatoire', 'err'); return; }
+  _api('/api/v1/exercice/scenarios', {method:'POST', body: JSON.stringify(body)})
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) { _toast('Scénario créé', 'ok'); closeModal('modal-create'); loadScenarios(); }
+    else { _toast('Erreur : ' + (d.detail || ''), 'err'); }
+  });
+}
+
+function submitGenerateIA() {
+  var sujet = document.getElementById('ia-sujet').value.trim();
+  if (!sujet) { _toast('Décrivez le sujet', 'err'); return; }
+  var sites = getSelectedSitesFromModal('ia-sites');
+  var statusEl = document.getElementById('ia-status');
+  statusEl.style.display = 'block';
+  document.getElementById('btn-ia-gen').disabled = true;
+  var body = {
+    sujet: sujet,
+    nb_sites: sites.length || 1,
+    sites: sites.length ? sites : ['CHAG'],
+    duree_exercice_min: parseInt(document.getElementById('ia-duree').value),
+    duree_reel_min: parseInt(document.getElementById('ia-duree-reel').value),
+    type_crise: document.getElementById('ia-type').value,
+    complexite: document.getElementById('ia-complexite').value,
+    langue: 'fr',
+  };
+  _api('/api/v1/exercice/scenarios/generate', {method:'POST', body: JSON.stringify(body)})
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    statusEl.style.display = 'none';
+    document.getElementById('btn-ia-gen').disabled = false;
+    if (d.ok) {
+      _toast('Scénario généré : ' + (d.scenario && d.scenario.meta ? d.scenario.meta.titre : ''), 'ok');
+      closeModal('modal-ia');
+      loadScenarios();
+    } else {
+      _toast('Erreur IA : ' + (d.error || ''), 'err');
+    }
+  }).catch(function(e) {
+    statusEl.style.display = 'none';
+    document.getElementById('btn-ia-gen').disabled = false;
+    _toast('Erreur réseau : ' + e, 'err');
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function _exoBootstrap() {
+  var tries = 0;
+  var _done = false;
+  function doInit() {
+    if (_done) return;
+    _done = true;
+    loadScenarios();
+    refreshStatus();
+    startStatusPolling();
+  }
+  function tryInit() {
+    tries++;
+    try {
+      var p = window.parent || window;
+      if (p.__scribe_auth_ready) { doInit(); return; }
+    } catch(e) {}
+    if (tries >= 3 && _tok && _tok()) { doInit(); return; }
+    if (tries >= 12) { doInit(); return; }
+    setTimeout(tryInit, 500);
+  }
+  try {
+    var p = window.parent;
+    if (p && p !== window) {
+      p.addEventListener("scribe-auth-ready", doInit, { once: true });
+    }
+  } catch(e) {}
+  tryInit();
+}
+window.addEventListener('load', _exoBootstrap);
+</script>
+</body>
+</html>

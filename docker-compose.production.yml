@@ -1,0 +1,47 @@
+# ── SCRIBE — docker-compose.production.yml ─────────────────────────────────
+# Déploiement production établissement unique
+# Usage :
+#   cp config.xml /srv/scribe/config.xml
+#   docker compose -f docker-compose.production.yml up -d
+#   docker compose -f docker-compose.production.yml logs -f
+
+services:
+  scribe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scribe_prod
+    restart: unless-stopped
+    ports:
+      - "${SCRIBE_PORT:-8000}:8000"
+    volumes:
+      # Données persistantes (DB, uploads, config.js généré)
+      - /srv/scribe/data:/data
+      # Votre config.xml établissement (obligatoire en production)
+      - /srv/scribe/config.xml:/data/config.xml:ro
+      # Optionnel : votre fichier UF personnalisé
+      # - /srv/scribe/uf.xlsx:/app/uf.xlsx:ro
+      # Optionnel : votre fichier comptes
+      # - /srv/scribe/comptes.xlsx:/app/comptes.xlsx:ro
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+# Pour Nginx reverse-proxy, décommentez :
+#  nginx:
+#    image: nginx:alpine
+#    ports: ["443:443","80:80"]
+#    volumes:
+#      - ./nginx.conf:/etc/nginx/conf.d/scribe.conf:ro
+#      - /etc/letsencrypt:/etc/letsencrypt:ro
+#    depends_on: [scribe]

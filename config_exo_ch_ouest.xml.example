@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  config_exo_ch_ouest.xml — Mode EXERCICE / Site fictif CH_OUEST
+  Données fictives uniquement.
+-->
+<scribe>
+
+  <etablissement>
+    <nom>Centre Hospitalier Ouest</nom>
+    <sigle>CH_OUEST</sigle>
+    <finess>0000000010</finess>
+    <login_tagline>EXERCICE — Données fictives</login_tagline>
+    <login_footer>Mode exercice de gestion de crise</login_footer>
+  </etablissement>
+
+  <admin>
+    <login>dircrise</login>
+    <password>Exercice2026!</password>
+    <nom_affiche>Directeur de Crise — CH_OUEST</nom_affiche>
+  </admin>
+
+  <sites>
+    <site>
+      <nom>CH_OUEST — Site principal</nom>
+      <adresse>1 avenue de l'Hôpital, Nantes</adresse>
+      <latitude>47.2184</latitude>
+      <longitude>-1.5536</longitude>
+      <telephone_garde>0X 00 00 00 00</telephone_garde>
+    </site>
+  </sites>
+
+  <directeurs>
+    <directeur>
+      <nom>Directeur Général</nom>
+      <fonction>DG CH_OUEST</fonction>
+      <abreviation>DG</abreviation>
+    </directeur>
+    <directeur>
+      <nom>RSSI</nom>
+      <fonction>Responsable Sécurité SI</fonction>
+      <abreviation>RSSI</abreviation>
+    </directeur>
+  </directeurs>
+
+  <ia>
+    <fournisseur>albert</fournisseur>
+    <cle_api></cle_api>
+    <modele></modele>
+  </ia>
+
+  <federation>
+    <enabled>true</enabled>
+    <collecteur_url>http://localhost:8565/api/push</collecteur_url>
+    <token>token_demo_ch_ouest</token>
+    <push_interval>30</push_interval>
+  </federation>
+
+</scribe>
