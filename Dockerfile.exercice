@@ -1,0 +1,49 @@
+# ── SCRIBE — Dockerfile.exercice ──────────────────────────────────────────
+# Image dédiée au COLLECTEUR EXERCICE (port 8565)
+# Utilisée par docker-compose.exercice.yml comme service collecteur_exo.
+#
+# Pour les instances joueur, c'est le Dockerfile principal qui est utilisé
+# (avec command: uvicorn main:app et SCRIBE_PORT custom).
+# ──────────────────────────────────────────────────────────────────────────
+FROM python:3.11-slim
+
+LABEL maintainer="github.com/nocomp/scribe"
+LABEL description="SCRIBE Collecteur Exercice — animateur multi-sites"
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    SCRIBE_DATA_DIR=/data
+
+WORKDIR /app
+
+# Dépendances système
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Dépendances Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Code applicatif
+COPY . .
+
+# Dossier données persistantes
+RUN mkdir -p /data
+
+# Sécurisation : utilisateur non-root
+RUN addgroup --system scribe && \
+    adduser --system --ingroup scribe --home /app --shell /usr/sbin/nologin scribe && \
+    chown -R scribe:scribe /app /data
+
+USER scribe
+
+EXPOSE 8565
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:8565/health || exit 1
+
+# Lance le collecteur exercice (et NON main:app)
+CMD ["uvicorn", "collecteur_exercice.collecteur_exercice:app", \
+     "--host", "0.0.0.0", "--port", "8565", "--workers", "1"]
