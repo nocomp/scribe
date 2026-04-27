@@ -107,7 +107,10 @@ def demo1():
     delete_db(); delete_config_js()
     if run(f"{py} setup_demo1.py") != 0: return
     run(f"{py} setup_capacite_demo.py", exit_on_error=False)
-    if run(f"{py} seed_demo_crise.py") != 0: return
+    # v2.0.4 — Fix : seed_demo_crise.py peut être absent du repo public.
+    # On rend l'appel non-bloquant : si le fichier est manquant, la démo
+    # démarre quand même mais sans crise pré-chargée (instance vierge).
+    run(f"{py} seed_demo_crise.py", exit_on_error=False)
     demarrer()
 
 def demo2():
