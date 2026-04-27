@@ -6,6 +6,29 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et le projet utilise [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
+## [2.0.3] — 2026-04-27
+
+### 🐛 Corrections
+
+- **Mode exercice Docker** : ajout d'un `docker-compose.exercice.yml` 
+  dédié (1 collecteur animateur + 6 instances joueur) qui résout le 
+  fait que le `docker-compose.yml` original était conçu pour la prod 
+  en solo et ne supportait pas le mode exercice multi-instances.
+- `docker-entrypoint.sh` adapté pour supporter plusieurs instances 
+  en parallèle (variables `SCRIBE_CONFIG`, `SCRIBE_PORT`, `DATABASE_URL`)
+- Collecteur exercice : variable d'environnement `SCRIBE_EXO_INSTANCES` 
+  pour personnaliser les sigles et ports des sites joueur sans toucher au code.
+
+### 📚 Documentation
+
+- Nouveau document `DOCKER_EXERCICE.md` (FR + EN) expliquant le 
+  lancement du mode exercice via Docker Compose, la personnalisation 
+  des ports et sigles, et le dépannage.
+
+---
+
+## [2.0.2] — 2026-04-27
+
 
 ## [2.0.1] — 2026-04-26
 
