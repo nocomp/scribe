@@ -189,3 +189,7 @@ config_exo_*.example.xml
 # depuis config.xml.example)
 config.xml
 !config.xml.example
+
+# ── v2.0.5 — Config IA persistée (contient clé API en clair, NE JAMAIS COMMITTER) ──
+instance/ia_config.json
+instance/

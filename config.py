@@ -222,3 +222,68 @@ def get_ia_provider_config() -> dict:
     if IA["base_url"]: base["url"]      = IA["base_url"]
     base["provider"] = provider
     return base
+
+
+# ── v2.0.5 — Persistance config IA via fichier JSON ──────────────────────────
+# Permet à l'admin de sauvegarder provider/api_key/model/base_url depuis l'UI
+# sans redémarrer le process. Le fichier prime sur les variables d'env au boot,
+# et reload_ai_config() le relit à chaud après écriture.
+
+import json as _json
+
+_IA_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "instance", "ia_config.json")
+
+
+def _load_persisted_ia() -> None:
+    """
+    Lit instance/ia_config.json si présent et applique provider/api_key/model/
+    base_url sur le dict IA. Silencieux si le fichier est absent ou corrompu —
+    on retombe sur les variables d'env / valeurs par défaut.
+    """
+    try:
+        if not os.path.exists(_IA_CONFIG_PATH):
+            return
+        with open(_IA_CONFIG_PATH, "r", encoding="utf-8") as f:
+            data = _json.load(f)
+        if not isinstance(data, dict):
+            return
+        for key in ("provider", "api_key", "model", "base_url"):
+            v = data.get(key)
+            if v is not None and isinstance(v, str):
+                IA[key] = v
+    except Exception:
+        # Échec silencieux — on n'empêche pas le boot si le JSON est cassé
+        pass
+
+
+def save_persisted_ia(provider: str, api_key: str = "",
+                      model: str = "", base_url: str = "") -> str:
+    """
+    Écrit instance/ia_config.json avec provider/api_key/model/base_url.
+    Met aussi à jour le dict IA en mémoire (pour ne pas avoir à reload).
+    Permissions 0600 sur le fichier (clé API = sensible).
+
+    Retourne le chemin du fichier écrit.
+    """
+    os.makedirs(os.path.dirname(_IA_CONFIG_PATH), exist_ok=True)
+    data = {
+        "provider": (provider or "").strip(),
+        "api_key":  (api_key  or "").strip(),
+        "model":    (model    or "").strip(),
+        "base_url": (base_url or "").strip(),
+    }
+    with open(_IA_CONFIG_PATH, "w", encoding="utf-8") as f:
+        _json.dump(data, f, indent=2, ensure_ascii=False)
+    try:
+        os.chmod(_IA_CONFIG_PATH, 0o600)
+    except Exception:
+        pass  # Windows ou FS sans support de chmod
+
+    # Met à jour le dict IA en mémoire immédiatement
+    for k, v in data.items():
+        IA[k] = v
+    return _IA_CONFIG_PATH
+
+
+# Appliquer la persistance au boot (une seule fois)
+_load_persisted_ia()

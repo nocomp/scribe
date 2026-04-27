@@ -70,10 +70,23 @@ class AIConfig:
     """Configuration du fournisseur IA, chargée une fois au démarrage."""
 
     def __init__(self):
-        self.provider = os.getenv("SCRIBE_IA_PROVIDER", "albert").lower()
-        self.api_key  = os.getenv("SCRIBE_IA_KEY", "")
-        self.model    = os.getenv("SCRIBE_IA_MODEL", "")
-        self.base_url = os.getenv("SCRIBE_IA_URL", "")
+        # v2.0.5 — Priorité de lecture :
+        #   1. config.IA (qui a déjà appliqué instance/ia_config.json + env vars)
+        #   2. fallback config.js IA section (legacy)
+        # Ainsi l'admin qui sauvegarde via UI voit son changement pris en compte
+        # immédiatement après reload_ai_config().
+        try:
+            from config import IA
+            self.provider = (IA.get("provider") or "albert").lower()
+            self.api_key  = IA.get("api_key", "") or ""
+            self.model    = IA.get("model", "") or ""
+            self.base_url = IA.get("base_url", "") or ""
+        except Exception:
+            # Fallback strict env si import config échoue (cas exotique)
+            self.provider = os.getenv("SCRIBE_IA_PROVIDER", "albert").lower()
+            self.api_key  = os.getenv("SCRIBE_IA_KEY", "")
+            self.model    = os.getenv("SCRIBE_IA_MODEL", "")
+            self.base_url = os.getenv("SCRIBE_IA_URL", "")
 
         self._load_from_config_js()
 

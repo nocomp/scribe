@@ -5829,6 +5829,8 @@ async function loadAdminIA() {
     const r2 = await apiFetch('/api/v1/admin/config/ia');
     if (!r2 || !r2.ok) return;
     const d2 = await r2.json();
+    // v2.0.5 — cache global pour que adminShowIaConfig puisse récupérer default_model
+    window._iaProvidersCache = d2.all_providers || [];
     const provBox = document.getElementById('admin-ia-providers');
     if (!provBox || !d2.all_providers) return;
     provBox.innerHTML = d2.all_providers.map(p => {
@@ -5851,30 +5853,58 @@ function adminShowIaConfig(providerId, providerLabel) {
   if (!panel) return;
   panel.style.display = 'block';
   panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+
+  // v2.0.5 — Récupérer le modèle par défaut du fournisseur depuis la config exposée
+  let defaultModel = '';
+  try {
+    const all = window._iaProvidersCache || [];
+    const meta = all.find(p => p.id === providerId);
+    if (meta && meta.default_model) defaultModel = meta.default_model;
+  } catch(e) {}
+
+  const isLocal = providerId === 'ollama' || providerId === 'openai_compat';
   panel.innerHTML =
     '<div style="font-family:var(--mono);font-size:11px;font-weight:700;margin-bottom:10px">⚙ Configurer : ' + providerLabel + '</div>' +
-    '<p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px">' +
-      'Pour activer ce fournisseur, définir les variables d\'environnement suivantes avant de démarrer SCRIBE :' +
-    '</p>' +
-    '<div style="background:var(--surface3);border-radius:4px;padding:10px;font-family:var(--mono);font-size:10px;line-height:2">' +
-      '<div>export <strong>SCRIBE_IA_PROVIDER</strong>=' + providerId + '</div>' +
-      '<div>export <strong>SCRIBE_IA_KEY</strong>=<em>votre-clé-api</em></div>' +
-      '<div>export <strong>SCRIBE_IA_MODEL</strong>=<em>nom-du-modèle (optionnel)</em></div>' +
-    '</div>' +
-    '<div id="ia-config-key-section" style="margin-top:12px">' +
-      '<label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">CLÉ API (sauvegardée en variable d\'env temporaire)</label>' +
-      '<div style="display:flex;gap:8px">' +
-        '<input type="password" id="ia-config-key-input" placeholder="sk-... ou clé API" style="flex:1;font-family:var(--mono);font-size:10px;padding:6px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">' +
-        '<button onclick="adminSaveIaKey(&quot;' + providerId + '&quot;)" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:#003189;color:#fff;border:none;border-radius:4px;cursor:pointer">Tester</button>' +
+    '<div id="ia-config-key-section">' +
+      '<label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">' +
+        'CLÉ API' + (isLocal ? ' (optionnelle pour fournisseur local)' : ' (obligatoire)') + '</label>' +
+      '<input type="password" id="ia-config-key-input" placeholder="sk-... ou clé API" autocomplete="off" ' +
+        'style="width:100%;font-family:var(--mono);font-size:10px;padding:6px 8px;background:var(--surface2);' +
+        'border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box;margin-bottom:10px">' +
+      '<label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">' +
+        'MODÈLE (optionnel — laisser vide pour le défaut)</label>' +
+      '<input type="text" id="ia-config-model-input" placeholder="' + (defaultModel || 'défaut') + '" ' +
+        'style="width:100%;font-family:var(--mono);font-size:10px;padding:6px 8px;background:var(--surface2);' +
+        'border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box;margin-bottom:10px">' +
+      (isLocal ?
+        '<label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">' +
+          'URL DU SERVEUR LOCAL (optionnel)</label>' +
+        '<input type="text" id="ia-config-url-input" placeholder="http://localhost:11434/v1/chat/completions" ' +
+          'style="width:100%;font-family:var(--mono);font-size:10px;padding:6px 8px;background:var(--surface2);' +
+          'border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box;margin-bottom:10px">'
+        : '') +
+      '<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">' +
+        '<button onclick="adminTestIaKey(&quot;' + providerId + '&quot;)" ' +
+          'style="font-family:var(--mono);font-size:10px;padding:8px 14px;background:transparent;color:var(--text);' +
+          'border:1px solid var(--border2);border-radius:4px;cursor:pointer">🧪 Tester la clé</button>' +
+        '<button onclick="adminSaveIaConfig(&quot;' + providerId + '&quot;)" ' +
+          'style="font-family:var(--mono);font-size:10px;padding:8px 18px;background:#003189;color:#fff;' +
+          'border:none;border-radius:4px;cursor:pointer;font-weight:700">💾 Enregistrer & activer</button>' +
+        '<button onclick="adminResetIaConfig()" ' +
+          'style="font-family:var(--mono);font-size:10px;padding:8px 14px;background:transparent;color:#f87171;' +
+          'border:1px solid #f87171;border-radius:4px;cursor:pointer;margin-left:auto" ' +
+          'title="Supprime la clé sauvegardée et revient aux variables d\'environnement">' +
+          '🗑 Supprimer la config sauvegardée</button>' +
       '</div>' +
-      '<div id="ia-config-result" style="font-family:var(--mono);font-size:10px;margin-top:6px"></div>' +
+      '<div id="ia-config-result" style="font-family:var(--mono);font-size:10px;margin-top:10px"></div>' +
     '</div>';
 }
 
-async function adminSaveIaKey(providerId) {
+// v2.0.5 — Tester sans enregistrer (renommé pour clarté)
+async function adminTestIaKey(providerId) {
   const key = document.getElementById('ia-config-key-input')?.value?.trim();
   const res = document.getElementById('ia-config-result');
-  if (!key) { if(res) { res.style.color='#fbbf24'; res.textContent='⚠ Saisir une clé API'; } return; }
+  if (!key) { if(res) { res.style.color='#fbbf24'; res.textContent='⚠ Saisir une clé API à tester'; } return; }
   if(res) { res.style.color='var(--muted)'; res.textContent='⏳ Test de connexion…'; }
   try {
     const r = await apiFetch('/api/v1/admin/config/ia/test', {
@@ -5884,11 +5914,71 @@ async function adminSaveIaKey(providerId) {
     });
     const d = await r.json();
     if (d.ok) {
-      if(res) { res.style.color='#4ade80'; res.textContent='✓ Connexion OK — ' + (d.message||''); }
+      if(res) { res.style.color='#4ade80'; res.textContent='✓ Connexion OK — ' + (d.message||'') + ' · La clé n\'est PAS encore enregistrée, cliquez sur 💾 Enregistrer pour l\'activer'; }
     } else {
       if(res) { res.style.color='#f87171'; res.textContent='✗ ' + (d.detail||d.message||'Erreur'); }
     }
   } catch(e) { if(res) { res.style.color='#f87171'; res.textContent='Erreur réseau : ' + e.message; } }
+}
+
+// v2.0.5 — Enregistrer la config IA (avec persistance + reload à chaud)
+async function adminSaveIaConfig(providerId) {
+  const key   = document.getElementById('ia-config-key-input')?.value?.trim() || '';
+  const model = document.getElementById('ia-config-model-input')?.value?.trim() || '';
+  const url   = document.getElementById('ia-config-url-input')?.value?.trim() || '';
+  const res   = document.getElementById('ia-config-result');
+
+  const isLocal = providerId === 'ollama' || providerId === 'openai_compat';
+  if (!isLocal && !key) {
+    if(res) { res.style.color='#fbbf24'; res.textContent='⚠ Clé API obligatoire pour ce fournisseur'; }
+    return;
+  }
+
+  if(res) { res.style.color='var(--muted)'; res.textContent='⏳ Enregistrement…'; }
+  try {
+    const r = await apiFetch('/api/v1/admin/config/ia', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({provider: providerId, api_key: key, model: model, base_url: url})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      if(res) {
+        res.style.color='#4ade80';
+        res.textContent='✓ ' + (d.message || 'Config IA enregistrée et activée');
+      }
+      // Vider le champ clé pour pas qu'elle traîne en clair dans le DOM
+      const keyInput = document.getElementById('ia-config-key-input');
+      if (keyInput) keyInput.value = '';
+      // Refresh du panneau actif après 800ms
+      setTimeout(() => loadAdminIA(), 800);
+    } else {
+      if(res) { res.style.color='#f87171'; res.textContent='✗ ' + (d.detail||d.message||'Erreur enregistrement'); }
+    }
+  } catch(e) { if(res) { res.style.color='#f87171'; res.textContent='Erreur réseau : ' + e.message; } }
+}
+
+// v2.0.5 — Supprimer la config IA persistée
+async function adminResetIaConfig() {
+  if (!confirm('Supprimer la configuration IA enregistrée ?\n\nL\'instance reviendra aux valeurs des variables d\'environnement (ou aux valeurs par défaut).')) return;
+  const res = document.getElementById('ia-config-result');
+  if(res) { res.style.color='var(--muted)'; res.textContent='⏳ Suppression…'; }
+  try {
+    const r = await apiFetch('/api/v1/admin/config/ia', {method: 'DELETE'});
+    const d = await r.json();
+    if (d.ok) {
+      if(res) { res.style.color='#4ade80'; res.textContent='✓ ' + (d.message || 'Config supprimée'); }
+      setTimeout(() => loadAdminIA(), 800);
+    } else {
+      if(res) { res.style.color='#f87171'; res.textContent='✗ ' + (d.detail||d.message||'Erreur'); }
+    }
+  } catch(e) { if(res) { res.style.color='#f87171'; res.textContent='Erreur réseau : ' + e.message; } }
+}
+
+// v2.0.5 — Stub conservé pour compatibilité descendante (au cas où des handlers
+// onclick="adminSaveIaKey(...)" subsistent dans du DOM ancien). Redirige vers test.
+async function adminSaveIaKey(providerId) {
+  return adminTestIaKey(providerId);
 }
 
 async function loadAdminRouting() {

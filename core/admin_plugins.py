@@ -114,7 +114,15 @@ def get_ia_config(current_user: User = Depends(require_admin)):
         "doc":         meta.get("doc", ""),
         "has_key":     bool(IA["api_key"]),
         "all_providers": [
-            {"id": pid, "label": p["label"], "hds": p["hds"], "local": p["local"]}
+            {
+                "id":            pid,
+                "label":         p["label"],
+                "hds":           p["hds"],
+                "local":         p["local"],
+                # v2.0.5 — exposés pour pré-remplir les placeholders du panneau admin
+                "default_model": p.get("model", ""),
+                "default_url":   p.get("url", ""),
+            }
             for pid, p in IA["providers"].items()
         ],
     }
@@ -220,6 +228,70 @@ def test_ia_key(body: dict, current_user: User = Depends(require_admin)):
         return {"ok": False, "message": f"HTTP {resp.status_code}"}
     except Exception as e:
         return {"ok": False, "message": f"Erreur réseau: {e}"}
+
+
+# v2.0.5 — Sauvegarde persistante de la config IA (admin)
+@router.post("/config/ia")
+def save_ia_config(body: dict, current_user: User = Depends(require_admin)):
+    """
+    Enregistre la config IA dans instance/ia_config.json (permissions 0600).
+    Recharge à chaud via reload_ai_config() — pas de restart nécessaire.
+
+    Body : {provider, api_key, model?, base_url?}
+    """
+    from config import IA, save_persisted_ia
+    from app.api.ai_router import reload_ai_config
+
+    provider = (body.get("provider") or "").strip()
+    api_key  = (body.get("api_key")  or "").strip()
+    model    = (body.get("model")    or "").strip()
+    base_url = (body.get("base_url") or "").strip()
+
+    if not provider:
+        raise HTTPException(400, "provider requis")
+    if provider not in IA.get("providers", {}):
+        raise HTTPException(404, f"Fournisseur inconnu: {provider}")
+
+    # Pour les providers cloud, exiger une clé API ; pour les locaux, optionnel
+    cloud_providers = {"albert", "openai", "anthropic", "gemini", "mistral"}
+    if provider in cloud_providers and not api_key:
+        raise HTTPException(400, f"Clé API requise pour le fournisseur cloud '{provider}'")
+
+    path = save_persisted_ia(provider=provider, api_key=api_key,
+                             model=model, base_url=base_url)
+    # Recharger la config IA en mémoire dans ai_router (cache _ai_config)
+    reload_ai_config()
+
+    return {
+        "ok":       True,
+        "provider": provider,
+        "model":    model or IA["providers"][provider].get("model", ""),
+        "has_key":  bool(api_key),
+        "saved_to": path,
+        "message":  f"✓ Config IA enregistrée pour '{provider}' (rechargée à chaud)",
+    }
+
+
+# v2.0.5 — Suppression de la config IA persistée (admin)
+@router.delete("/config/ia")
+def delete_ia_config(current_user: User = Depends(require_admin)):
+    """Supprime la config IA persistée (instance/ia_config.json) et reload."""
+    import os
+    from config import _IA_CONFIG_PATH, IA
+    from app.api.ai_router import reload_ai_config
+
+    if os.path.exists(_IA_CONFIG_PATH):
+        os.remove(_IA_CONFIG_PATH)
+
+    # Reset en mémoire vers les valeurs d'env / defaults
+    IA["provider"] = os.environ.get("SCRIBE_IA_PROVIDER", "albert")
+    IA["api_key"]  = os.environ.get("SCRIBE_IA_KEY",      "")
+    IA["model"]    = os.environ.get("SCRIBE_IA_MODEL",    "")
+    IA["base_url"] = os.environ.get("SCRIBE_IA_URL",      "")
+    reload_ai_config()
+
+    return {"ok": True, "message": "Config IA persistée supprimée — retour aux valeurs d'env"}
+
 
 # ── Upload d'un nouveau plugin (ZIP) ──────────────────────────────────────────
 
