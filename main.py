@@ -1,5 +1,5 @@
 """
-main.py — SCRIBE v2.3.101
+main.py — SCRIBE v2.4.8.3
 """
 import asyncio
 import logging
@@ -15,18 +15,19 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.database import engine, Base
 import app.models  # noqa
 import app.api.status_page  # noqa — enregistre les tables StatusPage
-from app.api import status_page  # v2.3.101 — explicitement pour include_router
+from app.api import status_page  # v2.4.8.3 — explicitement pour include_router
 
 from app.api import sitrep, cartographie, attachments, i18n
 from app.api import auth, tasks
 from app.api import v140
-from app.api import scenario_export  # v2.3.101 — Générateur scénario depuis crise
-from app.api import lang_admin  # v2.3.101 — Admin sélection langue
+from app.api import scenario_export  # v2.4.8.3 — Générateur scénario depuis crise
+from app.api import lang_admin  # v2.4.8.3 — Admin sélection langue
 from app.api import mfa as mfa_module  # v2315 — MFA TOTP
+from app.api import admin_uf  # v2.4.8.3 — Admin UF (activer/désactiver/éditer)
 from core import admin_plugins
 from core.plugin_loader import load_all_plugins, get_loaded_plugins
 
-# v2.3.101 — Importer les modèles des plugins avant create_all pour que
+# v2.4.8.3 — Importer les modèles des plugins avant create_all pour que
 # SQLAlchemy découvre toutes les tables (sinon les tables du plugin
 # notifications ne seraient créées qu'au premier appel API).
 try:
@@ -77,16 +78,10 @@ def _build_csp() -> str:
 
     # Ajouter les origines CORS configurées (inter-instances)
     # Lire directement depuis l'env (évite la dépendance à _allowed_origins)
-    # SCRIBE_PUBLIC_HOST est l'hôte public de déploiement (ex: monhopital.fr,
-    # vps-xxxx.ovh.net, IP locale du serveur de crise…). Si vide, seul
-    # localhost est autorisé — adapté au mode mono-poste/mono-réseau.
-    _public_host = os.getenv("SCRIBE_PUBLIC_HOST", "").strip()
-    _all_ports_csp = list(range(8000, 8010)) + list(range(8560, 8568)) + list(range(8660, 8668)) + [9000, 7474, 7373]
-    _default_origins = [f"http://localhost:{p}" for p in _all_ports_csp]
-    if _public_host:
-        _default_origins += [f"http://{_public_host}:{p}" for p in _all_ports_csp]
-        _default_origins += [f"https://{_public_host}:{p}" for p in _all_ports_csp]
-    _cors_env = os.getenv("SCRIBE_ALLOWED_ORIGINS", ",".join(_default_origins))
+    _cors_env = os.getenv(
+        "SCRIBE_ALLOWED_ORIGINS",
+        ",".join([f"http://localhost:{p}" for p in list(range(8000, 8010)) + list(range(6560, 6568)) + [9000, 7474, 7373]])
+    )
     for orig in _cors_env.split(","):
         orig = orig.strip()
         if orig:
@@ -94,11 +89,9 @@ def _build_csp() -> str:
 
     connect_src = " ".join(sorted(connect_origins))
 
-    # frame-ancestors : autorise l'iframe par le collecteur exercice s'il
-    # tourne sur la même hôte publique. Configurable via env var.
-    _frame_ancestors = ["'self'", "http://localhost:8565"]
-    if _public_host:
-        _frame_ancestors += [f"http://{_public_host}:8565", f"https://{_public_host}:8565"]
+    # frame-ancestors : autoriser self + origines configurées (pour iframe master)
+    frame_ancestors_extra = os.getenv("SCRIBE_FRAME_ANCESTORS", "http://localhost:8565")
+
     return (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' unpkg.com cdnjs.cloudflare.com cdn.jsdelivr.net; "
@@ -107,8 +100,8 @@ def _build_csp() -> str:
         "img-src 'self' data: blob: *.basemaps.cartocdn.com *.tile.openstreetmap.org "
         "server.arcgisonline.com unpkg.com cdnjs.cloudflare.com; "
         f"connect-src {connect_src}; "
-        "worker-src 'none'; "
-        f"frame-ancestors {' '.join(_frame_ancestors)}"
+        "worker-src 'self'; "
+        f"frame-ancestors 'self' {frame_ancestors_extra}"
     )
 
 # Calculer la CSP une fois au démarrage (après _allowed_origins)
@@ -128,26 +121,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
-app = FastAPI(title="SCRIBE Crisis OS", version="2.3.101")
+app = FastAPI(title="SCRIBE v2.4.8.3 Crisis OS", version="2.3.1")
 
-# CORS — restreint aux origines configurées (jamais wildcard en prod).
-# Pour un déploiement mono-poste : laisser SCRIBE_PUBLIC_HOST vide.
-# Pour un déploiement réseau : définir SCRIBE_PUBLIC_HOST=hostname-public
-# Pour un contrôle fin : définir SCRIBE_ALLOWED_ORIGINS=url1,url2,…
-_PUBLIC_HOST = os.getenv("SCRIBE_PUBLIC_HOST", "").strip()
-_ALL_PORTS = list(range(8000, 8010)) + list(range(8560, 8568)) + list(range(8660, 8668)) + [9000, 7474, 7373]
-_default_orig_list = (
-    [f"http://localhost:{p}"  for p in _ALL_PORTS] +
-    [f"http://127.0.0.1:{p}"  for p in _ALL_PORTS]
-)
-if _PUBLIC_HOST:
-    _default_orig_list += (
-        [f"http://{_PUBLIC_HOST}:{p}"  for p in _ALL_PORTS] +
-        [f"https://{_PUBLIC_HOST}:{p}" for p in _ALL_PORTS]
-    )
+# CORS — restreint aux origines configurées (jamais wildcard en prod)
+_VPS = "http://localhost"
+_ALL_PORTS = list(range(8000, 8010)) + list(range(6560, 6568)) + [9000, 7474, 7373]
 _allowed_origins = os.getenv(
     "SCRIBE_ALLOWED_ORIGINS",
-    ",".join(_default_orig_list)
+    ",".join([
+        *[f"http://localhost:{p}" for p in _ALL_PORTS],
+        *[f"http://127.0.0.1:{p}" for p in _ALL_PORTS],
+        *[f"{_VPS}:{p}" for p in _ALL_PORTS],
+    ])
 ).split(",")
 
 # Les requêtes same-origin (même hôte:port) ne passent pas par CORS —
@@ -178,17 +163,19 @@ app.include_router(tasks.router,        prefix="/api/v1/tasks",        tags=["Ka
 app.include_router(i18n.router,         prefix="",                     tags=["i18n"])
 # ── Admin plugins ──────────────────────────────────────────────────────────
 app.include_router(admin_plugins.router, prefix="/api/v1/admin",       tags=["Admin Plugins"])
-# v2.3.101 — Export scénario depuis une crise passée (crise → rejouable)
+# v2.4.8.3 — Export scénario depuis une crise passée (crise → rejouable)
 app.include_router(scenario_export.router)
-# v2.3.101 — Changement de langue depuis l'admin (style WordPress)
+# v2.4.8.3 — Changement de langue depuis l'admin (style WordPress)
 app.include_router(lang_admin.router)
 # v2315 — MFA TOTP (activation par l'utilisateur, vérification login phase 2)
 app.include_router(mfa_module.router)
-# v2.3.101 — Statut public / page de situation. Le routeur existait mais
+# v2.4.8.3 — Statut public / page de situation. Le routeur existait mais
 # n'était pas inclus dans l'app → les endpoints /api/v1/status/* étaient
 # invisibles. Maintenant exposés, utilisés par le collecteur animateur
 # pour afficher la vue pédagogique des statuts publics de chaque site.
 app.include_router(status_page.router, prefix="/api/v1/status",        tags=["Status Page"])
+# v2.4.8.3 — Admin UF : activer / désactiver / éditer le référentiel
+app.include_router(admin_uf.router, tags=["Admin UF"])
 # ── Compatibilité v140 (endpoints non encore migrés en plugins) ────────────
 app.include_router(v140.router,         prefix="/api/v1",              tags=["v1.4.0 legacy"])
 
@@ -433,7 +420,7 @@ async def public_status():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "2.0.5", "build": "v2.0.5"}
+    return {"status": "ok", "version": "2.5.0", "build": "v2500"}
 
 
 @app.get("/api/push-test")

@@ -20,10 +20,10 @@ Bench 5/5 vert.
 
 ### Symptôme
 Tu as déployé v2204 fraîchement, lancé avec `--reset`, et tu trouvais
-toujours sur l'instance GHTLMB un transfert **"Maternité Bench →
+toujours sur l'instance DEMO2 un transfert **"Maternité Bench →
 Réanimation Bench"** qui n'existait pas dans ton exercice actuel.
 
-Ce transfert était en plus visible **uniquement sur GHTLMB, pas sur
+Ce transfert était en plus visible **uniquement sur DEMO2, pas sur
 CHANGE** — comportement incohérent qui ne collait pas à une simple
 erreur de seed.
 
@@ -49,7 +49,7 @@ Au redémarrage d'un collecteur exercice :
 1. `load_transferts()` lit `collecteur_exo_transferts.json`
 2. Trouve le transfert résiduel, le charge en mémoire
 3. Le pousse aux instances via `/api/push` à leur première connexion
-4. GHTLMB l'affiche → bug visible
+4. DEMO2 l'affiche → bug visible
 
 Le `--reset` de `lancer_exercice.sh` ne supprimait **que les DBs des
 instances**, pas les fichiers de state du collecteur exercice lui-même.
@@ -173,7 +173,7 @@ cd scribe_v2205
 bash lancer_exercice.sh --reset
 ```
 
-Vérifier après lancement : l'onglet TRANSFERTS de GHTLMB doit être vide
+Vérifier après lancement : l'onglet TRANSFERTS de DEMO2 doit être vide
 tant que tu n'as pas créé un transfert dans l'exercice courant.
 
 ## Mea culpa

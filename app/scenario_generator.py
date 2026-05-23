@@ -177,7 +177,7 @@ def generate_scenario_from_crisis(
     description: str = "",
     since: Optional[datetime] = None,
     until: Optional[datetime] = None,
-    cible_sigle: str = "CHAG",
+    cible_sigle: str = "DEMO",
     anonymize: bool = True,
     include_incidents: bool = True,
     include_messages: bool = True,
@@ -193,7 +193,7 @@ def generate_scenario_from_crisis(
         description: description libre (ce qu'on a voulu capturer)
         since: borne basse ; si None, prend le premier événement trouvé
         until: borne haute ; si None, pas de limite supérieure
-        cible_sigle: SIGLE de l'établissement cible (par défaut CHAG)
+        cible_sigle: SIGLE de l'établissement cible (par défaut DEMO)
         anonymize: applique l'anonymisation aux textes
         include_*: filtres sur les catégories d'événements
         type_crise, complexite: metadata pédagogique

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SCRIBE v2.3.101 | Crisis OS</title>
+<title>SCRIBE v2.4.8.3 | Crisis OS</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="/api/config.js"></script>
@@ -22,7 +22,7 @@
   <div class="header-top">
   <div class="brand">
     <img src="/static/logo-scribe.png" alt="SCRIBE" style="height:30px;width:auto;flex-shrink:0">
-    <span style="font-family:var(--mono);font-weight:300;font-size:9px;color:rgba(255,255,255,.6);letter-spacing:1px">v2.3.101</span>
+    <span style="font-family:var(--mono);font-weight:300;font-size:9px;color:rgba(255,255,255,.6);letter-spacing:1px">v2.4.8.3</span>
     <span id="etab-sigle" style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.8);margin-left:4px;letter-spacing:1px;padding:1px 6px;background:rgba(255,255,255,.15);border-radius:3px"></span>
   </div>
   <div class="header-right">
@@ -78,6 +78,8 @@
     <button class="tab-btn"        onclick="openTab('tab-analyse',this)" id="tab-btn-analyse" data-i18n-label="nav.analyse" data-i18n-icon="🔬">🔬 ANALYSE</button>
     <button class="tab-btn"        onclick="openTab('tab-rex',this)" id="tab-btn-rex" data-i18n-label="nav.rex" data-i18n-icon="📊">📊 REX</button>
     <button class="tab-btn"        onclick="openTab('tab-messagerie',this)" id="tab-btn-messagerie" data-i18n-label="nav.messagerie" data-i18n-icon="✉️">✉️ MESSAGERIE<span id="msg-badge" style="display:none;background:#ef4444;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <!-- v2.4.8.3 — Onglet ADMIN UF : masqué par défaut, affiché si user.role === 'admin' -->
+    <button class="tab-btn" style="display:none" onclick="openTab('tab-admin-uf',this)" id="tab-btn-admin-uf">⚙️ ADMIN UF</button>
     <!-- v2307 — Onglet INTER-GHT masqué par défaut. Le plugin inter_ght est
          désactivé depuis cette version (le chat natif couvre le besoin).
          Le bouton reste dans le DOM pour que l'auto-découverte puisse le
@@ -91,6 +93,11 @@
   <div class="login-box">
     <div class="login-logo" style="padding:8px 0"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:60px;object-fit:contain;display:block;margin:0 auto"></div>
     <div class="login-sub" id="login-subtitle">VOTRE ÉTABLISSEMENT — CRISIS OS</div>
+    <div id="login-demo-banner" style="display:none;background:#fff7ed;border:1px solid #fb923c;border-left:4px solid #ea580c;border-radius:4px;padding:10px 12px;margin:8px 0 10px;font-family:var(--mono);font-size:10px;color:#9a3412;line-height:1.6">
+      <div style="font-weight:700;margin-bottom:4px;font-size:11px">🎓 MODE DÉMO</div>
+      <div>Identifiant : <strong style="color:#7c2d12">dircrise</strong></div>
+      <div>Mot de passe : <strong style="color:#7c2d12">Demo2026!</strong></div>
+    </div>
     <div class="login-field"><label>Identifiant</label><input type="text" id="login-user" placeholder="dircrise" autocomplete="username"></div>
     <div class="login-field"><label>Mot de passe</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn-login" onclick="doLogin()">CONNEXION</button>
@@ -100,6 +107,28 @@
     <div id="login-credit" style="font-family:var(--mono);font-size:8px;color:var(--muted);text-align:center;margin-top:6px;opacity:.6">Designed by Hervé PELLARIN</div>
   </div>
 </div>
+<script>
+// Détection mode démo : si sigle = DEMO, afficher le bandeau credentials
+(function() {
+  function _showDemoBanner() {
+    try {
+      var cfg = (typeof SCRIBE_CONFIG !== 'undefined') ? SCRIBE_CONFIG : null;
+      if (!cfg) return;
+      var sigle = (cfg.etablissement && cfg.etablissement.sigle) || '';
+      if (sigle.toUpperCase() === 'DEMO') {
+        var b = document.getElementById('login-demo-banner');
+        if (b) b.style.display = 'block';
+      }
+    } catch (e) { /* silencieux */ }
+  }
+  // SCRIBE_CONFIG est chargé via /api/config.js avant le DOM
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _showDemoBanner);
+  } else {
+    _showDemoBanner();
+  }
+})();
+</script>
 <div id="app-content" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0">
 
 <!-- ══════════════════ TAB DASHBOARD ══════════════════════ -->
@@ -137,7 +166,7 @@
             <div id="db-poles" style="display:flex;flex-direction:column;gap:7px"></div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">Arc Alpin G7</div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">SCRIBE</div>
             <div id="db-g7" style="display:flex;flex-direction:column;gap:6px"></div>
           </div>
         </div>
@@ -185,8 +214,8 @@
       </div>
 
       <div class="form-row">
-        <div class="field" style="flex:1"><label>Site</label>
-          <select id="site_id" onchange="loadUF()"><option value="">-- Site --</option></select>
+        <div class="field" style="flex:1"><label>Établissement</label>
+          <select id="site_id" onchange="loadUF()"><option value="">-- Établissement --</option></select>
         </div>
         <div class="field" style="flex:1;position:relative"><label>Unité Fonct.</label>
           <div style="display:flex;gap:4px;align-items:center">
@@ -450,8 +479,8 @@
     <div class="col-body" id="presence-list"><div class="empty-state">Aucune présence</div></div>
     <div class="col-footer">
       <div class="form-row" style="margin-bottom:5px">
-        <input type="text" id="p-nom"  placeholder="Nom de l'acteur" style="flex:1">
-        <input type="text" id="p-role" placeholder="Rôle/Fonction"   style="flex:1">
+        <input type="text" id="p-nom"  placeholder="Nom de l'acteur" list="acteurs-generiques" autocomplete="off" style="flex:1">
+        <input type="text" id="p-role" placeholder="Rôle/Fonction"   list="acteurs-roles" autocomplete="off" style="flex:1">
       </div>
       <div class="form-row" style="margin-bottom:0">
         <button class="btn-success" style="flex:1" onclick="logPresence('ENTRÉE')">▶ ENTRÉE</button>
@@ -463,7 +492,7 @@
     <div class="col-header"><h2>⚖️ Chronologie décisionnelle</h2></div>
     <div class="col-body" id="decision-list"><div class="empty-state">Aucune décision</div></div>
     <div class="col-footer">
-      <div class="field" style="margin-bottom:4px"><input type="text" id="d-responsable" placeholder="Responsable"></div>
+      <div class="field" style="margin-bottom:4px"><input type="text" id="d-responsable" placeholder="Responsable" list="acteurs-generiques" autocomplete="off"></div>
       <div class="field" style="margin-bottom:4px">
         <select id="d-base">
           <option value="Plan Blanc">Plan Blanc</option><option value="ORSAN">ORSAN</option>
@@ -557,7 +586,7 @@
 </div>
 
 <!-- ══ MODAL NOUVEAU TRANSFERT ══ -->
-<div class="modal-overlay" id="tr-modal" style="display:none;align-items:flex-start;justify-content:center;padding-top:52px;overflow-y:auto" onclick="if(event.target===this)this.style.display='none'">
+<div class="modal-overlay" id="tr-modal" style="display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto" onclick="if(event.target===this)this.style.display='none'">
   <div style="background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:640px;max-width:96vw;max-height:calc(100vh - 80px);display:flex;flex-direction:column;overflow:hidden;margin-bottom:16px">
     <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
       <div>
@@ -797,7 +826,8 @@
             <h3>Import de comptes (Excel)</h3>
             <input type="file" id="import-users-file" accept=".xlsx,.xls">
             <button class="btn-sm blue" style="margin-top:8px" onclick="importComptes()">Importer</button>
-            <a href="/api/v1/auth/comptes-modele" class="btn-sm" style="margin-left:8px;text-decoration:none">Télécharger modèle</a>
+            <button class="btn-sm" style="margin-left:8px" onclick="downloadComptesModele()">Télécharger modèle</button>
+            <div id="import-result" style="margin-top:8px;font-family:var(--mono);font-size:10px;padding:6px 10px;border:1px solid var(--border);border-radius:4px;display:none"></div>
           </div>
         </div>
 
@@ -835,7 +865,7 @@
         </div>
 
         <!-- SECTION : Contenu & scénarios -->
-        <!-- v2.3.101 (v2306) — Génération de scénarios rejouables depuis une
+        <!-- v2.4.8.3 (v2306) — Génération de scénarios rejouables depuis une
              crise passée. L'admin choisit la fenêtre temporelle, les
              catégories à inclure, l'anonymisation ; SCRIBE produit un JSON
              immédiatement utilisable par le collecteur d'exercice.
@@ -863,7 +893,7 @@
               </div>
               <div>
                 <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">SIGLE CIBLE</label>
-                <input type="text" id="scen-cible" value="CHAG"
+                <input type="text" id="scen-cible" value="DEMO"
                        style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
               </div>
             </div>
@@ -1371,7 +1401,7 @@
 <div id="toast"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- v2.3.101 — Génération QR code pour statut public (onglet Communiqué) -->
+<!-- v2.4.8.3 — Génération QR code pour statut public (onglet Communiqué) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <!-- ══════════════════ TAB COMMUNIQUÉ ══════════════════ -->
@@ -1436,7 +1466,8 @@
           <span class="published-dot off" id="comm-pub-dot"></span>
           <span id="comm-pub-label">Non publié — accès /status non disponible</span>
         </div>
-        <button class="btn-publish off" id="comm-pub-btn" onclick="togglePublish()">Publier</button>
+        <button class="btn-publish off" id="comm-pub-btn" onclick="publishOrUpdate()">Publier</button>
+        <button class="btn-secondary" id="comm-unpub-btn" onclick="unpublishStatus()" style="display:none;font-family:var(--mono);font-size:10px;padding:5px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;border-radius:4px" title="Retirer le point de situation du /status public">Retirer</button>
         <a href="/status" target="_blank" class="btn-secondary" style="font-family:var(--mono);font-size:10px;padding:5px 10px;text-decoration:none">↗ Voir</a>
       </div>
     </div>
@@ -1647,6 +1678,9 @@
     <div class="cap-filters">
       <button class="cap-site-btn active" data-site="all" id="cap-btn-all" onclick="capFilterSite(this)">Tous les sites</button>
       <span id="cap-site-btns-dyn"></span>
+      <label style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:12px;cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:4px">
+        <input type="checkbox" id="cap-filter-lits" onchange="capToggleFilterLits()" checked style="cursor:pointer"> Lits &gt; 0 uniquement
+      </label>
       <span id="cap-last-update" style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:8px"></span>
       <button class="cap-synthese-btn" onclick="capToggleSynthese()">📊 Synthèse</button>
       <button class="cap-synthese-btn" style="background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3)" onclick="capAlbertAnalyse()">◈ SCRIBE</button>
@@ -1730,7 +1764,7 @@
       <div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px">CADRE DÉCLARANT</div>
         <input id="cap-redacteur" type="text" class="cap-num-input" style="font-size:14px;text-align:left;padding:8px 12px"
-          placeholder="Prénom Nom du cadre">
+          placeholder="Prénom Nom du cadre" list="acteurs-cadres" autocomplete="off">
       </div>
 
       <!-- SECTION LITS -->
@@ -2139,11 +2173,71 @@
   </div>
 </div>
 
+<!-- v2.4.8.3 — Onglet ADMIN UF : gestion du référentiel UF (admin only) -->
+<div id="tab-admin-uf" class="tab-content" style="flex-direction:column;background:var(--bg)">
+  <div style="padding:20px;max-width:1400px;margin:0 auto;width:100%">
+    <h2 style="font-family:var(--mono);font-size:14px;font-weight:700;margin:0 0 4px;color:var(--text)">⚙️ Administration des Unités Fonctionnelles</h2>
+    <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 0 18px">
+      Active/désactive ou édite les UF. Les UF désactivées restent en base (pour préserver les incidents historiques) mais n'apparaissent plus dans les dropdowns VEILLE / CAPACITÉ.
+    </p>
+
+    <!-- Toolbar -->
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+      <input type="text" id="auf-search" placeholder="🔎 Rechercher (libellé, code, pôle)..."
+        style="flex:1;min-width:240px;font-family:var(--mono);font-size:11px;padding:7px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text)"
+        oninput="aufRender()">
+      <label style="font-family:var(--mono);font-size:10px;color:var(--muted);cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:4px">
+        <input type="checkbox" id="auf-show-inactive" checked onchange="aufRender()" style="cursor:pointer"> Inclure inactives
+      </label>
+      <span id="auf-count" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto"></span>
+      <button onclick="aufBulkActivate(true)" style="font-family:var(--mono);font-size:10px;padding:6px 12px;background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3);border-radius:4px;cursor:pointer">✓ Tout activer</button>
+      <button onclick="aufBulkActivate(false)" style="font-family:var(--mono);font-size:10px;padding:6px 12px;background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:4px;cursor:pointer">✗ Tout désactiver</button>
+      <button onclick="aufShowCreate()" style="font-family:var(--mono);font-size:10px;padding:6px 12px;background:#003189;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">+ Nouvelle UF</button>
+    </div>
+
+    <!-- Formulaire de création (caché par défaut) -->
+    <div id="auf-create-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:12px">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px">Nouvelle UF</div>
+      <div style="display:grid;grid-template-columns:1fr 2fr 1fr auto auto;gap:8px;align-items:center">
+        <input type="text" id="auf-new-code" placeholder="Code UF*" style="font-family:var(--mono);font-size:11px;padding:6px 9px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+        <input type="text" id="auf-new-libelle" placeholder="Libellé*" style="font-family:var(--mono);font-size:11px;padding:6px 9px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+        <input type="text" id="auf-new-pole" placeholder="Pôle (optionnel)" style="font-family:var(--mono);font-size:11px;padding:6px 9px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+        <button onclick="aufCreate()" style="font-family:var(--mono);font-size:10px;padding:6px 12px;background:#16a34a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">Créer</button>
+        <button onclick="aufHideCreate()" style="font-family:var(--mono);font-size:10px;padding:6px 12px;background:var(--surface3);color:var(--muted);border:1px solid var(--border);border-radius:4px;cursor:pointer">Annuler</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden">
+      <div style="max-height:calc(100vh - 280px);overflow-y:auto">
+        <table id="auf-table" style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px">
+          <thead style="position:sticky;top:0;background:var(--surface3);z-index:1">
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600">ACTIF</th>
+              <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600">CODE</th>
+              <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600">LIBELLÉ</th>
+              <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600">PÔLE</th>
+              <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600">ÉTABLISSEMENT</th>
+              <th style="text-align:right;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody id="auf-tbody"></tbody>
+        </table>
+        <div id="auf-empty" style="display:none;padding:40px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px">
+          Aucune UF ne correspond aux critères.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- v2183 — Liste d'acteurs génériques pour autocomplétion des champs
      Déclarant / Intervenant. Peuplée au load avec une liste standard
      hospitalière, étendue en mode exercice avec les joueurs du scénario
      pour éviter de taper des noms pendant le jeu. -->
 <datalist id="acteurs-generiques"></datalist>
+<datalist id="acteurs-roles"></datalist>
+<datalist id="acteurs-cadres"></datalist>
 
 </body>
 </html>

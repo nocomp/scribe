@@ -393,5 +393,19 @@
     "sexe_h": "Letti uomini",
     "sexe_f": "Letti donne",
     "sexe_i": "Letti neutri"
+  },
+  "master": {
+    "title": "📦 SCRIBE — Gestione istanze",
+    "subtitle": "Avvia, configura e supervisiona le istanze da un punto unico",
+    "tab_instances": "Istanze",
+    "tab_profil": "Profilo base (UF)",
+    "add_custom_title": "➕ Aggiungi istanza personalizzata",
+    "field_port": "Porta",
+    "field_sigle": "Sigla",
+    "field_address": "Indirizzo",
+    "field_login": "Utente",
+    "field_password": "Password",
+    "btn_add": "+ Aggiungi",
+    "field_sync": "🔗 Sincronizzare con la supervisione"
   }
 }

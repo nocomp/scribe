@@ -36,7 +36,7 @@ TOKEN_TTL  = 72  # heures — 3 jours (adapté aux crises G7 longues)
 
 # Credentials admin depuis variables d'environnement (jamais en dur en prod)
 ADMIN_USER = os.getenv("SCRIBE_ADMIN_USER", "dircrise")
-ADMIN_PASS = os.getenv("SCRIBE_ADMIN_PASS", "Scribe2026!")
+ADMIN_PASS = os.getenv("SCRIBE_ADMIN_PASS", "changeme")
 
 # ── Hachage bcrypt (remplace SHA-256 sans sel) ────────────────────────────────
 _pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")

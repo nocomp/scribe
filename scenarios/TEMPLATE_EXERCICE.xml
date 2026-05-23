@@ -31,14 +31,14 @@
   </meta>
 
   <!-- ── Acteurs / Joueurs ── -->
-  <!-- Ports exercice : CHAG=8660 GHTLMB=8661 CHRUMILLY=8662 HDLEMAN=8663 HPMB=8664 CHB=8665 CHPG=8666 -->
+  <!-- Ports exercice : DEMO1=8660 DEMO2=8661 DEMO3=8662 DEMO4=8663 DEMO5=8664 DEMO6=8665 DEMO7=8666 -->
   <acteurs>
-    <acteur sigle="CHAG" port="8660" role="coordinateur">
-      <nom_etablissement>Centre Hospitalier Annecy-Genevois</nom_etablissement>
+    <acteur sigle="DEMO1" port="8660" role="coordinateur">
+      <nom_etablissement>Hôpital de Démonstration</nom_etablissement>
       <joueurs>
         <joueur>
           <username>dircrise</username>
-          <display_name>Dr Martin — Directeur de Crise CHAG</display_name>
+          <display_name>Dr Martin — Directeur de Crise DEMO1</display_name>
           <role_exercice>Directeur de cellule de crise</role_exercice>
           <responsabilites>
             <resp>Activation plan blanc</resp>
@@ -57,12 +57,12 @@
         </joueur>
       </joueurs>
     </acteur>
-    <acteur sigle="GHTLMB" port="8661" role="participant">
-      <nom_etablissement>GHT Léman Mont-Blanc</nom_etablissement>
+    <acteur sigle="DEMO2" port="8661" role="participant">
+      <nom_etablissement>Groupement de Démonstration</nom_etablissement>
       <joueurs>
         <joueur>
           <username>dircrise</username>
-          <display_name>Mme Bernard — Directrice GHTLMB</display_name>
+          <display_name>Mme Bernard — Directrice DEMO2</display_name>
           <role_exercice>Récepteur transfert et coordinateur site</role_exercice>
           <responsabilites>
             <resp>Accueil transfert</resp>
@@ -80,7 +80,7 @@
     <stimulus>
       <id>S01</id>
       <t_min>0</t_min>            <!-- Minutes depuis le début de l'exercice -->
-      <cible>CHAG</cible>         <!-- Sigle du site qui reçoit le stimulus -->
+      <cible>DEMO1</cible>         <!-- Sigle du site qui reçoit le stimulus -->
       <type>incident</type>
       <titre>Déclenchement — Nom court du stimulus</titre>
       <description_animateur>
@@ -92,7 +92,7 @@
         <fait>Description précise pour les joueurs — ce qu'ils voient dans SCRIBE</fait>
         <urgency>3</urgency>
         <type_crise>SANITAIRE</type_crise>
-        <site_id>CHAG</site_id>
+        <site_id>DEMO1</site_id>
         <unite_fonctionnelle>Maternité</unite_fonctionnelle>
         <declarant_nom>Sage-femme coordinatrice</declarant_nom>
         <analyse></analyse>
@@ -108,7 +108,7 @@
     <stimulus>
       <id>S02</id>
       <t_min>10</t_min>
-      <cible>CHAG</cible>
+      <cible>DEMO1</cible>
       <type>message</type>
       <titre>Message entrant — exemple</titre>
       <description_animateur>Message entrant simulé depuis le SAMU ou un partenaire</description_animateur>
@@ -122,20 +122,20 @@
     <stimulus>
       <id>S03</id>
       <t_min>20</t_min>
-      <cible>GHTLMB</cible>
+      <cible>DEMO2</cible>
       <type>incident</type>
       <titre>Stimulus sur site secondaire</titre>
-      <description_animateur>Forcer la coordination inter-sites en injectant un incident sur GHTLMB</description_animateur>
-      <action_attendue>Communication CHAG ↔ GHTLMB et coordination</action_attendue>
+      <description_animateur>Forcer la coordination inter-sites en injectant un incident sur DEMO2</description_animateur>
+      <action_attendue>Communication DEMO1 ↔ DEMO2 et coordination</action_attendue>
       <payload>
-        <fait>Description de l'incident pour les joueurs GHTLMB</fait>
+        <fait>Description de l'incident pour les joueurs DEMO2</fait>
         <urgency>2</urgency>
         <type_crise>SANITAIRE</type_crise>
-        <site_id>GHTLMB</site_id>
+        <site_id>DEMO2</site_id>
         <unite_fonctionnelle>Urgences</unite_fonctionnelle>
         <declarant_nom>Médecin urgentiste</declarant_nom>
         <jalons>
-          <jalon>Contacter CHAG pour coordination</jalon>
+          <jalon>Contacter DEMO1 pour coordination</jalon>
           <jalon>Préparer l'accueil</jalon>
         </jalons>
       </payload>
@@ -146,7 +146,7 @@
   <!-- ── Décisions attendues ── -->
   <decisions_attendues>
     <decision obligatoire="true" t_min="5" responsable="Directeur de crise">
-      Activation cellule de crise CHAG
+      Activation cellule de crise DEMO1
     </decision>
     <decision obligatoire="true" t_min="10" responsable="Chef de service">
       Activation protocole hémorragie obstétricale
@@ -160,7 +160,7 @@
   <debriefing>
     <points_cles>
       <point>Réactivité lors de l'alerte initiale (T+0 à T+5 min)</point>
-      <point>Qualité de la communication inter-sites CHAG ↔ GHTLMB</point>
+      <point>Qualité de la communication inter-sites DEMO1 ↔ DEMO2</point>
       <point>Documentation dans SCRIBE en temps réel</point>
     </points_cles>
     <questions>

@@ -393,5 +393,19 @@
     "sexe_h": "Mannenbedden",
     "sexe_f": "Vrouwenbedden",
     "sexe_i": "Neutrale bedden"
+  },
+  "master": {
+    "title": "📦 SCRIBE — Instantie sturing",
+    "subtitle": "Lanceren, configureren en bewaken van instanties vanaf één punt",
+    "tab_instances": "Instanties",
+    "tab_profil": "Basis profiel (UF)",
+    "add_custom_title": "➕ Aangepaste instantie toevoegen",
+    "field_port": "Poort",
+    "field_sigle": "Code",
+    "field_address": "Adres",
+    "field_login": "Gebruiker",
+    "field_password": "Wachtwoord",
+    "btn_add": "+ Toevoegen",
+    "field_sync": "🔗 Synchroniseren met toezicht"
   }
 }

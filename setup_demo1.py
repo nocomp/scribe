@@ -253,7 +253,7 @@ print(f"      ✓ {transv} UF transverses")
 # ── 5. Admin ───────────────────────────────────────────────────────────────
 print("\n[5/5] Compte admin...")
 
-login, password = "dircrise", "Scribe2026!"
+login, password = "dircrise", "changeme"
 config_js = os.path.join(os.path.dirname(__file__), "app", "static", "config.js")
 if os.path.exists(config_js):
     try:
@@ -332,7 +332,7 @@ if os.path.exists(_xml_path):
         if _admin_el is not None:
             _admin = {
                 "login":    (_admin_el.findtext("login")    or "dircrise").strip(),
-                "password": (_admin_el.findtext("password") or "Scribe2026!").strip(),
+                "password": (_admin_el.findtext("password") or "changeme").strip(),
             }
 
         _cfg = {

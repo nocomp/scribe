@@ -403,7 +403,7 @@ function openTab(id, btn) {
       const today = new Date(); today.setHours(0,0,0,0);
       (allDecisions || []).forEach(d => {
         if (d && d.timestamp) {
-          const dt = new Date(d.timestamp);
+          const dt = parseUTC(d.timestamp);
           if (dt >= today) viewed.add(d.id);
         }
       });
@@ -418,22 +418,15 @@ function openTab(id, btn) {
 }
 
 // ── CARTE ────────────────────────────────────────────
-// Attributions cartographiques conformes (v2.0.1) :
-//   - OpenStreetMap : © OpenStreetMap contributors, ODbL
-//     https://www.openstreetmap.org/copyright
-//   - CartoDB : © OpenStreetMap contributors, © CARTO
-//     https://carto.com/attributions
-//   - Esri World Imagery : Tiles © Esri
-//     https://www.esri.com/en-us/legal/terms/data-attributions
 let mapSoins = null;
 function initMap() {
   map = L.map('map', {zoomControl:true}).setView([45.9, 6.1], 10);
   const _osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors', maxZoom:19});
+    {attribution:'© OpenStreetMap', maxZoom:19});
   const _cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    {attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>', maxZoom:19});
+    {attribution:'CartoDB Light', maxZoom:19});
   const _satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    {attribution:'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community', maxZoom:19});
+    {attribution:'Esri World Imagery', maxZoom:19});
   const _baseLayers = {'⬜ Clair': _cartoLight, '🗺 OSM': _osmLayer, '🛰 Satellite': _satellite};
   _cartoLight.addTo(map);
   L.control.layers(_baseLayers, {}, {position:'topright', collapsed:false}).addTo(map);
@@ -446,7 +439,7 @@ function initMap() {
   if (mapSoinsEl) {
     mapSoins = L.map('map-soins', {zoomControl:true}).setView([45.9, 6.1], 10);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      {attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>', maxZoom:19}).addTo(mapSoins);
+      {attribution:'CartoDB Light', maxZoom:19}).addTo(mapSoins);
     // Synchroniser zoom/center avec la carte principale
     map.on('moveend zoomend', () => {
       if (mapSoins) mapSoins.setView(map.getCenter(), map.getZoom(), {animate:false});
@@ -501,7 +494,7 @@ async function loadDBIncidents() {
     // Main courante
     const mc = document.getElementById('db-mc');
     if (mc) {
-      const recent = [...data].sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)).slice(0,5);
+      const recent = [...data].sort((a,b)=>parseUTC(b.created_at||0)-parseUTC(a.created_at||0)).slice(0,5);
       mc.innerHTML = recent.length ? recent.map(i => {
         const dt = i.created_at ? parseUTC(i.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '—';
         const cols = ['','#22c55e','#fbbf24','#f97316','#ef4444'];
@@ -811,13 +804,157 @@ async function initAfterLogin() {
   await loadTransfertsEntrants();
   // Forcer recalcul taille carte après affichage
   setTimeout(() => { if (map) map.invalidateSize(); }, 300);
+
+  // v2321 — Handler de fragment #admin-ia : si l'URL contient ce hash,
+  // ouvrir directement le panneau admin sur la section APIs & IA. Utilisé
+  // par le bouton "Aller à l'admin" de la modale "IA non configurée".
+  if (window.location.hash === '#admin-ia' && currentUser?.role === 'admin') {
+    setTimeout(() => {
+      try {
+        showAdminPanel();
+        setTimeout(() => {
+          const apiBtn = document.getElementById('admin-nav-apis');
+          if (apiBtn) apiBtn.click();
+        }, 200);
+      } catch(e) { console.warn('Auto-open admin IA failed:', e); }
+    }, 400);
+  }
+
+  // v2322 — Démarrer le système Tuteur (Hook 2A : rappel discret + observations)
+  // Armé automatiquement en mode exercice ou si actif_en_prod=true côté config
+  try { tuteurInit(); } catch(e) { console.warn('[tuteur] init failed:', e); }
 }
+
+// v2.4.6 — Patch global pour timezone configurée (option B du sélecteur wizard)
+// Si SCRIBE_CONFIG.etablissement.timezone est défini (ex: "Pacific/Tahiti"),
+// on intercepte les toLocaleString/toLocaleTimeString/toLocaleDateString pour
+// injecter timeZone automatiquement. Sinon (par défaut), l'heure du navigateur
+// est utilisée (option A).
+(function installTimezonePatch() {
+  function getTZ() {
+    try {
+      const tz = (window.SCRIBE_CONFIG?.etablissement?.timezone || '').trim();
+      return tz || undefined;
+    } catch (e) { return undefined; }
+  }
+  const origStr  = Date.prototype.toLocaleString;
+  const origTime = Date.prototype.toLocaleTimeString;
+  const origDate = Date.prototype.toLocaleDateString;
+  Date.prototype.toLocaleString = function(locales, opts) {
+    const tz = getTZ();
+    if (tz && (!opts || !opts.timeZone)) {
+      opts = Object.assign({}, opts || {}, {timeZone: tz});
+    }
+    return origStr.call(this, locales, opts);
+  };
+  Date.prototype.toLocaleTimeString = function(locales, opts) {
+    const tz = getTZ();
+    if (tz && (!opts || !opts.timeZone)) {
+      opts = Object.assign({}, opts || {}, {timeZone: tz});
+    }
+    return origTime.call(this, locales, opts);
+  };
+  Date.prototype.toLocaleDateString = function(locales, opts) {
+    const tz = getTZ();
+    if (tz && (!opts || !opts.timeZone)) {
+      opts = Object.assign({}, opts || {}, {timeZone: tz});
+    }
+    return origDate.call(this, locales, opts);
+  };
+})();
 
 function parseUTC(s) {
   // Les dates du serveur sont en UTC sans 'Z' — corriger
   if (!s) return null;
+  if (typeof s === 'number') return new Date(s);
+  if (typeof s !== 'string') return new Date(s);
   if (s.includes('Z') || s.includes('+')) return new Date(s);
   return new Date(s.includes('T') ? s + 'Z' : s.replace(' ', 'T') + 'Z');
+}
+
+// v2.4.6 — formatLocal/formatTime : si l'établissement a défini une timezone
+// explicite (config.js: etablissement.timezone, ex: "Pacific/Tahiti"), tous
+// les utilisateurs voient l'heure de cet établissement. Sinon (par défaut),
+// l'heure du navigateur de chaque utilisateur est utilisée.
+function _getTZ() {
+  try {
+    return (window.SCRIBE_CONFIG?.etablissement?.timezone || '').trim() || undefined;
+  } catch (e) {
+    return undefined;
+  }
+}
+function formatLocal(dateInput, opts) {
+  const d = (dateInput instanceof Date) ? dateInput : parseUTC(dateInput);
+  if (!d) return '—';
+  const tz = _getTZ();
+  const o = Object.assign({}, opts || {});
+  if (tz) o.timeZone = tz;
+  return d.toLocaleString('fr-FR', o);
+}
+function formatTime(dateInput) {
+  return formatLocal(dateInput, {hour: '2-digit', minute: '2-digit'});
+}
+function formatDateTime(dateInput) {
+  return formatLocal(dateInput, {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'});
+}
+
+// v2.4.8 — convertit une date UTC (string ISO ou Date) en string "YYYY-MM-DDTHH:MM"
+// au format attendu par <input type="datetime-local">. Respecte la timezone
+// configurée de l'établissement si présente, sinon utilise l'heure du navigateur.
+function _utcToLocalInput(dateInput) {
+  const d = (dateInput instanceof Date) ? dateInput : parseUTC(dateInput);
+  if (!d || isNaN(d.getTime())) return '';
+  try {
+    const tz = (window.SCRIBE_CONFIG?.etablissement?.timezone || '').trim();
+    if (tz) {
+      // Utilise Intl pour extraire Y/M/D/H/M dans la timezone cible
+      const parts = new Intl.DateTimeFormat('fr-FR', {
+        timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      }).formatToParts(d);
+      const p = {};
+      parts.forEach(x => { if (x.type !== 'literal') p[x.type] = x.value; });
+      // Quelques navigateurs renvoient "24" au lieu de "00" pour minuit
+      if (p.hour === '24') p.hour = '00';
+      return `${p.year}-${p.month}-${p.day}T${p.hour}-${p.minute}`.replace('T', 'T').replace(/-(\d{2})$/, ':$1');
+    }
+  } catch (e) {}
+  // Fallback : heure du navigateur
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// v2.4.8 — inverse : convertit une string "YYYY-MM-DDTHH:MM" depuis l'input
+// datetime-local (= heure locale OU heure de la TZ configurée) en ISO UTC.
+function _localInputToUtc(localStr) {
+  if (!localStr) return null;
+  try {
+    const tz = (window.SCRIBE_CONFIG?.etablissement?.timezone || '').trim();
+    if (tz) {
+      // Stratégie : on construit une date "candidate" en UTC, on regarde
+      // quelle heure elle donne dans la TZ cible, on ajuste l'offset.
+      // Format input : "2026-05-19T13:30"
+      const [datePart, timePart] = localStr.split('T');
+      const [Y, M, D] = datePart.split('-').map(Number);
+      const [h, m] = timePart.split(':').map(Number);
+      // Date UTC candidate (mêmes Y/M/D/h/m mais interprétés en UTC)
+      const candidate = new Date(Date.UTC(Y, M - 1, D, h, m));
+      // Combien fait l'heure dans la TZ pour cette candidate ?
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+      }).formatToParts(candidate);
+      const p = {};
+      parts.forEach(x => { if (x.type !== 'literal') p[x.type] = x.value; });
+      if (p.hour === '24') p.hour = '00';
+      const asTz = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+      const offset = asTz - candidate.getTime();  // ms entre TZ et UTC
+      // L'heure réelle = candidate - offset
+      return new Date(candidate.getTime() - offset).toISOString();
+    }
+  } catch (e) {}
+  // Fallback navigateur (comportement v2.4.6)
+  return new Date(localStr).toISOString();
 }
 
 function markerColor(n) {
@@ -1527,7 +1664,7 @@ async function refreshAll() {
         today.setHours(0,0,0,0);
         const recent = (decisions || []).filter(d => {
           if (!d || !d.timestamp) return false;
-          const dt = new Date(d.timestamp);
+          const dt = parseUTC(d.timestamp);
           return dt >= today && !viewed.has(d.id);
         });
         const n = recent.length;
@@ -1788,7 +1925,7 @@ function renderTimeline(list) {
 }
 
 function buildCard(h) {
-  const ts = new Date(h.timestamp).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const ts = parseUTC(h.timestamp).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   // Statuts disponibles dans le select (RÉSOLU/ARCHIVÉ via bouton dédié)
   const STATUSES_SELECT = ['SIGNALÉ','ANALYSE','RÉSOLUTION'];
   const opts = STATUSES_SELECT.map(s=>`<option value="${s}"${h.status===s?' selected':''}>${s}</option>`).join('');
@@ -1816,14 +1953,14 @@ function buildCard(h) {
       ${js.map((j,i)=>`<div class="jalon-item">
         <input type="checkbox" class="jalon-cb"${j.done?' checked':''} onchange="toggleJalon(${h.id},${i},this.checked)" onclick="event.stopPropagation()">
         <span class="jalon-label${j.done?' jalon-done':''}">${j.label}</span>
-        ${j.done_at?`<span class="jalon-time">${new Date(j.done_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span>`:''}
+        ${j.done_at?`<span class="jalon-time">${parseUTC(j.done_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span>`:''}
       </div>`).join('')}
     </div>`;}catch(e){}}
 
   // Projection
   let projHTML='';
   if(h.estimated_resolution && h.status!=='RÉSOLU'){
-    const eta=new Date(h.estimated_resolution), now=new Date(), dm=Math.round((eta-now)/60000);
+    const eta=parseUTC(h.estimated_resolution), now=new Date(), dm=Math.round((eta-now)/60000);
     const ds=dm>0?(dm>=60?`dans ${Math.floor(dm/60)}h${String(dm%60).padStart(2,'0')}`:`dans ${dm} min`):'DÉPASSÉE';
     projHTML=`<div class="projection-section">
       <div class="proj-title">📊 PROJECTION RETOUR NORMAL</div>
@@ -1841,7 +1978,7 @@ function buildCard(h) {
       <div class="albert-inline-body">${h.albert_avis}</div>
     </div>`;}
 
-  const resBadge=h.resolved_at?`<span class="resolved-badge">✓ ${new Date(h.resolved_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>`:'';
+  const resBadge=h.resolved_at?`<span class="resolved-badge">✓ ${parseUTC(h.resolved_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>`:'';
 
   const dirBadge=h.directeur_crise?`<span class="inc-dir">${h.directeur_crise.split(' ').slice(-1)[0]}</span>`:'';
 
@@ -2083,7 +2220,7 @@ function renderTransverses() {
     const isOk   = s.statut === 'OK';
     const isDeg  = s.statut === 'DEGRADE';
     const isCrit = s.statut === 'CRITIQUE';
-    const ts     = s.updated_at ? new Date(s.updated_at).toLocaleTimeString('fr-FR') : '';
+    const ts     = s.updated_at ? parseUTC(s.updated_at).toLocaleTimeString('fr-FR') : '';
     return `<div class="service-card">
       <div class="service-card-header">
         <span class="service-name">${icon} ${s.libelle}</span>
@@ -2413,7 +2550,7 @@ function _buildIncidentETAs(incidents) {
       const pole = _getPoleForIncident(i);
       let etaMs;
       if (i.estimated_resolution) {
-        etaMs = new Date(i.estimated_resolution).getTime() - now;
+        etaMs = parseUTC(i.estimated_resolution).getTime() - now;
         if (etaMs < 0) etaMs = 5 * 60000; // passé → dans 5min
       } else {
         // Estimation par urgence
@@ -2956,7 +3093,7 @@ async function loadPresences() {
     const el=document.getElementById('presence-list');
     if(!list.length){el.innerHTML='<div class="empty-state">Aucune présence</div>';return;}
     el.innerHTML=list.map(p=>{
-      const t=new Date(p.timestamp).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+      const t=parseUTC(p.timestamp).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
       return `<div class="presence-entry">
         <div class="presence-time">${t}</div>
         <div class="presence-info"><div class="presence-nom">${p.nom}</div>${p.role?`<div class="presence-role">${p.role}</div>`:''}</div>
@@ -2982,7 +3119,7 @@ async function loadDecisions() {
     const el=document.getElementById('decision-list');
     if(!list.length){el.innerHTML='<div class="empty-state">Aucune décision</div>';return;}
     el.innerHTML=list.map(d=>{
-      const t=new Date(d.timestamp).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      const t=parseUTC(d.timestamp).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
       return `<div class="decision-entry">
         <div class="decision-time">${t}</div>
         ${d.responsable?`<div class="decision-responsable">▶ ${d.responsable}</div>`:''}
@@ -3008,8 +3145,8 @@ async function loadConsignes() {
     const el=document.getElementById('consigne-list');
     if(!list.length){el.innerHTML='<div class="empty-state">Aucune consigne</div>';return;}
     el.innerHTML=list.map(c=>{
-      const t=new Date(c.timestamp).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-      const ackTs = c.accuse_at ? new Date(c.accuse_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '';
+      const t=parseUTC(c.timestamp).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+      const ackTs = c.accuse_at ? parseUTC(c.accuse_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '';
       const ackPar = c.accuse_par ? ` par ${c.accuse_par}` : '';
       const ack=c.accuse
         ?`<span class="badge-accuse ok">✓ REÇU${ackPar} à ${ackTs}</span>`
@@ -3267,12 +3404,31 @@ async function msgOpenComposeDirect(userId, displayName) {
 }
 
 function renderAnnuaire(filter='') {
-  const data = annuaireMode==='secours' ? ANNUAIRE_SECOURS : ANNUAIRE_NORMAL;
+  const rawData = annuaireMode==='secours' ? ANNUAIRE_SECOURS : ANNUAIRE_NORMAL;
+  // v2.4.8 : normaliser le mapping backend (service/interne/direct/mobile/site/note)
+  // → frontend (service/tel/local/note). Bug fix : "undefined" partout sinon.
+  const data = (rawData || []).map(e => {
+    if (!e) return null;
+    // Si l'entrée a déjà tel/local (ancien format), on garde tel quel
+    if (e.tel !== undefined && e.local !== undefined) return e;
+    // Sinon on fabrique tel à partir de mobile|direct|interne (priorité au plus utile)
+    const tels = [];
+    if (e.mobile) tels.push('📱 ' + e.mobile);
+    if (e.direct && e.direct !== e.mobile) tels.push('☎ ' + e.direct);
+    if (e.interne && e.interne !== e.direct && e.interne !== e.mobile) tels.push('☎ ' + e.interne);
+    return {
+      service: e.service || '',
+      tel:     tels.join(' · ') || '—',
+      local:   e.site || '',
+      note:    e.note || '',
+    };
+  }).filter(Boolean);
+
   const q = filter.toLowerCase();
   const filtered = q ? data.filter(e =>
-    e.service.toLowerCase().includes(q) ||
+    (e.service||'').toLowerCase().includes(q) ||
     (e.local||'').toLowerCase().includes(q) ||
-    e.tel.includes(q)
+    (e.tel||'').toLowerCase().includes(q)
   ) : data;
 
   const el = document.getElementById('annuaire-list');
@@ -3281,7 +3437,8 @@ function renderAnnuaire(filter='') {
   // Grouper par première lettre du service
   const grouped = {};
   filtered.forEach(e => {
-    const key = e.service[0].toUpperCase();
+    const s = e.service || '?';
+    const key = s[0].toUpperCase();
     if (!grouped[key]) grouped[key]=[]; grouped[key].push(e);
   });
 
@@ -3293,17 +3450,17 @@ function renderAnnuaire(filter='') {
     <div class="ann-group">
       <div class="ann-group-header">${letter}</div>
       ${grouped[letter].map(e => {
-        const initials = e.service.split(/[\s-\/]+/).filter(w=>w.length>2).slice(0,2).map(w=>w[0]).join('');
+        const initials = (e.service||'').split(/[\s-\/]+/).filter(w=>w.length>2).slice(0,2).map(w=>w[0]).join('');
         const noteHtml = e.note ? `<div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px">${e.note}</div>` : '';
         return `<div class="ann-entry">
-          <div class="ann-avatar">${initials||e.service[0]}</div>
+          <div class="ann-avatar">${initials||(e.service||'?')[0]}</div>
           <div class="ann-info">
-            <div class="ann-name">${e.service}</div>
+            <div class="ann-name">${e.service||''}</div>
             <div class="ann-service">${e.local||''}</div>
             ${noteHtml}
           </div>
           <div class="ann-phones">
-            <div class="ann-phone">${e.tel}</div>
+            <div class="ann-phone">${e.tel||'—'}</div>
             ${badge}
           </div>
         </div>`;
@@ -3710,8 +3867,331 @@ async function apiFetch(url, opts = {}) {
     if (overlay) { overlay.classList.remove('hidden'); overlay.style.display = 'flex'; }
     if (wasConnected) toast('⚠ Session expirée — reconnexion requise', 'warn');
   }
+  // v2320 — Intercepteur "IA non configurée" : pop-up DSFR uniforme
+  // déclenché par toute route IA qui appelle require_ia_configured()
+  // côté backend et lève un HTTP 400 avec detail.error === "ia_not_configured".
+  if (r.status === 400) {
+    try {
+      const data = await r.clone().json();
+      const detail = data && data.detail;
+      if (detail && detail.error === 'ia_not_configured') {
+        showIaNotConfiguredModal(detail);
+      }
+    } catch(e) { /* pas du JSON, on ignore */ }
+  }
+
+  // v2322 — Capture automatique des observations Tuteur sur les POST réussis.
+  // Granularité volontairement faible : on tague juste l'action métier de haut
+  // niveau (incident créé, décision prise, transfert, message) pour reconstruire
+  // une timeline pédagogique sans alourdir chaque endpoint.
+  if (r.ok && (opts.method === 'POST' || opts.method === 'post')
+      && typeof window.tuteurObserve === 'function') {
+    try {
+      const u = (typeof url === 'string' ? url : '');
+      let typeObs = null;
+      if      (u.match(/\/api\/v1\/sitrep(\b|\/?$)/))   typeObs = 'INCIDENT_CREE';
+      else if (u.match(/\/api\/v1\/decisions(\b|\/?$)/)) typeObs = 'DECISION';
+      else if (u.match(/\/api\/v1\/transferts(\b|\/?$)/)) typeObs = 'TRANSFERT';
+      else if (u.match(/\/api\/v1\/messagerie(\b|\/?$)/)) typeObs = 'MESSAGE_ENVOYE';
+      else if (u.match(/\/api\/v1\/tasks/))             typeObs = 'ACTION';
+      else if (u.match(/\/api\/v1\/cellule\/presences/)) typeObs = 'ACTION';
+      if (typeObs) {
+        // Ne pas attendre la promesse pour ne pas bloquer le retour de fetch
+        window.tuteurObserve(typeObs, null, null, {url: u.slice(0, 80)});
+      }
+    } catch(e) {}
+  }
+
   return r;
 }
+
+// v2320 — Modale DSFR "IA non configurée" injectée à la volée.
+// Anti-spam à 5s pour éviter des modales en cascade si plusieurs widgets IA
+// appellent l'API simultanément (ex: dashboard avec analyse + situation globale).
+let _iaNotConfShownAt = 0;
+function showIaNotConfiguredModal(detail) {
+  const now = Date.now();
+  if (now - _iaNotConfShownAt < 5000) return;
+  _iaNotConfShownAt = now;
+
+  let m = document.getElementById('ia-not-conf-modal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'ia-not-conf-modal';
+    m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);'
+                    + 'z-index:10000;display:flex;align-items:center;'
+                    + 'justify-content:center;';
+    m.innerHTML =
+      '<div style="background:#fff;border-top:4px solid #003189;border-radius:8px;'
+    + 'max-width:520px;width:90%;padding:24px;'
+    + 'box-shadow:0 8px 32px rgba(0,0,0,.2);font-family:Marianne,system-ui,sans-serif;">'
+    + '<h3 style="color:#003189;margin:0 0 12px 0;font-size:1.2rem;">'
+    + '🤖 IA non configurée</h3>'
+    + '<p id="ia-not-conf-msg" style="color:#0f172a;margin:0 0 8px 0;line-height:1.5;"></p>'
+    + '<p id="ia-not-conf-action" style="color:#475569;font-size:.92rem;'
+    + 'margin:0 0 20px 0;line-height:1.5;"></p>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+    + '<button id="ia-not-conf-close" style="background:transparent;'
+    + 'border:1px solid #cbd5e1;color:#0f172a;padding:8px 16px;'
+    + 'border-radius:4px;cursor:pointer;font-family:inherit;">Fermer</button>'
+    + '<a id="ia-not-conf-admin" href="#" style="background:#003189;'
+    + 'color:#fff;text-decoration:none;padding:8px 16px;border-radius:4px;'
+    + 'display:inline-block;">Aller à l\'admin</a>'
+    + '</div></div>';
+    document.body.appendChild(m);
+    m.addEventListener('click', e => {
+      if (e.target === m) m.style.display = 'none';
+    });
+    m.querySelector('#ia-not-conf-close').addEventListener('click',
+      () => m.style.display = 'none');
+    m.querySelector('#ia-not-conf-admin').addEventListener('click',
+      () => m.style.display = 'none');
+  }
+  m.querySelector('#ia-not-conf-msg').textContent    = detail.message || '';
+  m.querySelector('#ia-not-conf-action').textContent = detail.action  || '';
+  m.querySelector('#ia-not-conf-admin').href = detail.admin_url || '/admin';
+  m.style.display = 'flex';
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2322 — Plugin Tuteur : Hook 2A (rappel discret pendant l'exercice)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const TUTEUR = {
+  sessionId: null,
+  lastUserAction: Date.now(),
+  pollInterval: null,
+  config: null,            // chargé depuis /tuteur/config
+  rappelShownAt: 0,        // timestamp du dernier rappel local
+  observationQueue: [],    // observations à pousser
+  enabled: false,          // armé uniquement si plugin actif + (mode exercice ou prod activé)
+};
+
+async function tuteurInit() {
+  if (!authToken || !currentUser) return;
+  // Vérifier que le plugin est chargé
+  try {
+    const r = await apiFetch('/api/v1/plugins/active');
+    const plugs = await r.json();
+    if (!plugs.find(p => p.id === 'tuteur')) {
+      console.log('[tuteur] plugin non actif — skip');
+      return;
+    }
+  } catch(e) { return; }
+
+  // Charger la config tuteur (seuils, mode prod...)
+  try {
+    const r = await apiFetch('/api/v1/tuteur/config');
+    if (r.ok) TUTEUR.config = await r.json();
+  } catch(e) { TUTEUR.config = {seuil_inactivite_exercice_min: 1, seuil_inactivite_prod_min: 12, actif_en_prod: false}; }
+
+  // Mode exercice : armé automatiquement
+  const isExercice = (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.exercice_mode);
+  const armer = isExercice || (TUTEUR.config && TUTEUR.config.actif_en_prod);
+  if (!armer) {
+    console.log('[tuteur] non armé (mode prod sans actif_en_prod)');
+    return;
+  }
+  TUTEUR.enabled = true;
+
+  // Restaurer ou démarrer une session
+  const stored = localStorage.getItem('tuteur_session_id');
+  if (stored) {
+    TUTEUR.sessionId = parseInt(stored, 10);
+    console.log('[tuteur] session restaurée:', TUTEUR.sessionId);
+  } else {
+    await tuteurStartSession(isExercice ? 'exercice' : 'prod');
+  }
+
+  // Démarrer le poller d'inactivité
+  if (TUTEUR.pollInterval) clearInterval(TUTEUR.pollInterval);
+  TUTEUR.pollInterval = setInterval(tuteurCheckInactivity, 60 * 1000); // toutes les 60s
+
+  // Hook les events qui marquent une action utilisateur
+  ['click', 'keydown', 'submit'].forEach(evt => {
+    document.addEventListener(evt, () => { TUTEUR.lastUserAction = Date.now(); }, true);
+  });
+
+  console.log('[tuteur] armé en mode', isExercice ? 'exercice' : 'prod', '— session', TUTEUR.sessionId);
+}
+
+async function tuteurStartSession(mode) {
+  const sigle = (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.etablissement)
+    ? (SCRIBE_CONFIG.etablissement.sigle || '?') : '?';
+  const scenarioId = (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.exercice_sigle)
+    ? SCRIBE_CONFIG.exercice_sigle : null;
+  try {
+    const r = await apiFetch('/api/v1/tuteur/session/start', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        mode: mode,
+        instance_sigle: sigle,
+        scenario_id: scenarioId,
+        intention_pedago: localStorage.getItem('tuteur_intention') || null,
+      }),
+    });
+    const d = await r.json();
+    if (d.id) {
+      TUTEUR.sessionId = d.id;
+      localStorage.setItem('tuteur_session_id', String(d.id));
+      console.log('[tuteur] session démarrée:', d.id);
+    }
+  } catch(e) { console.warn('[tuteur] start failed:', e); }
+}
+
+async function tuteurEndSession() {
+  if (!TUTEUR.sessionId) return;
+  try {
+    await apiFetch('/api/v1/tuteur/session/end', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({session_id: TUTEUR.sessionId}),
+    });
+    console.log('[tuteur] session terminée:', TUTEUR.sessionId);
+  } catch(e) {}
+  localStorage.removeItem('tuteur_session_id');
+  localStorage.removeItem('tuteur_intention');
+  TUTEUR.sessionId = null;
+}
+
+// Vérifie l'inactivité et déclenche un rappel si seuil dépassé
+async function tuteurCheckInactivity() {
+  if (!TUTEUR.enabled || !TUTEUR.sessionId) return;
+
+  const minutesInactif = (Date.now() - TUTEUR.lastUserAction) / 60000;
+  const isExercice = (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.exercice_mode);
+  const seuil = isExercice
+    ? (TUTEUR.config?.seuil_inactivite_exercice_min || 8)
+    : (TUTEUR.config?.seuil_inactivite_prod_min || 12);
+
+  if (minutesInactif < seuil) return;
+
+  // Anti-spam local : pas plus d'1 rappel par 10 min
+  if (Date.now() - TUTEUR.rappelShownAt < 1 * 60 * 1000) return;
+
+  // Vérifier qu'il y a des incidents OUVERTS (sinon pas de raison de rappeler)
+  let incidentsOuverts = [];
+  try {
+    const r = await apiFetch('/api/v1/sitrep/history');
+    if (r.ok) {
+      const all = await r.json();
+      incidentsOuverts = (all || [])
+        .filter(i => i.status === 'OUVERT' || i.status === 'EN_COURS')
+        .slice(0, 5)
+        .map(i => ({fait: i.fait, urgency: i.urgency, type_crise: i.type_crise}));
+    }
+  } catch(e) {}
+
+  if (incidentsOuverts.length === 0) return;
+
+  // Demander un rappel à l'IA
+  console.log('[tuteur] inactif depuis', Math.round(minutesInactif), 'min — demande rappel');
+  try {
+    const r = await apiFetch('/api/v1/tuteur/rappel', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        session_id: TUTEUR.sessionId,
+        contexte: {
+          incidents_ouverts: incidentsOuverts,
+          minutes_inactivite: Math.round(minutesInactif),
+        },
+      }),
+    });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.skipped) return;  // anti-spam serveur
+    if (d.contenu) {
+      tuteurShowRappelPopup(d.rappel_id, d.contenu);
+      TUTEUR.rappelShownAt = Date.now();
+    }
+  } catch(e) { console.warn('[tuteur] rappel failed:', e); }
+}
+
+// Affiche le pop-up DSFR coin bas-droit
+function tuteurShowRappelPopup(rappelId, contenu) {
+  // Retirer un pop-up existant
+  const old = document.getElementById('tuteur-rappel-popup');
+  if (old) old.remove();
+
+  const m = document.createElement('div');
+  m.id = 'tuteur-rappel-popup';
+  m.style.cssText =
+    'position:fixed;bottom:20px;right:20px;width:380px;max-width:calc(100vw - 40px);' +
+    'background:#fff;border-left:4px solid #003189;border-radius:8px;' +
+    'box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:9500;padding:16px;' +
+    'font-family:Marianne,system-ui,sans-serif;animation:tuteurSlideIn 0.4s ease-out;';
+
+  // Animation CSS si pas déjà ajoutée
+  if (!document.getElementById('tuteur-popup-style')) {
+    const st = document.createElement('style');
+    st.id = 'tuteur-popup-style';
+    st.textContent = '@keyframes tuteurSlideIn{from{transform:translateX(420px);opacity:0}to{transform:translateX(0);opacity:1}}';
+    document.head.appendChild(st);
+  }
+
+  m.innerHTML =
+    '<div style="display:flex;align-items:start;gap:10px;margin-bottom:10px">' +
+      '<div style="font-size:1.5rem">🎓</div>' +
+      '<div style="flex:1">' +
+        '<div style="font-size:.75rem;color:#64748b;letter-spacing:1px;margin-bottom:2px">MON COACH</div>' +
+        '<div id="tuteur-rappel-content" style="font-size:.9rem;color:#0f172a;line-height:1.4"></div>' +
+      '</div>' +
+      '<button id="tuteur-rappel-close" style="background:transparent;border:none;font-size:1.2rem;color:#64748b;cursor:pointer;padding:0 4px" title="Fermer">×</button>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">' +
+      '<button class="tuteur-rappel-btn" data-action="COMPRIS" style="background:#003189;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:.8rem;font-family:inherit">✓ Compris</button>' +
+      '<button class="tuteur-rappel-btn" data-action="PAS_PERTINENT" style="background:transparent;color:#64748b;border:1px solid #cbd5e1;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:.8rem;font-family:inherit">Pas pertinent</button>' +
+      '<button class="tuteur-rappel-btn" data-action="PAS_MAINTENANT" style="background:transparent;color:#64748b;border:1px solid #cbd5e1;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:.8rem;font-family:inherit">Pas maintenant</button>' +
+    '</div>';
+  document.body.appendChild(m);
+  m.querySelector('#tuteur-rappel-content').textContent = contenu;
+
+  const close = () => m.remove();
+  m.querySelector('#tuteur-rappel-close').addEventListener('click', close);
+
+  m.querySelectorAll('.tuteur-rappel-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const action = btn.getAttribute('data-action');
+      try {
+        await apiFetch('/api/v1/tuteur/rappel/ack', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({rappel_id: rappelId, action_apres: action}),
+        });
+      } catch(e) {}
+      close();
+    });
+  });
+
+  // Auto-fermeture après 90s
+  setTimeout(() => { if (document.getElementById('tuteur-rappel-popup') === m) close(); }, 90000);
+}
+
+// Helper appelé par les autres modules pour tracer une observation
+async function tuteurObserve(typeObs, targetType, targetId, detail) {
+  if (!TUTEUR.enabled || !TUTEUR.sessionId) return;
+  TUTEUR.lastUserAction = Date.now();  // l'observation marque aussi une action
+  try {
+    await apiFetch('/api/v1/tuteur/observation', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        session_id: TUTEUR.sessionId,
+        type_observation: typeObs,
+        target_type: targetType || null,
+        target_id: targetId || null,
+        detail: detail || null,
+      }),
+    });
+  } catch(e) { /* silencieux : ne pas bloquer l'UX si tuteur backend HS */ }
+}
+window.tuteurObserve = tuteurObserve;
+window.tuteurEndSession = tuteurEndSession;
+
+
 
 // On load: restore session avec vérification serveur
 window.addEventListener('load', async () => {
@@ -4331,7 +4811,7 @@ function _scenBuildBody() {
   const body = {
     titre,
     description: (document.getElementById('scen-description').value || '').trim(),
-    cible_sigle: (document.getElementById('scen-cible').value || 'CHAG').trim(),
+    cible_sigle: (document.getElementById('scen-cible').value || 'DEMO').trim(),
     anonymize: document.getElementById('scen-anonymize').checked,
     include_incidents: document.getElementById('scen-inc-incidents').checked,
     include_messages:  document.getElementById('scen-inc-messages').checked,
@@ -4815,7 +5295,7 @@ async function loadNotifications() {
       <div class="np-item ${n.lu ? '' : 'unread'}" onclick="readNotif(${n.id}, ${n.incident_id})">
         <div class="np-item-titre">${n.titre}</div>
         <div class="np-item-msg">${n.message}</div>
-        <div class="np-item-time">${n.timestamp ? new Date(n.timestamp).toLocaleString('fr-FR') : ''}</div>
+        <div class="np-item-time">${n.timestamp ? parseUTC(n.timestamp).toLocaleString('fr-FR') : ''}</div>
       </div>`).join('');
     document.getElementById('np-count-info').textContent = `${notifs.length} notification(s) — ${unread} non lue(s)`;
   } catch(e) {}
@@ -4979,8 +5459,8 @@ function renderKanban() {
     const el = document.getElementById('col-' + col);
     if (!el) return;
     el.innerHTML = tasks.map(t => {
-      const dueTxt = t.due_at ? new Date(t.due_at).toLocaleString('fr-FR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
-      const overdue = t.due_at && new Date(t.due_at) < new Date() && col !== 'TERMINÉ';
+      const dueTxt = t.due_at ? parseUTC(t.due_at).toLocaleString('fr-FR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+      const overdue = t.due_at && parseUTC(t.due_at) < new Date() && col !== 'TERMINÉ';
       return `
       <div class="kanban-card p${t.priorite}" id="kcard-${t.id}"
         draggable="true" ondragstart="onDragStart(event,${t.id})" ondragend="onDragEnd(event)">
@@ -5044,7 +5524,7 @@ function openTaskModal(taskId = null, defaultCol = 'BACKLOG') {
       document.getElementById('tm-colonne').value = t.colonne;
       document.getElementById('tm-incident').value = t.incident_id || '';
       document.getElementById('tm-desc').value = t.description || '';
-      document.getElementById('tm-due').value = t.due_at ? new Date(t.due_at).toISOString().slice(0,16) : '';
+      document.getElementById('tm-due').value = t.due_at ? parseUTC(t.due_at).toISOString().slice(0,16) : '';
     }
   } else {
     titleEl.textContent = 'Nouvelle tâche';
@@ -5182,7 +5662,7 @@ async function loadRex() {
         <div class="rex-entry-header">
           <span class="rex-entry-titre">${r.titre}</span>
           <span class="rex-entry-type" style="color:${typeColor};border:1px solid ${typeColor};background:${typeColor}22">${r.type_crise||'?'}</span>
-          <span class="rex-entry-date">${r.created_at ? new Date(r.created_at).toLocaleDateString('fr-FR') : ''}</span>
+          <span class="rex-entry-date">${r.created_at ? parseUTC(r.created_at).toLocaleDateString('fr-FR') : ''}</span>
           <button class="kc-btn" style="color:#f87171" onclick="deleteRex(${r.id})">✕</button>
         </div>
         <div class="rex-entry-metrics">
@@ -5224,8 +5704,8 @@ async function genRexFromIncident() {
     const all = await r.json();
     const inc = all.find(i => i.id === id);
     if (!inc) { toast('Incident #' + id + ' non trouvé','err'); return; }
-    const ts = new Date(inc.timestamp);
-    const resolved = inc.resolved_at ? new Date(inc.resolved_at) : null;
+    const ts = parseUTC(inc.timestamp);
+    const resolved = inc.resolved_at ? parseUTC(inc.resolved_at) : null;
     const dureeMin = resolved ? Math.round((resolved - ts) / 60000) : null;
     const jalons = inc.jalons ? (() => { try { return JSON.parse(inc.jalons); } catch { return []; } })() : [];
     // Pré-remplir le modal REX
@@ -5621,13 +6101,32 @@ async function trOpenEdit(id) {
     const dt = parseUTC(t.horodatage_creation) || new Date();
     const dateStr = dt.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     const col = {EN_PREPARATION:'#fbbf24',EN_COURS:'#60a5fa',ARRIVE:'#4ade80',ANNULE:'#6b7280'};
-    metaEl.innerHTML = `<span style="color:var(--muted)">Créé le ${dateStr}</span> · <span style="color:${col[t.statut]||'#9ca3af'}">${t.statut.replace('_',' ')}</span>`;
+    let html = `<span style="color:var(--muted)">Créé le ${dateStr}</span> · <span style="color:${col[t.statut]||'#9ca3af'}">${t.statut.replace('_',' ')}</span>`;
+    // v2.4.6 : afficher l'historique des changements de statut (+ motif v2.4.8)
+    if (t.historique && t.historique.length > 0) {
+      const histItems = t.historique.map(h => {
+        const ts = h.ts ? parseUTC(h.ts) : null;
+        const tsStr = ts ? ts.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '?';
+        const fromCol = col[h.from] || '#9ca3af';
+        const toCol = col[h.to] || '#9ca3af';
+        const reasonHtml = h.reason
+          ? `<div style="font-family:var(--mono);font-size:9px;color:#fbbf24;margin-left:14px;padding:2px 6px;background:rgba(251,191,36,.08);border-left:2px solid #fbbf24;margin-top:2px">⚠ Motif : ${String(h.reason).replace(/</g,'&lt;')}</div>`
+          : '';
+        return `<div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px">${tsStr} : <span style="color:${fromCol}">${(h.from||'').replace('_',' ')}</span> → <span style="color:${toCol}">${(h.to||'').replace('_',' ')}</span>${h.user&&h.user!=='?'?' <span style="opacity:.6">par '+h.user+'</span>':''}</div>${reasonHtml}`;
+      }).join('');
+      html += `<details style="margin-top:6px"><summary style="cursor:pointer;font-family:var(--mono);font-size:9px;color:var(--muted);user-select:none">📜 Historique (${t.historique.length})</summary>${histItems}</details>`;
+    }
+    metaEl.innerHTML = html;
   }
   const simpleFields = {
     'tr-nom':t.nom,'tr-prenom':t.prenom,'tr-njf':t.nom_jeune_fille,
     'tr-ipp':t.ipp,'tr-ddn':t.date_naissance,
     'tr-redacteur':currentUser?(currentUser.display_name||currentUser.username):(t.redacteur||''),
-    'tr-comment':t.commentaire,'tr-eta':t.eta?t.eta.substring(0,16):''
+    // v2.4.8 : ETA — convertir UTC → heure locale pour l'input datetime-local
+    // (bug fuseau : avant on injectait l'UTC brut, l'input l'affichait
+    //  comme local, et à la sauvegarde new Date(local).toISOString() re-décalait
+    //  de +4h → +8h après 2 éditions)
+    'tr-comment':t.commentaire,'tr-eta': t.eta ? _utcToLocalInput(t.eta) : ''
   };
   Object.entries(simpleFields).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val||'';});
   await trPopulateSitesForEdit(t);
@@ -5684,7 +6183,15 @@ async function trSave() {
   const ufD=(ufDestManualWrap&&ufDestManualWrap.style.display!=='none'&&ufDestManual)?ufDestManual:(document.getElementById('tr-uf-dest')?.value?.trim()||siteD);
   const etabOClean=etabO.trim(); const etabDClean=etabD.trim();
   const redc=document.getElementById('tr-redacteur').value.trim();
-  const etaVal=document.getElementById('tr-eta')?.value||null;
+  // v2.4.6 : l'input datetime-local renvoie "YYYY-MM-DDTHH:MM" en heure LOCALE
+  // du navigateur. On le convertit en ISO UTC pour que le backend stocke en UTC
+  // cohérent (UTC-10 : 13:30 local → 23:30Z, Paris : 13:30 local → 11:30Z).
+  // v2.4.8 : l'input datetime-local renvoie "YYYY-MM-DDTHH:MM" en heure
+  // locale (du navigateur OU de la TZ configurée). On utilise _localInputToUtc
+  // qui inverse correctement la conversion appliquée par _utcToLocalInput,
+  // donc un round-trip ETA → édition → save ne décale plus l'heure.
+  const _etaLocal=document.getElementById('tr-eta')?.value||null;
+  const etaVal = _etaLocal ? _localInputToUtc(_etaLocal) : null;
   if (!nom||!prenom||!ufO||!etabOClean||!ufD||!etabDClean||!redc) { toast('Champs obligatoires manquants (*)','warn'); return; }
   const editId=document.getElementById('tr-edit-id').value;
   // Résoudre le vrai nom de site destination (siteD peut être le sigle GHT si le select n'avait pas de |||)
@@ -5694,6 +6201,14 @@ async function trSave() {
     const siteEntry = _trAllSites.find(s => s.etab.toUpperCase() === etabDClean.toUpperCase() && !s.local);
     if (siteEntry) siteDResolved = siteEntry.nom;
   }
+  // v2.4.6 : en ÉDITION, on préserve le statut actuel du transfert (sinon
+  // on repasse un transfert EN_COURS en EN_PREPARATION à chaque sauvegarde).
+  // En CRÉATION, EN_PREPARATION par défaut.
+  let currentStatut = 'EN_PREPARATION';
+  if (editId) {
+    const existingTr = (trData || []).find(t => String(t.id) === String(editId));
+    if (existingTr && existingTr.statut) currentStatut = existingTr.statut;
+  }
   const payload={nom,prenom,
     nom_jeune_fille:document.getElementById('tr-njf').value.trim()||null,
     ipp:document.getElementById('tr-ipp').value.trim()||null,
@@ -5701,7 +6216,7 @@ async function trSave() {
     unite_origine:ufO,etablissement_origine:etabOClean,
     unite_destination:ufD,etablissement_destination:etabDClean,site_destination:siteDResolved||etabDClean,
     redacteur:redc,commentaire:document.getElementById('tr-comment').value.trim()||null,
-    statut:'EN_PREPARATION',eta:etaVal||null};
+    statut:currentStatut,eta:etaVal||null};
   const url=editId?`/api/v1/transferts/${editId}`:'/api/v1/transferts';
   const method=editId?'PUT':'POST';
   const r=await fetch(url,{method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify(payload)});
@@ -5742,17 +6257,56 @@ async function trArchiver(id) {
   else toast('Erreur suppression','err');
 }
 
+// v2.4.8 : ordre des statuts pour détecter un "recul"
+const _STATUT_ORDER = {'EN_PREPARATION': 0, 'EN_COURS': 1, 'ARRIVE': 2, 'ANNULE': 99};
+
 async function trChangeStatut(id, newStatut) {
+  // v2.4.8 : si on revient à un statut antérieur (ex: ARRIVE → EN_COURS),
+  // demander une justification obligatoire qui sera tracée dans l'historique
+  const t = (trData || []).find(x => x.id === id);
+  const oldStatut = t?.statut;
+  const isRegression = oldStatut
+    && _STATUT_ORDER[newStatut] !== undefined
+    && _STATUT_ORDER[oldStatut] !== undefined
+    && _STATUT_ORDER[newStatut] < _STATUT_ORDER[oldStatut]
+    && newStatut !== 'ANNULE';
+  let reason = null;
+  if (isRegression) {
+    reason = prompt(
+      `⚠ Retour en arrière : ${oldStatut.replace('_',' ')} → ${newStatut.replace('_',' ')}\n\n` +
+      `Motif (obligatoire) :`,
+      ''
+    );
+    // v2.4.8.2 : Annuler (null) OU motif vide (clic OK sans saisir)
+    //   → on annule le retour en arrière silencieusement et on recharge
+    //   pour remettre la carte à sa vraie position dans la kanban.
+    //   AVANT : motif vide affichait un toast "Motif obligatoire" et la
+    //   carte restait à la mauvaise place visuellement → le user pouvait
+    //   re-trigger l'action sans s'en rendre compte.
+    if (reason === null || !reason.trim()) {
+      await loadTransferts();  // remet la carte à sa vraie place
+      return;
+    }
+    reason = reason.trim();
+    if (reason.length < 3) {
+      toast('Motif trop court (3 caractères minimum)', 'err');
+      await loadTransferts();
+      return;
+    }
+  }
   const tok = localStorage.getItem('scribe_token') || '';
+  const body = {statut: newStatut};
+  if (reason) body.reason = reason;
   const r = await apiFetch(`/api/v1/transferts/${id}/statut`, {
     method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
-    body: JSON.stringify({statut: newStatut})
+    body: JSON.stringify(body)
   });
   if (r.ok) {
     await loadTransferts();
-    toast(`→ ${newStatut.replace('_',' ')}`, 'ok');
-    const t = trData.find(x => x.id === id);
+    toast(`→ ${newStatut.replace('_',' ')}` + (reason ? ' (motif tracé)' : ''), 'ok');
     if (t) await trPushCollecteur({...t, statut: newStatut});
+  } else {
+    await loadTransferts();  // erreur backend : on remet propre aussi
   }
 }
 
@@ -5829,7 +6383,7 @@ async function loadAdminIA() {
     const r2 = await apiFetch('/api/v1/admin/config/ia');
     if (!r2 || !r2.ok) return;
     const d2 = await r2.json();
-    // v2.0.5 — cache global pour que adminShowIaConfig puisse récupérer default_model
+    // v2321 — cache global pour que adminShowIaConfig puisse récupérer default_model
     window._iaProvidersCache = d2.all_providers || [];
     const provBox = document.getElementById('admin-ia-providers');
     if (!provBox || !d2.all_providers) return;
@@ -5854,7 +6408,7 @@ function adminShowIaConfig(providerId, providerLabel) {
   panel.style.display = 'block';
   panel.scrollIntoView({behavior:'smooth', block:'nearest'});
 
-  // v2.0.5 — Récupérer le modèle par défaut du fournisseur depuis la config exposée
+  // v2321 — Récupérer le modèle par défaut du fournisseur depuis la config exposée
   let defaultModel = '';
   try {
     const all = window._iaProvidersCache || [];
@@ -5883,7 +6437,7 @@ function adminShowIaConfig(providerId, providerLabel) {
           'style="width:100%;font-family:var(--mono);font-size:10px;padding:6px 8px;background:var(--surface2);' +
           'border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box;margin-bottom:10px">'
         : '') +
-      '<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">' +
+      '<div style="display:flex;gap:8px;margin-top:6px">' +
         '<button onclick="adminTestIaKey(&quot;' + providerId + '&quot;)" ' +
           'style="font-family:var(--mono);font-size:10px;padding:8px 14px;background:transparent;color:var(--text);' +
           'border:1px solid var(--border2);border-radius:4px;cursor:pointer">🧪 Tester la clé</button>' +
@@ -5900,7 +6454,7 @@ function adminShowIaConfig(providerId, providerLabel) {
     '</div>';
 }
 
-// v2.0.5 — Tester sans enregistrer (renommé pour clarté)
+// v2321 — Tester sans enregistrer (renommé pour clarté)
 async function adminTestIaKey(providerId) {
   const key = document.getElementById('ia-config-key-input')?.value?.trim();
   const res = document.getElementById('ia-config-result');
@@ -5921,7 +6475,7 @@ async function adminTestIaKey(providerId) {
   } catch(e) { if(res) { res.style.color='#f87171'; res.textContent='Erreur réseau : ' + e.message; } }
 }
 
-// v2.0.5 — Enregistrer la config IA (avec persistance + reload à chaud)
+// v2321 — Enregistrer la config IA (avec persistance + reload à chaud)
 async function adminSaveIaConfig(providerId) {
   const key   = document.getElementById('ia-config-key-input')?.value?.trim() || '';
   const model = document.getElementById('ia-config-model-input')?.value?.trim() || '';
@@ -5958,7 +6512,7 @@ async function adminSaveIaConfig(providerId) {
   } catch(e) { if(res) { res.style.color='#f87171'; res.textContent='Erreur réseau : ' + e.message; } }
 }
 
-// v2.0.5 — Supprimer la config IA persistée
+// v2321 — Supprimer la config IA persistée
 async function adminResetIaConfig() {
   if (!confirm('Supprimer la configuration IA enregistrée ?\n\nL\'instance reviendra aux valeurs des variables d\'environnement (ou aux valeurs par défaut).')) return;
   const res = document.getElementById('ia-config-result');
@@ -5975,7 +6529,7 @@ async function adminResetIaConfig() {
   } catch(e) { if(res) { res.style.color='#f87171'; res.textContent='Erreur réseau : ' + e.message; } }
 }
 
-// v2.0.5 — Stub conservé pour compatibilité descendante (au cas où des handlers
+// v2321 — Stub conservé pour compatibilité descendante (au cas où des handlers
 // onclick="adminSaveIaKey(...)" subsistent dans du DOM ancien). Redirige vers test.
 async function adminSaveIaKey(providerId) {
   return adminTestIaKey(providerId);
@@ -6583,7 +7137,7 @@ function renderChronList(chrons) {
   if (!c) return;
   if (!chrons.length) { c.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:4px 0">Aucune entrée</div>'; return; }
   c.innerHTML = chrons.map(ch => {
-    const ts = ch.ts ? new Date(ch.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '';
+    const ts = ch.ts ? parseUTC(ch.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '';
     return `<div class="chron-list-item">
       <span class="chron-ts">${ts}</span>
       <span class="chron-texte">${ch.texte}</span>
@@ -6645,7 +7199,7 @@ function renderCommPreview() {
     ${chrons.length?`<div class="preview-card">
       <div class="preview-card-hdr">Chronologie</div>
       ${chrons.map(ch=>`<div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:11px">
-        <span style="color:var(--muted);font-family:var(--mono);font-size:10px;margin-right:8px">${ch.ts?new Date(ch.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):''}</span>
+        <span style="color:var(--muted);font-family:var(--mono);font-size:10px;margin-right:8px">${ch.ts?parseUTC(ch.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):''}</span>
         ${ch.texte}
       </div>`).join('')}
     </div>`:''}
@@ -6676,17 +7230,22 @@ function updatePublishBar(published) {
   const dot = document.getElementById('comm-pub-dot');
   const lbl = document.getElementById('comm-pub-label');
   const btn = document.getElementById('comm-pub-btn');
+  const unpubBtn = document.getElementById('comm-unpub-btn');
   if (!dot || !lbl || !btn) return;
   if (published) {
     dot.className = 'published-dot on';
     lbl.textContent = 'Publié — accessible sur /status';
-    btn.textContent = 'Dépublier';
+    // Bouton primaire : "Mettre à jour" en un clic (push direct sans dépublier)
+    btn.textContent = 'Mettre à jour';
     btn.className   = 'btn-publish on';
+    // Bouton secondaire "Retirer" visible quand publié
+    if (unpubBtn) unpubBtn.style.display = 'inline-block';
   } else {
     dot.className = 'published-dot off';
     lbl.textContent = 'Non publié — /status non disponible';
     btn.textContent = 'Publier';
     btn.className   = 'btn-publish off';
+    if (unpubBtn) unpubBtn.style.display = 'none';
   }
 }
 
@@ -6752,13 +7311,46 @@ async function delChronEntry(id) {
   } catch(e) { toast('Erreur: ' + e.message, 'err'); }
 }
 
-async function togglePublish() {
+// ── Publication / mise à jour du point de situation ─────────────────────────
+// publishOrUpdate : 1 seul clic pour publier OU pousser une mise à jour.
+//   - Si non publié → publie (passe published=true, push initial)
+//   - Si déjà publié → re-pousse les modifs (sans dépublier/republier).
+//     L'URL /status reste accessible, juste le contenu change.
+async function publishOrUpdate() {
   if (!commData) return;
-  commData.published = !commData.published;
-  updatePublishBar(commData.published);
+  const wasPublished = !!commData.published;
+  commData.published = true;
+  updatePublishBar(true);
   // Sauvegarder IMMÉDIATEMENT sans debounce
   await saveStatusNow();
-  toast(commData.published ? '✓ Point de situation publié sur /status' : 'Dépublié', commData.published ? 'ok' : 'warn');
+  toast(
+    wasPublished
+      ? '✓ Mise à jour poussée sur /status'
+      : '✓ Point de situation publié sur /status',
+    'ok'
+  );
+}
+
+// unpublishStatus : retire le point de situation du /status public.
+// Bouton "Retirer" séparé, discret, pour les cas exceptionnels.
+async function unpublishStatus() {
+  if (!commData) return;
+  if (!confirm('Retirer le point de situation du /status public ?')) return;
+  commData.published = false;
+  updatePublishBar(false);
+  await saveStatusNow();
+  toast('Retiré du /status public', 'warn');
+}
+
+// Compat : ancienne fonction togglePublish — gardée comme alias
+// pour ne pas casser d'éventuels appels JS externes ou bookmarks.
+async function togglePublish() {
+  if (!commData) return;
+  if (commData.published) {
+    await unpublishStatus();
+  } else {
+    await publishOrUpdate();
+  }
 }
 
 // Sauvegarde immédiate (sans timer) utilisée par togglePublish
@@ -7228,6 +7820,8 @@ async function loadCapacite() {
     capCheckSilences();
     document.getElementById('cap-last-update').textContent =
       'Mis à jour ' + new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+    // v2.4.7 : autocomplete depuis l'historique
+    try { window.populateDatalistFromHistory && window.populateDatalistFromHistory(); } catch(e){}
   } catch(e) {
     console.error('loadCapacite:', e);
   }
@@ -7250,9 +7844,24 @@ function capToggleSynthese() {
   if (capSyntheseMode) capRenderSynthese();
 }
 
+// v2.4.7 : toggle "Lits > 0 uniquement" (persisté en localStorage)
+// v2.4.8 : "Lits > 0" coché par défaut.
+// Sauf si l'utilisateur l'a explicitement désactivé (-> localStorage = "0")
+let capFilterLitsOnly = (localStorage.getItem('cap_filter_lits') !== '0');
+function capToggleFilterLits() {
+  const cb = document.getElementById('cap-filter-lits');
+  capFilterLitsOnly = !!cb?.checked;
+  try { localStorage.setItem('cap_filter_lits', capFilterLitsOnly ? '1' : '0'); } catch(e){}
+  capRenderGrid();
+  if (capSyntheseMode) capRenderSynthese();
+}
+
 // ── Rendu de la grille ──────────────────────────────────────────────────
 function capRenderGrid() {
   const grid = document.getElementById('cap-grid');
+  // Restaurer l'état de la checkbox depuis localStorage au premier rendu
+  const cbLits = document.getElementById('cap-filter-lits');
+  if (cbLits && cbLits.checked !== capFilterLitsOnly) cbLits.checked = capFilterLitsOnly;
   // Générer les boutons de site dynamiquement depuis les vraies données
   const dynSpan = document.getElementById('cap-site-btns-dyn');
   if (dynSpan) {
@@ -7261,9 +7870,13 @@ function capRenderGrid() {
       '<button class="cap-site-btn' + (capCurrentSite===s?' active':'') + '" data-site="' + s + '" onclick="capFilterSite(this)">' + s + '</button>'
     ).join('');
   }
-  const filtered = capCurrentSite === 'all'
+  let filtered = capCurrentSite === 'all'
     ? capData
     : capData.filter(r => r.site === capCurrentSite);
+  // v2.4.7 : filtre "Lits > 0 uniquement"
+  if (capFilterLitsOnly) {
+    filtered = filtered.filter(r => (r.capacite_totale || 0) > 0);
+  }
 
   // Grouper par pôle
   const byPole = {};
@@ -7343,7 +7956,7 @@ function capRenderCard(ref) {
   // Horodatage
   let metaTxt = '';
   if (d && d.horodatage) {
-    const dt = new Date(d.horodatage);
+    const dt = parseUTC(d.horodatage);
     const heure = dt.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
     const point = {matin:'🌅',aprem:'☀',soir:'🌙'}[d.point] || '';
     metaTxt = `${point} ${heure} — ${d.redacteur || '?'}`;
@@ -7402,7 +8015,7 @@ function capRenderSynthese() {
     const color = CAP_STATUT_COLORS[statut];
     const hasAlerte = d && (d.alerte_lits || d.alerte_rh || d.alerte_materiel);
     const heure = d && d.horodatage
-      ? new Date(d.horodatage).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
+      ? parseUTC(d.horodatage).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
       : '—';
     return `<tr onclick="capOpenPopup(${ref.id})" style="cursor:pointer">
       <td style="font-weight:600">${ref.service_nom}</td>
@@ -7422,7 +8035,11 @@ function capRenderSynthese() {
 // ── Alertes silence ─────────────────────────────────────────────────────
 function capCheckSilences() {
   const banner = document.getElementById('cap-silence-banner');
-  const nonDeclares = capData.filter(r => !r.derniere_declaration);
+  // v2.4.8.2 : exclure les services à 0 lits — pas de sens de leur demander
+  // de déclarer leur capacité quand ils n'ont aucun lit à suivre.
+  const nonDeclares = capData.filter(r =>
+    !r.derniere_declaration && (r.capacite_totale || 0) > 0
+  );
   if (nonDeclares.length > 0) {
     banner.textContent = `⚠ ${nonDeclares.length} service(s) n'ont pas encore déclaré leur situation : ${nonDeclares.slice(0,3).map(r => r.service_nom).join(', ')}${nonDeclares.length > 3 ? '...' : ''}`;
     banner.style.display = '';
@@ -7489,7 +8106,7 @@ function capOpenPopup(refId) {
       document.getElementById('cap-alerte-'+k).checked = false;
       document.getElementById('cap-alerte-'+k+'-lbl').classList.remove('checked');
     });
-    // Redacteur
+    // Redacteur — préremplir avec celui de la dernière déclaration
     if (d.redacteur) document.getElementById('cap-redacteur').value = d.redacteur;
   } else {
     ['statut-lits','statut-rh','statut-mat'].forEach(id => {
@@ -7509,6 +8126,16 @@ function capOpenPopup(refId) {
   if (brEl) brEl.value = 0;
   const ppEl = document.getElementById('cap-peut-preter');
   if (ppEl) ppEl.value = 0;
+  }
+
+  // v2.4.8.2 : Auto-fill du cadre déclarant avec l'utilisateur connecté
+  // si le champ est vide. L'utilisateur peut toujours saisir un autre nom
+  // (cas du cadre qui déclare pour un collègue absent), et dans ce cas la
+  // trace "par <user_connecté>" sera ajoutée côté backend pour traçabilité.
+  const redElCap = document.getElementById('cap-redacteur');
+  if (redElCap && !redElCap.value && window.currentUser) {
+    const u = window.currentUser;
+    redElCap.value = u.display_name || u.username || '';
   }
 
   // Détecter le point selon l'heure
@@ -7550,8 +8177,25 @@ function capToggleModeDegrade(on) {
 async function capSubmitDeclaration() {
   if (!capCurrentRef) return;
   const ref = capCurrentRef;
-  const redacteur = document.getElementById('cap-redacteur').value.trim();
+  let redacteur = document.getElementById('cap-redacteur').value.trim();
   if (!redacteur) { toast('Veuillez indiquer le cadre déclarant', 'warn'); return; }
+
+  // v2.4.8.2 : si le redacteur saisi diffère du user connecté, on ajoute la
+  // mention "(par <user_connecté>)" pour garder la trace de qui a fait
+  // matériellement l'action. Cas typique : un cadre déclare pour un collègue
+  // absent ou hiérarchiquement supérieur (ex: connecté "l.voudon", saisie
+  // "TARTEMPION Micheline" → stocké "TARTEMPION Micheline (par Laurent VOUDON)").
+  try {
+    const u = window.currentUser;
+    if (u) {
+      const myName = (u.display_name || u.username || '').trim();
+      // Si la saisie n'est PAS le user connecté et ne contient pas déjà "(par ...)"
+      if (myName && redacteur.toLowerCase() !== myName.toLowerCase()
+                 && !/\(par .+\)/i.test(redacteur)) {
+        redacteur = `${redacteur} (par ${myName})`;
+      }
+    }
+  } catch(e) {}
 
   const point = document.querySelector('.cap-point-btn.active')?.dataset?.point || 'matin';
   const modeDegrade = document.getElementById('cap-mode-degrade')?.checked || false;
@@ -7807,7 +8451,7 @@ async function msgOpen(id, boite) {
     const rootId = m.reply_to ? m.reply_to : m.id;
     const root   = allMsgs.find(x => x.id === rootId) || m;
     const thread = [root, ...allMsgs.filter(x => x.reply_to === rootId && x.id !== rootId)]
-                   .sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+                   .sort((a,b) => parseUTC(a.created_at) - parseUTC(b.created_at));
 
     const renderBubble = (msg) => {
       const isMine = !!msg.is_mine;
@@ -8214,7 +8858,7 @@ async function ightLoadDecl() {
             ${d.unite_fonct ? `<span style="font-family:var(--mono);font-size:9px;color:var(--muted)">— ${d.unite_fonct}</span>` : ''}
             ${isRemote ? `<span style="font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(99,102,241,.15);color:#a5b4fc">📡 ${d.ght_nom||d.ght_emetteur}</span>` : ''}
           </div>
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px">📍 ${d.site_id} · ${new Date(d.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} · par ${d.created_by||'—'}</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px">📍 ${d.site_id} · ${parseUTC(d.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} · par ${d.created_by||'—'}</div>
           ${d.description ? `<div style="font-size:12px;color:var(--text);line-height:1.5">${d.description}</div>` : ''}
         </div>
         ${!isRemote ? `<button onclick="ightCloturerDecl(${d.id})" style="font-family:var(--mono);font-size:9px;padding:4px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer;flex-shrink:0;white-space:nowrap">Clôturer</button>` : '<span style="font-family:var(--mono);font-size:8px;color:var(--muted);flex-shrink:0">inter-GHT</span>'}
@@ -8282,7 +8926,7 @@ async function ightLoadMsgsCollecteur() {
     }
     const data = await r.json();
     const msgs = [...(data.received || []), ...(data.sent || [])].sort((a,b) =>
-      new Date(b.created_at) - new Date(a.created_at));
+      parseUTC(b.created_at) - parseUTC(a.created_at));
 
     if (!msgs.length) {
       list.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:40px;text-align:center">Aucun message inter-GHT</div>';
@@ -8433,7 +9077,7 @@ async function ightLoadDem() {
               <span style="font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:10px;background:${statutColor[d.statut]||'#6b7280'}22;color:${statutColor[d.statut]||'#9ca3af'}">${statutLabel[d.statut]||d.statut}</span>
               ${isRemote ? `<span style="font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(124,58,237,.15);color:#a78bfa">📡 ${d.ght_nom||d.ght_emetteur}</span>` : ''}
             </div>
-            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px">${d.ght_emetteur} → ${d.ght_destinataire||'Tous GHT'} · ${new Date(d.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px">${d.ght_emetteur} → ${d.ght_destinataire||'Tous GHT'} · ${parseUTC(d.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>
             <div style="font-size:12px;color:var(--text);line-height:1.5;margin-bottom:6px">${d.description}</div>
             ${d.reponse ? `<div style="padding:8px 10px;background:rgba(22,163,74,.1);border-left:3px solid #16a34a;border-radius:4px;font-size:11px;color:#4ade80"><div style="font-family:var(--mono);font-size:9px;opacity:.7;margin-bottom:2px">✓ Réponse${d.repondu_par?' de <b>'+d.repondu_par+'</b>':''} :</div>${d.reponse}</div>` : ''}
           </div>
@@ -8584,16 +9228,20 @@ async function submitForcedPw() {
 }
 
 async function importComptes() {
-  const fileInput = document.getElementById('import-file');
+  // v2.4.8.2 : le bon ID était "import-users-file" pas "import-file"
+  const fileInput = document.getElementById('import-users-file');
   const resultEl  = document.getElementById('import-result');
   if (!fileInput || !fileInput.files || !fileInput.files[0]) {
     toast('Sélectionnez un fichier Excel', 'err'); return;
   }
   const formData = new FormData();
   formData.append('file', fileInput.files[0]);
-  resultEl.style.display = 'none';
-  resultEl.textContent = 'Import en cours…';
-  resultEl.style.display = 'block';
+  if (resultEl) {
+    resultEl.style.display = 'block';
+    resultEl.style.borderColor = 'var(--border)';
+    resultEl.style.color = 'var(--text)';
+    resultEl.textContent = 'Import en cours…';
+  }
 
   try {
     const r = await apiFetch('/api/v1/auth/import-comptes', {
@@ -8603,20 +9251,54 @@ async function importComptes() {
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) {
-      resultEl.style.borderColor = '#f87171';
-      resultEl.style.color = '#f87171';
-      resultEl.textContent = d.detail || 'Erreur import';
+      const msg = d.detail || ('Erreur HTTP ' + r.status);
+      if (resultEl) {
+        resultEl.style.borderColor = '#f87171';
+        resultEl.style.color = '#f87171';
+        resultEl.textContent = msg + (r.status === 403 ? ' — connectez-vous avec un compte admin' : '');
+      }
+      toast(msg, 'err');
       return;
     }
-    resultEl.style.borderColor = '#4ade80';
-    resultEl.style.color = '#4ade80';
-    resultEl.textContent = d.message + (d.errors && d.errors.length ? ' | Avertissements: ' + d.errors.join(' ; ') : '');
+    if (resultEl) {
+      resultEl.style.borderColor = '#4ade80';
+      resultEl.style.color = '#4ade80';
+      resultEl.textContent = d.message + (d.errors && d.errors.length ? ' | Avertissements: ' + d.errors.join(' ; ') : '');
+    }
     toast(d.message, 'ok');
     loadUsers(); // Rafraîchir la liste
   } catch(e) {
-    resultEl.style.borderColor = '#f87171';
-    resultEl.style.color = '#f87171';
-    resultEl.textContent = 'Erreur réseau';
+    if (resultEl) {
+      resultEl.style.borderColor = '#f87171';
+      resultEl.style.color = '#f87171';
+      resultEl.textContent = 'Erreur réseau : ' + e.message;
+    }
+    toast('Erreur réseau', 'err');
+  }
+}
+
+// v2.4.8.2 : télécharger le modèle xlsx avec le token JWT (sinon 401)
+async function downloadComptesModele() {
+  try {
+    const r = await apiFetch('/api/v1/auth/comptes-modele', {
+      method: 'GET',
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      toast(d.detail || ('Erreur HTTP ' + r.status), 'err');
+      return;
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'comptes_modele.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
+  } catch(e) {
+    toast('Erreur téléchargement : ' + e.message, 'err');
   }
 }
 
@@ -9018,6 +9700,15 @@ async function acvCreateAll() {
       }
     } catch(e) {}
 
+    // v2.4.7 : ajouter les directeurs du config.js (= annuaire DIRECTEURS du xlsx)
+    try {
+      var directeurs = (typeof SCRIBE_CONFIG !== 'undefined' && Array.isArray(SCRIBE_CONFIG.directeurs))
+        ? SCRIBE_CONFIG.directeurs : [];
+      directeurs.forEach(function(d) {
+        if (d.nom) items.unshift(d.fonction ? d.nom + ' — ' + d.fonction : d.nom);
+      });
+    } catch(e) {}
+
     // Dédoublonnage en conservant l'ordre
     var seen = {};
     var uniq = items.filter(function(x) { if(seen[x]) return false; seen[x]=1; return true; });
@@ -9025,9 +9716,319 @@ async function acvCreateAll() {
       x.replace(/"/g,'&quot;') +'">'; }).join('');
   }
 
+  // v2.4.7 : peuple les datalists depuis l'historique réel via API
+  async function populateDatalistFromHistory() {
+    try {
+      var acteurs = new Set();
+      var roles = new Set();
+      var cadres = new Set();
+      var tok = localStorage.getItem('scribe_token') || '';
+      var hdr = {'Authorization': 'Bearer ' + tok};
+
+      // 1. Incidents : déclarants + intervenants + directeurs
+      try {
+        var r = await fetch('/api/v1/main-courante?limit=200', {headers: hdr});
+        if (r.ok) {
+          var hist = await r.json();
+          (Array.isArray(hist) ? hist : []).forEach(function(i) {
+            if (i.declarant_nom) acteurs.add(String(i.declarant_nom).trim());
+            if (i.intervenant_nom) acteurs.add(String(i.intervenant_nom).trim());
+            if (i.intervenant_role) roles.add(String(i.intervenant_role).trim());
+            if (i.directeur_crise) acteurs.add(String(i.directeur_crise).trim());
+          });
+        }
+      } catch(e) {}
+
+      // 2. Capacité : cadres déclarants — via capData déjà chargé
+      try {
+        if (Array.isArray(window.capData)) {
+          window.capData.forEach(function(c) {
+            var d = c.derniere_declaration;
+            if (d && d.redacteur) cadres.add(String(d.redacteur).trim());
+          });
+        }
+      } catch(e) {}
+
+      // 3. Cellule de crise via présences
+      try {
+        var r2 = await fetch('/api/v1/presence', {headers: hdr});
+        if (r2.ok) {
+          var pres = await r2.json();
+          (Array.isArray(pres) ? pres : []).forEach(function(p) {
+            if (p.nom) acteurs.add(String(p.nom).trim());
+            if (p.role) roles.add(String(p.role).trim());
+          });
+        }
+      } catch(e) {}
+
+      function fill(id, set, fallback) {
+        var dl = document.getElementById(id);
+        if (!dl) return;
+        var items = Array.from(set).filter(function(s) { return s && s.length > 1; });
+        if (items.length === 0 && fallback) items = fallback.slice();
+        items.sort(function(a, b) { return a.localeCompare(b, 'fr'); });
+        dl.innerHTML = items.map(function(x) { return '<option value="' +
+          x.replace(/"/g,'&quot;') + '">'; }).join('');
+      }
+      fill('acteurs-roles', roles, [
+        'Directeur de Crise', 'DSI', 'RSSI', 'DRH', 'Cadre de garde',
+        'Médecin coordinateur', 'Standardiste', 'Logistique', 'Sécurité'
+      ]);
+      fill('acteurs-cadres', cadres);
+      // Pour le générique : fusion avec l'existant (qui contient déjà directeurs + exercice)
+      var dlG = document.getElementById('acteurs-generiques');
+      if (dlG && acteurs.size > 0) {
+        var existing = Array.from(dlG.querySelectorAll('option')).map(function(o) { return o.value; });
+        var merged = new Set(existing);
+        acteurs.forEach(function(x) { if (x.length > 1) merged.add(x); });
+        var sorted = Array.from(merged).sort(function(a, b) { return a.localeCompare(b, 'fr'); });
+        dlG.innerHTML = sorted.map(function(x) { return '<option value="' +
+          x.replace(/"/g,'&quot;') + '">'; }).join('');
+      }
+    } catch(e) {
+      console.warn('populateDatalistFromHistory:', e);
+    }
+  }
+  window.populateDatalistFromHistory = populateDatalistFromHistory;
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', populateDatalist);
   } else {
     populateDatalist();
+  }
+})();
+// ════════════════════════════════════════════════════════════════════════════
+// v2.4.7 — ADMIN UF : gestion du référentiel des Unités Fonctionnelles
+// (onglet admin only)
+// ════════════════════════════════════════════════════════════════════════════
+let aufData = [];
+
+async function aufLoad() {
+  try {
+    const tok = localStorage.getItem('scribe_token') || '';
+    const r = await fetch('/api/v1/admin/uf?include_inactive=true', {
+      headers: {'Authorization': 'Bearer ' + tok}
+    });
+    if (r.status === 403) {
+      toast('Accès refusé : vous devez être admin pour cet onglet', 'err');
+      return;
+    }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    aufData = await r.json();
+    aufRender();
+  } catch (e) {
+    console.error('aufLoad:', e);
+    toast('Erreur chargement UF : ' + e.message, 'err');
+  }
+}
+
+function aufRender() {
+  const tbody = document.getElementById('auf-tbody');
+  const empty = document.getElementById('auf-empty');
+  const countEl = document.getElementById('auf-count');
+  if (!tbody) return;
+  const search = (document.getElementById('auf-search')?.value || '').toLowerCase().trim();
+  const showInactive = !!document.getElementById('auf-show-inactive')?.checked;
+
+  let rows = aufData.slice();
+  if (!showInactive) rows = rows.filter(u => u.actif);
+  if (search) {
+    rows = rows.filter(u =>
+      (u.libelle || '').toLowerCase().includes(search) ||
+      (u.code_uf || '').toLowerCase().includes(search) ||
+      (u.pole || '').toLowerCase().includes(search)
+    );
+  }
+
+  const nbActives = aufData.filter(u => u.actif).length;
+  countEl.textContent = `${rows.length} affichées · ${nbActives}/${aufData.length} actives`;
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = rows.map(u => {
+    const escHtml = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const codeEsc = escHtml(u.code_uf);
+    const libEsc = escHtml(u.libelle);
+    const poleEsc = escHtml(u.pole);
+    const hospEsc = escHtml(u.hospital_nom || '—');
+    const checked = u.actif ? 'checked' : '';
+    const opacity = u.actif ? '1' : '0.5';
+    return `<tr data-id="${u.id}" style="border-bottom:1px solid var(--border);opacity:${opacity}">
+      <td style="padding:6px 10px"><input type="checkbox" ${checked} onchange="aufToggle(${u.id}, this.checked)" style="cursor:pointer;width:16px;height:16px"></td>
+      <td style="padding:6px 10px"><input type="text" value="${codeEsc}" data-field="code_uf" onblur="aufFieldBlur(${u.id}, 'code_uf', this.value)" style="font-family:var(--mono);font-size:11px;padding:3px 6px;width:90px;background:transparent;border:1px solid transparent;border-radius:3px;color:var(--text)" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)'" onblurpost="this.style.borderColor='transparent';this.style.background='transparent'"></td>
+      <td style="padding:6px 10px"><input type="text" value="${libEsc}" data-field="libelle" onblur="aufFieldBlur(${u.id}, 'libelle', this.value)" style="font-family:var(--mono);font-size:11px;padding:3px 6px;width:100%;background:transparent;border:1px solid transparent;border-radius:3px;color:var(--text)" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)'"></td>
+      <td style="padding:6px 10px"><input type="text" value="${poleEsc}" data-field="pole" onblur="aufFieldBlur(${u.id}, 'pole', this.value)" style="font-family:var(--mono);font-size:11px;padding:3px 6px;width:160px;background:transparent;border:1px solid transparent;border-radius:3px;color:var(--text)" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)'"></td>
+      <td style="padding:6px 10px;color:var(--muted);font-size:10px">${hospEsc}</td>
+      <td style="padding:6px 10px;text-align:right"><button onclick="aufDelete(${u.id})" style="font-family:var(--mono);font-size:9px;padding:4px 8px;background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:3px;cursor:pointer" title="Supprimer définitivement">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function aufToggle(id, actif) {
+  try {
+    const tok = localStorage.getItem('scribe_token') || '';
+    const r = await fetch('/api/v1/admin/uf/' + id, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok},
+      body: JSON.stringify({actif: actif}),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const updated = await r.json();
+    const idx = aufData.findIndex(u => u.id === id);
+    if (idx >= 0) aufData[idx] = updated;
+    aufRender();
+    toast(actif ? '✓ UF activée' : '✓ UF désactivée', 'ok');
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'err');
+    aufLoad();
+  }
+}
+
+async function aufFieldBlur(id, field, value) {
+  const current = aufData.find(u => u.id === id);
+  if (!current || current[field] === value.trim()) return;  // pas de changement
+  try {
+    const tok = localStorage.getItem('scribe_token') || '';
+    const body = {};
+    body[field] = value.trim();
+    const r = await fetch('/api/v1/admin/uf/' + id, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok},
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const updated = await r.json();
+    const idx = aufData.findIndex(u => u.id === id);
+    if (idx >= 0) aufData[idx] = updated;
+    toast('✓ Sauvegardé', 'ok');
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'err');
+    aufLoad();
+  }
+}
+
+async function aufDelete(id) {
+  const uf = aufData.find(u => u.id === id);
+  if (!uf) return;
+  if (!confirm(
+    `⚠ Supprimer l'UF "${uf.libelle}" (${uf.code_uf}) ?\n\n` +
+    `Cette action est IRRÉVERSIBLE. Si des incidents historiques référencent cette UF, ` +
+    `ils seront orphelins.\n\n` +
+    `Préfère "Désactiver" (décocher) si tu veux juste la masquer.`
+  )) return;
+  try {
+    const tok = localStorage.getItem('scribe_token') || '';
+    const r = await fetch('/api/v1/admin/uf/' + id, {
+      method: 'DELETE',
+      headers: {'Authorization': 'Bearer ' + tok},
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    aufData = aufData.filter(u => u.id !== id);
+    aufRender();
+    toast('✓ UF supprimée', 'ok');
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'err');
+  }
+}
+
+function aufShowCreate() {
+  document.getElementById('auf-create-form').style.display = '';
+  document.getElementById('auf-new-code').focus();
+}
+function aufHideCreate() {
+  document.getElementById('auf-create-form').style.display = 'none';
+  document.getElementById('auf-new-code').value = '';
+  document.getElementById('auf-new-libelle').value = '';
+  document.getElementById('auf-new-pole').value = '';
+}
+
+async function aufCreate() {
+  const code = document.getElementById('auf-new-code').value.trim();
+  const libelle = document.getElementById('auf-new-libelle').value.trim();
+  const pole = document.getElementById('auf-new-pole').value.trim();
+  if (!code || !libelle) {
+    toast('Code et libellé obligatoires', 'err');
+    return;
+  }
+  try {
+    const tok = localStorage.getItem('scribe_token') || '';
+    const r = await fetch('/api/v1/admin/uf', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok},
+      body: JSON.stringify({code_uf: code, libelle: libelle, pole: pole || null}),
+    });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail || 'HTTP ' + r.status); }
+    const created = await r.json();
+    aufData.push(created);
+    aufHideCreate();
+    aufRender();
+    toast('✓ UF créée', 'ok');
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'err');
+  }
+}
+
+async function aufBulkActivate(actif) {
+  const label = actif ? 'activer' : 'désactiver';
+  const visibleIds = Array.from(document.querySelectorAll('#auf-tbody tr[data-id]'))
+    .map(tr => parseInt(tr.dataset.id, 10))
+    .filter(Boolean);
+  if (visibleIds.length === 0) {
+    toast('Aucune UF visible', 'warn');
+    return;
+  }
+  if (!confirm(`${label.charAt(0).toUpperCase() + label.slice(1)} les ${visibleIds.length} UF actuellement visibles ?`)) return;
+  try {
+    const tok = localStorage.getItem('scribe_token') || '';
+    const payload = visibleIds.map(id => ({id: id, actif: actif}));
+    const r = await fetch('/api/v1/admin/uf/bulk-toggle', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok},
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    await aufLoad();
+    toast(`✓ ${visibleIds.length} UF ${actif ? 'activées' : 'désactivées'}`, 'ok');
+  } catch (e) {
+    toast('Erreur : ' + e.message, 'err');
+  }
+}
+
+// Auto-load quand on ouvre l'onglet
+(function() {
+  const origOpenTab = window.openTab;
+  if (typeof origOpenTab === 'function') {
+    window.openTab = function(id, btn) {
+      origOpenTab(id, btn);
+      if (id === 'tab-admin-uf') {
+        setTimeout(aufLoad, 50);
+      }
+    };
+  }
+})();
+
+// Affichage conditionnel du bouton "ADMIN UF" dans la nav selon le rôle
+(function() {
+  function checkAdminAndShow() {
+    try {
+      const u = window.currentUser;
+      if (u && u.role === 'admin') {
+        const btn = document.getElementById('tab-btn-admin-uf');
+        if (btn) btn.style.display = '';
+      }
+    } catch (e) {}
+  }
+  // Tente plusieurs fois car currentUser arrive après le login
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      setInterval(checkAdminAndShow, 2000);
+    });
+  } else {
+    setInterval(checkAdminAndShow, 2000);
   }
 })();

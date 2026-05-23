@@ -393,5 +393,19 @@
     "sexe_h": "Camas homens",
     "sexe_f": "Camas mulheres",
     "sexe_i": "Camas neutras"
+  },
+  "master": {
+    "title": "📦 SCRIBE — Pilotagem de instâncias",
+    "subtitle": "Lançar, configurar e supervisionar instâncias a partir de um ponto único",
+    "tab_instances": "Instâncias",
+    "tab_profil": "Perfil base (UF)",
+    "add_custom_title": "➕ Adicionar instância personalizada",
+    "field_port": "Porta",
+    "field_sigle": "Código",
+    "field_address": "Endereço",
+    "field_login": "Utilizador",
+    "field_password": "Palavra-passe",
+    "btn_add": "+ Adicionar",
+    "field_sync": "🔗 Sincronizar com a supervisão"
   }
 }

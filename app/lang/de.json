@@ -393,5 +393,19 @@
     "sexe_h": "Männerbetten",
     "sexe_f": "Frauenbetten",
     "sexe_i": "Allgemeine Betten"
+  },
+  "master": {
+    "title": "📦 SCRIBE — Instanzsteuerung",
+    "subtitle": "Instanzen von einem zentralen Punkt aus starten und verwalten",
+    "tab_instances": "Instanzen",
+    "tab_profil": "Basisprofil (UF)",
+    "add_custom_title": "➕ Benutzerdefinierte Instanz hinzufügen",
+    "field_port": "Port",
+    "field_sigle": "Kürzel",
+    "field_address": "Adresse",
+    "field_login": "Benutzername",
+    "field_password": "Passwort",
+    "btn_add": "+ Hinzufügen",
+    "field_sync": "🔗 Mit Aufsicht synchronisieren"
   }
 }

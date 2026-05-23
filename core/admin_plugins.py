@@ -119,7 +119,7 @@ def get_ia_config(current_user: User = Depends(require_admin)):
                 "label":         p["label"],
                 "hds":           p["hds"],
                 "local":         p["local"],
-                # v2.0.5 — exposés pour pré-remplir les placeholders du panneau admin
+                # v2321 — exposés pour pré-remplir les placeholders du panneau admin
                 "default_model": p.get("model", ""),
                 "default_url":   p.get("url", ""),
             }
@@ -230,12 +230,12 @@ def test_ia_key(body: dict, current_user: User = Depends(require_admin)):
         return {"ok": False, "message": f"Erreur réseau: {e}"}
 
 
-# v2.0.5 — Sauvegarde persistante de la config IA (admin)
+# v2321 — Sauvegarde persistante de la config IA (admin)
 @router.post("/config/ia")
 def save_ia_config(body: dict, current_user: User = Depends(require_admin)):
     """
     Enregistre la config IA dans instance/ia_config.json (permissions 0600).
-    Recharge à chaud via reload_ai_config() — pas de restart nécessaire.
+    Recharge à chaud via reload_ia_config() — pas de restart nécessaire.
 
     Body : {provider, api_key, model?, base_url?}
     """
@@ -272,7 +272,7 @@ def save_ia_config(body: dict, current_user: User = Depends(require_admin)):
     }
 
 
-# v2.0.5 — Suppression de la config IA persistée (admin)
+# v2321 — Suppression de la config IA persistée (admin)
 @router.delete("/config/ia")
 def delete_ia_config(current_user: User = Depends(require_admin)):
     """Supprime la config IA persistée (instance/ia_config.json) et reload."""

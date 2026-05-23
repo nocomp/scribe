@@ -50,6 +50,7 @@ class UniteFonctionnelle(Base):
     libelle     = Column(String)
     pole        = Column(String, nullable=True)
     hospital_id = Column(Integer, ForeignKey("hospitals.id"))
+    actif       = Column(Boolean, default=True)  # v2.4.7 : désactivation soft
     hospital    = relationship("Hospital", back_populates="units")
 
 class SitrepEntry(Base):
@@ -209,7 +210,7 @@ class CapaciteReferentiel(Base):
     service_nom     = Column(String, nullable=False, index=True)
     uf_code         = Column(String, nullable=True)
     pole            = Column(String, nullable=True)
-    site            = Column(String, nullable=True)       # Annecy / Saint-Julien / Rumilly / USLD
+    site            = Column(String, nullable=True)       # Site principal / Site secondaire / USLD
     capacite_totale = Column(Integer, default=0)          # capacité nominale totale
     tension_1       = Column(Integer, default=0)          # lits ouverts en tension niveau 1
     tension_2       = Column(Integer, default=0)          # lits ouverts en tension niveau 2
@@ -319,6 +320,9 @@ class TransfertPatient(Base):
     # Métadonnées
     redacteur             = Column(String, nullable=False)
     commentaire           = Column(Text, nullable=True)
+    # v2.4.6 : historique des changements de statut (liste JSON-encoded de
+    # {"ts": "ISO-UTC", "from": "EN_PREPARATION", "to": "EN_COURS", "user": "..."})
+    historique_json       = Column(Text, nullable=True, default="[]")
 
 
 class MessageInterne(Base):

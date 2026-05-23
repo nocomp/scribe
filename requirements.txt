@@ -1,34 +1,20 @@
-# SCRIBE — dépendances Python v2.0
-# Installation : pip install -r requirements.txt
-
-# Web framework
 fastapi>=0.110.0
 uvicorn[standard]>=0.29.0
-python-multipart>=0.0.9
-
-# ORM et données
 sqlalchemy>=2.0.0
 pydantic>=2.0.0
-
-# Authentification
+httpx>=0.27.0
+python-multipart>=0.0.9
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
-bcrypt>=4.0.0,<5.0.0
+bcrypt>=4.0.0,<5.0.0  # passlib 1.7.4 incompatible avec bcrypt 5+ (Python 3.12 crash "password > 72 bytes")
+python-docx>=1.1.0
+openpyxl>=3.1.0
+slowapi>=0.1.9
 
-# MFA TOTP (v2.0)
+# v2.3.x — MFA TOTP (app/api/mfa.py)
 pyotp>=2.9.0
 qrcode[pil]>=7.4.0
 
-# HTTP client (IA + fédération)
-httpx>=0.27.0
-
-# Génération de documents
-python-docx>=1.1.0
-openpyxl>=3.1.0
-
-# Rate limiting
-slowapi>=0.1.9
-
-# Notifications Web Push (plugin notifications)
+# v2.3.87 — Plugin notifications (Web Push)
 pywebpush>=2.0.0
 py_vapid>=1.9.0

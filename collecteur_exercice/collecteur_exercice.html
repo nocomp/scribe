@@ -269,7 +269,7 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
 </div>
 <div class="topbar">
   <img src="/static/logo-scribe.png" onerror="this.style.display='none'">
-  <h1>SCRIBE — ANIMATEUR EXERCICE ARC ALPIN</h1>
+  <h1>SCRIBE — ANIMATEUR EXERCICE</h1>
   <span class="topbar-time" id="topbar-time"></span>
 </div>
 <div class="tab-bar">
@@ -413,7 +413,7 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
     <div style="font-family:var(--mo);font-size:9px;color:var(--mu);font-weight:700;letter-spacing:.5px;margin-bottom:6px;border-bottom:1px solid var(--bd);padding-bottom:6px">PARAMÈTRES DE GÉNÉRATION IA</div>
     <div class="form-row">
       <label>Sujet / contexte clinique *</label>
-      <textarea id="ia-sujet" placeholder="Ex: Femme enceinte hémorragie au bloc + prématuré. Saturation maternité CHANGE. Coordination SAMU et transfert vers GHTLMB nécessaires."></textarea>
+      <textarea id="ia-sujet" placeholder="Ex: Femme enceinte hémorragie au bloc + prématuré. Saturation maternité DEMO1. Coordination SAMU et transfert vers DEMO2 nécessaires."></textarea>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
       <div class="form-row"><label>Durée exercice</label>
@@ -567,13 +567,13 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
     <div class="form-row">
       <label>Sites participants</label>
       <div class="sites-row" id="ia-sites-sel">
-        <div class="site-chip on" data-s="CHAG" onclick="toggleChip(this)">CHANGE</div>
-        <div class="site-chip" data-s="GHTLMB" onclick="toggleChip(this)">GHTLMB</div>
-        <div class="site-chip" data-s="CHRUMILLY" onclick="toggleChip(this)">CHRUMILLY</div>
-        <div class="site-chip" data-s="HDLEMAN" onclick="toggleChip(this)">HDLEMAN</div>
-        <div class="site-chip" data-s="HPMB" onclick="toggleChip(this)">HPMB</div>
-        <div class="site-chip" data-s="CHB" onclick="toggleChip(this)">CHB</div>
-        <div class="site-chip" data-s="CHPG" onclick="toggleChip(this)">CHPG</div>
+        <div class="site-chip on" data-s="DEMO1" onclick="toggleChip(this)">DEMO1</div>
+        <div class="site-chip" data-s="DEMO2" onclick="toggleChip(this)">DEMO2</div>
+        <div class="site-chip" data-s="DEMO3" onclick="toggleChip(this)">DEMO3</div>
+        <div class="site-chip" data-s="DEMO4" onclick="toggleChip(this)">DEMO4</div>
+        <div class="site-chip" data-s="DEMO5" onclick="toggleChip(this)">DEMO5</div>
+        <div class="site-chip" data-s="DEMO6" onclick="toggleChip(this)">DEMO6</div>
+        <div class="site-chip" data-s="DEMO7" onclick="toggleChip(this)">DEMO7</div>
       </div>
     </div>
     <div id="ia-loading" class="ia-loading" style="display:none"><span class="spin">⏳</span> SCRIBE génère votre scénario (30-60s)...</div>
@@ -623,13 +623,13 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
       <div class="form-row">
         <label>Sites participants</label>
         <div class="sites-row" id="exo-sites-sel">
-          <div class="site-chip on" data-s="CHAG" onclick="toggleChip(this)">CHANGE</div>
-          <div class="site-chip on" data-s="GHTLMB" onclick="toggleChip(this)">GHTLMB</div>
-          <div class="site-chip" data-s="CHRUMILLY" onclick="toggleChip(this)">CHRUMILLY</div>
-          <div class="site-chip" data-s="HDLEMAN" onclick="toggleChip(this)">HDLEMAN</div>
-          <div class="site-chip" data-s="HPMB" onclick="toggleChip(this)">HPMB</div>
-          <div class="site-chip" data-s="CHB" onclick="toggleChip(this)">CHB</div>
-          <div class="site-chip" data-s="CHPG" onclick="toggleChip(this)">CHPG</div>
+          <div class="site-chip on" data-s="DEMO1" onclick="toggleChip(this)">DEMO1</div>
+          <div class="site-chip on" data-s="DEMO2" onclick="toggleChip(this)">DEMO2</div>
+          <div class="site-chip" data-s="DEMO3" onclick="toggleChip(this)">DEMO3</div>
+          <div class="site-chip" data-s="DEMO4" onclick="toggleChip(this)">DEMO4</div>
+          <div class="site-chip" data-s="DEMO5" onclick="toggleChip(this)">DEMO5</div>
+          <div class="site-chip" data-s="DEMO6" onclick="toggleChip(this)">DEMO6</div>
+          <div class="site-chip" data-s="DEMO7" onclick="toggleChip(this)">DEMO7</div>
         </div>
       </div>
     </div>
@@ -744,7 +744,7 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
           </div>
           <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Établissement destination</label>
             <select id="adhoc-tr-dest" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
-              <option value="CHAG">CHANGE</option><option value="GHTLMB">GHTLMB</option><option value="CHRUMILLY">CHRUMILLY</option><option value="HDLEMAN">HDLEMAN</option><option value="HPMB">HPMB</option><option value="CHB">CHB</option><option value="CHPG">CHPG</option>
+              <option value="DEMO1">DEMO1</option><option value="DEMO2">DEMO2</option><option value="DEMO3">DEMO3</option><option value="DEMO4">DEMO4</option><option value="DEMO5">DEMO5</option><option value="DEMO6">DEMO6</option><option value="DEMO7">DEMO7</option>
             </select>
           </div>
         </div>
@@ -1694,7 +1694,7 @@ function submitGenIA(){
   document.getElementById('ia-loading').style.display='block';
   document.getElementById('btn-gen').disabled=true;
   api('/api/exercice/generate',{method:'POST',body:JSON.stringify({
-    sujet:sujet,nb_sites:sites.length||1,sites:sites.length?sites:['CHAG'],
+    sujet:sujet,nb_sites:sites.length||1,sites:sites.length?sites:['DEMO'],
     duree_exercice_min:parseInt(document.getElementById('ia-duree').value)||60,
     duree_reel_min:parseInt(document.getElementById('ia-duree-reel').value)||240,
     type_crise:document.getElementById('ia-type').value,
@@ -2126,7 +2126,7 @@ function openAdhocModal(){
   } catch(e){}
   if(!sites.length){
     // Fallback : lister toutes les instances G7 (le backend rejettera si non connectée)
-    sites=['CHAG','GHTLMB','CHRUMILLY','HDLEMAN','HPMB','CHB','CHPG'];
+    sites=['DEMO','DEMO2','DEMO3','DEMO4','DEMO5','DEMO6','DEMO7'];
   }
   sites.forEach(function(s){
     var opt=document.createElement('option');

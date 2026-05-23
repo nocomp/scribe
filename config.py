@@ -122,6 +122,8 @@ UI: dict = {
 }
 
 # ── PLUGINS ───────────────────────────────────────────────────────────────────
+# v2320 — BUILD PRIVÉ : tous les plugins activés par défaut.
+# Pour le build public GitHub, repasser inter_ght et tuteur à False.
 PLUGINS: dict[str, bool] = {
     "cellule":    True,
     "releve":     True,
@@ -132,20 +134,20 @@ PLUGINS: dict[str, bool] = {
     "rapport":    True,
     "transferts": True,
     "messagerie": True,
-    # v2307 — Plugin inter_ght DÉSACTIVÉ par défaut. Le chat temps réel
-    # couvre les besoins d'échanges inter-établissements ; les déclarations
-    # officielles passent désormais par le plugin Déclarations autorités
-    # (en cours de développement) ou par la messagerie externe avec
-    # broadcast-externe. Le code reste présent pour compatibilité avec les
-    # bases existantes, mais aucun hôpital ne verra l'onglet en sortie
-    # de build. Réactivable ponctuellement en éditant cette ligne.
-    "inter_ght":  False,
+    # v2307 → v2320 : Plugin inter_ght normalement désactivé en public car
+    # le chat temps réel couvre les besoins d'échanges inter-établissements.
+    # Activé ici pour build privé où l'onglet est attendu.
+    "inter_ght":  True,
     "federation": True,
-    "albert":     True,   # Assistant IA activé par défaut
-    "brancardage":   True,   # Activé par défaut
-    "chat":          True,   # Chat temps réel
+    "albert":     True,
+    "brancardage":   True,
+    "chat":          True,
     "exercice":      True,   # Plugin exercice de crise (ports 8660-8666)
-    "notifications": True,   # Notifications multi-canal (mail/push/SMS)
+    "notifications": True,
+    # v2320 — Plugin tuteur v0.5 (compagnon d'apprentissage). Sur build public
+    # GitHub : repasser à False (opt-in admin via /admin/plugins) pour
+    # rétrocompatibilité.
+    "tuteur":        True,
     # "chaine_alerte": False,
 }
 
@@ -164,6 +166,7 @@ PLUGIN_META: dict[str, dict] = {
     "albert":     {"label": "ASSISTANT IA", "icon": "🤖", "order": 120, "tab": False},
     "exercice":   {"label": "EXERCICE",    "icon": "🎯", "order": 88,  "tab": True},
     "notifications": {"label": "NOTIFICATIONS", "icon": "🔔", "order": 95, "tab": False},
+    "tuteur":     {"label": "MON COACH",   "icon": "🎓", "order": 115, "tab": True},
 }
 
 # ── FEDERATION ────────────────────────────────────────────────────────────────
@@ -172,13 +175,13 @@ FEDERATION: dict = {
     "demo_port":           int(os.getenv("SCRIBE_DEMO_PORT",      "7474")),
     "demo_collector_port": int(os.getenv("SCRIBE_DEMO_COLL_PORT", "7373")),
     "instances": [
-        {"sigle": "CHAG",      "port": 8000},
-        {"sigle": "GHTLMB",    "port": 8001},
-        {"sigle": "CHRUMILLY", "port": 8002},
-        {"sigle": "HDLEMAN",   "port": 8003},
-        {"sigle": "HPMB",      "port": 8004},
-        {"sigle": "CHB",       "port": 8005},
-        {"sigle": "CHPG",      "port": 8006},
+        {"sigle": "DEMO",      "port": 8000},
+        {"sigle": "DEMO2",    "port": 8001},
+        {"sigle": "DEMO3", "port": 8002},
+        {"sigle": "DEMO4",   "port": 8003},
+        {"sigle": "DEMO5",      "port": 8004},
+        {"sigle": "DEMO6",       "port": 8005},
+        {"sigle": "DEMO7",      "port": 8006},
     ],
 }
 
@@ -187,7 +190,7 @@ FEDERATION: dict = {
 # (lus dynamiquement depuis config.js par le frontend, ou ici comme défauts).
 LOGIN: dict = {
     # Ligne de sous-titre sous le logo (nom de l'établissement + contexte)
-    # Exemples : "CHAG — Crisis OS" | "CHU Grenoble — Cellule de Crise"
+    # Exemples : "DEMO — Crisis OS" | "CHU Grenoble — Cellule de Crise"
     "subtitle":    os.getenv("SCRIBE_LOGIN_SUBTITLE",   "Votre Établissement — Crisis OS"),
 
     # Texte en bas de la login box (contexte réseau, mention légale, etc.)
@@ -224,10 +227,10 @@ def get_ia_provider_config() -> dict:
     return base
 
 
-# ── v2.0.5 — Persistance config IA via fichier JSON ──────────────────────────
+# ── v2321 — Persistance config IA via fichier JSON ────────────────────────────
 # Permet à l'admin de sauvegarder provider/api_key/model/base_url depuis l'UI
 # sans redémarrer le process. Le fichier prime sur les variables d'env au boot,
-# et reload_ai_config() le relit à chaud après écriture.
+# et reload_ia_config() le relit à chaud après écriture.
 
 import json as _json
 

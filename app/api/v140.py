@@ -713,7 +713,7 @@ import hashlib as _hashlib
 from fastapi import UploadFile, File
 import io as _io
 
-IMPORT_TEMP_PASSWORD = "Scribe2026!"
+IMPORT_TEMP_PASSWORD = "changeme"
 IMPORT_TEMP_HASH     = _hashlib.sha256(IMPORT_TEMP_PASSWORD.encode()).hexdigest()
 IMPORT_VALID_ROLES   = {"admin", "directeur", "observateur"}
 
@@ -838,8 +838,11 @@ async def import_comptes_xlsx(
 
 
 @router.get("/auth/comptes-modele")
-async def download_comptes_modele(admin: User = Depends(require_admin)):
-    """Télécharge le fichier Excel modèle pour l'import de comptes."""
+async def download_comptes_modele(user: User = Depends(get_current_user)):
+    """Télécharge le fichier Excel modèle pour l'import de comptes.
+    v2.4.8.2 : accessible à tout utilisateur authentifié — c'est juste un
+    modèle vierge sans secret. La création de comptes nécessite toujours
+    le rôle admin via /auth/import-comptes."""
     import os as _os
     from fastapi.responses import FileResponse as _FR
     # Chercher le fichier dans le répertoire racine du projet
@@ -886,8 +889,14 @@ class TransfertUpdate(BaseModel):
 
 class StatutUpdate(BaseModel):
     statut: str
+    reason: str | None = None  # v2.4.8 : motif obligatoire en cas de recul
 
 def _fmt_transfert(t: TransfertPatient) -> dict:
+    import json as _json
+    try:
+        history = _json.loads(t.historique_json) if getattr(t, "historique_json", None) else []
+    except (ValueError, TypeError):
+        history = []
     return {
         "id": t.id,
         "unite_origine": t.unite_origine,
@@ -908,6 +917,7 @@ def _fmt_transfert(t: TransfertPatient) -> dict:
         "eta":                 getattr(t, "eta", None),
         "site_destination":    getattr(t, "site_destination", None),
         "site_origine":        getattr(t, "site_origine", None),
+        "historique":          history,  # v2.4.6
     }
 
 @router.get("/transferts")
@@ -963,13 +973,53 @@ def patch_transfert_statut(tid: int, body: StatutUpdate, db: Session = Depends(g
     if not t:
         raise HTTPException(status_code=404, detail="Transfert introuvable")
     now = datetime.now(timezone.utc)
+    # v2.4.8 : si recul (ARRIVE→EN_COURS, EN_COURS→EN_PREPARATION), motif obligatoire
+    ORDER = {"EN_PREPARATION": 0, "EN_COURS": 1, "ARRIVE": 2, "ANNULE": 99}
+    is_regression = (
+        t.statut in ORDER and body.statut in ORDER
+        and ORDER[body.statut] < ORDER[t.statut]
+        and body.statut != "ANNULE"
+    )
+    if is_regression and not (body.reason and body.reason.strip()):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Motif obligatoire pour passer de {t.statut} à {body.statut}"
+        )
     if body.statut == "EN_COURS" and t.statut == "EN_PREPARATION":
         t.horodatage_depart = now
     elif body.statut == "ARRIVE" and t.statut != "ARRIVE":
         t.horodatage_arrivee = now
+    # v2.4.6 : trace historique des changements de statut (+ motif v2.4.8)
+    if body.statut != t.statut:
+        _append_transfert_history(t, t.statut, body.statut, current_user, now,
+                                   reason=(body.reason or "").strip() or None)
     t.statut = body.statut
     db.commit(); db.refresh(t)
     return _fmt_transfert(t)
+
+
+def _append_transfert_history(t, old_statut, new_statut, current_user, now, reason=None):
+    """Append une entrée à historique_json. v2.4.6 (+reason v2.4.8)"""
+    import json as _json
+    try:
+        history = _json.loads(t.historique_json) if t.historique_json else []
+    except (ValueError, TypeError):
+        history = []
+    user_label = "?"
+    try:
+        user_label = getattr(current_user, "login", None) or getattr(current_user, "username", None) or "?"
+    except Exception:
+        pass
+    entry = {
+        "ts":   now.isoformat() if now else "",
+        "from": old_statut or "",
+        "to":   new_statut or "",
+        "user": user_label,
+    }
+    if reason:
+        entry["reason"] = reason
+    history.append(entry)
+    t.historique_json = _json.dumps(history)
 
 
 @router.put("/transferts/{tid}")
@@ -984,6 +1034,9 @@ def update_transfert(tid: int, body: TransfertUpdate, db: Session = Depends(get_
             t.horodatage_depart = now
         elif body.statut == "ARRIVE" and t.statut != "ARRIVE":
             t.horodatage_arrivee = now
+        # v2.4.6 : trace historique
+        if body.statut != t.statut:
+            _append_transfert_history(t, t.statut, body.statut, current_user, now)
         t.statut = body.statut
     if body.commentaire is not None: t.commentaire = body.commentaire
     if body.unite_destination is not None: t.unite_destination = body.unite_destination

@@ -8,7 +8,7 @@ L'appel réseau est délégué à app/api/ai_router.py.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
-from app.api.ai_router import call_ai, get_ai_config
+from app.api.ai_router import call_ai, get_ai_config, require_ia_configured
 
 router = APIRouter()
 
@@ -87,6 +87,9 @@ async def get_ia_config_info():
 @router.post("/analyser")
 async def analyser_incident(req: AlbertRequest):
     """Analyse un incident individuel et retourne un avis structuré."""
+    err = require_ia_configured()
+    if err:
+        raise HTTPException(status_code=400, detail=err)
     system = SYSTEM_CYBER if req.type_crise == "CYBER" else SYSTEM_SANITAIRE
     prompt = (
         f"FAIT DÉCLARÉ : {req.fait}\n"
@@ -115,6 +118,10 @@ async def analyser_situation_globale(req: SituationGlobaleRequest):
     """Analyse globale : tous les incidents ouverts + décisions prises."""
     if not req.incidents:
         return {"analyse": "Aucun incident ouvert.", "niveau_global": "VEILLE", "source": "—"}
+
+    err = require_ia_configured()
+    if err:
+        raise HTTPException(status_code=400, detail=err)
 
     incidents_txt = "\n".join([
         f"- [{i.type_crise}] Urgence {i.urgency}/4 | {i.site_id} | {i.status} : {i.fait}"
@@ -189,6 +196,9 @@ class AnalyseCriseRequest(BaseModel):
 @router.post("/analyse-crise")
 async def analyse_crise(req: AnalyseCriseRequest):
     """Répond à une question libre sur une main courante ou situation capacitaire."""
+    err = require_ia_configured()
+    if err:
+        raise HTTPException(status_code=400, detail=err)
     if req.type_analyse == "capacitaire":
         system = (
             "Tu es un expert en gestion capacitaire hospitalière. "
@@ -225,6 +235,9 @@ class AskRequest(BaseModel):
 @router.post("/ask")
 async def ask_albert(req: AskRequest):
     """Question libre à Albert AI — avec contexte optionnel pour les questions de suivi."""
+    err = require_ia_configured()
+    if err:
+        raise HTTPException(status_code=400, detail=err)
     prompt = req.question
     if req.contexte:
         prompt = f"Contexte de l'analyse précédente :\n{req.contexte[:600]}\n\nQuestion : {req.question}"

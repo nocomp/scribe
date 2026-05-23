@@ -393,5 +393,19 @@
     "sexe_h": "Male beds",
     "sexe_f": "Female beds",
     "sexe_i": "Neutral beds"
+  },
+  "master": {
+    "title": "📦 SCRIBE — Instance pilot",
+    "subtitle": "Launch, configure and supervise instances from a single point",
+    "tab_instances": "Instances",
+    "tab_profil": "Base profile (UF)",
+    "add_custom_title": "➕ Add a custom instance",
+    "field_port": "Port",
+    "field_sigle": "Code",
+    "field_address": "Address",
+    "field_login": "Login",
+    "field_password": "Password",
+    "btn_add": "+ Add",
+    "field_sync": "🔗 Synchronize with supervision"
   }
 }

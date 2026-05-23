@@ -438,10 +438,17 @@ function chat_init() {
   _pingTimer = setInterval(chat_ping, 30000);
   chat_ping();
   // Charger la config fédération pour la sync chat inter-GHT
+  // IMPORTANT : on récupère _mysigle ET on démarre le sync dans le MÊME .then()
+  // pour éviter une race où chat_syncCollecteur tournerait avant que _mysigle
+  // soit défini → on n'ignorerait pas nos propres messages → doublons.
   _api("/api/v1/federation/status").then(function(r) {
     return r.ok ? r.json() : null;
   }).then(function(fed) {
-    if (fed && fed.ready && fed.collecteur_url) {
+    if (!fed) return;
+    // 1. _mysigle FIRST (essentiel pour le filtre anti-doublon)
+    if (fed.etablissement) _mysigle = fed.etablissement || "";
+    // 2. Sync collecteur seulement si fed prête ET sigle connu
+    if (fed.ready && fed.collecteur_url && _mysigle) {
       _fedBase = fed.collecteur_url.replace("/api/push", "");
       _fedToken = fed.token || "";
       _syncReady = true;
@@ -450,6 +457,8 @@ function chat_init() {
       // Présence inter-GHT toutes les 30 secondes
       setInterval(chat_pushPresence, 30000);
       chat_pushPresence();
+    } else if (fed.ready && fed.collecteur_url && !_mysigle) {
+      console.warn("SCRIBE Chat: fédération prête mais sigle absent — sync collecteur désactivée pour éviter doublons");
     }
   }).catch(function(){});
 
@@ -467,17 +476,11 @@ function chat_init() {
   }).then(function(users) {
     _autocompleteUsers = users;
   }).catch(function(){});
-  // Récupérer l'utilisateur courant et le sigle local
+  // Récupérer l'utilisateur courant
   _api("/api/v1/auth/me").then(function(r) {
     return r.ok ? r.json() : null;
   }).then(function(u) {
     if (u) _myUserId = u.id;
-  }).catch(function(){});
-  // Le sigle est dans /api/v1/federation/status → "etablissement"
-  _api("/api/v1/federation/status").then(function(r) {
-    return r.ok ? r.json() : null;
-  }).then(function(fed) {
-    if (fed && fed.etablissement) _mysigle = fed.etablissement || "";
   }).catch(function(){});
 }
 
@@ -783,6 +786,15 @@ function chat_send() {
     inp.value = "";
     inp.style.height = "auto";
     chat_cancelReply();
+    // ── Apprentissage du sigle ────────────────────────────────────────
+    // Le backend a mis msg.auteur_sigle exactement comme il le mettra
+    // sur les messages futurs. Synchroniser _mysigle dessus garantit
+    // que le filtre anti-doublon match exactement, même si le sigle
+    // d'origine (config.js) diffère par casse/espaces de celui injecté
+    // par le backend ou par la mappage du collecteur.
+    if (msg.auteur_sigle) {
+      _mysigle = msg.auteur_sigle;
+    }
     // Si PJs → recharger le message depuis l'API pour avoir les PJs à jour
     if (msg.pj && msg.pj.length) {
       _messages.push(msg);
@@ -1248,11 +1260,33 @@ function chat_syncCollecteur() {
     return r.ok ? r.json() : [];
   }).then(function(msgs) {
     msgs.forEach(function(m) {
-      // Ignorer nos propres messages (déjà dans le feed)
-      var sigleLocal = _mysigle || "";
-      if (m.auteur_sigle === sigleLocal) return;
-      // Vérifier si déjà affiché
+      // ── Anti-doublon 1 : ignorer nos propres messages (par sigle)
+      // Comparaison case-insensitive + trim pour tolérer les écarts de
+      // formatage entre le sigle du config.js et celui imposé par la
+      // mappage du collecteur (ex: "hopital 1" vs "HOPITAL 1").
+      var sigleLocal = (_mysigle || "").trim().toLowerCase();
+      var sigleMsg   = (m.auteur_sigle || "").trim().toLowerCase();
+      if (sigleLocal && sigleMsg && sigleMsg === sigleLocal) return;
+
+      // ── Anti-doublon 2 : déjà affiché par son id collecteur
       if (document.getElementById("msg-coll-" + m.id)) return;
+
+      // ── Anti-doublon 3 (ceinture-bretelle) : si _mysigle n'était
+      // pas encore chargé au moment où le message a été créé localement,
+      // le filtre 1 a pu rater. On regarde si on a un message LOCAL
+      // identique (même auteur+contenu, ±15s) → si oui, on ne réaffiche pas.
+      // Important pour l'utilisateur qui voit son propre message
+      // remonter du collecteur.
+      var mTime = m.horodatage ? new Date(m.horodatage).getTime() : 0;
+      var isDup = _messages.some(function(local) {
+        if (!local || local.origine === "ght") return false;
+        if (local.auteur_nom !== m.auteur_nom) return false;
+        if (local.contenu !== m.contenu) return false;
+        var lTime = local.horodatage ? new Date(local.horodatage).getTime() : 0;
+        return Math.abs(lTime - mTime) < 15000; // 15s de tolérance
+      });
+      if (isDup) return;
+
       // Créer un pseudo-message au format local
       var pseudo = {
         id:           "coll-" + m.id,

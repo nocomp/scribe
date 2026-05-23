@@ -41,11 +41,10 @@ ADMIN_FILE = str(BASE_DIR / "collecteur_exo_admin.json")
 UI_AUTH_FILE = str(BASE_DIR / "collecteur_exo_ui_auth.json")
 SCENARIOS_DIR = ROOT_DIR / "scenarios"
 
-# Instances exercice
-EXO_INSTANCES = {
-    "CHAG":8660,"GHTLMB":8661,"CHRUMILLY":8662,
-    "HDLEMAN":8663,"HPMB":8664,"CHB":8665,"CHPG":8666,
-}
+try:
+    EXO_INSTANCES = json.loads(os.environ.get("SCRIBE_EXO_PORTS_JSON", "{}"))
+except (json.JSONDecodeError, ValueError):
+    EXO_INSTANCES = {}
 EXO_HOST = os.environ.get("SCRIBE_EXO_HOST","http://localhost")
 
 app = FastAPI(title="SCRIBE Collecteur Exercice",version="2.3.101")
@@ -176,41 +175,10 @@ def _make_admin_token() -> str:
 
 ADMIN_TOKEN = _make_admin_token()
 
-# v2315-public — Tokens d'authentification fédération.
-# AVANT (privé) : tokens prévisibles `token_exo_<sigle>_2026`.
-# APRÈS (public) : tokens dérivés d'une seed locale unique générée au
-# 1er lancement (~/.scribe_federation_seed) et persistante. Un attaquant
-# qui ne connaît pas la seed ne peut pas forger de token.
-# Si tu veux tes propres tokens explicites, ajoute-les dans
-# collecteur_exo_tokens.json (overwrite la map ci-dessous).
-def _get_or_make_seed():
-    """Retourne (et crée si besoin) une seed locale pour dériver les tokens.
-    Stockée en clair dans un fichier home — non secrète, mais imprévisible."""
-    import os, hashlib, secrets
-    seed_file = Path(os.path.expanduser("~/.scribe_federation_seed"))
-    if seed_file.exists():
-        try: return seed_file.read_text().strip()
-        except Exception: pass
-    seed = secrets.token_urlsafe(32)
-    try:
-        seed_file.write_text(seed)
-        seed_file.chmod(0o600)
-    except Exception as e:
-        logger.warning(f"Impossible d'écrire la seed fédération: {e}")
-    return seed
-
-_FED_SEED = _get_or_make_seed()
-
-def _derive_token(sigle: str) -> str:
-    """Dérive un token déterministe (sigle, seed) → token. Pas réversible."""
-    import hashlib
-    h = hashlib.sha256(f"{_FED_SEED}:{sigle.upper()}".encode()).hexdigest()
-    return f"fed_{h[:32]}"
-
 def load_tokens():
     global tokens
     for sigle in EXO_INSTANCES:
-        tokens[_derive_token(sigle)] = sigle
+        tokens[f"token_exo_{sigle.lower()}_2026"] = sigle
     if Path(TOKENS_FILE).exists():
         try: tokens.update(json.loads(Path(TOKENS_FILE).read_text()))
         except: pass
@@ -247,7 +215,7 @@ def check_creds(login:str, pwd:str) -> bool:
     import hashlib
     auth_data = {"users":[
         {"login":"animateur","password_hash":hashlib.sha256(b"Animateur2026!").hexdigest(),"role":"admin"},
-        {"login":"supervision","password_hash":hashlib.sha256(b"Scribe2026!").hexdigest(),"role":"admin"},
+        {"login":"supervision","password_hash":hashlib.sha256(b"changeme").hexdigest(),"role":"admin"},
     ]}
     if Path(UI_AUTH_FILE).exists():
         try: auth_data = json.loads(Path(UI_AUTH_FILE).read_text())
@@ -472,7 +440,7 @@ async def import_xml_scenario(request:Request, auth=Depends(require_auth)):
                     "responsabilites": [r.text.strip() for r in j.findall(".//resp") if r.text],
                 })
             scenario["acteurs"].append({
-                "sigle": a.get("sigle", "CHAG"),
+                "sigle": a.get("sigle", "DEMO"),
                 "nom_etablissement": t(a, "nom_etablissement"),
                 "role": a.get("role", "participant"),
                 "port": int(a.get("port", "8660")),
@@ -498,7 +466,7 @@ async def import_xml_scenario(request:Request, auth=Depends(require_auth)):
         scenario["stimuli"].append({
             "id": t(s, "id", f"S{len(scenario['stimuli'])+1:02d}"),
             "t_min": float(t(s, "t_min", "0")),
-            "cible": t(s, "cible", "CHAG"),
+            "cible": t(s, "cible", "DEMO"),
             "type": t(s, "type", "incident"),
             "titre": t(s, "titre", ""),
             "description_animateur": t(s, "description_animateur", ""),
@@ -553,7 +521,7 @@ async def save_scenario(request:Request, auth=Depends(require_auth)):
 
 # ── Génération IA ──────────────────────────────────────────────────────────────
 class GenRequest(BaseModel):
-    sujet:str; nb_sites:int=1; sites:list=["CHAG"]
+    sujet:str; nb_sites:int=1; sites:list=["DEMO"]
     duree_exercice_min:int=60; duree_reel_min:int=240
     complexite:str="MOYEN"; type_crise:str="SANITAIRE"; langue:str="fr"
     nb_joueurs:int=4; nb_stimuli:int=8
@@ -571,14 +539,14 @@ class GenRequest(BaseModel):
 ALBERT_URL   = "https://albert.api.etalab.gouv.fr/v1/chat/completions"
 ALBERT_MODEL = "mistralai/Ministral-3-8B-Instruct-2512"
 ALBERT_KEY   = os.environ.get("SCRIBE_IA_KEY",
-    os.getenv("ALBERT_API_KEY", ""))
+    "")
 
 SYSTEM_EXO = """Tu es expert en gestion de crise hospitalière française. Tu génères des scénarios d'exercice réalistes pour équipes GHT. Tu réponds UNIQUEMENT en JSON valide, sans texte autour."""
 
 def _prompt_scenario(b:GenRequest) -> str:
     ratio = round(b.duree_reel_min/b.duree_exercice_min,1)
     sid = datetime.now().strftime("%Y%m%d_%H%M")
-    ports = {"CHAG":8660,"GHTLMB":8661,"CHRUMILLY":8662,"HDLEMAN":8663,"HPMB":8664,"CHB":8665,"CHPG":8666}
+    ports = {"DEMO1":8660,"DEMO2":8661,"DEMO3":8662,"DEMO4":8663,"DEMO5":8664,"DEMO6":8665,"DEMO7":8666}
     
     # Construire les instructions spécifiques
     type_instructions = {
@@ -641,25 +609,25 @@ CONTRAINTE DE SITE — IMPORTANT :
 - NE JAMAIS cibler un site non listé. Les "cible" des stimuli doivent strictement appartenir à : {", ".join(b.sites)}.
 
 NOMS DES ÉTABLISSEMENTS — pour la rédaction des textes :
-- Les sigles à utiliser dans les champs "cible", "sigle" et les identifiants sont : CHAG, GHTLMB, CHRUMILLY, HDLEMAN, HPMB, CHB, CHPG.
+- Les sigles à utiliser dans les champs "cible", "sigle" et les identifiants sont : DEMO1, DEMO2, DEMO3, DEMO4, DEMO5, DEMO6, DEMO7.
 - MAIS dans les textes en langage naturel (titres, descriptions, faits, contenus de messages), utilisez le VRAI nom :
-  * CHAG = "CHANGE" (Centre Hospitalier ANnecy-GEnevois)
-  * GHTLMB = "Hôpitaux du Léman" ou "Thonon"
-  * CHRUMILLY = "CH Rumilly"
-  * HDLEMAN = "Hôpitaux du Pays du Mont-Blanc"
-  * HPMB = "Hôpital Privé Mont-Blanc"
-  * CHB = "CH Bonneville"
-  * CHPG = "CH Pays de Gex"
-- Exemple CORRECT : titre "Afflux massif au CHANGE", cible "CHAG".
-- Exemple INCORRECT : titre "Afflux massif au CHAG" (on utilise le nom long dans les textes).
+  * DEMO1 = "Hôpital de Démonstration 1"
+  * DEMO2 = "Hôpital de Démonstration 2"
+  * DEMO3 = "Hôpital de Démonstration 3"
+  * DEMO4 = "Hôpital de Démonstration 4"
+  * DEMO5 = "Hôpital de Démonstration 5"
+  * DEMO6 = "Hôpital de Démonstration 6"
+  * DEMO7 = "Hôpital de Démonstration 7"
+- Exemple CORRECT : titre "Afflux massif au site démo 1", cible "DEMO1".
+- Exemple INCORRECT : titre "Afflux massif au DEMO1" (on utilise le nom long dans les textes).
 
 Retourne UNIQUEMENT ce JSON valide (rien d'autre, pas de texte avant ou après):
-{{"meta":{{"id":"exo_{sid}","titre":"<titre court et évocateur>","description":"<2-3 phrases>","duree_min":{b.duree_exercice_min},"duree_reel_min":{b.duree_reel_min},"ratio_compression":{ratio},"complexite":"{b.complexite}","type_crise":"{b.type_crise}","objectifs_pedagogiques":["<obj1>","<obj2>","<obj3>"]}},"acteurs":[{{"sigle":"{b.sites[0] if b.sites else "CHAG"}","nom_etablissement":"<nom complet>","role":"coordinateur","port":{ports.get(b.sites[0] if b.sites else "CHAG",8660)},"joueurs":[{{"username":"dircrise","display_name":"<prénom NOM — Directeur de Crise>","role_exercice":"<rôle précis dans l'exercice>","responsabilites":["<resp1>","<resp2>"]}}]}}],"stimuli":[{{"id":"S01","t_min":0,"cible":"{b.sites[0] if b.sites else "CHAG"}","type":"incident","titre":"<titre court>","description_animateur":"<contexte pour animateur — ce que les joueurs doivent faire>","payload":{{"fait":"<description précise pour les joueurs>","urgency":3,"type_crise":"{b.type_crise}","site_id":"<SIGLE>","unite_fonctionnelle":"<service>","declarant_nom":"<qui déclare>","analyse":"","jalons_labels":["<jalon1>","<jalon2>","<jalon3>"]}},"action_attendue":"<décision ou action attendue des joueurs>"}}],"decisions_attendues":[{{"t_min":5,"contenu":"<décision>","responsable":"Directeur de crise","obligatoire":true}}],"debriefing_guide":{{"points_cles":["<point1>","<point2>"],"questions_debriefing":["<question1>","<question2>"],"pieges_frequents":["<piège1>"]}}}}
+{{"meta":{{"id":"exo_{sid}","titre":"<titre court et évocateur>","description":"<2-3 phrases>","duree_min":{b.duree_exercice_min},"duree_reel_min":{b.duree_reel_min},"ratio_compression":{ratio},"complexite":"{b.complexite}","type_crise":"{b.type_crise}","objectifs_pedagogiques":["<obj1>","<obj2>","<obj3>"]}},"acteurs":[{{"sigle":"{b.sites[0] if b.sites else "DEMO1"}","nom_etablissement":"<nom complet>","role":"coordinateur","port":{ports.get(b.sites[0] if b.sites else "DEMO1",8660)},"joueurs":[{{"username":"dircrise","display_name":"<prénom NOM — Directeur de Crise>","role_exercice":"<rôle précis dans l'exercice>","responsabilites":["<resp1>","<resp2>"]}}]}}],"stimuli":[{{"id":"S01","t_min":0,"cible":"{b.sites[0] if b.sites else "DEMO1"}","type":"incident","titre":"<titre court>","description_animateur":"<contexte pour animateur — ce que les joueurs doivent faire>","payload":{{"fait":"<description précise pour les joueurs>","urgency":3,"type_crise":"{b.type_crise}","site_id":"<SIGLE>","unite_fonctionnelle":"<service>","declarant_nom":"<qui déclare>","analyse":"","jalons_labels":["<jalon1>","<jalon2>","<jalon3>"]}},"action_attendue":"<décision ou action attendue des joueurs>"}}],"decisions_attendues":[{{"t_min":5,"contenu":"<décision>","responsable":"Directeur de crise","obligatoire":true}}],"debriefing_guide":{{"points_cles":["<point1>","<point2>"],"questions_debriefing":["<question1>","<question2>"],"pieges_frequents":["<piège1>"]}}}}
 
 RÈGLES STRICTES:
 - EXACTEMENT {b.nb_stimuli} stimuli, espacés progressivement (T+0, T+5, T+10...)
 - Types stimuli disponibles: incident, message, transfert, chat, decision
-- Ports fixes: CHAG=8660 GHTLMB=8661 CHRUMILLY=8662 HDLEMAN=8663 HPMB=8664 CHB=8665 CHPG=8666
+- Ports fixes: DEMO1=8660 DEMO2=8661 DEMO3=8662 DEMO4=8663 DEMO5=8664 DEMO6=8665 DEMO7=8666
 - EXACTEMENT {b.nb_joueurs} joueurs répartis sur les sites
 - JSON VALIDE UNIQUEMENT — pas de backtick, pas de commentaire, pas de texte hors JSON"""
 
@@ -1672,7 +1640,7 @@ async def get_sites_actifs_public():
     Réponse minimale pour limiter la surface d'exposition :
       {
         "running": bool,
-        "sites": ["CHAG", "HDLEMAN", ...]
+        "sites": ["DEMO1", "DEMO2", ...]
       }
     Si aucun exercice actif : running=False, sites=[].
     """
@@ -1850,21 +1818,21 @@ def _template_json_skeleton() -> dict:
             "type_crise": "CYBER",
             "complexite": "MOYEN",
             "duree_min": 60,
-            "sites": ["CHAG"],
+            "sites": ["DEMO"],
             "nb_joueurs": 5,
             "auteur": "À compléter",
             "date_creation": "2026-04-21"
         },
         "joueurs": [
-            {"nom": "Martin DUPONT", "role": "Directeur général", "site": "CHAG"},
-            {"nom": "Claire MOREAU", "role": "RSSI", "site": "CHAG"}
+            {"nom": "Martin DUPONT", "role": "Directeur général", "site": "DEMO"},
+            {"nom": "Claire MOREAU", "role": "RSSI", "site": "DEMO"}
         ],
         "stimuli": [
             {
                 "id": "S01",
                 "type": "incident",
                 "t_min": 0,
-                "cible": "CHAG",
+                "cible": "DEMO",
                 "titre": "Premier incident",
                 "description_animateur": "Ce que l'animateur doit savoir",
                 "action_attendue": "Ce que les joueurs doivent faire",
@@ -1880,7 +1848,7 @@ def _template_json_skeleton() -> dict:
                 "id": "S02",
                 "type": "message",
                 "t_min": 10,
-                "cible": "CHAG",
+                "cible": "DEMO",
                 "titre": "Message chat",
                 "description_animateur": "Contexte du message",
                 "action_attendue": "Réaction des joueurs",
@@ -1892,14 +1860,14 @@ def _template_json_skeleton() -> dict:
                 "id": "S03",
                 "type": "transfert",
                 "t_min": 25,
-                "cible": "CHAG",
+                "cible": "DEMO",
                 "titre": "Transfert patient urgent",
                 "description_animateur": "Contexte du transfert",
                 "action_attendue": "Coordination du transfert",
                 "payload": {
                     "unite_origine": "Urgences",
-                    "etablissement_destination": "GHTLMB",
-                    "site_destination": "Hôpitaux du Léman",
+                    "etablissement_destination": "DEMO2",
+                    "site_destination": "Hôpital de Démonstration 2",
                     "unite_destination": "Réanimation",
                     "motif": "Saturation locale",
                     "mode_transport": "SMUR",
@@ -1933,11 +1901,11 @@ async def get_template_csv(auth=Depends(require_auth)):
         # En-tête explicite des colonnes attendues
         "id,type,t_min,cible,titre,description_animateur,action_attendue,contenu_ou_fait,urgency,declarant_nom,unite_fonctionnelle,etablissement_destination,unite_destination,motif,mode_transport,urgence",
         # Exemple incident
-        'S01,incident,0,CHAG,"Panne SI","Le SI tombe","Activer PCA","DPI inaccessible depuis 5 min",3,"Technicien DSI","DSI","","","","",""',
+        'S01,incident,0,DEMO,"Panne SI","Le SI tombe","Activer PCA","DPI inaccessible depuis 5 min",3,"Technicien DSI","DSI","","","","",""',
         # Exemple message
-        'S02,message,10,CHAG,"Message ARS","L\'ARS demande info","Répondre sous 30 min","Demande urgente d\'information ARS",2,"","","","","","",""',
+        'S02,message,10,DEMO,"Message ARS","L\'ARS demande info","Répondre sous 30 min","Demande urgente d\'information ARS",2,"","","","","","",""',
         # Exemple transfert
-        'S03,transfert,25,CHAG,"Transfert SMUR","Saturation","Coordonner avec GHTLMB","",3,"","",GHTLMB,"Réanimation","Saturation locale",SMUR,URGENT',
+        'S03,transfert,25,DEMO,"Transfert SMUR","Saturation","Coordonner avec DEMO2","",3,"","",DEMO2,"Réanimation","Saturation locale",SMUR,URGENT',
     ]
     content = "\n".join(rows) + "\n"
     return Response(
@@ -1967,7 +1935,7 @@ async def get_template_xlsx(auth=Depends(require_auth)):
         ("type_crise", "CYBER", "CYBER / SANITAIRE / MIXTE / RH / TERTIAIRE"),
         ("complexite", "MOYEN", "FACILE / MOYEN / DIFFICILE / EXPERT"),
         ("duree_min", 60, "Durée en minutes"),
-        ("sites", "CHAG,GHTLMB", "Sites séparés par virgule"),
+        ("sites", "DEMO,DEMO2", "Sites séparés par virgule"),
         ("nb_joueurs", 5, ""),
         ("auteur", "Prénom NOM", ""),
     ]
@@ -1982,24 +1950,24 @@ async def get_template_xlsx(auth=Depends(require_auth)):
                "unite_fonctionnelle", "etablissement_destination",
                "unite_destination", "motif", "mode_transport", "urgence"]
     ws_stim.append(headers)
-    ws_stim.append(["S01", "incident", 0, "CHAG", "Panne SI",
+    ws_stim.append(["S01", "incident", 0, "DEMO", "Panne SI",
                     "Le SI tombe", "Activer PCA",
                     "DPI inaccessible depuis 5 min", 3,
                     "Technicien DSI", "DSI", "", "", "", "", ""])
-    ws_stim.append(["S02", "message", 10, "CHAG", "Message ARS",
+    ws_stim.append(["S02", "message", 10, "DEMO", "Message ARS",
                     "L'ARS demande info", "Répondre sous 30 min",
                     "Demande urgente d'information ARS", 2,
                     "", "", "", "", "", "", ""])
-    ws_stim.append(["S03", "transfert", 25, "CHAG", "Transfert SMUR",
-                    "Saturation", "Coordonner avec GHTLMB",
-                    "", 3, "", "", "GHTLMB", "Réanimation",
+    ws_stim.append(["S03", "transfert", 25, "DEMO", "Transfert SMUR",
+                    "Saturation", "Coordonner avec DEMO2",
+                    "", 3, "", "", "DEMO2", "Réanimation",
                     "Saturation locale", "SMUR", "URGENT"])
 
     # Feuille 3 : Joueurs
     ws_joueurs = wb.create_sheet("Joueurs")
     ws_joueurs.append(["nom", "role", "site"])
-    ws_joueurs.append(["Martin DUPONT", "Directeur général", "CHAG"])
-    ws_joueurs.append(["Claire MOREAU", "RSSI", "CHAG"])
+    ws_joueurs.append(["Martin DUPONT", "Directeur général", "DEMO"])
+    ws_joueurs.append(["Claire MOREAU", "RSSI", "DEMO"])
 
     # Écrire en mémoire
     import io

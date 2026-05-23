@@ -393,5 +393,19 @@
     "sexe_h": "Łóżka męskie",
     "sexe_f": "Łóżka żeńskie",
     "sexe_i": "Łóżka neutralne"
+  },
+  "master": {
+    "title": "📦 SCRIBE — Sterowanie instancjami",
+    "subtitle": "Uruchamiaj, konfiguruj i nadzoruj instancje z jednego punktu",
+    "tab_instances": "Instancje",
+    "tab_profil": "Profil bazowy (UF)",
+    "add_custom_title": "➕ Dodaj instancję niestandardową",
+    "field_port": "Port",
+    "field_sigle": "Kod",
+    "field_address": "Adres",
+    "field_login": "Login",
+    "field_password": "Hasło",
+    "btn_add": "+ Dodaj",
+    "field_sync": "🔗 Synchronizuj z nadzorem"
   }
 }

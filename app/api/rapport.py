@@ -570,7 +570,7 @@ def archiver_crise(
                         f"Permet de rejouer la crise pour valider les mesures de "
                         f"remédiation mises en place."
                     ),
-                    cible_sigle="CHAG",
+                    cible_sigle="DEMO",
                     anonymize=anonymiser,
                     type_crise="MIXTE",
                     complexite="MOYEN",

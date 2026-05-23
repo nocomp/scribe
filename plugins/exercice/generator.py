@@ -59,7 +59,7 @@ STRUCTURE JSON ATTENDUE (respecter exactement) :
       "joueurs": [
         {{
           "username": "dir_chag_exo",
-          "display_name": "Directeur de Crise CHAG",
+          "display_name": "Directeur de Crise DEMO",
           "role_exercice": "Directeur de cellule de crise",
           "responsabilites": ["activation plan blanc", "contact SAMU", "coordination inter-GHT"]
         }}
@@ -109,7 +109,7 @@ CONTRAINTES IMPORTANTES :
 - Les types de stimuli disponibles : incident, message, transfert, chat, capacite, decision
 - Pour les exercices multi-sites : alterner les stimuli entre les sites pour forcer la coordination
 - Les usernames doivent être en minuscules sans accents ni espaces
-- Les ports : CHAG=8660, GHTLMB=8661, CHRUMILLY=8662, HDLEMAN=8663, HPMB=8664, CHB=8665, CHPG=8666
+- Les ports : DEMO=8660, DEMO2=8661, DEMO3=8662, DEMO4=8663, DEMO5=8664, DEMO6=8665, DEMO7=8666
 - Adapter la complexité : FACILE=alertes simples, MOYEN=coordination inter-services, DIFFICILE=multi-sites, EXPERT=gestion de crise complète avec complications
 
 Génère maintenant le scénario complet en JSON valide."""
@@ -133,7 +133,7 @@ async def generate_scenario(
 
     ratio = round(duree_reel_min / duree_exercice_min, 1)
     id_auto = datetime.now().strftime("%Y%m%d_%H%M")
-    sites_str = ", ".join(sites) if sites else "CHAG"
+    sites_str = ", ".join(sites) if sites else "DEMO"
 
     prompt = PROMPT_TEMPLATE.format(
         sujet=sujet,
@@ -251,7 +251,7 @@ Génère un bilan pédagogique complet en JSON :
   "points_forts": ["Point fort 1", "Point fort 2"],
   "axes_amelioration": ["Axe 1", "Axe 2"],
   "analyse_par_site": {{
-    "CHAG": {{
+    "DEMO": {{
       "note": 8.0,
       "commentaire": "...",
       "points_forts": ["..."],

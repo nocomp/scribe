@@ -393,5 +393,19 @@
     "sexe_h": "Camas hombres",
     "sexe_f": "Camas mujeres",
     "sexe_i": "Camas neutras"
+  },
+  "master": {
+    "title": "📦 SCRIBE — Pilotaje de instancias",
+    "subtitle": "Lanzar, configurar y supervisar instancias desde un único punto",
+    "tab_instances": "Instancias",
+    "tab_profil": "Perfil base (UF)",
+    "add_custom_title": "➕ Añadir instancia personalizada",
+    "field_port": "Puerto",
+    "field_sigle": "Código",
+    "field_address": "Dirección",
+    "field_login": "Usuario",
+    "field_password": "Contraseña",
+    "btn_add": "+ Añadir",
+    "field_sync": "🔗 Sincronizar con la supervisión"
   }
 }

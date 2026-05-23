@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>SCRIBE — Mode Exercice</title>
+<style>
+  /* Charte DSFR officielle, identique à instances.html */
+  :root {
+    --bleu-france:    #000091;
+    --rouge-marianne: #E1000F;
+    --orange-exo:     #B34000; /* couleur dédiée au mode exercice */
+    --orange-exo-bg:  #FEECC2;
+    --blanc:          #FFFFFF;
+    --fond:           #F6F6F6;
+    --texte:          #161616;
+    --gris-clair:     #DDDDDD;
+    --gris-bord:      #CECECE;
+    --gris:           #666666;
+    --gris-leger:     #999999;
+    --etat-nominal:     #18753C;
+    --etat-nominal-bg:  #B8FEC9;
+    --etat-erreur:      #CE0500;
+    --etat-erreur-bg:   #FFE9E5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--fond);
+    color: var(--texte);
+    margin: 0; padding: 0;
+  }
+  header {
+    background: var(--bleu-france);
+    color: white;
+    padding: 16px 24px;
+    border-bottom: 4px solid var(--orange-exo);
+  }
+  header h1 { margin: 0; font-size: 1.3em; }
+  header .sub { font-size: 0.85em; opacity: 0.85; margin-top: 4px; }
+  header .badge-exo {
+    display: inline-block;
+    background: var(--orange-exo);
+    color: white;
+    padding: 2px 10px;
+    border-radius: 3px;
+    font-size: 0.75em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-left: 12px;
+    vertical-align: middle;
+  }
+  main {
+    max-width: 1400px;
+    margin: 24px auto;
+    padding: 0 24px;
+  }
+  .card {
+    background: white;
+    border: 1px solid var(--gris-clair);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  /* ── Bloc supervision ───────────────────────────────────────── */
+  .superv-bar {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    background: white;
+    border: 1px solid var(--gris-clair);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .superv-bar.actif {
+    border-left: 6px solid var(--etat-nominal);
+    background: linear-gradient(to right, var(--etat-nominal-bg) 0px, white 80px);
+  }
+  .superv-bar.inactif {
+    border-left: 6px solid var(--gris-leger);
+  }
+  .superv-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+  }
+  .dot {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--gris-leger);
+  }
+  .superv-bar.actif .dot { background: var(--etat-nominal); box-shadow: 0 0 0 4px rgba(24,117,60,.18); }
+  .superv-text-small { font-size: 0.82em; color: var(--gris); margin-top: 2px; }
+  /* ── Boutons ────────────────────────────────────────────────── */
+  .btn-primary, .btn-secondary, .btn-danger, .btn-success, .btn-icon {
+    cursor: pointer;
+    padding: 7px 14px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: inherit;
+    border: 1px solid transparent;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-primary {
+    background: var(--bleu-france);
+    color: white;
+  }
+  .btn-primary:hover { background: #00006a; }
+  .btn-primary:disabled { background: var(--gris-leger); cursor: not-allowed; }
+  .btn-secondary {
+    background: var(--gris-clair);
+    color: var(--texte);
+  }
+  .btn-secondary:hover { background: #ccc; }
+  .btn-danger {
+    background: var(--rouge-marianne);
+    color: white;
+  }
+  .btn-danger:hover { background: #aa000c; }
+  .btn-success {
+    background: var(--etat-nominal);
+    color: white;
+  }
+  .btn-success:hover { background: #135a2c; }
+  .btn-icon {
+    padding: 4px 8px;
+    background: transparent;
+    border: 1px solid var(--gris-bord);
+  }
+  .btn-icon:hover { background: var(--gris-clair); }
+  /* ── Tableau d'instances ────────────────────────────────────── */
+  .header-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 1.4fr 1fr 1fr auto;
+    gap: 14px;
+    align-items: center;
+    color: var(--gris);
+    font-size: 0.78em;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    margin-bottom: 8px;
+  }
+  .instance-card {
+    display: grid;
+    grid-template-columns: 80px 1fr 1.4fr 1fr 1fr auto;
+    gap: 14px;
+    align-items: center;
+    background: white;
+    border: 1px solid var(--gris-clair);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+  }
+  .instance-card.actif {
+    border-left: 4px solid var(--etat-nominal);
+  }
+  .instance-card.erreur {
+    border-left: 4px solid var(--etat-erreur);
+    background: var(--etat-erreur-bg);
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .field input, .field select {
+    padding: 6px 9px;
+    border: 1px solid var(--gris-bord);
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: inherit;
+    width: 100%;
+  }
+  .field-pwd { display: flex; gap: 4px; align-items: center; }
+  .field-pwd input { flex: 1; }
+  .port-cell {
+    font-family: "SF Mono", Consolas, monospace;
+    font-weight: 600;
+    color: var(--bleu-france);
+    font-size: 0.95em;
+  }
+  .actions { display: flex; gap: 6px; }
+  .actions .btn-icon { padding: 4px 8px; font-size: 0.85em; }
+  .meta { font-size: 0.78em; color: var(--gris); margin-top: 2px; }
+  .field-pwd-row { font-family: "SF Mono", Consolas, monospace; font-size: 0.85em; color: var(--gris); }
+  /* Toast */
+  #toast {
+    position: fixed;
+    top: 80px;
+    right: 24px;
+    padding: 12px 18px;
+    border-radius: 4px;
+    color: white;
+    font-weight: 500;
+    z-index: 9999;
+    display: none;
+    max-width: 400px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  }
+  #toast.ok { background: var(--etat-nominal); }
+  #toast.err { background: var(--etat-erreur); }
+  #toast.warn { background: var(--orange-exo); color: white; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎯 SCRIBE — Mode Exercice <span class="badge-exo">EXERCICE</span></h1>
+  <div class="sub">Pilotage des sessions d'entraînement et de simulation de crise</div>
+</header>
+
+<main>
+
+  <!-- ─── Bloc supervision exercice ───────────────────────────── -->
+  <div class="superv-bar" id="superv-bar">
+    <div class="superv-status">
+      <span class="dot"></span>
+      <span id="superv-label">Supervision exercice arrêtée</span>
+    </div>
+    <div class="superv-text-small" id="superv-detail">
+      Le collecteur exercice :8565 doit être démarré pour permettre aux instances
+      de se synchroniser.
+    </div>
+    <div id="superv-actions">
+      <button class="btn-primary" onclick="startCollecteur()" id="btn-coll-start">
+        ▶ Lancer la supervision exercice
+      </button>
+    </div>
+    <button class="btn-secondary" onclick="refreshAll()" title="Rafraîchir">🔄</button>
+  </div>
+
+  <!-- Actions globales -->
+  <div style="display:flex; gap:8px; margin-bottom: 16px; flex-wrap: wrap;">
+    <button class="btn-secondary" onclick="resetAllDbs()" title="Supprime toutes les DBs exercice et l'état du collecteur. Toutes les instances doivent être arrêtées.">
+      🔄 Réinitialiser les bases exercice
+    </button>
+    <a href="/" class="btn-secondary" style="text-decoration: none;">← Retour à la supervision</a>
+  </div>
+
+  <!-- ─── Tableau des 10 instances exercice ───────────────────── -->
+  <div class="card">
+    <h3 style="margin: 0 0 12px 0;">Instances exercice (ports 8660–8669)</h3>
+    <div class="header-row">
+      <div>Port</div>
+      <div>Sigle</div>
+      <div>Adresse</div>
+      <div>Login</div>
+      <div>Mot de passe</div>
+      <div>Actions</div>
+    </div>
+    <div id="instances-list">
+      <div style="text-align: center; color: var(--gris); padding: 24px;">
+        Chargement…
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+const TOK_KEY = 'admin_token';
+
+function getAdminToken() {
+  // Essai 1 : token stocké par le collecteur parent au switch d'onglet
+  let token = localStorage.getItem("collecteur_admin_token") ||
+              localStorage.getItem("admin_token");
+  if (token) return token;
+  // Essai 2 : prompt (cas debug — page chargée hors iframe)
+  token = prompt("Token admin du collecteur (Bearer) :");
+  if (token) localStorage.setItem("admin_token", token);
+  return token;
+}
+
+function authHeaders(extra) {
+  return Object.assign({Authorization: 'Bearer ' + getAdminToken()}, extra || {});
+}
+function toast(msg, type) {
+  type = type || 'ok';
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = type;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.style.display = 'none',
+                     type === 'err' ? 6000 : 3500);
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ─── Status global ────────────────────────────────────────────
+async function refreshStatus() {
+  try {
+    const r = await fetch('/api/master/exercice/status', {headers: authHeaders()});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const s = await r.json();
+    const bar = document.getElementById('superv-bar');
+    const lbl = document.getElementById('superv-label');
+    const det = document.getElementById('superv-detail');
+    const acts = document.getElementById('superv-actions');
+    if (s.collecteur_actif) {
+      bar.className = 'superv-bar actif';
+      lbl.textContent = '✓ Supervision exercice ACTIVE';
+      det.textContent = s.collecteur_url + ' (PID ' + s.collecteur_pid + ') — ' + s.instances_actives + ' instance(s) active(s) sur ' + s.instances_total;
+      acts.innerHTML =
+        '<a href="' + s.collecteur_url + '" target="_blank" class="btn-success">↗ Ouvrir l\'animateur</a>' +
+        ' <button class="btn-danger" onclick="stopCollecteur()">⏸ Arrêter la supervision</button>';
+    } else {
+      bar.className = 'superv-bar inactif';
+      lbl.textContent = 'Supervision exercice arrêtée';
+      det.textContent = 'Le collecteur exercice :8565 doit être démarré pour permettre aux instances de se synchroniser.';
+      acts.innerHTML = '<button class="btn-primary" onclick="startCollecteur()">▶ Lancer la supervision exercice</button>';
+    }
+    return s;
+  } catch (e) {
+    toast('Erreur status : ' + e.message, 'err');
+    return null;
+  }
+}
+
+// ─── Collecteur exercice ──────────────────────────────────────
+async function startCollecteur() {
+  const btn = document.querySelector('#superv-actions button');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Démarrage…'; }
+  try {
+    const r = await fetch('/api/master/exercice/collecteur/start', {
+      method: 'POST', headers: authHeaders(),
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || ('HTTP ' + r.status)); }
+    toast('✓ Supervision exercice démarrée', 'ok');
+    await refreshStatus();
+  } catch (e) {
+    toast('Erreur démarrage : ' + e.message, 'err');
+    await refreshStatus();
+  }
+}
+
+async function stopCollecteur() {
+  if (!confirm('Arrêter la supervision exercice ?\n\nToutes les instances exercice actives seront aussi arrêtées.')) return;
+  try {
+    const r = await fetch('/api/master/exercice/collecteur/stop', {
+      method: 'POST', headers: authHeaders(),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    toast('Supervision exercice arrêtée', 'warn');
+    await refreshAll();
+  } catch (e) {
+    toast('Erreur arrêt : ' + e.message, 'err');
+  }
+}
+
+async function resetAllDbs() {
+  if (!confirm('Réinitialiser toutes les bases exercice ?\n\nCette action :\n  • supprime les DBs des 10 instances exercice\n  • efface l\'état du collecteur exercice\n  • garde les scénarios "example_*.json"\n\nLes scénarios générés (non-démos) seront supprimés.\n\nLes instances doivent être toutes arrêtées au préalable.')) return;
+  try {
+    const r = await fetch('/api/master/exercice/reset', {
+      method: 'POST', headers: authHeaders(),
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || ('HTTP ' + r.status)); }
+    const data = await r.json();
+    toast('✓ Reset OK — ' + data.instances_dbs + ' DB(s) + ' + data.collecteur_state_files + ' fichier(s) collecteur', 'ok');
+    await refreshAll();
+  } catch (e) {
+    toast('Reset impossible : ' + e.message, 'err');
+  }
+}
+
+// ─── Instances exercice ───────────────────────────────────────
+async function refreshInstances() {
+  try {
+    const r = await fetch('/api/master/exercice/instances', {headers: authHeaders()});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    renderInstances(data.instances);
+  } catch (e) {
+    document.getElementById('instances-list').innerHTML =
+      '<div style="color:var(--etat-erreur); padding:14px;">Erreur : ' + esc(e.message) + '</div>';
+  }
+}
+
+function renderInstances(instances) {
+  const html = instances.map(inst => {
+    const cfg = inst.config;
+    const port = cfg.port;
+    const actif = inst.statut === 'actif' && inst.alive;
+    const erreur = inst.statut === 'erreur';
+    const cls = actif ? 'actif' : (erreur ? 'erreur' : '');
+    const adr = cfg.adresse || '';
+    const adrMeta = (cfg.latitude != null && cfg.longitude != null)
+      ? ('📍 ' + Number(cfg.latitude).toFixed(4) + ', ' + Number(cfg.longitude).toFixed(4))
+      : '<span style="color:var(--gris-leger)">Géoloc à renseigner</span>';
+
+    let actionsHtml = '';
+    if (actif) {
+      actionsHtml =
+        '<a class="btn-icon" href="http://localhost:' + port + '" target="_blank" title="Ouvrir">↗</a>' +
+        '<button class="btn-icon" onclick="copyCreds(' + port + ')" title="Copier login/mdp">📋</button>' +
+        '<button class="btn-danger" onclick="stopInstance(' + port + ')">⏸</button>';
+    } else {
+      actionsHtml =
+        '<button class="btn-success" onclick="startInstance(' + port + ')">▶ Lancer</button>';
+    }
+
+    return (
+      '<div class="instance-card ' + cls + '" data-port="' + port + '">' +
+        '<div class="port-cell">:' + port + '</div>' +
+
+        '<div class="field">' +
+          '<input type="text" value="' + esc(cfg.sigle) + '" ' +
+                 'onchange="updateField(' + port + ', \'sigle\', this.value)" ' +
+                 (actif ? 'disabled' : '') + ' placeholder="Sigle EXO">' +
+        '</div>' +
+
+        '<div class="field">' +
+          '<input type="text" value="' + esc(adr) + '" ' +
+                 'onchange="updateField(' + port + ', \'adresse\', this.value)" ' +
+                 (actif ? 'disabled' : '') + ' placeholder="Adresse complète">' +
+          '<div class="meta">' + adrMeta +
+            (actif ? '' : ' <button class="btn-icon" onclick="geocode(' + port + ')" title="Géocoder l\'adresse" style="padding:1px 6px;font-size:0.85em">🌍</button>') +
+          '</div>' +
+        '</div>' +
+
+        '<div class="field">' +
+          '<input type="text" value="' + esc(cfg.admin_login) + '" ' +
+                 'onchange="updateField(' + port + ', \'admin_login\', this.value)" ' +
+                 (actif ? 'disabled' : '') + ' placeholder="Login admin">' +
+        '</div>' +
+
+        '<div class="field">' +
+          '<div class="field-pwd">' +
+            '<input type="text" value="' +
+                   (actif ? '••••••••' : '(masqué — utilisez 📋)') + '" disabled>' +
+            (actif ? '' : '<button class="btn-icon" onclick="regenPwd(' + port + ')" title="Regénérer">🎲</button>') +
+          '</div>' +
+        '</div>' +
+
+        '<div class="actions">' + actionsHtml + '</div>' +
+      '</div>'
+    );
+  }).join('');
+  document.getElementById('instances-list').innerHTML = html ||
+    '<div style="text-align:center;color:var(--gris);padding:24px">Aucune instance configurée.</div>';
+}
+
+let _updateTimer = null;
+function updateField(port, field, value) {
+  // Debounce : 600ms après la dernière frappe
+  clearTimeout(_updateTimer);
+  _updateTimer = setTimeout(async () => {
+    try {
+      const body = {};
+      body[field] = value;
+      const r = await fetch('/api/master/exercice/instances/' + port, {
+        method: 'PUT',
+        headers: authHeaders({'Content-Type': 'application/json'}),
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.detail || ('HTTP ' + r.status)); }
+      // Pas de toast pour ne pas noyer
+    } catch (e) {
+      toast('Erreur sauvegarde : ' + e.message, 'err');
+    }
+  }, 600);
+}
+
+async function geocode(port) {
+  // Récupérer l'adresse actuellement saisie
+  const card = document.querySelector('[data-port="' + port + '"]');
+  const inputs = card.querySelectorAll('input');
+  const adr = inputs[1] ? inputs[1].value.trim() : '';
+  if (!adr) { toast('Adresse vide', 'warn'); return; }
+  try {
+    const r = await fetch('/api/master/geocode?q=' + encodeURIComponent(adr), {
+      headers: authHeaders(),
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || ('HTTP ' + r.status)); }
+    const g = await r.json();
+    // Sauvegarder lat/lon
+    await fetch('/api/master/exercice/instances/' + port, {
+      method: 'PUT',
+      headers: authHeaders({'Content-Type': 'application/json'}),
+      body: JSON.stringify({latitude: g.lat, longitude: g.lon, adresse: adr}),
+    });
+    toast('📍 Géocodé : ' + g.display_name, 'ok');
+    refreshInstances();
+  } catch (e) {
+    toast('Géocodage : ' + e.message, 'err');
+  }
+}
+
+async function regenPwd(port) {
+  if (!confirm('Régénérer un nouveau mot de passe pour le port ' + port + ' ?')) return;
+  try {
+    // Génération côté serveur via PUT vide → __post_init__ ne génère pas, donc
+    // on génère un mot de passe ici côté JS (16 chars)
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+    let pwd = '';
+    for (let i = 0; i < 14; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+    pwd += '!';
+    const r = await fetch('/api/master/exercice/instances/' + port, {
+      method: 'PUT',
+      headers: authHeaders({'Content-Type': 'application/json'}),
+      body: JSON.stringify({admin_password: pwd}),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    toast('🎲 Nouveau mot de passe généré', 'ok');
+  } catch (e) {
+    toast('Erreur regen : ' + e.message, 'err');
+  }
+}
+
+async function copyCreds(port) {
+  try {
+    const r = await fetch('/api/master/exercice/instances/' + port + '/credentials', {
+      headers: authHeaders(),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const c = await r.json();
+    const txt = c.url + '\nLogin : ' + c.login + '\nMot de passe : ' + c.password;
+    await navigator.clipboard.writeText(txt);
+    toast('📋 Identifiants copiés dans le presse-papiers', 'ok');
+  } catch (e) {
+    toast('Copie : ' + e.message, 'err');
+  }
+}
+
+async function startInstance(port) {
+  try {
+    const r = await fetch('/api/master/exercice/instances/' + port + '/start', {
+      method: 'POST', headers: authHeaders(),
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || ('HTTP ' + r.status)); }
+    const data = await r.json();
+    toast('✓ Instance exercice :' + port + ' démarrée (PID ' + data.pid + ')', 'ok');
+    await refreshAll();
+  } catch (e) {
+    toast('Démarrage :' + port + ' : ' + e.message, 'err');
+    await refreshInstances();
+  }
+}
+
+async function stopInstance(port) {
+  if (!confirm('Arrêter l\'instance exercice :' + port + ' ?')) return;
+  try {
+    const r = await fetch('/api/master/exercice/instances/' + port + '/stop', {
+      method: 'POST', headers: authHeaders(),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    toast('Instance :' + port + ' arrêtée', 'warn');
+    await refreshAll();
+  } catch (e) {
+    toast('Arrêt :' + port + ' : ' + e.message, 'err');
+  }
+}
+
+async function refreshAll() {
+  await refreshStatus();
+  await refreshInstances();
+}
+
+// ─── Init ─────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  refreshAll();
+  // Refresh auto toutes les 8 secondes (statut collecteur + instances)
+  setInterval(refreshAll, 8000);
+});
+</script>
+
+</body>
+</html>

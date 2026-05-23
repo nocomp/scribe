@@ -42,9 +42,13 @@ def get_units(hospital_name: str, db: Session = Depends(get_db)):
     h = db.query(Hospital).filter(Hospital.nom == hospital_name).first()
     if not h:
         return []
+    # v2.4.7 : ne renvoie que les UF actives (les inactives restent en DB
+    # pour préserver l'intégrité référentielle des incidents historiques,
+    # mais elles n'apparaissent plus dans les dropdowns VEILLE/CAPACITÉ)
     return (
         db.query(UniteFonctionnelle)
         .filter(UniteFonctionnelle.hospital_id == h.id)
+        .filter((UniteFonctionnelle.actif == True) | (UniteFonctionnelle.actif == None))
         .order_by(UniteFonctionnelle.libelle)
         .all()
     )
@@ -52,12 +56,13 @@ def get_units(hospital_name: str, db: Session = Depends(get_db)):
 
 @router.get("/poles")
 def get_poles(db: Session = Depends(get_db)):
-    """Liste des pôles actifs (hors UF supprimées)."""
+    """Liste des pôles actifs (hors UF supprimées/désactivées)."""
     from sqlalchemy import func as sqlfunc
     poles = (
         db.query(UniteFonctionnelle.pole, sqlfunc.count().label("n"))
         .filter(UniteFonctionnelle.pole != "", UniteFonctionnelle.pole != None,
                 ~UniteFonctionnelle.pole.like("RAPPEL%"))
+        .filter((UniteFonctionnelle.actif == True) | (UniteFonctionnelle.actif == None))  # v2.4.7
         .group_by(UniteFonctionnelle.pole)
         .order_by(UniteFonctionnelle.pole)
         .all()
@@ -186,7 +191,7 @@ def get_ufs_by_site(site: str = "", db: Session = Depends(get_db)):
     """Retourne les services/UF d'un site depuis le référentiel capacitaire."""
     from app.models import CapaciteReferentiel, UniteFonctionnelle, Hospital
     
-    # D'abord essayer CapaciteReferentiel (source principale CHAG)
+    # D'abord essayer CapaciteReferentiel (source principale DEMO)
     q = db.query(CapaciteReferentiel)
     if site:
         q = q.filter(CapaciteReferentiel.site == site)

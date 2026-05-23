@@ -39,7 +39,7 @@ for username, display, role in COMPTES:
         created += 1
 
 # Forcer le mot de passe de dircrise en mode exercice
-# (au cas où la DB existerait déjà avec Scribe2026!)
+# (au cas où la DB existerait déjà avec changeme)
 existing_admin = db.query(User).filter_by(username="dircrise").first()
 if existing_admin:
     existing_admin.hashed_password = _ctx.hash(PWD)

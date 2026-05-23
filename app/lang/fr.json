@@ -393,5 +393,19 @@
     "sexe_h": "Lits hommes",
     "sexe_f": "Lits femmes",
     "sexe_i": "Lits indiff."
+  },
+  "master": {
+    "title": "📦 SCRIBE — Pilotage des instances",
+    "subtitle": "Lance, configure et supervise les instances depuis un point unique",
+    "tab_instances": "Instances",
+    "tab_profil": "Profil de base (UF)",
+    "add_custom_title": "➕ Ajouter une instance personnalisée",
+    "field_port": "Port",
+    "field_sigle": "Sigle",
+    "field_address": "Adresse",
+    "field_login": "Login",
+    "field_password": "Mot de passe",
+    "btn_add": "+ Ajouter",
+    "field_sync": "🔗 Synchroniser avec la supervision"
   }
 }

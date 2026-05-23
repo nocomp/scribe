@@ -70,7 +70,7 @@ class AIConfig:
     """Configuration du fournisseur IA, chargée une fois au démarrage."""
 
     def __init__(self):
-        # v2.0.5 — Priorité de lecture :
+        # v2321 — Priorité de lecture :
         #   1. config.IA (qui a déjà appliqué instance/ia_config.json + env vars)
         #   2. fallback config.js IA section (legacy)
         # Ainsi l'admin qui sauvegarde via UI voit son changement pris en compte
@@ -282,3 +282,53 @@ async def call_ai(system: str, prompt: str, max_tokens: int = 700) -> Tuple[str,
         )
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"IA indisponible ({cfg.provider}) : {str(e)}")
+
+
+# ── Helper "IA configurée ?" — fix UX transversal v2.1.0 ────────────────────
+
+# Providers cloud : clé API obligatoire.
+_CLOUD_PROVIDERS = {"albert", "openai", "anthropic", "gemini", "mistral"}
+# Providers locaux : clé API optionnelle, mais base_url indispensable.
+_LOCAL_PROVIDERS = {"ollama", "openai_compat"}
+
+
+def require_ia_configured() -> Optional[dict]:
+    """
+    Retourne None si une IA est utilisable, sinon un dict d'erreur structurée
+    à passer en `detail` d'une HTTPException(400).
+
+    Le frontend (apiFetch dans scribe.js) reconnaît le marqueur
+    `error: "ia_not_configured"` et affiche un pop-up DSFR uniforme,
+    quel que soit l'endpoint qui a déclenché l'erreur.
+
+    Pattern d'usage dans une route IA :
+        @router.post("/analyser")
+        async def analyser(...):
+            err = require_ia_configured()
+            if err:
+                raise HTTPException(status_code=400, detail=err)
+            # ... appel à call_ai() ...
+    """
+    cfg = get_ai_config()
+    missing = None
+
+    if not cfg.provider:
+        missing = "fournisseur IA"
+    elif cfg.provider in _CLOUD_PROVIDERS and not cfg.api_key:
+        missing = "clé API"
+    elif cfg.provider in _LOCAL_PROVIDERS and not cfg.base_url:
+        missing = "URL du serveur local"
+    # Si provider inconnu mais clé fournie : on laisse passer (compat openai_compat custom)
+
+    if missing is None:
+        return None
+
+    return {
+        "error":     "ia_not_configured",
+        "message":   f"L'IA n'est pas configurée pour utiliser cette fonction "
+                     f"(manquant : {missing}).",
+        "action":    "Demandez à votre administrateur de configurer un fournisseur IA "
+                     "dans l'espace administration (Configuration → APIs & IA).",
+        "admin_url": "/#admin-ia",
+        "provider":  cfg.provider or None,
+    }

@@ -165,7 +165,7 @@ def save_data():
 
 # ── App FastAPI ───────────────────────────────────────────────────────────
 
-app = FastAPI(title="SCRIBE Collecteur territorial", version="1.2.0")
+app = FastAPI(title="SCRIBE Collecteur territorial", version="1.2.1")
 
 # ── CORS : middleware http natif Starlette ────────────────────────────────
 @app.middleware("http")
@@ -210,6 +210,22 @@ async def global_exc_handler(request: _Req2, exc: Exception):
         "Access-Control-Allow-Origin": origin,
         "Access-Control-Allow-Credentials": "true",
     })
+
+
+# ─── INTÉGRATION MASTER (pilotage d'instances) ───────────────────────────────
+# v2323 : permet de lancer/arrêter/configurer les instances SCRIBE depuis l'UI
+# Le module master/ est optionnel — si absent, le collecteur tourne normalement.
+try:
+    import sys as _sys, os as _os
+    _master_path = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    if _master_path not in _sys.path:
+        _sys.path.insert(0, _master_path)
+    from master.master_routes import router as _master_router, lifecycle_register as _master_lifecycle
+    app.include_router(_master_router)
+    _master_lifecycle(app)
+    print("[master] Module pilotage instances activé")
+except Exception as _e:
+    print(f"[master] Module non chargé (OK si non utilisé) : {_e}")
 
 
 security = HTTPBearer(auto_error=False)
@@ -354,7 +370,7 @@ async def accept_pending(token_prefix: str, body: dict = {}):
 
 @app.post("/api/admin/tokens/demo", dependencies=[Depends(require_admin)])
 async def register_demo_tokens():
-    """Enregistre les tokens démo — utile si l'auto-register a échoué."""
+    """Enregistre les 4 tokens démo démo — utile si l'auto-register a échoué."""
     added = []
     for tok, sigle in DEMO_TOKENS.items():
         if tok not in tokens:
@@ -362,7 +378,7 @@ async def register_demo_tokens():
             added.append(sigle)
     if added:
         save_tokens()
-        logger.info(f"Tokens Arc Alpin enregistrés manuellement : {added}")
+        logger.info(f"Tokens démo enregistrés manuellement : {added}")
     return {"ok": True, "added": added, "total": len(tokens),
             "message": f"{len(added)} token(s) ajouté(s), {len(tokens)} token(s) total"}
 
@@ -939,8 +955,7 @@ async def chat_get_presence(credentials=Depends(security)):
 async def get_annuaire_interght():
     import httpx
     result = []
-    PORT_MAP = {"CHAG":"8000","GHTLMB":"8001","GHTSAV":"8002","GHTAD38":"8003",
-                "CHRUMILLY":"8002","HDLEMAN":"8003","HPMB":"8004","CHB":"8005","CHPG":"8006"}
+    PORT_MAP = {}
     for token, sigle in tokens.items():
         etab_data = etablissements.get(sigle)
         if not etab_data:
@@ -1214,7 +1229,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--b
   <div style="display:flex;flex-direction:column;gap:4px"><label style="font-family:monospace;font-size:9px;color:#64748b;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:3px">Mot de passe</label><input id="coll-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key===String.fromCharCode(13))collLogin()" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:5px;font-family:monospace;font-size:11px;color:#0f172a;background:#f8fafc;outline:none;box-sizing:border-box;width:100%"></div>
   <button onclick="collLogin()" style="width:100%;padding:10px;font-family:monospace;font-size:12px;font-weight:700;letter-spacing:2px;background:#003189;color:#fff;border:none;border-radius:5px;cursor:pointer;margin-top:4px">CONNEXION</button>
   <div id="coll-err" style="font-family:monospace;font-size:10px;color:#e1000f;text-align:center;min-height:14px"></div>
-  <div style="font-family:monospace;font-size:9px;color:#94a3b8;text-align:center;margin-top:8px">© Centre Hospitalier Annecy-Genevois — SCRIBE Crisis OS<br>Accès réservé aux personnels autorisés</div>
+  <div id="coll-default-hint" style="display:none;background:#e3e3fd;border-radius:4px;padding:10px 12px;font-family:monospace;font-size:10px;color:#000091;line-height:1.5;text-align:left;margin-top:4px">
+    <strong>Première connexion ?</strong><br>
+    Identifiant : <code style="background:rgba(0,0,145,.1);padding:1px 4px;border-radius:2px">supervision</code><br>
+    Mot de passe : <code style="background:rgba(0,0,145,.1);padding:1px 4px;border-radius:2px">changeme</code><br>
+    <span style="font-size:9px;opacity:.7">À changer après le premier login (onglet Comptes).</span>
+  </div>
+  <div style="font-family:monospace;font-size:9px;color:#94a3b8;text-align:center;margin-top:8px">SCRIBE — Crisis OS Open Source<br>Accès réservé aux personnels autorisés</div>
 </div>
 </div>
 <script>
@@ -1242,6 +1263,19 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--b
   const app = document.getElementById('app');
   if (ls) { ls.style.display='flex'; }
   if (app) { app.style.display='none'; }
+
+  // Si premier lancement (aucune instance configurée), afficher le hint
+  // avec les credentials par défaut pour que le nouvel utilisateur ne soit
+  // pas perdu devant l'écran de login.
+  fetch('api/ui/first-launch').then(r => r.ok ? r.json() : null).then(s => {
+    if (s && s.first_launch) {
+      const hint = document.getElementById('coll-default-hint');
+      if (hint) hint.style.display = 'block';
+      // Pré-remplir le champ login pour faciliter
+      const loginInp = document.getElementById('coll-login');
+      if (loginInp && !loginInp.value) loginInp.value = 'supervision';
+    }
+  }).catch(()=>{});
 })();
 
 async function collLogin() {
@@ -1267,7 +1301,7 @@ async function collLogin() {
 
   <!-- KPI BAR -->
   <div id="kpi-bar">
-    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v2.3.32</div>
+    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v2.5.0</div>
     <div class="kpi-cell"><span class="kpi-label">GHT</span><span class="kpi-val" id="k-ght">—</span></div>
     <div class="kpi-cell" style="cursor:pointer" title="Délai avant masquage incidents résolus (clic pour modifier)">
       <span class="kpi-label">RÉSOLU → masqué</span>
@@ -1294,6 +1328,8 @@ async function collLogin() {
     <button class="tab-btn" onclick="switchTab('statuts',this)">▦ STATUTS PUBLICS</button>
     <button class="tab-btn" onclick="switchTab('chat',this)">💬 CHAT</button>
     <button class="tab-btn" onclick="switchTab('comptes',this)">&#128100; COMPTES</button>
+    <button class="tab-btn" onclick="switchTab('instances',this)">📦 INSTANCES</button>
+    <button class="tab-btn" onclick="switchTab('exercice',this)" style="border-left:1px solid var(--border);margin-left:6px;padding-left:14px" title="Mode exercice / simulation">🎯 EXERCICE</button>
     <div class="tab-spacer"></div>
   </div>
 
@@ -1315,16 +1351,6 @@ async function collLogin() {
           <div id="pending-list"></div>
         </div>
         <!-- Relay section -->
-        <!-- Fix tokens section -->
-        <div style="border-bottom:1px solid var(--border);padding:6px 12px;background:rgba(249,115,22,.04)">
-          <div style="font-family:var(--mono);font-size:8px;color:var(--muted2);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
-            <span>🔧 TOKENS ARC ALPIN</span>
-            <button onclick="registerArcAlpinTokens()" style="font-family:var(--mono);font-size:7px;padding:2px 8px;background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.4);border-radius:3px;color:#f97316;cursor:pointer">
-              ⚡ Enregistrer
-            </button>
-          </div>
-          <div style="font-family:var(--mono);font-size:7px;color:var(--muted)">Si supervision vide → cliquer pour forcer l'enregistrement des tokens démo</div>
-        </div>
         <div id="relay-section" style="border-bottom:1px solid var(--border);padding:8px 12px">
           <div style="font-family:var(--mono);font-size:8px;letter-spacing:1px;color:var(--muted2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
             <span>⇪ RELAIS UPSTREAM</span>
@@ -1402,6 +1428,15 @@ async function collLogin() {
         <div id="comptes-list"></div>
       </div>
     </div>
+  </div>
+
+  <!-- INSTANCES (master) -->
+  <div id="pane-instances" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0;width:100%;height:100%">
+    <iframe id="master-iframe" src="about:blank" style="border:0;width:100%;height:100%;flex:1"></iframe>
+  </div>
+
+  <div id="pane-exercice" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0;width:100%;height:100%">
+    <iframe id="exercice-iframe" src="about:blank" style="border:0;width:100%;height:100%;flex:1"></iframe>
   </div>
 
   </div><!-- /main -->
@@ -1482,7 +1517,7 @@ async function collLogin() {
       <div id="accept-info" style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.8;padding:8px 10px;background:var(--s3);border-radius:5px;border:1px solid var(--border2)"></div>
       <div>
         <label class="form-label">SIGLE OFFICIEL</label>
-        <input id="accept-sigle" type="text" class="form-input" placeholder="ex: CHANGE">
+        <input id="accept-sigle" type="text" class="form-input" placeholder="ex: DEMO1">
       </div>
       <input id="accept-token" type="hidden">
     </div>
@@ -1536,7 +1571,7 @@ function closeModal(id) {
 function switchTab(id, btn) {
   // Masquer tous les panes (classe tab-pane ET nos panes custom)
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  ['pane-chat','pane-comptes'].forEach(pid => {
+  ['pane-chat','pane-comptes','pane-instances','pane-exercice'].forEach(pid => {
     var el = document.getElementById(pid);
     if (el) el.style.display = 'none';
   });
@@ -1545,7 +1580,7 @@ function switchTab(id, btn) {
   // Panes natifs via classe active
   var pane = document.getElementById('pane-' + id);
   if (pane) {
-    if (id === 'chat' || id === 'comptes') {
+    if (id === 'chat' || id === 'comptes' || id === 'instances' || id === 'exercice') {
       pane.style.display = 'flex';
     } else {
       pane.classList.add('active');
@@ -1561,6 +1596,43 @@ function switchTab(id, btn) {
       var tok = localStorage.getItem('coll_session') || '';
       // Toujours recharger avec le token frais
       iframe.src = 'chat/ui?token=' + encodeURIComponent(tok);
+    }
+  }
+  if (id === 'instances') {
+    // Charger l'UI master dans l'iframe avec le token admin pré-stocké
+    var iframe = document.getElementById('master-iframe');
+    if (iframe) {
+      // Stocker le token admin pour que l'UI master le récupère
+      try { localStorage.setItem('admin_token', ADMIN_TOKEN); } catch(e){}
+      // v2.4.8.3 : on TOUJOURS interroge /onboarding/status, sans condition
+      // sur iframe.src. Le bug précédent : si l'iframe était déjà sur
+      // /api/master/ui (après quickDemo par ex), cliquer "🎯 Wizard" puis
+      // recharger la page ne réinterrogeait plus le statut, donc l'iframe
+      // restait sur l'UI normale alors que show_wizard=true.
+      // Coût : un appel /status à chaque switch d'onglet (négligeable).
+      fetch('/api/master/onboarding/status', {headers: {Authorization: 'Bearer ' + ADMIN_TOKEN}})
+        .then(r => r.ok ? r.json() : null)
+        .then(s => {
+          var target = (s && s.show_wizard) ? '/api/master/onboarding/ui' : '/api/master/ui';
+          // Ne reload que si l'URL cible diffère de l'actuelle (évite un
+          // flicker sur les switches d'onglet répétés)
+          if (!iframe.src || iframe.src === 'about:blank' || iframe.src.indexOf(target) < 0) {
+            iframe.src = target;
+          }
+        })
+        .catch(() => {
+          if (iframe.src === 'about:blank') iframe.src = '/api/master/ui';
+        });
+    }
+  }
+  if (id === 'exercice') {
+    // Charger l'UI exercice (mode simulation) dans l'iframe
+    var iframe = document.getElementById('exercice-iframe');
+    if (iframe) {
+      try { localStorage.setItem('admin_token', ADMIN_TOKEN); } catch(e){}
+      if (iframe.src === 'about:blank' || iframe.src.indexOf('master/exercice/ui') < 0) {
+        iframe.src = '/api/master/exercice/ui';
+      }
     }
   }
   if (id === 'comptes') loadComptes();
@@ -1579,6 +1651,23 @@ let resolvedHideMinutes = parseInt(localStorage.getItem('scribe_hide_min') || '3
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('k-hide-delay');
   if (el) el.textContent = resolvedHideMinutes + 'min';
+
+  // Auto-redirect vers le wizard d'onboarding si aucune instance configurée.
+  // L'utilisateur vient de se connecter à la supervision : si le master est
+  // vide, on bascule directement sur l'onglet Instances qui chargera le wizard.
+  fetch('/api/master/onboarding/status', {
+    headers: {Authorization: 'Bearer ' + ADMIN_TOKEN}
+  }).then(r => r.ok ? r.json() : null)
+    .then(s => {
+      if (s && s.show_wizard) {
+        const btn = document.querySelector('[onclick*="switchTab(\'instances\'"]');
+        if (btn) {
+          // Bascule sur l'onglet Instances (qui chargera l'iframe wizard)
+          btn.click();
+        }
+      }
+    })
+    .catch(() => {});
 });
 
 function promptHideDelay() {
@@ -1848,13 +1937,12 @@ function renderDetail(e) {
 function initMap() {
   if (map) return;
   map = L.map('map', {zoomControl:true}).setView([45.5, 6.2], 8);
-  // Attributions cartographiques conformes (v2.0.1)
   const _osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors', maxZoom:19});
+    {attribution:'© OpenStreetMap', maxZoom:19});
   const _cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    {attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>', maxZoom:19});
+    {attribution:'CartoDB Light', maxZoom:19});
   const _satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    {attribution:'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener">Esri</a> &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community', maxZoom:19});
+    {attribution:'Esri World Imagery', maxZoom:19});
   const _baseLayers = {'⬜ CartoDB Clair': _cartoLight, '🗺 OpenStreetMap': _osmLayer, '🛰 Satellite': _satellite};
   _cartoLight.addTo(map);
   L.control.layers(_baseLayers, {}, {position:'topright', collapsed:false}).addTo(map);
@@ -2103,7 +2191,7 @@ function renderRelays(relays) {
     <button onclick="deleteRelay(${i})" style="font-family:var(--mono);font-size:7px;padding:2px 5px;background:transparent;border:1px solid rgba(255,45,85,.3);border-radius:3px;color:var(--red);cursor:pointer">✕</button>
   </div>`).join('');
 }
-async function registerArcAlpinTokens() {
+async function registerDemoTokens() {
   const r = await fetch('/api/admin/tokens/demo', {
     method: 'POST',
     headers: {'Authorization': 'Bearer ' + ADMIN_TOKEN}
@@ -2560,8 +2648,8 @@ def load_ui_auth() -> dict:
     import hashlib
     return {
         "login": "supervision",
-        "password_hash": hashlib.sha256("Scribe2026!".encode()).hexdigest(),
-        "users": [{"login": "supervision", "role": "admin", "password_hash": "0a0da7eef0453b6cbd142fcf25f7ac63081c9cb920cba999c1a3a80d1f25dfda"}]
+        "password_hash": hashlib.sha256("changeme".encode()).hexdigest(),
+        "users": [{"login": "supervision", "role": "admin", "password_hash": "057ba03d6c44104863dc7361fe4578965d1887360f90a0895882e58a6248fc86", "must_change_password": True}]
     }
 
 def check_ui_credentials(login: str, password: str) -> bool:
@@ -2688,6 +2776,19 @@ def auth_required():
     auth = load_ui_auth()
     return {"required": bool(auth), "login": auth.get("login","") if auth else ""}
 
+@app.get("/api/ui/first-launch")
+def first_launch():
+    """Indique si c'est le tout premier lancement (aucune instance configurée
+    et aucun compte UI custom n'a été créé). Utilisé pour afficher le hint
+    de credentials par défaut sur l'écran de login."""
+    # Master/onboarding pas fait
+    onboarding_flag = Path("master/.onboarding_done")
+    onboarding_done = onboarding_flag.exists()
+    # Pas de compte UI custom (juste le compte par défaut supervision/changeme)
+    has_custom_users = Path(UI_AUTH_FILE).exists()
+    # Premier lancement = onboarding pas fait ET pas de compte custom
+    return {"first_launch": (not onboarding_done) and (not has_custom_users)}
+
 @app.get("/api/ui/verify")
 def verify_session(credentials=Depends(security)):
     """Vérifie qu'un token de session est toujours valide."""
@@ -2702,20 +2803,8 @@ def verify_session(credentials=Depends(security)):
 
 # ── Démarrage ──────────────────────────────────────────────────────────────
 
-# ── Tokens Arc Alpin démo — enregistrés automatiquement si tokens vides ─────
-# Tokens fédération de démonstration. Pour un déploiement réel, utilise
-# des tokens uniques générés via `openssl rand -hex 32` et stocke-les
-# dans config_fed.xml de chaque instance + ce dictionnaire ici.
-# Ces tokens correspondent aux configs config_exo_ch_*.xml fournies en
-# exemple pour le mode exercice multi-sites.
-DEMO_TOKENS = {
-    "token_ch_nord_demo_2026":      "CH_NORD",
-    "token_ch_sud_demo_2026":       "CH_SUD",
-    "token_ch_est_demo_2026":       "CH_EST",
-    "token_ch_ouest_demo_2026":     "CH_OUEST",
-    "token_chu_centre_demo_2026":   "CHU_CENTRE",
-    "token_clinique_demo_2026":     "CLINIQUE_DEMO",
-}
+# ── Tokens démo démo — enregistrés automatiquement si tokens vides ─────
+DEMO_TOKENS = {}
 
 if __name__ == "__main__":
     load_tokens()
@@ -2731,13 +2820,13 @@ if __name__ == "__main__":
     else:
         print(f"  ℹ Aucun token — les GHTs apparaîtront en ⏳ EN ATTENTE")
         print(f"  → Ouvrir http://localhost:9000 et cliquer ✓ ACCEPTER")
-        print(f"  → OU cliquer ⚡ Enregistrer (section TOKENS ARC ALPIN)")
+        print(f"  → Tokens démo configurables via DEMO_TOKENS dans collecteur.py")
 
     nb_etab = len(tokens)
     nb_data  = len(etablissements)
 
     print("\n  ╔══════════════════════════════════════════════╗")
-    print("  ║  SCRIBE Collecteur territorial  v1.1.1       ║")
+    print("  ║  SCRIBE Collecteur territorial  v1.2.1       ║")
     print("  ╚══════════════════════════════════════════════╝")
     print(f"\n  Dashboard     : http://0.0.0.0:9000")
     print(f"  Etablissements: {nb_etab} token(s) / {nb_data} remontée(s)")
@@ -2745,13 +2834,8 @@ if __name__ == "__main__":
     print(f"  (persistant dans {ADMIN_FILE} — identique à chaque redémarrage)\n")
     if nb_etab == 0:
         print("  ► Aucun établissement enregistré.")
-        print("  → Les GHT qui poussent arrivent en section ⏳ EN ATTENTE")
+        print("  → Les établissements qui poussent arrivent en section ⏳ EN ATTENTE")
         print("  → Ouvrir http://localhost:9000 et cliquer ✓ ACCEPTER\n")
-        print("  Tokens Arc Alpin démo :")
-        print("    CHAG    : vivelafonduevivelafondue")
-        print("    GHTLMB  : token_ghtlmb_demo_2026")
-        print("    GHTSAV  : token_ghtsav_demo_2026")
-        print("    GHTAD38 : token_ghtad38_demo_2026\n")
     else:
         etabs = list(set(tokens.values()))
         print(f"  ► Etablissements actifs : {', '.join(etabs)}")

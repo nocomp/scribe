@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>SCRIBE — Bienvenue</title>
+<style>
+  /* Charte DSFR officielle */
+  :root {
+    --bleu-france:    #000091;
+    --rouge-marianne: #E1000F;
+    --blanc:          #FFFFFF;
+    --fond:           #F6F6F6;
+    --texte:          #161616;
+    --gris-clair:     #DDDDDD;
+    --gris-bord:      #CECECE;
+    --gris:           #666666;
+    --gris-leger:     #999999;
+    --vert:           #18753C;
+    --vert-bg:        #B8FEC9;
+    --orange:         #B34000;
+    --rouge:          #CE0500;
+    --bleu-pale:      #E3E3FD;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(135deg, #f6f6f6 0%, #e8e8f5 100%);
+    color: var(--texte);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+  .lang-selector {
+    position: fixed;
+    top: 16px;
+    right: 24px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  }
+  .lang-selector select {
+    border: 1px solid var(--gris-bord);
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 0.9em;
+    cursor: pointer;
+  }
+  /* ── Splash screen ──────────────────────────────────────── */
+  .splash {
+    max-width: 1100px;
+    margin: 60px auto 40px;
+    padding: 0 24px;
+  }
+  .splash-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .splash-logo {
+    margin-bottom: 12px;
+  }
+  .splash-logo img {
+    height: 72px;
+    width: auto;
+    object-fit: contain;
+  }
+  .splash-title {
+    font-size: 2.2em;
+    color: var(--bleu-france);
+    margin: 0 0 8px 0;
+    font-weight: 700;
+  }
+  .splash-subtitle {
+    font-size: 1.1em;
+    color: var(--gris);
+    margin: 0;
+  }
+  .splash-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 768px) {
+    .splash-grid { grid-template-columns: 1fr; }
+  }
+  .splash-card {
+    background: white;
+    border: 2px solid var(--gris-clair);
+    border-radius: 8px;
+    padding: 28px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
+  }
+  .splash-card:hover {
+    border-color: var(--bleu-france);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,145,.12);
+  }
+  .splash-card-icon {
+    font-size: 2.4em;
+    margin-bottom: 12px;
+  }
+  .splash-card-title {
+    font-size: 1.15em;
+    font-weight: 600;
+    color: var(--bleu-france);
+    margin: 0 0 6px 0;
+  }
+  .splash-card-desc {
+    font-size: 0.92em;
+    color: var(--gris);
+    margin: 0 0 16px 0;
+    flex: 1;
+  }
+  .splash-card-btn {
+    background: var(--bleu-france);
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-size: 0.95em;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: auto;
+    align-self: center;
+  }
+  .splash-card-btn:hover { background: #00006a; }
+  .splash-skip {
+    text-align: center;
+    margin-top: 18px;
+  }
+  .splash-skip a {
+    color: var(--gris);
+    text-decoration: underline;
+    font-size: 0.9em;
+    cursor: pointer;
+  }
+  .splash-skip a:hover { color: var(--bleu-france); }
+  /* ── Wizard ──────────────────────────────────────────────── */
+  .wizard {
+    max-width: 720px;
+    margin: 40px auto;
+    padding: 0 24px;
+    display: none;
+  }
+  .wizard.active { display: block; }
+  .wizard-header {
+    background: white;
+    border-radius: 8px 8px 0 0;
+    padding: 24px;
+    border-bottom: 1px solid var(--gris-clair);
+  }
+  .wizard-step-info {
+    color: var(--gris);
+    font-size: 0.9em;
+    margin-bottom: 4px;
+  }
+  .wizard-title {
+    color: var(--bleu-france);
+    margin: 0;
+    font-size: 1.6em;
+  }
+  .wizard-progress {
+    display: flex;
+    gap: 6px;
+    margin-top: 14px;
+  }
+  .wizard-progress-dot {
+    flex: 1;
+    height: 4px;
+    background: var(--gris-clair);
+    border-radius: 2px;
+  }
+  .wizard-progress-dot.active { background: var(--bleu-france); }
+  .wizard-body {
+    background: white;
+    padding: 28px 24px;
+  }
+  .wizard-footer {
+    background: white;
+    border-radius: 0 0 8px 8px;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--gris-clair);
+  }
+  .field {
+    margin-bottom: 18px;
+  }
+  .field label {
+    display: block;
+    font-weight: 600;
+    color: var(--texte);
+    margin-bottom: 6px;
+    font-size: 0.95em;
+  }
+  .field label .req { color: var(--rouge-marianne); }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--gris-bord);
+    border-radius: 4px;
+    font-size: 1em;
+    font-family: inherit;
+  }
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-color: var(--bleu-france);
+    box-shadow: 0 0 0 3px rgba(0,0,145,.1);
+  }
+  .field-help {
+    font-size: 0.85em;
+    color: var(--gris);
+    margin-top: 4px;
+  }
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .geo-result {
+    background: var(--vert-bg);
+    color: var(--vert);
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-top: 8px;
+    font-size: 0.9em;
+    display: none;
+  }
+  .geo-result.show { display: block; }
+  .pwd-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .pwd-row input { flex: 1; }
+  .pwd-warning {
+    background: #FEF6E5;
+    color: var(--orange);
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin-top: 8px;
+    font-size: 0.88em;
+    border-left: 4px solid var(--orange);
+  }
+  .ia-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .ia-option {
+    border: 2px solid var(--gris-clair);
+    border-radius: 4px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ia-option:hover { border-color: var(--gris); }
+  .ia-option.selected {
+    border-color: var(--bleu-france);
+    background: var(--bleu-pale);
+  }
+  .ia-option label { cursor: pointer; font-weight: 500; margin: 0; }
+  .ia-option-desc { font-size: 0.85em; color: var(--gris); margin-top: 4px; }
+  .recap-section {
+    background: var(--fond);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 14px;
+    border-left: 4px solid var(--bleu-france);
+  }
+  .recap-section h4 {
+    margin: 0 0 8px 0;
+    color: var(--bleu-france);
+    font-size: 0.95em;
+  }
+  .recap-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0;
+    font-size: 0.92em;
+  }
+  .recap-key { color: var(--gris); }
+  .recap-val { color: var(--texte); font-weight: 500; }
+  .btn {
+    cursor: pointer;
+    padding: 9px 18px;
+    border-radius: 4px;
+    font-size: 0.95em;
+    font-family: inherit;
+    border: 1px solid transparent;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary {
+    background: var(--bleu-france);
+    color: white;
+  }
+  .btn-primary:hover:not(:disabled) { background: #00006a; }
+  .btn-secondary {
+    background: var(--gris-clair);
+    color: var(--texte);
+  }
+  .btn-secondary:hover:not(:disabled) { background: #ccc; }
+  .btn-success {
+    background: var(--vert);
+    color: white;
+  }
+  .btn-success:hover:not(:disabled) { background: #135a2c; }
+  /* Toast */
+  #toast {
+    position: fixed;
+    top: 80px;
+    right: 24px;
+    padding: 12px 18px;
+    border-radius: 4px;
+    color: white;
+    font-weight: 500;
+    z-index: 9999;
+    display: none;
+    max-width: 400px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  }
+  #toast.ok { background: var(--vert); }
+  #toast.err { background: var(--rouge); }
+  #toast.warn { background: var(--orange); }
+  /* Spinner */
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* Loading overlay */
+  .loading {
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,.92);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 10000;
+  }
+  .loading.show { display: flex; }
+  .loading-spinner {
+    width: 48px; height: 48px;
+    border: 4px solid var(--gris-clair);
+    border-top-color: var(--bleu-france);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  .loading-msg { margin-top: 18px; color: var(--gris); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="lang-selector">
+  <span style="font-size:0.85em;color:var(--gris)">🌐</span>
+  <select id="lang-select" onchange="changeLang(this.value)">
+    <option value="fr">Français</option>
+    <option value="en">English</option>
+    <option value="de">Deutsch</option>
+    <option value="es">Español</option>
+    <option value="it">Italiano</option>
+    <option value="nl">Nederlands</option>
+    <option value="pl">Polski</option>
+    <option value="pt">Português</option>
+  </select>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!--   SPLASH SCREEN (étape 0)                                              -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<div class="splash" id="splash">
+  <div class="splash-header">
+    <div class="splash-logo"><img src="/static/logo-scribe.png" alt="SCRIBE"></div>
+    <h1 class="splash-title" data-i18n="splash.title">Bienvenue sur SCRIBE</h1>
+    <p class="splash-subtitle" data-i18n="splash.subtitle">Comment souhaitez-vous démarrer ?</p>
+  </div>
+
+  <div class="splash-grid">
+
+    <div class="splash-card" onclick="startWizard()">
+      <div class="splash-card-icon">🎯</div>
+      <h3 class="splash-card-title" data-i18n="splash.card1.title">Wizard guidé</h3>
+      <p class="splash-card-desc" data-i18n="splash.card1.desc">5 étapes pour créer votre établissement depuis zéro. Environ 5 minutes.</p>
+      <button class="splash-card-btn" data-i18n="splash.card1.btn">Commencer</button>
+    </div>
+
+    <div class="splash-card" onclick="document.getElementById('xlsx-input').click()">
+      <div class="splash-card-icon">📥</div>
+      <h3 class="splash-card-title" data-i18n="splash.card2.title">Importer une config existante</h3>
+      <p class="splash-card-desc" data-i18n="splash.card2.desc">Reprendre une configuration depuis un fichier .xlsx (format SCRIBE).</p>
+      <button class="splash-card-btn" data-i18n="splash.card2.btn">Choisir un fichier</button>
+      <input type="file" id="xlsx-input" accept=".xlsx" style="display:none" onchange="onXlsxImport(event)">
+    </div>
+
+    <div class="splash-card" onclick="document.getElementById('zip-input').click()">
+      <div class="splash-card-icon">📦</div>
+      <h3 class="splash-card-title" data-i18n="splash.card3.title">Déployer un GHT complet</h3>
+      <p class="splash-card-desc" data-i18n="splash.card3.desc">Importer un .zip contenant plusieurs établissements (export GHT complet).</p>
+      <button class="splash-card-btn" data-i18n="splash.card3.btn">Choisir un .zip</button>
+      <input type="file" id="zip-input" accept=".zip" style="display:none" onchange="onZipImport(event)">
+    </div>
+
+    <div class="splash-card" onclick="quickDemo()">
+      <div class="splash-card-icon">📚</div>
+      <h3 class="splash-card-title" data-i18n="splash.card4.title">Mode démo</h3>
+      <p class="splash-card-desc" data-i18n="splash.card4.desc">Découvrir SCRIBE avec un établissement fictif pré-configuré.</p>
+      <button class="splash-card-btn" data-i18n="splash.card4.btn">Démarrer la démo</button>
+    </div>
+
+  </div>
+
+  <div class="splash-skip">
+    <a onclick="skipOnboarding()" data-i18n="splash.skip">Passer cette étape — aller à la configuration manuelle</a>
+    <span style="margin: 0 10px; color: var(--gris-leger)">·</span>
+    <a href="/api/master/onboarding/template-xlsx" data-i18n="splash.template">📄 Télécharger le template Excel vierge</a>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<!--   WIZARD                                                               -->
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<div class="wizard" id="wizard">
+  <div class="wizard-header">
+    <div style="text-align:center;margin-bottom:18px">
+      <img src="/static/logo-scribe.png" alt="SCRIBE" style="height:48px;width:auto;object-fit:contain">
+    </div>
+    <div class="wizard-step-info">
+      <span data-i18n="wizard.step">Étape</span>
+      <span id="step-num">1</span>
+      <span data-i18n="wizard.of">sur</span>
+      5
+    </div>
+    <h2 class="wizard-title" id="wizard-title" data-i18n="wizard.step1.title">Identité de l'établissement</h2>
+    <div class="wizard-progress">
+      <div class="wizard-progress-dot active" id="dot-1"></div>
+      <div class="wizard-progress-dot" id="dot-2"></div>
+      <div class="wizard-progress-dot" id="dot-3"></div>
+      <div class="wizard-progress-dot" id="dot-4"></div>
+      <div class="wizard-progress-dot" id="dot-5"></div>
+    </div>
+  </div>
+
+  <div class="wizard-body" id="wizard-body">
+    <!-- contenu dynamique selon l'étape -->
+  </div>
+
+  <div class="wizard-footer">
+    <button class="btn btn-secondary" onclick="prevStep()" id="btn-prev" data-i18n="wizard.btn_prev">← Retour</button>
+    <button class="btn btn-primary" onclick="nextStep()" id="btn-next" data-i18n="wizard.btn_next">Suivant →</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div class="loading" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-msg" id="loading-msg" data-i18n="loading.creating">Création de l'instance…</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//   I18N — traductions multi-langues
+// ═══════════════════════════════════════════════════════════════════
+const I18N = {
+  fr: {
+    'splash.title': 'Bienvenue sur SCRIBE',
+    'splash.subtitle': 'Comment souhaitez-vous démarrer ?',
+    'splash.card1.title': 'Wizard guidé',
+    'splash.card1.desc': '5 étapes pour créer votre établissement depuis zéro. Environ 5 minutes.',
+    'splash.card1.btn': 'Commencer',
+    'splash.card2.title': 'Importer une config existante',
+    'splash.card2.desc': 'Reprendre une configuration depuis un fichier .xlsx (format SCRIBE).',
+    'splash.card2.btn': 'Choisir un fichier',
+    'splash.card3.title': 'Déployer un GHT complet',
+    'splash.card3.desc': 'Importer un .zip contenant plusieurs établissements (export GHT complet).',
+    'splash.card3.btn': 'Choisir un .zip',
+    'splash.card4.title': 'Mode démo',
+    'splash.card4.desc': 'Découvrir SCRIBE avec un établissement fictif pré-configuré.',
+    'splash.card4.btn': 'Démarrer la démo',
+    'splash.skip': 'Passer cette étape — aller à la configuration manuelle',
+    'splash.template': '📄 Télécharger le template Excel vierge',
+    'wizard.step': 'Étape', 'wizard.of': 'sur',
+    'wizard.btn_prev': '← Retour', 'wizard.btn_next': 'Suivant →',
+    'wizard.btn_finish': '✓ Créer et lancer l\'instance',
+    'wizard.btn_export': '💾 Exporter cette config',
+    'wizard.step1.title': 'Identité de l\'établissement',
+    'wizard.step2.title': 'Site principal',
+    'wizard.step3.title': 'Compte administrateur',
+    'wizard.step4.title': 'Intelligence artificielle',
+    'wizard.step5.title': 'Récapitulatif',
+    'field.nom': 'Nom complet de l\'établissement',
+    'field.sigle': 'Sigle (3-5 lettres)',
+    'field.finess': 'N° FINESS (optionnel)',
+    'field.langue': 'Langue interface',
+    'field.langue_instance': 'Langue de l\'instance',
+    'field.langue_hint': 'La langue de l\'instance suit le sélecteur 🌐 en haut. Changez-le si besoin avant de finaliser.',
+    'field.adresse': 'Adresse complète du site principal',
+    'field.geocode': '🌍 Géolocaliser cette adresse',
+    'field.geocoded': 'Coordonnées trouvées',
+    'field.login': 'Login administrateur',
+    'field.password': 'Mot de passe',
+    'field.password_warn': '⚠ Notez ce mot de passe, il ne sera plus affiché par la suite.',
+    'field.generate': '🎲 Générer',
+    'field.nom_affiche': 'Nom affiché dans l\'interface',
+    'ia.skip': 'Pas d\'IA pour l\'instant',
+    'ia.skip_desc': 'Configurer plus tard. SCRIBE fonctionne pleinement sans IA.',
+    'ia.albert': 'Albert (gouvernement français)',
+    'ia.albert_desc': 'Service IA gratuit pour la fonction publique. Clé API requise.',
+    'ia.other': 'Autre fournisseur (OpenAI, Anthropic, Mistral, Ollama)',
+    'ia.other_desc': 'Configuration avancée — vous pourrez choisir le fournisseur après la création.',
+    'recap.etab': 'Établissement', 'recap.site': 'Site',
+    'recap.admin': 'Administrateur', 'recap.ia': 'IA',
+    'recap.port': 'Cette instance va être créée sur le premier port libre',
+    'loading.creating': 'Création de l\'instance…',
+    'loading.demo': 'Démarrage du mode démo…',
+    'loading.import': 'Import du fichier…',
+    'toast.created': '✓ Instance créée avec succès',
+    'toast.error': 'Erreur',
+    'err.required': 'Ce champ est obligatoire',
+    'err.geocode': 'Adresse introuvable. Saisissez les coordonnées manuellement.',
+    'demo.title': 'Mode démo prêt',
+    'demo.intro': 'L\'instance de démonstration a été créée et lancée. Notez ces identifiants — ils s\'afficheront aussi en haut de la mire de connexion.',
+    'demo.url': 'URL',
+    'demo.login': 'Identifiant',
+    'demo.password': 'Mot de passe',
+    'demo.hint': '💡 La démo va s\'ouvrir dans un nouvel onglet. Vous pourrez revenir ici à tout moment, et relancer le wizard depuis le bouton 🎯 dans la liste des instances.',
+    'demo.cancel': 'Annuler',
+    'demo.open': '↗ Ouvrir la démo',
+  },
+  en: {
+    'splash.title': 'Welcome to SCRIBE',
+    'splash.subtitle': 'How do you want to start?',
+    'splash.card1.title': 'Guided wizard',
+    'splash.card1.desc': '5 steps to create your facility from scratch. About 5 minutes.',
+    'splash.card1.btn': 'Start',
+    'splash.card2.title': 'Import existing config',
+    'splash.card2.desc': 'Resume a configuration from an .xlsx file (SCRIBE format).',
+    'splash.card2.btn': 'Choose file',
+    'splash.card3.title': 'Deploy a full HCC',
+    'splash.card3.desc': 'Import a .zip with multiple facilities (full HCC export).',
+    'splash.card3.btn': 'Choose .zip',
+    'splash.card4.title': 'Demo mode',
+    'splash.card4.desc': 'Discover SCRIBE with a fictitious pre-configured facility.',
+    'splash.card4.btn': 'Start demo',
+    'splash.skip': 'Skip — go to manual configuration',
+    'splash.template': '📄 Download the empty Excel template',
+    'wizard.step': 'Step', 'wizard.of': 'of',
+    'wizard.btn_prev': '← Back', 'wizard.btn_next': 'Next →',
+    'wizard.btn_finish': '✓ Create and launch instance',
+    'wizard.btn_export': '💾 Export this config',
+    'wizard.step1.title': 'Facility identity',
+    'wizard.step2.title': 'Main site',
+    'wizard.step3.title': 'Administrator account',
+    'wizard.step4.title': 'Artificial intelligence',
+    'wizard.step5.title': 'Summary',
+    'field.nom': 'Full facility name',
+    'field.sigle': 'Acronym (3-5 letters)',
+    'field.finess': 'FINESS number (optional)',
+    'field.langue': 'Interface language',
+    'field.langue_instance': 'Instance language',
+    'field.langue_hint': 'The instance language follows the 🌐 selector at the top. Change it before finalizing if needed.',
+    'field.adresse': 'Full address of the main site',
+    'field.geocode': '🌍 Geolocate this address',
+    'field.geocoded': 'Coordinates found',
+    'field.login': 'Admin login',
+    'field.password': 'Password',
+    'field.password_warn': '⚠ Save this password, it won\'t be shown again.',
+    'field.generate': '🎲 Generate',
+    'field.nom_affiche': 'Display name in interface',
+    'ia.skip': 'No AI for now',
+    'ia.skip_desc': 'Configure later. SCRIBE works fully without AI.',
+    'ia.albert': 'Albert (French government)',
+    'ia.albert_desc': 'Free AI service for public sector. API key required.',
+    'ia.other': 'Other provider (OpenAI, Anthropic, Mistral, Ollama)',
+    'ia.other_desc': 'Advanced configuration — pick provider after creation.',
+    'recap.etab': 'Facility', 'recap.site': 'Site',
+    'recap.admin': 'Administrator', 'recap.ia': 'AI',
+    'recap.port': 'This instance will be created on the first free port',
+    'loading.creating': 'Creating instance…',
+    'loading.demo': 'Starting demo mode…',
+    'loading.import': 'Importing file…',
+    'toast.created': '✓ Instance successfully created',
+    'toast.error': 'Error',
+    'err.required': 'This field is required',
+    'err.geocode': 'Address not found. Enter coordinates manually.',
+    'demo.title': 'Demo ready',
+    'demo.intro': 'The demo instance has been created and launched. Note these credentials — they will also appear at the top of the login screen.',
+    'demo.url': 'URL',
+    'demo.login': 'Login',
+    'demo.password': 'Password',
+    'demo.hint': '💡 The demo will open in a new tab. You can come back here anytime and relaunch the wizard from the 🎯 button in the instances list.',
+    'demo.cancel': 'Cancel',
+    'demo.open': '↗ Open demo',
+  },
+  // Auto-traduction best-effort — à réviser par un natif
+  de: {
+    'splash.title': 'Willkommen bei SCRIBE',
+    'splash.subtitle': 'Wie möchten Sie beginnen?',
+    'splash.card1.title': 'Geführter Assistent',
+    'splash.card1.desc': '5 Schritte zur Erstellung Ihrer Einrichtung. Etwa 5 Minuten.',
+    'splash.card1.btn': 'Beginnen',
+    'splash.card2.title': 'Bestehende Konfiguration importieren',
+    'splash.card2.desc': 'Konfiguration aus einer .xlsx-Datei laden (SCRIBE-Format).',
+    'splash.card2.btn': 'Datei wählen',
+    'splash.card3.title': 'Vollständiges KH-Netzwerk bereitstellen',
+    'splash.card3.desc': '.zip mit mehreren Einrichtungen importieren.',
+    'splash.card3.btn': '.zip wählen',
+    'splash.card4.title': 'Demo-Modus',
+    'splash.card4.desc': 'SCRIBE mit einer fiktiven vorkonfigurierten Einrichtung entdecken.',
+    'splash.card4.btn': 'Demo starten',
+    'splash.skip': 'Überspringen — manuelle Konfiguration',
+    'splash.template': '📄 Leere Excel-Vorlage herunterladen',
+    'wizard.step': 'Schritt', 'wizard.of': 'von',
+    'wizard.btn_prev': '← Zurück', 'wizard.btn_next': 'Weiter →',
+    'wizard.btn_finish': '✓ Instanz erstellen und starten',
+    'wizard.btn_export': '💾 Diese Konfig exportieren',
+    'wizard.step1.title': 'Einrichtungsidentität',
+    'wizard.step2.title': 'Hauptstandort',
+    'wizard.step3.title': 'Administrator-Konto',
+    'wizard.step4.title': 'Künstliche Intelligenz',
+    'wizard.step5.title': 'Zusammenfassung',
+    'field.nom': 'Vollständiger Einrichtungsname',
+    'field.sigle': 'Kürzel (3-5 Buchstaben)',
+    'field.finess': 'FINESS-Nummer (optional)',
+    'field.langue': 'Oberflächensprache',
+    'field.langue_instance': 'Instanz-Sprache',
+    'field.langue_hint': 'Die Instanz-Sprache folgt der 🌐-Auswahl oben. Ändern Sie sie vor dem Abschluss bei Bedarf.',
+    'field.adresse': 'Vollständige Adresse des Hauptstandorts',
+    'field.geocode': '🌍 Adresse geolokalisieren',
+    'field.geocoded': 'Koordinaten gefunden',
+    'field.login': 'Admin-Login',
+    'field.password': 'Passwort',
+    'field.password_warn': '⚠ Notieren Sie dieses Passwort, es wird nicht erneut angezeigt.',
+    'field.generate': '🎲 Generieren',
+    'field.nom_affiche': 'Anzeigename in der Oberfläche',
+    'ia.skip': 'Vorerst keine KI',
+    'ia.skip_desc': 'Später konfigurieren. SCRIBE funktioniert vollständig ohne KI.',
+    'ia.albert': 'Albert (französische Regierung)',
+    'ia.albert_desc': 'Kostenloser KI-Dienst für öffentlichen Sektor. API-Schlüssel erforderlich.',
+    'ia.other': 'Anderer Anbieter (OpenAI, Anthropic, Mistral, Ollama)',
+    'ia.other_desc': 'Erweiterte Konfiguration — Anbieter nach Erstellung wählen.',
+    'recap.etab': 'Einrichtung', 'recap.site': 'Standort',
+    'recap.admin': 'Administrator', 'recap.ia': 'KI',
+    'recap.port': 'Diese Instanz wird auf dem ersten freien Port erstellt',
+    'loading.creating': 'Instanz wird erstellt…',
+    'loading.demo': 'Demo wird gestartet…',
+    'loading.import': 'Datei wird importiert…',
+    'toast.created': '✓ Instanz erfolgreich erstellt',
+    'toast.error': 'Fehler',
+    'err.required': 'Pflichtfeld',
+    'err.geocode': 'Adresse nicht gefunden. Koordinaten manuell eingeben.',
+    'demo.title': 'Demo bereit',
+    'demo.intro': 'Die Demo-Instanz wurde erstellt und gestartet. Notieren Sie diese Anmeldedaten — sie erscheinen auch oben auf dem Anmeldebildschirm.',
+    'demo.url': 'URL',
+    'demo.login': 'Login',
+    'demo.password': 'Passwort',
+    'demo.hint': '💡 Die Demo öffnet sich in einem neuen Tab. Sie können jederzeit hierher zurückkehren und den Assistenten über die 🎯-Schaltfläche neu starten.',
+    'demo.cancel': 'Abbrechen',
+    'demo.open': '↗ Demo öffnen',
+  },
+  es: {
+    'splash.title': 'Bienvenido a SCRIBE',
+    'splash.subtitle': '¿Cómo desea comenzar?',
+    'splash.card1.title': 'Asistente guiado',
+    'splash.card1.desc': '5 pasos para crear su establecimiento. Unos 5 minutos.',
+    'splash.card1.btn': 'Comenzar',
+    'splash.card2.title': 'Importar config existente',
+    'splash.card2.desc': 'Cargar configuración desde un archivo .xlsx (formato SCRIBE).',
+    'splash.card2.btn': 'Elegir archivo',
+    'splash.card3.title': 'Desplegar GHT completo',
+    'splash.card3.desc': 'Importar .zip con múltiples establecimientos.',
+    'splash.card3.btn': 'Elegir .zip',
+    'splash.card4.title': 'Modo demo',
+    'splash.card4.desc': 'Descubrir SCRIBE con un establecimiento ficticio preconfigurado.',
+    'splash.card4.btn': 'Iniciar demo',
+    'splash.skip': 'Omitir — configuración manual',
+    'splash.template': '📄 Descargar plantilla Excel vacía',
+    'wizard.step': 'Paso', 'wizard.of': 'de',
+    'wizard.btn_prev': '← Atrás', 'wizard.btn_next': 'Siguiente →',
+    'wizard.btn_finish': '✓ Crear y lanzar instancia',
+    'wizard.btn_export': '💾 Exportar esta config',
+    'wizard.step1.title': 'Identidad del establecimiento',
+    'wizard.step2.title': 'Sitio principal',
+    'wizard.step3.title': 'Cuenta de administrador',
+    'wizard.step4.title': 'Inteligencia artificial',
+    'wizard.step5.title': 'Resumen',
+    'field.nom': 'Nombre completo del establecimiento',
+    'field.sigle': 'Sigla (3-5 letras)',
+    'field.finess': 'Número FINESS (opcional)',
+    'field.langue': 'Idioma de interfaz',
+    'field.langue_instance': 'Idioma de la instancia',
+    'field.langue_hint': 'El idioma de la instancia sigue el selector 🌐 de arriba. Cámbielo antes de finalizar si es necesario.',
+    'field.adresse': 'Dirección completa del sitio principal',
+    'field.geocode': '🌍 Geolocalizar esta dirección',
+    'field.geocoded': 'Coordenadas encontradas',
+    'field.login': 'Login admin',
+    'field.password': 'Contraseña',
+    'field.password_warn': '⚠ Guarde esta contraseña, no se mostrará más.',
+    'field.generate': '🎲 Generar',
+    'field.nom_affiche': 'Nombre mostrado en interfaz',
+    'ia.skip': 'Sin IA por ahora',
+    'ia.skip_desc': 'Configurar más tarde. SCRIBE funciona sin IA.',
+    'ia.albert': 'Albert (gobierno francés)',
+    'ia.albert_desc': 'Servicio IA gratuito para sector público. Clave API requerida.',
+    'ia.other': 'Otro proveedor (OpenAI, Anthropic, Mistral, Ollama)',
+    'ia.other_desc': 'Configuración avanzada — proveedor elegido después de creación.',
+    'recap.etab': 'Establecimiento', 'recap.site': 'Sitio',
+    'recap.admin': 'Administrador', 'recap.ia': 'IA',
+    'recap.port': 'Esta instancia se creará en el primer puerto libre',
+    'loading.creating': 'Creando instancia…',
+    'loading.demo': 'Iniciando modo demo…',
+    'loading.import': 'Importando archivo…',
+    'toast.created': '✓ Instancia creada con éxito',
+    'toast.error': 'Error',
+    'err.required': 'Campo obligatorio',
+    'err.geocode': 'Dirección no encontrada. Introducir coordenadas manualmente.',
+    'demo.title': 'Demo listo',
+    'demo.intro': 'La instancia de demo ha sido creada e iniciada. Anote estas credenciales — también aparecerán en la parte superior de la pantalla de inicio de sesión.',
+    'demo.url': 'URL',
+    'demo.login': 'Usuario',
+    'demo.password': 'Contraseña',
+    'demo.hint': '💡 La demo se abrirá en una nueva pestaña. Puede volver aquí en cualquier momento y relanzar el asistente desde el botón 🎯 en la lista de instancias.',
+    'demo.cancel': 'Cancelar',
+    'demo.open': '↗ Abrir demo',
+  },
+  it: {
+    'splash.title': 'Benvenuto in SCRIBE',
+    'splash.subtitle': 'Come desidera iniziare?',
+    'splash.card1.title': 'Procedura guidata',
+    'splash.card1.desc': '5 passaggi per creare il vostro istituto. Circa 5 minuti.',
+    'splash.card1.btn': 'Inizia',
+    'splash.card2.title': 'Importa config esistente',
+    'splash.card2.desc': 'Caricare configurazione da file .xlsx (formato SCRIBE).',
+    'splash.card2.btn': 'Scegli file',
+    'splash.card3.title': 'Distribuire un GHT completo',
+    'splash.card3.desc': 'Importa .zip con più istituti.',
+    'splash.card3.btn': 'Scegli .zip',
+    'splash.card4.title': 'Modalità demo',
+    'splash.card4.desc': 'Scopri SCRIBE con un istituto fittizio preconfigurato.',
+    'splash.card4.btn': 'Avvia demo',
+    'splash.skip': 'Salta — configurazione manuale',
+    'splash.template': '📄 Scarica template Excel vuoto',
+    'wizard.step': 'Passaggio', 'wizard.of': 'di',
+    'wizard.btn_prev': '← Indietro', 'wizard.btn_next': 'Avanti →',
+    'wizard.btn_finish': '✓ Crea e avvia istanza',
+    'wizard.btn_export': '💾 Esporta questa config',
+    'wizard.step1.title': 'Identità istituto',
+    'wizard.step2.title': 'Sito principale',
+    'wizard.step3.title': 'Account amministratore',
+    'wizard.step4.title': 'Intelligenza artificiale',
+    'wizard.step5.title': 'Riepilogo',
+    'field.nom': 'Nome completo istituto',
+    'field.sigle': 'Sigla (3-5 lettere)',
+    'field.finess': 'Numero FINESS (opzionale)',
+    'field.langue': 'Lingua interfaccia',
+    'field.langue_instance': 'Lingua dell\'istanza',
+    'field.langue_hint': 'La lingua dell\'istanza segue il selettore 🌐 in alto. Modificarla prima di finalizzare se necessario.',
+    'field.adresse': 'Indirizzo completo sito principale',
+    'field.geocode': '🌍 Geolocalizza questo indirizzo',
+    'field.geocoded': 'Coordinate trovate',
+    'field.login': 'Login admin',
+    'field.password': 'Password',
+    'field.password_warn': '⚠ Salvare questa password, non sarà più mostrata.',
+    'field.generate': '🎲 Genera',
+    'field.nom_affiche': 'Nome mostrato in interfaccia',
+    'ia.skip': 'Nessuna IA per ora',
+    'ia.skip_desc': 'Configurare più tardi. SCRIBE funziona senza IA.',
+    'ia.albert': 'Albert (governo francese)',
+    'ia.albert_desc': 'Servizio IA gratuito per settore pubblico. Chiave API richiesta.',
+    'ia.other': 'Altro fornitore (OpenAI, Anthropic, Mistral, Ollama)',
+    'ia.other_desc': 'Configurazione avanzata — scegliere fornitore dopo creazione.',
+    'recap.etab': 'Istituto', 'recap.site': 'Sito',
+    'recap.admin': 'Amministratore', 'recap.ia': 'IA',
+    'recap.port': 'Questa istanza sarà creata sulla prima porta libera',
+    'loading.creating': 'Creazione istanza…',
+    'loading.demo': 'Avvio modalità demo…',
+    'loading.import': 'Importazione file…',
+    'toast.created': '✓ Istanza creata con successo',
+    'toast.error': 'Errore',
+    'err.required': 'Campo obbligatorio',
+    'err.geocode': 'Indirizzo non trovato. Inserire coordinate manualmente.',
+    'demo.title': 'Demo pronto',
+    'demo.intro': 'L\'istanza demo è stata creata e avviata. Annota queste credenziali — appariranno anche nella parte superiore della schermata di accesso.',
+    'demo.url': 'URL',
+    'demo.login': 'Login',
+    'demo.password': 'Password',
+    'demo.hint': '💡 La demo si aprirà in una nuova scheda. Puoi tornare qui in qualsiasi momento e riavviare la procedura dal pulsante 🎯 nella lista delle istanze.',
+    'demo.cancel': 'Annulla',
+    'demo.open': '↗ Apri demo',
+  },
+  nl: {
+    'splash.title': 'Welkom bij SCRIBE',
+    'splash.subtitle': 'Hoe wilt u beginnen?',
+    'splash.card1.title': 'Geleide wizard',
+    'splash.card1.desc': '5 stappen om uw instelling te maken. Ongeveer 5 minuten.',
+    'splash.card1.btn': 'Start',
+    'splash.card2.title': 'Bestaande config importeren',
+    'splash.card2.desc': 'Configuratie laden uit .xlsx bestand (SCRIBE formaat).',
+    'splash.card2.btn': 'Bestand kiezen',
+    'splash.card3.title': 'Volledig GHT implementeren',
+    'splash.card3.desc': '.zip met meerdere instellingen importeren.',
+    'splash.card3.btn': '.zip kiezen',
+    'splash.card4.title': 'Demo modus',
+    'splash.card4.desc': 'SCRIBE ontdekken met fictieve voorgeconfigureerde instelling.',
+    'splash.card4.btn': 'Start demo',
+    'splash.skip': 'Overslaan — handmatige configuratie',
+    'splash.template': '📄 Lege Excel sjabloon downloaden',
+    'wizard.step': 'Stap', 'wizard.of': 'van',
+    'wizard.btn_prev': '← Terug', 'wizard.btn_next': 'Volgende →',
+    'wizard.btn_finish': '✓ Instantie maken en starten',
+    'wizard.btn_export': '💾 Deze config exporteren',
+    'wizard.step1.title': 'Instelling identiteit',
+    'wizard.step2.title': 'Hoofdvestiging',
+    'wizard.step3.title': 'Beheerder account',
+    'wizard.step4.title': 'Kunstmatige intelligentie',
+    'wizard.step5.title': 'Samenvatting',
+    'field.nom': 'Volledige naam instelling',
+    'field.sigle': 'Afkorting (3-5 letters)',
+    'field.finess': 'FINESS nummer (optioneel)',
+    'field.langue': 'Interface taal',
+    'field.langue_instance': 'Instantie taal',
+    'field.langue_hint': 'De instantie-taal volgt de 🌐 keuze bovenaan. Wijzig indien nodig voor het afronden.',
+    'field.adresse': 'Volledig adres hoofdvestiging',
+    'field.geocode': '🌍 Dit adres geolocaliseren',
+    'field.geocoded': 'Coördinaten gevonden',
+    'field.login': 'Admin login',
+    'field.password': 'Wachtwoord',
+    'field.password_warn': '⚠ Bewaar dit wachtwoord, het wordt niet meer getoond.',
+    'field.generate': '🎲 Genereren',
+    'field.nom_affiche': 'Weergavenaam in interface',
+    'ia.skip': 'Geen AI voorlopig',
+    'ia.skip_desc': 'Later configureren. SCRIBE werkt volledig zonder AI.',
+    'ia.albert': 'Albert (Franse overheid)',
+    'ia.albert_desc': 'Gratis AI dienst voor publieke sector. API sleutel vereist.',
+    'ia.other': 'Andere provider (OpenAI, Anthropic, Mistral, Ollama)',
+    'ia.other_desc': 'Geavanceerde configuratie — provider kiezen na aanmaak.',
+    'recap.etab': 'Instelling', 'recap.site': 'Vestiging',
+    'recap.admin': 'Beheerder', 'recap.ia': 'AI',
+    'recap.port': 'Deze instantie wordt op de eerste vrije poort aangemaakt',
+    'loading.creating': 'Instantie aanmaken…',
+    'loading.demo': 'Demo modus starten…',
+    'loading.import': 'Bestand importeren…',
+    'toast.created': '✓ Instantie succesvol aangemaakt',
+    'toast.error': 'Fout',
+    'err.required': 'Verplicht veld',
+    'err.geocode': 'Adres niet gevonden. Voer coördinaten handmatig in.',
+    'demo.title': 'Demo gereed',
+    'demo.intro': 'De demo-instantie is aangemaakt en gestart. Noteer deze inloggegevens — ze verschijnen ook bovenaan het inlogscherm.',
+    'demo.url': 'URL',
+    'demo.login': 'Login',
+    'demo.password': 'Wachtwoord',
+    'demo.hint': '💡 De demo opent in een nieuw tabblad. U kunt hier altijd terugkeren en de wizard opnieuw starten via de 🎯-knop in de lijst met instanties.',
+    'demo.cancel': 'Annuleren',
+    'demo.open': '↗ Demo openen',
+  },
+  pl: {
+    'splash.title': 'Witamy w SCRIBE',
+    'splash.subtitle': 'Jak chcesz rozpocząć?',
+    'splash.card1.title': 'Asystent prowadzony',
+    'splash.card1.desc': '5 kroków do utworzenia placówki. Około 5 minut.',
+    'splash.card1.btn': 'Rozpocznij',
+    'splash.card2.title': 'Importuj istniejącą konfigurację',
+    'splash.card2.desc': 'Wczytaj konfigurację z pliku .xlsx (format SCRIBE).',
+    'splash.card2.btn': 'Wybierz plik',
+    'splash.card3.title': 'Wdróż pełny GHT',
+    'splash.card3.desc': 'Importuj .zip z wieloma placówkami.',
+    'splash.card3.btn': 'Wybierz .zip',
+    'splash.card4.title': 'Tryb demo',
+    'splash.card4.desc': 'Odkryj SCRIBE z fikcyjną prekonfigurowaną placówką.',
+    'splash.card4.btn': 'Uruchom demo',
+    'splash.skip': 'Pomiń — konfiguracja ręczna',
+    'splash.template': '📄 Pobierz pusty szablon Excel',
+    'wizard.step': 'Krok', 'wizard.of': 'z',
+    'wizard.btn_prev': '← Wstecz', 'wizard.btn_next': 'Dalej →',
+    'wizard.btn_finish': '✓ Utwórz i uruchom instancję',
+    'wizard.btn_export': '💾 Eksportuj tę konfigurację',
+    'wizard.step1.title': 'Tożsamość placówki',
+    'wizard.step2.title': 'Lokalizacja główna',
+    'wizard.step3.title': 'Konto administratora',
+    'wizard.step4.title': 'Sztuczna inteligencja',
+    'wizard.step5.title': 'Podsumowanie',
+    'field.nom': 'Pełna nazwa placówki',
+    'field.sigle': 'Skrót (3-5 liter)',
+    'field.finess': 'Numer FINESS (opcjonalny)',
+    'field.langue': 'Język interfejsu',
+    'field.langue_instance': 'Język instancji',
+    'field.langue_hint': 'Język instancji odpowiada selektorowi 🌐 na górze. Zmień go przed zakończeniem w razie potrzeby.',
+    'field.adresse': 'Pełny adres lokalizacji głównej',
+    'field.geocode': '🌍 Geolokalizuj ten adres',
+    'field.geocoded': 'Znaleziono współrzędne',
+    'field.login': 'Login admin',
+    'field.password': 'Hasło',
+    'field.password_warn': '⚠ Zapisz to hasło, nie będzie więcej wyświetlane.',
+    'field.generate': '🎲 Generuj',
+    'field.nom_affiche': 'Nazwa wyświetlana w interfejsie',
+    'ia.skip': 'Bez AI na razie',
+    'ia.skip_desc': 'Skonfiguruj później. SCRIBE działa bez AI.',
+    'ia.albert': 'Albert (rząd francuski)',
+    'ia.albert_desc': 'Darmowa usługa AI dla sektora publicznego. Wymagany klucz API.',
+    'ia.other': 'Inny dostawca (OpenAI, Anthropic, Mistral, Ollama)',
+    'ia.other_desc': 'Konfiguracja zaawansowana — dostawca wybrany po utworzeniu.',
+    'recap.etab': 'Placówka', 'recap.site': 'Lokalizacja',
+    'recap.admin': 'Administrator', 'recap.ia': 'AI',
+    'recap.port': 'Ta instancja zostanie utworzona na pierwszym wolnym porcie',
+    'loading.creating': 'Tworzenie instancji…',
+    'loading.demo': 'Uruchamianie trybu demo…',
+    'loading.import': 'Importowanie pliku…',
+    'toast.created': '✓ Instancja utworzona pomyślnie',
+    'toast.error': 'Błąd',
+    'err.required': 'Pole wymagane',
+    'err.geocode': 'Nie znaleziono adresu. Wprowadź współrzędne ręcznie.',
+    'demo.title': 'Demo gotowe',
+    'demo.intro': 'Instancja demo została utworzona i uruchomiona. Zapisz te dane logowania — pojawią się również na górze ekranu logowania.',
+    'demo.url': 'URL',
+    'demo.login': 'Login',
+    'demo.password': 'Hasło',
+    'demo.hint': '💡 Demo otworzy się w nowej karcie. Możesz tu wrócić w każdej chwili i ponownie uruchomić asystenta przyciskiem 🎯 na liście instancji.',
+    'demo.cancel': 'Anuluj',
+    'demo.open': '↗ Otwórz demo',
+  },
+  pt: {
+    'splash.title': 'Bem-vindo ao SCRIBE',
+    'splash.subtitle': 'Como deseja começar?',
+    'splash.card1.title': 'Assistente guiado',
+    'splash.card1.desc': '5 passos para criar seu estabelecimento. Cerca de 5 minutos.',
+    'splash.card1.btn': 'Começar',
+    'splash.card2.title': 'Importar config existente',
+    'splash.card2.desc': 'Carregar configuração de arquivo .xlsx (formato SCRIBE).',
+    'splash.card2.btn': 'Escolher arquivo',
+    'splash.card3.title': 'Implantar GHT completo',
+    'splash.card3.desc': 'Importar .zip com vários estabelecimentos.',
+    'splash.card3.btn': 'Escolher .zip',
+    'splash.card4.title': 'Modo demo',
+    'splash.card4.desc': 'Descobrir SCRIBE com estabelecimento fictício pré-configurado.',
+    'splash.card4.btn': 'Iniciar demo',
+    'splash.skip': 'Pular — configuração manual',
+    'splash.template': '📄 Baixar template Excel vazio',
+    'wizard.step': 'Passo', 'wizard.of': 'de',
+    'wizard.btn_prev': '← Voltar', 'wizard.btn_next': 'Próximo →',
+    'wizard.btn_finish': '✓ Criar e iniciar instância',
+    'wizard.btn_export': '💾 Exportar esta config',
+    'wizard.step1.title': 'Identidade do estabelecimento',
+    'wizard.step2.title': 'Site principal',
+    'wizard.step3.title': 'Conta de administrador',
+    'wizard.step4.title': 'Inteligência artificial',
+    'wizard.step5.title': 'Resumo',
+    'field.nom': 'Nome completo do estabelecimento',
+    'field.sigle': 'Sigla (3-5 letras)',
+    'field.finess': 'Número FINESS (opcional)',
+    'field.langue': 'Idioma da interface',
+    'field.langue_instance': 'Idioma da instância',
+    'field.langue_hint': 'O idioma da instância segue o seletor 🌐 no topo. Altere-o antes de finalizar se necessário.',
+    'field.adresse': 'Endereço completo do site principal',
+    'field.geocode': '🌍 Geolocalizar este endereço',
+    'field.geocoded': 'Coordenadas encontradas',
+    'field.login': 'Login admin',
+    'field.password': 'Senha',
+    'field.password_warn': '⚠ Salve esta senha, não será mostrada novamente.',
+    'field.generate': '🎲 Gerar',
+    'field.nom_affiche': 'Nome exibido na interface',
+    'ia.skip': 'Sem IA por enquanto',
+    'ia.skip_desc': 'Configurar mais tarde. SCRIBE funciona sem IA.',
+    'ia.albert': 'Albert (governo francês)',
+    'ia.albert_desc': 'Serviço IA gratuito para setor público. Chave API necessária.',
+    'ia.other': 'Outro provedor (OpenAI, Anthropic, Mistral, Ollama)',
+    'ia.other_desc': 'Configuração avançada — provedor escolhido após criação.',
+    'recap.etab': 'Estabelecimento', 'recap.site': 'Site',
+    'recap.admin': 'Administrador', 'recap.ia': 'IA',
+    'recap.port': 'Esta instância será criada na primeira porta livre',
+    'loading.creating': 'Criando instância…',
+    'loading.demo': 'Iniciando modo demo…',
+    'loading.import': 'Importando arquivo…',
+    'toast.created': '✓ Instância criada com sucesso',
+    'toast.error': 'Erro',
+    'err.required': 'Campo obrigatório',
+    'err.geocode': 'Endereço não encontrado. Inserir coordenadas manualmente.',
+    'demo.title': 'Demo pronto',
+    'demo.intro': 'A instância de demo foi criada e iniciada. Anote estas credenciais — também aparecerão no topo da tela de login.',
+    'demo.url': 'URL',
+    'demo.login': 'Usuário',
+    'demo.password': 'Senha',
+    'demo.hint': '💡 A demo abrirá em uma nova aba. Você pode voltar aqui a qualquer momento e relançar o assistente pelo botão 🎯 na lista de instâncias.',
+    'demo.cancel': 'Cancelar',
+    'demo.open': '↗ Abrir demo',
+  },
+};
+
+let _lang = 'fr';
+function t(key) { return (I18N[_lang] && I18N[_lang][key]) || (I18N.fr[key] || key); }
+
+function changeLang(lang) {
+  _lang = lang;
+  // Synchro : la langue du wizard = langue de l'instance créée
+  _state.langue = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  // Re-render le wizard si actif (récap, hints, etc. doivent refléter la langue)
+  if (document.getElementById('wizard').classList.contains('active')) {
+    renderStep();
+  }
+}
+
+// Détection langue navigateur
+(function detectLang() {
+  const nav = (navigator.language || 'fr').slice(0, 2).toLowerCase();
+  if (I18N[nav]) {
+    _lang = nav;
+    document.getElementById('lang-select').value = nav;
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+//   ÉTAT GLOBAL DU WIZARD
+// ═══════════════════════════════════════════════════════════════════
+let _step = 1;
+let _state = {
+  nom: '', sigle: '', finess: '',
+  langue: 'fr',
+  adresse: '', latitude: null, longitude: null,
+  timezone: '',  // v2.4.6 : "" = automatique (navigateur), sinon IANA explicite
+  admin_login: 'dircrise', admin_password: '', nom_affiche_admin: 'Directeur de Crise',
+  ia_choice: 'skip',
+  fournisseur_ia: '', cle_api_ia: '', modele_ia: '', url_base_ia: '',
+};
+
+function getAdminToken() {
+  return localStorage.getItem("collecteur_admin_token") ||
+         localStorage.getItem("admin_token") || '';
+}
+function authHeaders(extra) {
+  return Object.assign({Authorization: 'Bearer ' + getAdminToken()}, extra || {});
+}
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = type || 'ok';
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.style.display = 'none', type === 'err' ? 6000 : 3500);
+}
+function showLoading(msg) {
+  document.getElementById('loading-msg').textContent = msg || t('loading.creating');
+  document.getElementById('loading').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loading').classList.remove('show');
+}
+
+function generatePassword() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  let p = '';
+  for (let i = 0; i < 14; i++) p += chars[Math.floor(Math.random() * chars.length)];
+  return p + '!';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//   SPLASH SCREEN ACTIONS
+// ═══════════════════════════════════════════════════════════════════
+function startWizard() {
+  document.getElementById('splash').style.display = 'none';
+  document.getElementById('wizard').classList.add('active');
+  _step = 1;
+  if (!_state.admin_password) _state.admin_password = generatePassword();
+  _state.langue = _lang;
+  renderStep();
+}
+
+async function skipOnboarding() {
+  if (!confirm("Passer l'onboarding et aller à la configuration manuelle ?")) return;
+  await fetch('/api/master/onboarding/finish', {method: 'POST', headers: authHeaders()});
+  window.location.href = '/api/master/ui';
+}
+
+async function quickDemo() {
+  showLoading(t('loading.demo'));
+  try {
+    // Créer une instance "Hôpital de Démonstration / DEMO" sur le 1er port libre
+    const r = await fetch('/api/master/onboarding/create-instance', {
+      method: 'POST',
+      headers: authHeaders({'Content-Type': 'application/json'}),
+      body: JSON.stringify({
+        sigle: 'DEMO',
+        nom: 'Hôpital de Démonstration',
+        adresse: 'Place de la République, 75011 Paris',
+        latitude: 48.8676,
+        longitude: 2.3631,
+        admin_login: 'dircrise',
+        admin_password: 'Demo2026!',
+        langue: _lang,
+      }),
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'HTTP ' + r.status); }
+    const data = await r.json();
+    // Lancer l'instance
+    const r2 = await fetch('/api/master/instances/' + data.port + '/start', {
+      method: 'POST', headers: authHeaders(),
+    });
+    if (!r2.ok) { const e = await r2.json(); throw new Error(e.detail || 'HTTP ' + r2.status); }
+    hideLoading();
+    // NE PAS marquer l'onboarding comme fini — la démo n'est pas un engagement,
+    // l'utilisateur doit pouvoir refaire le wizard pour créer sa vraie instance
+    // Ouvrir la démo dans un NOUVEL ONGLET (l'utilisateur garde le master derrière)
+    const demoUrl = window.location.protocol + '//' + window.location.hostname + ':' + data.port;
+    showDemoCredsModal(demoUrl, data.port);
+  } catch (e) {
+    hideLoading();
+    toast(t('toast.error') + ': ' + e.message, 'err');
+  }
+}
+
+function showDemoCredsModal(demoUrl, port) {
+  // Modal avec credentials avant ouverture du nouvel onglet
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:11000';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:8px;max-width:520px;padding:28px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+      <h2 style="color:var(--bleu-france);margin:0 0 14px 0">${t('demo.title')}</h2>
+      <p style="color:var(--gris);margin:0 0 18px 0">${t('demo.intro')}</p>
+      <div style="background:var(--bleu-pale);border-radius:6px;padding:14px 18px;margin-bottom:16px;font-family:monospace">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="color:var(--gris)">${t('demo.url')}</span>
+          <strong style="color:var(--texte)">${demoUrl}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="color:var(--gris)">${t('demo.login')}</span>
+          <strong style="color:var(--texte)">dircrise</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--gris)">${t('demo.password')}</span>
+          <strong style="color:var(--rouge-marianne)">Demo2026!</strong>
+        </div>
+      </div>
+      <p style="font-size:.88em;color:var(--gris);margin:0 0 18px 0">${t('demo.hint')}</p>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="this.closest('[data-modal]').remove()">${t('demo.cancel')}</button>
+        <button class="btn btn-primary" id="demo-open-btn">${t('demo.open')}</button>
+      </div>
+    </div>
+  `;
+  modal.setAttribute('data-modal', 'demo');
+  document.body.appendChild(modal);
+  document.getElementById('demo-open-btn').onclick = () => {
+    window.open(demoUrl, '_blank', 'noopener');
+    modal.remove();
+    // Rafraîchir la liste d'instances dans le master derrière (mais on est dans le wizard…)
+    // → recharger la page master
+    setTimeout(() => { window.location.href = '/api/master/ui'; }, 300);
+  };
+}
+
+async function onXlsxImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  showLoading(t('loading.import'));
+  try {
+    const buf = await file.arrayBuffer();
+    const r = await fetch('/api/master/onboarding/import-xlsx', {
+      method: 'POST', headers: authHeaders(), body: buf,
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'HTTP ' + r.status); }
+    const data = await r.json();
+    // Pré-remplir le state du wizard avec les données importées
+    Object.assign(_state, {
+      nom: data.nom || '', sigle: data.sigle || '', finess: data.finess || '',
+      langue: data.langue || 'fr',
+      admin_login: data.admin_login || 'dircrise',
+      admin_password: data.admin_password || generatePassword(),
+      nom_affiche_admin: data.nom_affiche_admin || 'Directeur de Crise',
+      adresse: data.adresse || '',
+      latitude: data.latitude, longitude: data.longitude,
+      fournisseur_ia: data.fournisseur_ia || '',
+      cle_api_ia: data.cle_api_ia || '',
+      modele_ia: data.modele_ia || '',
+      url_base_ia: data.url_base_ia || '',
+      ia_choice: data.fournisseur_ia ? (data.fournisseur_ia === 'albert' ? 'albert' : 'other') : 'skip',
+    });
+    hideLoading();
+    toast(`✓ ${data.sigle} importé (${data.uf_count} UF, ${data.capacite_count} services)`, 'ok');
+    // Aller direct à l'étape récap (5)
+    document.getElementById('splash').style.display = 'none';
+    document.getElementById('wizard').classList.add('active');
+    _step = 5;
+    renderStep();
+  } catch (e) {
+    hideLoading();
+    toast(t('toast.error') + ': ' + e.message, 'err');
+  }
+}
+
+async function onZipImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  showLoading(t('loading.import'));
+  try {
+    const buf = await file.arrayBuffer();
+    const r = await fetch('/api/master/onboarding/import-ght-zip', {
+      method: 'POST', headers: authHeaders(), body: buf,
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'HTTP ' + r.status); }
+    const data = await r.json();
+    hideLoading();
+    const lines = data.establishments.map(e =>
+      e.error ? '✗ ' + e.filename + ' : ' + e.error
+              : `✓ ${e.sigle} (${e.uf_count} UF, ${e.capa_count} services)`
+    );
+    if (!confirm(`${data.establishments.length} établissements détectés :\n\n${lines.join('\n')}\n\nLes créer maintenant ?`)) {
+      return;
+    }
+    // Créer chaque instance via /onboarding/create-instance
+    showLoading(t('loading.creating'));
+    let ok = 0, err = 0;
+    for (const e of data.establishments) {
+      if (e.error) { err++; continue; }
+      try {
+        await fetch('/api/master/onboarding/create-instance', {
+          method: 'POST', headers: authHeaders({'Content-Type': 'application/json'}),
+          body: JSON.stringify({
+            sigle: e.sigle, nom: e.nom,
+            adresse: '', admin_login: 'dircrise',
+            admin_password: generatePassword(), langue: _lang,
+          }),
+        });
+        ok++;
+      } catch (er) { err++; }
+    }
+    await fetch('/api/master/onboarding/finish', {method: 'POST', headers: authHeaders()});
+    hideLoading();
+    toast(`✓ ${ok} créés, ${err} erreurs`, ok > 0 ? 'ok' : 'err');
+    setTimeout(() => { window.location.href = '/api/master/ui'; }, 1500);
+  } catch (e) {
+    hideLoading();
+    toast(t('toast.error') + ': ' + e.message, 'err');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//   WIZARD RENDERING
+// ═══════════════════════════════════════════════════════════════════
+function renderStep() {
+  // Update progress dots
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById('dot-' + i).classList.toggle('active', i <= _step);
+  }
+  document.getElementById('step-num').textContent = _step;
+  document.getElementById('wizard-title').textContent = t('wizard.step' + _step + '.title');
+
+  const body = document.getElementById('wizard-body');
+  const btnNext = document.getElementById('btn-next');
+  const btnPrev = document.getElementById('btn-prev');
+
+  btnPrev.style.visibility = _step === 1 ? 'hidden' : 'visible';
+
+  if (_step === 1) {
+    body.innerHTML = `
+      <div class="field">
+        <label>${t('field.nom')} <span class="req">*</span></label>
+        <input type="text" id="f-nom" value="${esc(_state.nom)}" placeholder="Centre Hospitalier de…">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>${t('field.sigle')} <span class="req">*</span></label>
+          <input type="text" id="f-sigle" value="${esc(_state.sigle)}" maxlength="10" placeholder="CHV">
+        </div>
+        <div class="field">
+          <label>${t('field.finess')}</label>
+          <input type="text" id="f-finess" value="${esc(_state.finess)}" placeholder="000000000">
+        </div>
+      </div>
+      <div style="background: var(--bleu-pale); padding: 12px 14px; border-radius: 4px; font-size: 0.9em; color: var(--gris); margin-top: 10px;">
+        🌐 ${t('field.langue_hint')}
+      </div>
+    `;
+    btnNext.textContent = t('wizard.btn_next');
+  }
+
+  else if (_step === 2) {
+    const geoMsg = (_state.latitude != null && _state.longitude != null)
+      ? `${t('field.geocoded')} : ${Number(_state.latitude).toFixed(4)}, ${Number(_state.longitude).toFixed(4)}`
+      : '';
+    // v2.4.6 — Liste des fuseaux IANA courants. "" = Automatique (heure
+    // du navigateur de chaque utilisateur). Sinon : timezone explicite
+    // partagée par tous les utilisateurs de l'établissement.
+    const tzOptions = [
+      ['',                  '🌐 Automatique (heure du navigateur)'],
+      ['Europe/Paris',      '🇫🇷 Europe/Paris (France métropolitaine)'],
+      ['Pacific/Tahiti',    '🇵🇫 Pacific/Tahiti (Polynésie française)'],
+      ['Indian/Reunion',    '🇷🇪 Indian/Reunion (La Réunion)'],
+      ['Indian/Mayotte',    '🇾🇹 Indian/Mayotte (Mayotte)'],
+      ['America/Martinique','🇲🇶 America/Martinique (Martinique)'],
+      ['America/Guadeloupe','🇬🇵 America/Guadeloupe (Guadeloupe + Saint-Martin + Saint-Barthélemy)'],
+      ['America/Cayenne',   '🇬🇫 America/Cayenne (Guyane)'],
+      ['America/Miquelon',  '🇵🇲 America/Miquelon (Saint-Pierre-et-Miquelon)'],
+      ['Pacific/Noumea',    '🇳🇨 Pacific/Noumea (Nouvelle-Calédonie)'],
+      ['Pacific/Wallis',    '🇼🇫 Pacific/Wallis (Wallis-et-Futuna)'],
+      ['America/Montreal',  '🇨🇦 America/Montreal (Québec)'],
+      ['Europe/Brussels',   '🇧🇪 Europe/Brussels'],
+      ['Europe/Luxembourg', '🇱🇺 Europe/Luxembourg'],
+      ['Africa/Algiers',    '🇩🇿 Africa/Algiers (Algérie)'],
+      ['Africa/Tunis',      '🇹🇳 Africa/Tunis (Tunisie)'],
+      ['Africa/Casablanca', '🇲🇦 Africa/Casablanca (Maroc)'],
+      ['UTC',               'UTC'],
+      ['__custom__',        '✏️ Saisie libre (IANA, ex: Asia/Bangkok)'],
+    ];
+    const curTz = _state.timezone || '';
+    const isCustom = curTz && !tzOptions.some(o => o[0] === curTz);
+    const tzSelect = tzOptions.map(([v, lbl]) =>
+      `<option value="${esc(v)}" ${(isCustom && v === '__custom__') || curTz === v ? 'selected' : ''}>${esc(lbl)}</option>`
+    ).join('');
+    body.innerHTML = `
+      <div class="field">
+        <label>${t('field.adresse')} <span class="req">*</span></label>
+        <input type="text" id="f-adresse" value="${esc(_state.adresse)}" placeholder="1 avenue de l'Hôpital, 74000…">
+      </div>
+      <div class="field">
+        <button class="btn btn-secondary" onclick="doGeocode()" type="button">${t('field.geocode')}</button>
+        <div class="geo-result ${geoMsg ? 'show' : ''}" id="geo-result">${esc(geoMsg)}</div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Latitude</label>
+          <input type="number" step="0.000001" id="f-lat" value="${_state.latitude || ''}">
+        </div>
+        <div class="field">
+          <label>Longitude</label>
+          <input type="number" step="0.000001" id="f-lon" value="${_state.longitude || ''}">
+        </div>
+      </div>
+      <div class="field" style="margin-top: 10px">
+        <label>Fuseau horaire de l'établissement</label>
+        <select id="f-tz" onchange="onTzChange()">${tzSelect}</select>
+        <input type="text" id="f-tz-custom" value="${isCustom ? esc(curTz) : ''}"
+               placeholder="Asia/Bangkok / Pacific/Auckland / …"
+               style="margin-top: 6px; ${isCustom ? '' : 'display:none'}">
+        <div style="font-size:0.85em; color: var(--gris); margin-top: 4px">
+          🌐 Automatique : chaque utilisateur voit l'heure de son navigateur.<br>
+          Fuseau explicite : tous les utilisateurs voient l'heure de cet établissement.
+        </div>
+      </div>
+    `;
+    btnNext.textContent = t('wizard.btn_next');
+  }
+
+  else if (_step === 3) {
+    body.innerHTML = `
+      <div class="field">
+        <label>${t('field.login')}</label>
+        <input type="text" id="f-login" value="${esc(_state.admin_login)}">
+      </div>
+      <div class="field">
+        <label>${t('field.password')} <span class="req">*</span></label>
+        <div class="pwd-row">
+          <input type="text" id="f-pwd" value="${esc(_state.admin_password)}">
+          <button class="btn btn-secondary" type="button" onclick="document.getElementById('f-pwd').value = generatePassword()">${t('field.generate')}</button>
+        </div>
+        <div class="pwd-warning">${t('field.password_warn')}</div>
+      </div>
+      <div class="field">
+        <label>${t('field.nom_affiche')}</label>
+        <input type="text" id="f-nom-affiche" value="${esc(_state.nom_affiche_admin)}">
+      </div>
+    `;
+    btnNext.textContent = t('wizard.btn_next');
+  }
+
+  else if (_step === 4) {
+    body.innerHTML = `
+      <div class="ia-options">
+        <div class="ia-option ${_state.ia_choice === 'skip' ? 'selected' : ''}" onclick="selectIA('skip')">
+          <label><input type="radio" name="ia" ${_state.ia_choice === 'skip' ? 'checked' : ''}> ${t('ia.skip')}</label>
+          <div class="ia-option-desc">${t('ia.skip_desc')}</div>
+        </div>
+        <div class="ia-option ${_state.ia_choice === 'albert' ? 'selected' : ''}" onclick="selectIA('albert')">
+          <label><input type="radio" name="ia" ${_state.ia_choice === 'albert' ? 'checked' : ''}> ${t('ia.albert')}</label>
+          <div class="ia-option-desc">${t('ia.albert_desc')}</div>
+        </div>
+        <div class="ia-option ${_state.ia_choice === 'other' ? 'selected' : ''}" onclick="selectIA('other')">
+          <label><input type="radio" name="ia" ${_state.ia_choice === 'other' ? 'checked' : ''}> ${t('ia.other')}</label>
+          <div class="ia-option-desc">${t('ia.other_desc')}</div>
+        </div>
+      </div>
+      <div id="ia-detail" style="margin-top: 18px; ${_state.ia_choice === 'skip' ? 'display:none' : ''}">
+        <div class="field">
+          <label>Clé API</label>
+          <input type="text" id="f-cle-ia" value="${esc(_state.cle_api_ia)}" placeholder="sk-...">
+        </div>
+        <div class="field">
+          <label>Modèle</label>
+          <input type="text" id="f-modele-ia" value="${esc(_state.modele_ia)}" placeholder="${_state.ia_choice === 'albert' ? 'mistralai/Ministral-3-8B-Instruct-2512' : 'gpt-4 / claude-3-5-sonnet / etc.'}">
+        </div>
+      </div>
+    `;
+    btnNext.textContent = t('wizard.btn_next');
+  }
+
+  else if (_step === 5) {
+    const ia = _state.ia_choice === 'skip' ? '— ' + t('ia.skip')
+             : _state.ia_choice === 'albert' ? 'Albert' + (_state.cle_api_ia ? ' ✓' : ' (clé manquante)')
+             : 'Custom' + (_state.cle_api_ia ? ' ✓' : ' (clé manquante)');
+    body.innerHTML = `
+      <div class="recap-section">
+        <h4>${t('recap.etab')}</h4>
+        <div class="recap-row"><span class="recap-key">${t('field.nom')}</span><span class="recap-val">${esc(_state.nom)}</span></div>
+        <div class="recap-row"><span class="recap-key">${t('field.sigle')}</span><span class="recap-val">${esc(_state.sigle)}</span></div>
+        <div class="recap-row"><span class="recap-key">🌐 ${t('field.langue_instance')}</span><span class="recap-val">${esc(langueLabel(_state.langue))}</span></div>
+      </div>
+      <div class="recap-section">
+        <h4>${t('recap.site')}</h4>
+        <div class="recap-row"><span class="recap-key">${t('field.adresse')}</span><span class="recap-val">${esc(_state.adresse)}</span></div>
+        <div class="recap-row"><span class="recap-key">📍</span><span class="recap-val">${_state.latitude || '—'}, ${_state.longitude || '—'}</span></div>
+      </div>
+      <div class="recap-section">
+        <h4>${t('recap.admin')}</h4>
+        <div class="recap-row"><span class="recap-key">${t('field.login')}</span><span class="recap-val">${esc(_state.admin_login)}</span></div>
+        <div class="recap-row"><span class="recap-key">${t('field.password')}</span><span class="recap-val">${esc(_state.admin_password)}</span></div>
+      </div>
+      <div class="recap-section">
+        <h4>${t('recap.ia')}</h4>
+        <div class="recap-row"><span class="recap-val">${esc(ia)}</span></div>
+      </div>
+      <div style="font-size: 0.88em; color: var(--gris); margin-top: 16px; padding: 10px; background: var(--bleu-pale); border-radius: 4px;">
+        ${t('recap.port')}.
+      </div>
+      <div style="margin-top: 14px;">
+        <button class="btn btn-secondary" type="button" onclick="exportCurrentConfig()">${t('wizard.btn_export')}</button>
+      </div>
+    `;
+    btnNext.textContent = t('wizard.btn_finish');
+  }
+}
+
+function selectIA(choice) {
+  _state.ia_choice = choice;
+  if (choice === 'albert') _state.fournisseur_ia = 'albert';
+  else if (choice === 'other') _state.fournisseur_ia = 'openai';
+  else _state.fournisseur_ia = '';
+  renderStep();
+}
+
+// v2.4.6 — Affiche/masque l'input "saisie libre" du fuseau horaire
+function onTzChange() {
+  const sel = document.getElementById('f-tz');
+  const custom = document.getElementById('f-tz-custom');
+  if (sel && custom) {
+    custom.style.display = (sel.value === '__custom__') ? 'block' : 'none';
+    if (sel.value !== '__custom__') {
+      custom.value = '';
+    }
+  }
+}
+
+function captureStep() {
+  if (_step === 1) {
+    _state.nom = document.getElementById('f-nom').value.trim();
+    _state.sigle = document.getElementById('f-sigle').value.trim().toUpperCase();
+    _state.finess = document.getElementById('f-finess').value.trim();
+    // Langue de l'instance = langue du wizard (sélecteur 🌐 en haut)
+    _state.langue = _lang;
+  } else if (_step === 2) {
+    _state.adresse = document.getElementById('f-adresse').value.trim();
+    const lat = document.getElementById('f-lat').value;
+    const lon = document.getElementById('f-lon').value;
+    _state.latitude = lat ? parseFloat(lat) : null;
+    _state.longitude = lon ? parseFloat(lon) : null;
+    // v2.4.6 : fuseau horaire
+    const tzSel = document.getElementById('f-tz');
+    if (tzSel) {
+      if (tzSel.value === '__custom__') {
+        const custom = (document.getElementById('f-tz-custom')?.value || '').trim();
+        _state.timezone = custom;
+      } else {
+        _state.timezone = tzSel.value;
+      }
+    }
+  } else if (_step === 3) {
+    _state.admin_login = document.getElementById('f-login').value.trim();
+    _state.admin_password = document.getElementById('f-pwd').value;
+    _state.nom_affiche_admin = document.getElementById('f-nom-affiche').value.trim();
+  } else if (_step === 4) {
+    if (_state.ia_choice !== 'skip') {
+      _state.cle_api_ia = document.getElementById('f-cle-ia').value.trim();
+      _state.modele_ia = document.getElementById('f-modele-ia').value.trim();
+    }
+  }
+}
+
+function validateStep() {
+  if (_step === 1) {
+    if (!_state.nom) { toast(t('field.nom') + ' : ' + t('err.required'), 'err'); return false; }
+    if (!_state.sigle) { toast(t('field.sigle') + ' : ' + t('err.required'), 'err'); return false; }
+  } else if (_step === 2) {
+    if (!_state.adresse) { toast(t('field.adresse') + ' : ' + t('err.required'), 'err'); return false; }
+  } else if (_step === 3) {
+    if (!_state.admin_password) { toast(t('field.password') + ' : ' + t('err.required'), 'err'); return false; }
+  }
+  return true;
+}
+
+function nextStep() {
+  captureStep();
+  if (!validateStep()) return;
+  if (_step === 5) {
+    finishWizard();
+    return;
+  }
+  _step++;
+  renderStep();
+}
+
+function prevStep() {
+  captureStep();
+  if (_step > 1) _step--;
+  renderStep();
+}
+
+async function doGeocode() {
+  captureStep();
+  if (!_state.adresse) { toast(t('field.adresse') + ' : ' + t('err.required'), 'err'); return; }
+  try {
+    const r = await fetch('/api/master/geocode?q=' + encodeURIComponent(_state.adresse), {headers: authHeaders()});
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'HTTP ' + r.status); }
+    const g = await r.json();
+    _state.latitude = g.lat;
+    _state.longitude = g.lon;
+    toast('📍 ' + g.display_name, 'ok');
+    renderStep();
+  } catch (e) {
+    toast(t('err.geocode') + ' (' + e.message + ')', 'err');
+  }
+}
+
+async function exportCurrentConfig() {
+  // Export depuis les champs du wizard sans encore avoir créé l'instance
+  // → on re-génère un xlsx côté client n'est pas possible (openpyxl côté server)
+  // → solution : on crée l'instance en draft + download + l'utilisateur peut continuer
+  toast('Pour exporter, finalisez d\'abord la création de l\'instance.', 'warn');
+}
+
+async function finishWizard() {
+  // Double validation avant envoi : protéger contre un bug latent de
+  // capture/render qui laisserait passer un sigle vide ou "Site_NNNN"
+  if (!_state.sigle || _state.sigle.toUpperCase().startsWith('SITE_')) {
+    toast('Sigle obligatoire (3-5 lettres, ex: CHV). Retournez à l\'étape 1.', 'err');
+    _step = 1; renderStep();
+    return;
+  }
+  if (!_state.nom) {
+    toast('Nom de l\'établissement obligatoire. Retournez à l\'étape 1.', 'err');
+    _step = 1; renderStep();
+    return;
+  }
+  showLoading(t('loading.creating'));
+  try {
+    const r = await fetch('/api/master/onboarding/create-instance', {
+      method: 'POST',
+      headers: authHeaders({'Content-Type': 'application/json'}),
+      body: JSON.stringify({
+        sigle: _state.sigle, nom: _state.nom, finess: _state.finess,
+        langue: _state.langue,
+        admin_login: _state.admin_login,
+        admin_password: _state.admin_password,
+        nom_affiche_admin: _state.nom_affiche_admin,
+        adresse: _state.adresse,
+        latitude: _state.latitude, longitude: _state.longitude,
+        timezone: _state.timezone,
+        fournisseur_ia: _state.fournisseur_ia,
+        cle_api_ia: _state.cle_api_ia,
+        modele_ia: _state.modele_ia,
+      }),
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'HTTP ' + r.status); }
+    const data = await r.json();
+    await fetch('/api/master/onboarding/finish', {method: 'POST', headers: authHeaders()});
+    hideLoading();
+    toast(t('toast.created') + ' (' + data.sigle + ')', 'ok');
+    setTimeout(() => { window.location.href = '/api/master/ui'; }, 1500);
+  } catch (e) {
+    hideLoading();
+    toast(t('toast.error') + ': ' + e.message, 'err');
+  }
+}
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+const LANG_LABELS = {
+  fr: 'Français', en: 'English', de: 'Deutsch', es: 'Español',
+  it: 'Italiano', nl: 'Nederlands', pl: 'Polski', pt: 'Português',
+};
+function langueLabel(code) { return LANG_LABELS[code] || code; }
+
+// Init
+window.addEventListener('load', () => {
+  changeLang(_lang);
+});
+</script>
+</body>
+</html>

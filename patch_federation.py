@@ -105,5 +105,5 @@ final_lines = clean_content.count('\n') + 1
 print(f"✓ Corrigé: {final_lines} lignes (était {len(lines)})")
 print()
 print("Redémarrer les instances SCRIBE:")
-print("  bash lancer_exercice.sh")
+print("  bash lancer_demo.sh")
 print("  (sans --reset pour préserver les données)")

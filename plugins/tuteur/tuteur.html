@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Mon coach — SCRIBE Tuteur</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Marianne', system-ui, sans-serif; background: #f8fafc;
+         color: #0f172a; margin: 0; padding: 16px; line-height: 1.5; }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  h1 { color: #003189; margin: 0 0 8px 0; font-size: 1.5rem; }
+  h2 { color: #003189; margin: 16px 0 10px 0; font-size: 1.1rem; font-weight: 600; }
+  h3 { color: #1e40af; margin: 12px 0 6px 0; font-size: 0.95rem; font-weight: 600; }
+  .card { background: #fff; border-top: 4px solid #003189; border-radius: 8px;
+          padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.04); margin-bottom: 16px; }
+  .meta { color: #64748b; font-size: .85rem; }
+  .badge { display: inline-block; background: #e0e7ff; color: #003189;
+           padding: 2px 10px; border-radius: 12px; font-size: .75rem;
+           font-weight: 600; vertical-align: middle; }
+  .badge-success { background: #dcfce7; color: #166534; }
+  .badge-warning { background: #fef3c7; color: #92400e; }
+  .btn { background: #003189; color: #fff; border: none; padding: 10px 20px;
+         border-radius: 4px; cursor: pointer; font-family: inherit;
+         font-size: .9rem; font-weight: 600; }
+  .btn:hover { background: #001e5c; }
+  .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+  .btn-secondary { background: transparent; color: #003189; border: 1px solid #cbd5e1; }
+  .btn-secondary:hover { background: #f1f5f9; }
+  ul { margin: 6px 0 12px 0; padding-left: 24px; }
+  li { margin: 4px 0; }
+  .empty { text-align: center; padding: 40px 20px; color: #64748b; }
+  .score-box { display: inline-flex; align-items: center; gap: 12px;
+               background: #f1f5f9; padding: 8px 16px; border-radius: 8px;
+               margin-top: 8px; }
+  .score-num { font-size: 1.6rem; font-weight: 700; color: #003189; }
+  .score-label { font-size: .8rem; color: #64748b; }
+  .session-row { display: flex; align-items: center; justify-content: space-between;
+                 padding: 10px 0; border-bottom: 1px solid #e2e8f0; gap: 12px; }
+  .session-row:last-child { border-bottom: none; }
+  .session-info { flex: 1; }
+  .session-title { font-weight: 600; color: #0f172a; }
+  .session-meta { font-size: .8rem; color: #64748b; margin-top: 2px; }
+  .loader { display: inline-block; width: 14px; height: 14px;
+            border: 2px solid #e2e8f0; border-top-color: #003189;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+            vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .alert { padding: 12px; border-radius: 4px; margin: 12px 0; font-size: .9rem; }
+  .alert-info { background: #dbeafe; color: #1e40af; border-left: 4px solid #1e40af; }
+  .alert-warn { background: #fef3c7; color: #92400e; border-left: 4px solid #f59e0b; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>🎓 Mon coach <span class="badge">v0.5</span></h1>
+    <p class="meta">Compagnon d'apprentissage SCRIBE — pas un évaluateur, un compagnon
+    qui t'aide à progresser en gestion de crise.</p>
+  </div>
+
+  <div class="card">
+    <h2>📚 Mes derniers exercices</h2>
+    <div id="sessions-list"><span class="loader"></span> Chargement…</div>
+  </div>
+
+  <div class="card" id="debriefing-card" style="display:none">
+    <h2 id="debriefing-title">🎯 Debriefing</h2>
+    <div id="debriefing-content"></div>
+  </div>
+</div>
+
+<script>
+function getToken() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('token')) return params.get('token');
+  try { return window.parent.localStorage.getItem('scribe_token') || ''; } catch(e) { return ''; }
+}
+const TOKEN = getToken();
+
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({}, opts.headers || {}, {
+    'Authorization': 'Bearer ' + TOKEN,
+    'Content-Type': 'application/json',
+  });
+  const r = await fetch(path, opts);
+  if (r.status === 401) {
+    document.body.innerHTML = '<div class="card" style="margin:40px auto;max-width:500px"><h2>🔒 Session expirée</h2><p>Reconnecte-toi pour utiliser Mon coach.</p></div>';
+    throw new Error('unauthorized');
+  }
+  return r;
+}
+
+function fmt(dt) {
+  if (!dt) return '—';
+  const d = new Date(dt.includes('Z') || dt.includes('+') ? dt : dt + 'Z');
+  return d.toLocaleString('fr-FR', {dateStyle:'short', timeStyle:'short'});
+}
+
+function dur(s) {
+  if (!s) return '—';
+  const a = new Date(s.start || s.started_at);
+  const b = (s.end || s.ended_at) ? new Date(s.end || s.ended_at) : new Date();
+  const sec = Math.max(0, Math.floor((b - a) / 1000));
+  const m = Math.floor(sec / 60);
+  if (m < 60) return m + ' min';
+  return Math.floor(m/60) + 'h' + String(m%60).padStart(2,'0');
+}
+
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+async function loadHistorique() {
+  const box = document.getElementById('sessions-list');
+  try {
+    const r = await api('/api/v1/tuteur/historique');
+    if (!r.ok) { box.innerHTML = '<div class="empty">Erreur de chargement (' + r.status + ')</div>'; return; }
+    const sessions = await r.json();
+    if (!sessions || sessions.length === 0) {
+      box.innerHTML =
+        '<div class="empty">' +
+          '<p style="font-size:1rem">Aucun exercice joué pour le moment.</p>' +
+          '<p style="font-size:.85rem">Lance un exercice depuis l\'onglet 🎯 Exercice et reviens ici quand il sera terminé pour obtenir ton debriefing personnalisé.</p>' +
+        '</div>';
+      return;
+    }
+    let html = '';
+    for (const s of sessions) {
+      const isActive = !s.ended_at;
+      const badge = isActive
+        ? '<span class="badge badge-warning">En cours</span>'
+        : '<span class="badge badge-success">Terminé</span>';
+      const intent = s.intention_pedago
+        ? '<div class="session-meta">🎯 ' + escapeHtml(s.intention_pedago.slice(0, 100)) + '</div>'
+        : '';
+      const scenarioLabel = s.scenario_id
+        ? '<span class="meta">' + escapeHtml(s.scenario_id) + '</span>'
+        : '#' + s.id;
+      html +=
+        '<div class="session-row">' +
+          '<div class="session-info">' +
+            '<div class="session-title">Exercice ' + scenarioLabel + ' ' + badge + '</div>' +
+            '<div class="session-meta">📅 ' + fmt(s.started_at) + ' · ⏱ ' + dur(s) + ' · ' + escapeHtml(s.instance_sigle || '?') + '</div>' +
+            intent +
+          '</div>' +
+          '<div>' +
+            (isActive
+              ? '<span class="meta" style="font-size:.8rem">Termine pour debrief</span>'
+              : '<button class="btn" onclick="loadDebriefing(' + s.id + ')">🎯 Mon debriefing</button>') +
+          '</div>' +
+        '</div>';
+    }
+    box.innerHTML = html;
+  } catch(e) {
+    box.innerHTML = '<div class="empty">Erreur : ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+async function loadDebriefing(sessionId) {
+  const card = document.getElementById('debriefing-card');
+  const title = document.getElementById('debriefing-title');
+  const box = document.getElementById('debriefing-content');
+  card.style.display = 'block';
+  card.scrollIntoView({behavior:'smooth', block:'start'});
+  title.textContent = '🎯 Debriefing — Session #' + sessionId;
+  box.innerHTML = '<span class="loader"></span> Chargement…';
+
+  let r = await api('/api/v1/tuteur/debriefing/' + sessionId);
+  if (r.status === 404) {
+    box.innerHTML =
+      '<div class="alert alert-info">' +
+        'Aucun debriefing n\'a encore été généré pour cette session. ' +
+        'Génération à partir de tes actions et observations enregistrées pendant l\'exercice.' +
+      '</div>' +
+      '<button class="btn" onclick="genDebriefing(' + sessionId + ', false)">🤖 Générer mon debriefing</button>';
+    return;
+  }
+  if (!r.ok) {
+    box.innerHTML = '<div class="alert alert-warn">Erreur de chargement : HTTP ' + r.status + '</div>';
+    return;
+  }
+  const data = await r.json();
+  renderDebriefing(data, sessionId);
+}
+
+async function genDebriefing(sessionId, force) {
+  const box = document.getElementById('debriefing-content');
+  box.innerHTML = '<span class="loader"></span> Génération en cours… (5-15 secondes)';
+  try {
+    const url = '/api/v1/tuteur/debriefing/' + sessionId + (force ? '?force=true' : '');
+    const r = await api(url, {method: 'POST'});
+    if (!r.ok) {
+      let detail = '';
+      try {
+        const j = await r.json();
+        detail = j.detail?.message || j.detail?.error || j.detail || j.message || '';
+      } catch(e) {}
+      box.innerHTML = '<div class="alert alert-warn">Erreur génération (HTTP ' + r.status + ') ' +
+        (typeof detail === 'string' ? escapeHtml(detail) : '') + '</div>' +
+        '<button class="btn btn-secondary" onclick="genDebriefing(' + sessionId + ', false)">Réessayer</button>';
+      return;
+    }
+    const data = await r.json();
+    renderDebriefing(data, sessionId);
+  } catch(e) {
+    box.innerHTML = '<div class="alert alert-warn">Erreur réseau : ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderDebriefing(d, sessionId) {
+  const box = document.getElementById('debriefing-content');
+  const score = d.score_global;
+  const scoreColor = score >= 75 ? '#16a34a' : score >= 55 ? '#ea580c' : '#64748b';
+  let html = '';
+
+  if (d.synthese) {
+    html += '<h3>📝 Synthèse</h3><p>' + escapeHtml(d.synthese) + '</p>';
+  }
+
+  if (typeof score === 'number') {
+    html += '<div class="score-box">' +
+              '<span class="score-num" style="color:' + scoreColor + '">' + score + '</span>' +
+              '<div><div class="score-label">Score d\'engagement /100</div>' +
+              '<div class="meta">Indicateur global, pas une note de performance</div></div>' +
+            '</div>';
+  }
+
+  html += '<div class="grid-2" style="margin-top:16px">';
+  if (d.points_forts && d.points_forts.length) {
+    html += '<div><h3>✅ Points forts</h3><ul>';
+    for (const p of d.points_forts) html += '<li>' + escapeHtml(p) + '</li>';
+    html += '</ul></div>';
+  }
+  if (d.axes_amelioration && d.axes_amelioration.length) {
+    html += '<div><h3>🔧 Axes d\'amélioration</h3><ul>';
+    for (const a of d.axes_amelioration) html += '<li>' + escapeHtml(a) + '</li>';
+    html += '</ul></div>';
+  }
+  html += '</div>';
+
+  if (d.recommandations && d.recommandations.length) {
+    html += '<h3>🎯 Recommandations pour le prochain exercice</h3><ul>';
+    for (const r of d.recommandations) html += '<li>' + escapeHtml(r) + '</li>';
+    html += '</ul>';
+  }
+
+  html += '<div class="meta" style="margin-top:16px;padding-top:12px;border-top:1px solid #e2e8f0">' +
+            '🤖 Généré par : ' + escapeHtml(d.ia_provider || '?') + ' · ' + fmt(d.generated_at) +
+          '</div>' +
+          '<div style="margin-top:12px">' +
+            '<button class="btn btn-secondary" onclick="genDebriefing(' + sessionId + ', true)">🔄 Régénérer</button>' +
+          '</div>';
+
+  box.innerHTML = html;
+}
+
+loadHistorique();
+</script>
+</body>
+</html>

@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>SCRIBE — Pilotage des instances</title>
+<style>
+  /* ─── Charte DSFR officielle (couleurs République Française) ─────────── */
+  /* Inspirées de la palette CIAE / système de design de l'État */
+  :root {
+    --bleu-france:    #000091;
+    --rouge-marianne: #E1000F;
+    --blanc:          #FFFFFF;
+    --fond:           #F6F6F6;
+    --texte:          #161616;
+    --gris-clair:     #DDDDDD;
+    --gris-bord:      #CECECE;
+    --gris:           #666666;
+    --gris-leger:     #999999;
+    /* États (DSFR) */
+    --etat-nominal:     #18753C;
+    --etat-nominal-bg:  #B8FEC9;
+    --etat-degrade:     #B34000;
+    --etat-degrade-bg:  #FEECC2;
+    --etat-erreur:      #CE0500;
+    --etat-erreur-bg:   #FFE9E5;
+    /* Fonds DSFR (bleu pâle, rouge pâle) */
+    --bleu-bg:        #E3E3FD;
+    --bleu-bord:      #000091;
+    /* Compatibilité noms anciens (transition douce) */
+    --vert:           #18753C;
+    --orange:         #B34000;
+    --rouge:          #CE0500;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--fond);
+    color: var(--texte);
+    margin: 0;
+    padding: 0;
+  }
+  header {
+    background: var(--bleu-france);
+    color: white;
+    padding: 16px 24px;
+  }
+  header h1 { margin: 0; font-size: 1.3em; }
+  header .sub { font-size: 0.85em; opacity: 0.85; margin-top: 4px; }
+  main {
+    max-width: 1400px;
+    margin: 24px auto;
+    padding: 0 24px;
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid var(--gris-clair);
+    margin-bottom: 24px;
+  }
+  .tab {
+    padding: 12px 20px;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--gris);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+  }
+  .tab.active {
+    color: var(--bleu-france);
+    border-bottom-color: var(--bleu-france);
+  }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card {
+    background: white;
+    border: 1px solid var(--gris-clair);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .instance-card {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 1fr 1fr auto;
+    gap: 14px;
+    align-items: start;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .field label {
+    font-size: 0.78em;
+    color: var(--gris);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .field input, .field select {
+    padding: 7px 10px;
+    border: 1px solid var(--gris-bord);
+    border-radius: 4px;
+    font-size: 0.95em;
+    font-family: inherit;
+    color: var(--texte);
+    background: var(--blanc);
+  }
+  .field input:focus { outline: 2px solid var(--bleu-france); outline-offset: -1px; border-color: var(--bleu-france); }
+  .field input:disabled { background: var(--fond); color: var(--gris); border-color: var(--gris-clair); }
+  .field-pwd { display: flex; gap: 4px; }
+  .field-pwd input { flex: 1; min-width: 0; }
+  /* Actions : push le bouton LANCER en bas pour qu'il flotte au pied de la carte */
+  .actions { align-self: end; }
+  button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    transition: 0.15s;
+  }
+  button:hover { transform: translateY(-1px); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-primary { background: var(--bleu-france); color: white; }
+  .btn-success { background: var(--vert); color: white; }
+  .btn-warning { background: var(--orange); color: white; }
+  .btn-danger { background: var(--rouge-marianne); color: white; }
+  .btn-secondary { background: var(--gris-clair); color: var(--texte); }
+  /* Boutons d'action principale instance — gros et explicites */
+  .btn-start {
+    background: var(--vert);
+    color: white;
+    font-size: 1em;
+    padding: 10px 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .btn-stop {
+    background: var(--rouge-marianne);
+    color: white;
+    font-size: 1em;
+    padding: 10px 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .btn-icon {
+    padding: 6px 8px;
+    background: var(--gris-clair);
+    color: var(--texte);
+  }
+  /* ─── Mode (Synchronisé / Solo / [futur Exercice]) ─────────────────────
+     Pattern radio button dans une carte cliquable, à la DSFR.
+     Faciliterait l'ajout d'une 3e option "Exercice" plus tard. */
+  .mode-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mode-radio {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--gris-bord);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.88em;
+    background: var(--blanc);
+    transition: 0.15s;
+    user-select: none;
+  }
+  .mode-radio:hover:not(:has(input:disabled)) {
+    border-color: var(--bleu-france);
+    background: var(--bleu-bg);
+  }
+  .mode-radio input[type="radio"] {
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--bleu-france);
+    flex-shrink: 0;
+  }
+  .mode-radio input[type="radio"]:disabled { cursor: not-allowed; }
+  .mode-radio-selected {
+    border-color: var(--bleu-france);
+    background: var(--bleu-bg);
+    font-weight: 600;
+    color: var(--bleu-france);
+  }
+  .mode-radio-selected.mode-radio-solo {
+    border-color: var(--etat-degrade);
+    background: var(--etat-degrade-bg);
+    color: var(--etat-degrade);
+  }
+  .mode-radio:has(input:disabled) { opacity: 0.6; cursor: not-allowed; }
+  .statut-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+  }
+  .statut-arrete   { background: var(--gris-clair); color: var(--gris); }
+  .statut-actif    { background: var(--etat-nominal-bg); color: var(--etat-nominal); }
+  .statut-erreur   { background: var(--etat-erreur-bg);  color: var(--etat-erreur); }
+  .statut-starting {
+    background: var(--etat-degrade-bg);
+    color: var(--etat-degrade);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.6; }
+  }
+  .header-row {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 1fr 1fr auto;
+    gap: 14px;
+    padding: 8px 16px;
+    font-size: 0.75em;
+    color: var(--gris);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .meta {
+    font-size: 0.75em;
+    color: var(--gris);
+    margin-top: 4px;
+  }
+  .copy-feedback {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bleu-france);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: 0.3s;
+    pointer-events: none;
+    z-index: 1000;
+  }
+  .copy-feedback.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .uf-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+  }
+  .uf-table th, .uf-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--gris-clair);
+    text-align: left;
+  }
+  .uf-table th { background: var(--fond); font-weight: 600; }
+  .uf-table input[type=text] {
+    width: 100%;
+    border: 1px solid transparent;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-size: 0.9em;
+  }
+  .uf-table input[type=text]:focus {
+    border-color: var(--bleu-france);
+    outline: none;
+  }
+  .uf-table .row-disabled {
+    opacity: 0.5;
+    background: #fafafa;
+  }
+  .add-section {
+    background: white;
+    border: 2px dashed var(--gris-clair);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+  }
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: white;
+    padding: 24px;
+    border-radius: 8px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .modal pre {
+    background: var(--fond);
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.85em;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .summary-bar {
+    background: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    border-left: 4px solid var(--bleu-france);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 data-i18n-label="master.title">📦 SCRIBE — Pilotage des instances</h1>
+  <div class="sub" data-i18n-label="master.subtitle">Lance, configure et supervise les instances depuis un point unique</div>
+</header>
+
+<main>
+
+  <div class="tabs">
+    <div class="tab active" data-panel="instances" data-i18n-label="master.tab_instances">📦 Instances</div>
+    <div class="tab" data-panel="profil" data-i18n-label="master.tab_profil">🏥 Profil de base (UF)</div>
+  </div>
+
+  <!-- ─────────────────── PANEL INSTANCES ─────────────────── -->
+  <div class="panel active" id="panel-instances">
+
+    <div class="summary-bar">
+      <div>
+        <strong id="summary-actives">—</strong> instance(s) active(s) /
+        <strong id="summary-total">—</strong> au total
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-secondary" onclick="relaunchWizard()" title="Relancer l'assistant de configuration">🎯 Wizard</button>
+        <button class="btn-secondary" onclick="exportAllGhtZip()" title="Exporter toutes les instances configurées en un .zip (1 xlsx par instance)">📦 Exporter GHT (.zip)</button>
+        <button class="btn-secondary" onclick="refreshInstances()">🔄 Rafraîchir</button>
+      </div>
+    </div>
+
+    <div class="header-row card" style="background:transparent;border:none;padding:8px 16px;margin-bottom:8px;">
+      <div>Port / Sigle</div>
+      <div>Adresse / Géoloc</div>
+      <div>Identifiants admin</div>
+      <div>Mode</div>
+      <div>Actions</div>
+    </div>
+
+    <div id="instances-list"></div>
+
+    <div class="add-section">
+      <h3 style="margin-top:0" data-i18n-label="master.add_custom_title">➕ Ajouter une instance personnalisée</h3>
+      <div class="instance-card">
+        <div class="field">
+          <label data-i18n-label="master.field_port">Port</label>
+          <input type="number" id="custom-port" placeholder="8010" min="1024" max="65535">
+          <input type="text" id="custom-sigle" placeholder="MONHOPITAL">
+        </div>
+        <div class="field">
+          <label data-i18n-label="master.field_address">Adresse</label>
+          <input type="text" id="custom-adresse" placeholder="Rue de l'hôpital, Paris">
+          <div class="meta">(géolocalisation après création)</div>
+        </div>
+        <div class="field">
+          <label>Identifiants admin</label>
+          <input type="text" id="custom-login" value="dircrise" placeholder="Login">
+          <div class="field-pwd">
+            <input type="text" id="custom-pwd" placeholder="Mot de passe (auto si vide)">
+            <button class="btn-icon" onclick="generateCustomPwd()" title="Générer">🎲</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Mode</label>
+          <div class="mode-radio-group">
+            <label class="mode-radio mode-radio-selected">
+              <input type="radio" name="mode-custom" value="sync" checked>
+              <span>🔗 Synchronisé</span>
+            </label>
+            <label class="mode-radio">
+              <input type="radio" name="mode-custom" value="solo">
+              <span>🔒 Solo</span>
+            </label>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn-primary" onclick="addCustom()" data-i18n-label="master.btn_add">+ Ajouter</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─────────────────── PANEL PROFIL ─────────────────── -->
+  <div class="panel" id="panel-profil">
+
+    <div class="card">
+      <h3 style="margin-top:0">🏥 Profil de base — Unités fonctionnelles (UF)</h3>
+      <p style="color:var(--gris)">
+        Ce profil sert de référence à chaque nouvelle instance lancée.
+        Activer / désactiver / renommer / ajouter des UF selon votre DPI.
+        <br><strong>Note :</strong> les modifications s'appliquent uniquement aux
+        nouvelles instances. Les instances déjà lancées conservent leur configuration.
+      </p>
+
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button class="btn-success" onclick="saveUF()">💾 Enregistrer les modifications</button>
+        <button class="btn-secondary" onclick="addUFRow()">+ Nouvelle UF</button>
+        <button class="btn-secondary" onclick="downloadProfil()">📥 Télécharger profil xlsx</button>
+        <label class="btn-secondary" style="display:inline-block;cursor:pointer;">
+          📤 Uploader profil xlsx
+          <input type="file" id="upload-xlsx" accept=".xlsx" style="display:none" onchange="uploadProfil(this)">
+        </label>
+      </div>
+
+      <table class="uf-table">
+        <thead>
+          <tr>
+            <th style="width:60px">Actif</th>
+            <th style="width:120px">Code UF</th>
+            <th>Libellé</th>
+            <th style="width:180px">Pôle</th>
+            <th style="width:160px">Site</th>
+            <th style="width:60px"></th>
+          </tr>
+        </thead>
+        <tbody id="uf-tbody"></tbody>
+      </table>
+    </div>
+
+  </div>
+</main>
+
+<!-- ─────────────────── MODAL CRÉDENTIALS ─────────────────── -->
+<div class="modal-overlay" id="modal-creds">
+  <div class="modal">
+    <h3 style="margin-top:0">🔑 Informations de connexion</h3>
+    <pre id="creds-content"></pre>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn-primary" onclick="copyCreds()">📋 Copier</button>
+      <button class="btn-secondary" onclick="closeCreds()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div class="copy-feedback" id="copy-feedback">✓ Copié dans le presse-papier</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────
+// Auth — token admin du collecteur (stocké en localStorage par le collecteur)
+// ─────────────────────────────────────────────────────────────────────────
+function getAdminToken() {
+  // Essai 1 : token dans localStorage (clé du collecteur)
+  let token = localStorage.getItem("collecteur_admin_token") ||
+              localStorage.getItem("admin_token");
+  if (token) return token;
+
+  // Essai 2 : prompt
+  token = prompt("Token admin du collecteur (Bearer) :");
+  if (token) {
+    localStorage.setItem("admin_token", token);
+  }
+  return token;
+}
+
+// authHeaders() — utilisé par les fonctions d'export/import/wizard ajoutées en v2.4.x
+function authHeaders(extra) {
+  return Object.assign({Authorization: 'Bearer ' + getAdminToken()}, extra || {});
+}
+
+// toast() — mini notification non-bloquante (remplace alert pour les nouveaux flux)
+// Cherche d'abord un container existant, sinon le crée à la volée.
+function toast(msg, type) {
+  let el = document.getElementById('_master_toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_master_toast';
+    el.style.cssText = 'position:fixed;top:16px;right:16px;padding:12px 18px;border-radius:4px;color:white;font-weight:500;font-size:14px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,.15);max-width:420px;display:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg || '';
+  // Couleur par type : ok (vert) / err (rouge) / warn (orange) / info (bleu)
+  const colors = {
+    ok:   '#18753C',
+    err:  '#CE0500',
+    warn: '#B34000',
+    info: '#000091',
+  };
+  el.style.background = colors[type] || colors.info;
+  el.style.display = 'block';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.style.display = 'none'; }, type === 'err' ? 6000 : 3500);
+}
+
+async function api(method, path, body) {
+  const token = getAdminToken();
+  const opts = {
+    method,
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json",
+    }
+  };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+
+  const r = await fetch(path, opts);
+  if (r.status === 401 || r.status === 403) {
+    localStorage.removeItem("admin_token");
+    alert("Token admin invalide. Rechargez la page pour réessayer.");
+    throw new Error("auth");
+  }
+  if (!r.ok) {
+    let msg = "Erreur " + r.status;
+    try { const d = await r.json(); msg = d.detail || JSON.stringify(d); } catch {}
+    throw new Error(msg);
+  }
+  if (r.status === 204) return null;
+  return await r.json();
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Tabs
+// ─────────────────────────────────────────────────────────────────────────
+document.querySelectorAll(".tab").forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    document.getElementById("panel-" + t.dataset.panel).classList.add("active");
+    if (t.dataset.panel === "profil") loadUF();
+  };
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Instances — render
+// ─────────────────────────────────────────────────────────────────────────
+let _instances = [];
+let _passwords = {};  // cache local des mdp affichés
+let _startingPorts = new Set();  // ports en cours de démarrage (feedback immédiat)
+let _stoppingPorts = new Set();  // ports en cours d'arrêt
+
+// Vérifie si un input du panneau est actuellement focus → on ne re-render pas
+function _isInputFocused() {
+  const a = document.activeElement;
+  return a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT");
+}
+
+// Refresh classique (re-render complet) — utilisé après action utilisateur
+async function refreshInstances() {
+  try {
+    const data = await api("GET", "/api/master/instances");
+    _instances = data.instances || [];
+    renderInstances();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// Refresh "doux" — appelé par le timer auto. Si l'utilisateur est en train
+// de saisir dans un champ, on suspend le re-render pour ne pas perdre le
+// curseur. Sinon on met à jour de manière chirurgicale (statut, badges).
+async function softRefreshInstances() {
+  if (_isInputFocused()) {
+    // Utilisateur en train de saisir → on saute ce cycle
+    return;
+  }
+  try {
+    const data = await api("GET", "/api/master/instances");
+    const newInstances = data.instances || [];
+
+    // Détecter changements de statut → re-render seulement si différent
+    let needsFullRender = false;
+    if (newInstances.length !== _instances.length) {
+      needsFullRender = true;
+    } else {
+      for (let i = 0; i < newInstances.length; i++) {
+        const a = _instances[i];
+        const b = newInstances[i];
+        if (!a || a.statut !== b.statut || a.pid !== b.pid) {
+          needsFullRender = true;
+          break;
+        }
+      }
+    }
+
+    _instances = newInstances;
+    if (needsFullRender) {
+      renderInstances();
+    } else {
+      // Juste mettre à jour le compteur d'actifs (pas de DOM destruction)
+      const actives = _instances.filter(i => i.statut === "actif").length;
+      document.getElementById("summary-actives").textContent = actives;
+      document.getElementById("summary-total").textContent = _instances.length;
+    }
+  } catch (e) {
+    // Silencieux pour ne pas spammer la console sur le refresh auto
+  }
+}
+
+function renderInstances() {
+  const container = document.getElementById("instances-list");
+  let actives = 0;
+  container.innerHTML = "";
+
+  _instances.forEach(inst => {
+    const cfg = inst.config;
+    const isActive = inst.statut === "actif";
+    const isStarting = _startingPorts.has(cfg.port);
+    const isStopping = _stoppingPorts.has(cfg.port);
+    if (isActive) actives++;
+
+    // Libellés et couleurs des statuts
+    let statutLabel, statutClass;
+    if (isStarting) {
+      statutLabel = "Démarrage…";
+      statutClass = "statut-starting";
+    } else if (isStopping) {
+      statutLabel = "Arrêt…";
+      statutClass = "statut-starting";
+    } else {
+      statutLabel = labelStatut(inst.statut);
+      statutClass = `statut-${inst.statut}`;
+    }
+
+    const fieldsDisabled = isActive || isStarting;
+
+    const card = document.createElement("div");
+    card.className = "card instance-card";
+
+    // Mode (synchroniser/solo) — par défaut synchronisé
+    const isSync = cfg.synchroniser !== false;
+
+    // Carte instance : 4 colonnes alignées au top
+    card.innerHTML = `
+      <div class="field">
+        <label>Port — <span class="statut-badge ${statutClass}">${statutLabel}</span></label>
+        <input type="number" value="${cfg.port}" disabled>
+        <input type="text" data-port="${cfg.port}" data-field="sigle" value="${esc(cfg.sigle)}" ${fieldsDisabled ? "disabled" : ""} placeholder="Sigle">
+        ${inst.pid ? `<div class="meta">PID ${inst.pid} · démarré ${formatDate(inst.started_at)}</div>` : ""}
+      </div>
+      <div class="field">
+        <label>Adresse</label>
+        <input type="text" data-port="${cfg.port}" data-field="adresse" value="${esc(cfg.adresse || "")}" placeholder="Numéro rue, ville" ${fieldsDisabled ? "disabled" : ""}>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <button class="btn-icon" onclick="geocode(${cfg.port})" ${fieldsDisabled ? "disabled" : ""} title="Géocoder">🌍</button>
+          <span class="meta">${cfg.latitude && cfg.longitude ? `${cfg.latitude.toFixed(4)}, ${cfg.longitude.toFixed(4)}` : "(pas géolocalisé)"}</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Identifiants admin</label>
+        <input type="text" data-port="${cfg.port}" data-field="admin_login" value="${esc(cfg.admin_login)}" ${fieldsDisabled ? "disabled" : ""} placeholder="Login">
+        <div class="field-pwd">
+          <input type="text" data-port="${cfg.port}" data-field="admin_password" placeholder="••••••••" ${fieldsDisabled ? "disabled" : ""}>
+          <button class="btn-icon" onclick="regenPwd(${cfg.port})" ${fieldsDisabled ? "disabled" : ""} title="Régénérer">🎲</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Mode</label>
+        <div class="mode-radio-group">
+          <label class="mode-radio ${isSync ? 'mode-radio-selected' : ''}">
+            <input type="radio" name="mode-${cfg.port}" value="sync" ${isSync ? 'checked' : ''}
+                   onchange="setSync(${cfg.port}, true)" ${fieldsDisabled ? 'disabled' : ''}>
+            <span>🔗 Synchronisé</span>
+          </label>
+          <label class="mode-radio ${!isSync ? 'mode-radio-selected mode-radio-solo' : ''}">
+            <input type="radio" name="mode-${cfg.port}" value="solo" ${!isSync ? 'checked' : ''}
+                   onchange="setSync(${cfg.port}, false)" ${fieldsDisabled ? 'disabled' : ''}>
+            <span>🔒 Solo</span>
+          </label>
+        </div>
+      </div>
+      <div class="actions">
+        ${isStarting
+          ? `<button class="btn-secondary" disabled style="opacity:.6">⏳ Démarrage…</button>`
+          : isStopping
+            ? `<button class="btn-secondary" disabled style="opacity:.6">⏳ Arrêt…</button>`
+            : isActive
+              ? `<button class="btn-secondary" onclick="showCreds(${cfg.port})" title="Voir les identifiants admin"><span style="font-style:italic;font-weight:700;font-family:Georgia,serif">i</span></button>
+                 <a class="btn-secondary" href="http://localhost:${cfg.port}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block" title="Ouvrir l'instance dans un nouvel onglet">↗ Ouvrir</a>
+                 <button class="btn-secondary" onclick="exportInstanceXlsx(${cfg.port})" title="Exporter cette config en .xlsx">💾</button>
+                 <button class="btn-stop" onclick="stopInst(${cfg.port})">⏸ ARRÊTER</button>`
+              : `<button class="btn-start" onclick="startInst(${cfg.port})">▶ LANCER</button>
+                 <button class="btn-secondary" onclick="exportInstanceXlsx(${cfg.port})" title="Exporter cette config en .xlsx">💾</button>
+                 <button class="btn-secondary" onclick="importInstanceXlsx(${cfg.port})" title="Importer une config .xlsx pour ce port">📥</button>
+                 <button class="btn-secondary" onclick="resetInstanceDb(${cfg.port})" title="Réinitialiser la base de données (perte des incidents/transferts/déclarations)">🔄</button>
+                 <button class="btn-danger" onclick="delInst(${cfg.port})" title="Supprimer">🗑</button>`
+        }
+      </div>
+    `;
+
+    // Hooks de modification
+    card.querySelectorAll("input[data-field]").forEach(inp => {
+      inp.addEventListener("change", () => onFieldChange(inp));
+    });
+
+    container.appendChild(card);
+  });
+
+  document.getElementById("summary-actives").textContent = actives;
+  document.getElementById("summary-total").textContent = _instances.length;
+}
+
+async function onFieldChange(inp) {
+  const port = parseInt(inp.dataset.port);
+  const field = inp.dataset.field;
+  let value = inp.value;
+  try {
+    await api("PUT", `/api/master/instances/${port}`, { [field]: value });
+  } catch (e) {
+    alert("Modification refusée : " + e.message);
+    refreshInstances();
+  }
+}
+
+async function startInst(port) {
+  // Récupérer les valeurs saisies dans le DOM avant de lancer
+  await syncFieldsToServer(port);
+
+  // Feedback immédiat : passer en "starting"
+  _startingPorts.add(port);
+  renderInstances();
+
+  try {
+    const r = await api("POST", `/api/master/instances/${port}/start`);
+    showFeedback(`Instance lancée sur ${r.url}`);
+
+    // Vérifier que l'instance répond vraiment (peut prendre quelques secondes)
+    let ok = false;
+    for (let i = 0; i < 15; i++) {
+      await new Promise(res => setTimeout(res, 1000));
+      try {
+        // On tente un fetch HEAD/GET sans auth — si ça répond (même 401),
+        // c'est que l'instance est UP
+        const probe = await fetch(`http://localhost:${port}/`, {
+          mode: "no-cors",
+          credentials: "omit",
+        }).catch(() => null);
+        if (probe) {
+          ok = true;
+          break;
+        }
+      } catch(e) {}
+      // Refresh pour mettre à jour le state si l'instance s'est crashée entre temps
+      if (i === 5 || i === 10) await refreshInstances();
+    }
+
+    _startingPorts.delete(port);
+    if (ok) {
+      showFeedback(`✓ Instance accessible sur http://localhost:${port}`);
+    } else {
+      showFeedback(`⚠ Instance lancée mais ne répond pas. Voir data/instances/Site_${port}/scribe.log`);
+    }
+    await refreshInstances();
+  } catch (e) {
+    _startingPorts.delete(port);
+    await refreshInstances();
+    alert("Erreur au lancement : " + e.message);
+  }
+}
+
+async function stopInst(port) {
+  if (!confirm(`Arrêter l'instance port ${port} ?`)) return;
+  _stoppingPorts.add(port);
+  renderInstances();
+  try {
+    await api("POST", `/api/master/instances/${port}/stop`);
+    showFeedback(`Instance arrêtée`);
+  } catch (e) {
+    alert("Erreur à l'arrêt : " + e.message);
+  } finally {
+    _stoppingPorts.delete(port);
+    setTimeout(refreshInstances, 500);
+  }
+}
+
+async function delInst(port) {
+  if (!confirm(`Supprimer définitivement l'instance port ${port} et ses données ?`)) return;
+  try {
+    await api("DELETE", `/api/master/instances/${port}`);
+    refreshInstances();
+  } catch (e) {
+    alert("Erreur : " + e.message);
+  }
+}
+
+async function regenPwd(port) {
+  try {
+    const r = await api("POST", `/api/master/instances/${port}/regenerate-password`);
+    const inp = document.querySelector(`input[data-port="${port}"][data-field="admin_password"]`);
+    if (inp) inp.value = r.password;
+    showFeedback("Nouveau mot de passe généré");
+  } catch (e) {
+    alert("Erreur : " + e.message);
+  }
+}
+
+async function setSync(port, syncEnabled) {
+  // Appelée par les radio buttons. Pas de confirmation : la radio est
+  // suffisamment explicite, et le changement ne prend effet qu'au prochain
+  // démarrage de l'instance (l'utilisateur peut revenir en arrière).
+  try {
+    await api("PUT", `/api/master/instances/${port}`, { synchroniser: syncEnabled });
+    showFeedback(syncEnabled
+      ? "✓ Mode synchronisé activé — l'instance apparaîtra en supervision au prochain lancement"
+      : "✓ Mode solo activé — l'instance restera autonome au prochain lancement");
+    // Pas de full refresh : on met juste à jour le cache local et on re-render
+    const inst = _instances.find(x => x.config.port === port);
+    if (inst) inst.config.synchroniser = syncEnabled;
+    renderInstances();
+  } catch (e) {
+    alert("Erreur : " + e.message);
+    refreshInstances();
+  }
+}
+
+async function syncFieldsToServer(port) {
+  // Push toutes les valeurs des champs de la ligne vers le serveur.
+  // Skip silencieusement si l'instance est active (champs disabled, rien à sync)
+  const inst = _instances.find(x => x.config.port === port);
+  if (inst && inst.statut === "actif") return;
+
+  const inputs = document.querySelectorAll(`input[data-port="${port}"]`);
+  const payload = {};
+  inputs.forEach(inp => {
+    if (inp.dataset.field && inp.value !== "") {
+      payload[inp.dataset.field] = inp.value;
+    }
+  });
+  if (Object.keys(payload).length === 0) return;
+  try {
+    await api("PUT", `/api/master/instances/${port}`, payload);
+  } catch (e) {
+    // Ne bloque pas le start si la sync échoue — log uniquement
+    console.warn("Sync échouée :", e.message);
+  }
+}
+
+async function geocode(port) {
+  const inp = document.querySelector(`input[data-port="${port}"][data-field="adresse"]`);
+  if (!inp || !inp.value.trim()) {
+    alert("Saisissez une adresse d'abord");
+    return;
+  }
+  // Sauvegarder ce que l'utilisateur a tapé — on ne le remplacera PAS
+  const adresseSaisie = inp.value;
+  try {
+    const r = await api("GET", `/api/master/geocode?q=${encodeURIComponent(adresseSaisie)}`);
+    // On ne pousse QUE lat/lon. L'adresse reste celle saisie par l'utilisateur.
+    await api("PUT", `/api/master/instances/${port}`, {
+      latitude:  r.lat,
+      longitude: r.lon,
+      adresse:   adresseSaisie,  // explicite : on garde la saisie utilisateur
+    });
+    showFeedback(`✓ Géolocalisé : ${r.lat.toFixed(4)}, ${r.lon.toFixed(4)}`);
+    refreshInstances();
+  } catch (e) {
+    let msg = e.message;
+    if (msg.includes("Aucun résultat")) {
+      msg += "\n\nSuggestions :\n• Format : 'numéro rue, ville' (avec virgule)\n• Exemple : '1 avenue de l'hôpital, Paris'\n• Ou simplement : 'Paris, France'";
+    } else if (msg.includes("502") || msg.includes("indisponible")) {
+      msg = "Service de géocodage indisponible. Vous pouvez saisir lat/lon manuellement.";
+    }
+    alert("Géocodage : " + msg);
+  }
+}
+
+async function showCreds(port) {
+  try {
+    const r = await api("GET", `/api/master/instances/${port}/credentials`);
+    const txt = `SCRIBE — Instance ${port}\nURL : ${r.url}\nLogin : ${r.login}\nMot de passe : ${r.password}`;
+    document.getElementById("creds-content").textContent = txt;
+    document.getElementById("modal-creds").classList.add("show");
+    document.getElementById("modal-creds").dataset.text = txt;
+  } catch (e) {
+    alert("Erreur : " + e.message);
+  }
+}
+
+function copyCreds() {
+  const txt = document.getElementById("modal-creds").dataset.text;
+  navigator.clipboard.writeText(txt).then(() => {
+    showFeedback("Copié dans le presse-papier");
+    closeCreds();
+  });
+}
+
+function closeCreds() {
+  document.getElementById("modal-creds").classList.remove("show");
+}
+
+async function addCustom() {
+  const port = parseInt(document.getElementById("custom-port").value);
+  if (!port) { alert("Port requis"); return; }
+  // Récupérer le mode sélectionné par radio
+  const modeChecked = document.querySelector('input[name="mode-custom"]:checked');
+  const synchroniser = !modeChecked || modeChecked.value === "sync";
+
+  const payload = {
+    port,
+    sigle:        document.getElementById("custom-sigle").value || undefined,
+    adresse:      document.getElementById("custom-adresse").value || undefined,
+    admin_login:  document.getElementById("custom-login").value || "dircrise",
+    synchroniser: synchroniser,
+  };
+  // Si l'utilisateur a saisi un mdp, on le passe ; sinon le serveur en génère un
+  const customPwd = document.getElementById("custom-pwd");
+  if (customPwd && customPwd.value.trim()) {
+    payload.admin_password = customPwd.value.trim();
+  }
+  try {
+    await api("POST", "/api/master/instances/custom", payload);
+    document.getElementById("custom-port").value = "";
+    document.getElementById("custom-sigle").value = "";
+    document.getElementById("custom-adresse").value = "";
+    if (customPwd) customPwd.value = "";
+    // Reset radio à "sync" par défaut
+    const syncRadio = document.querySelector('input[name="mode-custom"][value="sync"]');
+    if (syncRadio) syncRadio.checked = true;
+    _refreshCustomModeStyle();
+    refreshInstances();
+    showFeedback("Instance ajoutée");
+  } catch (e) {
+    alert("Erreur : " + e.message);
+  }
+}
+
+// Met à jour le style "selected" des radios du form custom
+function _refreshCustomModeStyle() {
+  document.querySelectorAll('input[name="mode-custom"]').forEach(input => {
+    const label = input.closest("label");
+    if (!label) return;
+    label.classList.toggle("mode-radio-selected", input.checked);
+    label.classList.toggle("mode-radio-solo", input.checked && input.value === "solo");
+  });
+}
+
+// Listener pour réagir au clic sur les radios du form custom
+document.addEventListener("change", (e) => {
+  if (e.target.name === "mode-custom") _refreshCustomModeStyle();
+});
+
+function generateCustomPwd() {
+  // Génère un mdp lisible côté client (sans aller-retour serveur)
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*";
+  let pwd = "";
+  const arr = new Uint32Array(12);
+  crypto.getRandomValues(arr);
+  for (let i = 0; i < 12; i++) {
+    pwd += alphabet[arr[i] % alphabet.length];
+  }
+  document.getElementById("custom-pwd").value = pwd;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Profil UF
+// ─────────────────────────────────────────────────────────────────────────
+let _uf = [];
+
+async function loadUF() {
+  try {
+    const r = await api("GET", "/api/master/profil/uf");
+    _uf = r.uf || [];
+    renderUF();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function renderUF() {
+  const tbody = document.getElementById("uf-tbody");
+  tbody.innerHTML = "";
+  _uf.forEach((u, i) => {
+    const tr = document.createElement("tr");
+    if (!u.actif) tr.className = "row-disabled";
+    tr.innerHTML = `
+      <td><input type="checkbox" ${u.actif ? "checked" : ""} onchange="_uf[${i}].actif=this.checked;renderUF()"></td>
+      <td><input type="text" value="${esc(u.code)}" onchange="_uf[${i}].code=this.value"></td>
+      <td><input type="text" value="${esc(u.libelle)}" onchange="_uf[${i}].libelle=this.value"></td>
+      <td><input type="text" value="${esc(u.pole || '')}" onchange="_uf[${i}].pole=this.value"></td>
+      <td><input type="text" value="${esc(u.site || '')}" onchange="_uf[${i}].site=this.value"></td>
+      <td><button class="btn-icon" onclick="_uf.splice(${i},1);renderUF()" title="Supprimer">🗑</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function addUFRow() {
+  _uf.push({ code: "", libelle: "", pole: "", site: "Site Principal", actif: true });
+  renderUF();
+}
+
+async function saveUF() {
+  const cleaned = _uf.filter(u => u.code && u.libelle);
+  if (cleaned.length !== _uf.length) {
+    if (!confirm(`${_uf.length - cleaned.length} ligne(s) sans code/libellé seront ignorées. Continuer ?`)) return;
+  }
+  try {
+    await api("POST", "/api/master/profil/uf", { uf: cleaned });
+    _uf = cleaned;
+    renderUF();
+    showFeedback(`${cleaned.length} UF enregistrée(s) dans le profil de base`);
+  } catch (e) {
+    alert("Erreur : " + e.message);
+  }
+}
+
+async function downloadProfil() {
+  const token = getAdminToken();
+  const r = await fetch("/api/master/profil/download", {
+    headers: { "Authorization": "Bearer " + token }
+  });
+  if (!r.ok) { alert("Erreur téléchargement"); return; }
+  const blob = await r.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "SCRIBE_profil_base.xlsx";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function uploadProfil(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const token = getAdminToken();
+  const fd = new FormData();
+  fd.append("file", file);
+  try {
+    const r = await fetch("/api/master/profil/upload", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + token },
+      body: fd,
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.detail || ("HTTP " + r.status));
+    }
+    showFeedback("Profil uploadé. Rechargement…");
+    setTimeout(loadUF, 500);
+  } catch (e) {
+    alert("Erreur upload : " + e.message);
+  }
+  input.value = "";
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function labelStatut(s) {
+  return ({arrete:"Arrêté", actif:"Actif", erreur:"Erreur"})[s] || s;
+}
+
+function formatDate(iso) {
+  if (!iso) return "";
+  try { return new Date(iso).toLocaleString("fr-FR"); }
+  catch { return iso; }
+}
+
+function showFeedback(msg) {
+  const el = document.getElementById("copy-feedback");
+  el.textContent = "✓ " + msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// i18n — applique les traductions data-i18n-label si dispo
+// ─────────────────────────────────────────────────────────────────────────
+async function applyI18n() {
+  // Détecter la langue depuis localStorage du parent (cohérent avec SCRIBE)
+  let lang = "fr";
+  try {
+    lang = (window.parent && window.parent.localStorage.getItem("scribe_lang")) ||
+           localStorage.getItem("scribe_lang") || "fr";
+  } catch (e) {}
+  if (lang === "fr") return; // pas besoin de fetch, défaut français
+
+  try {
+    const r = await fetch("/api/master/lang/" + lang).catch(() => null);
+    if (!r || !r.ok) return;
+    const dict = await r.json();
+    document.querySelectorAll("[data-i18n-label]").forEach(el => {
+      const key = el.dataset.i18nLabel;
+      // Naviguer dans le dict avec la clé pointée (ex: "master.tab_instances")
+      const parts = key.split(".");
+      let val = dict;
+      for (const p of parts) { val = val && val[p]; }
+      if (typeof val === "string") {
+        // Conserver l'icône en début si présente
+        const m = el.textContent.match(/^([\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2700}-\u{27BF}\u{1F100}-\u{1F1FF}🌐💬➕▶⏸🎲📋🔄🌍📥📤🗑]\s*)/u);
+        const icon = m ? m[1] : "";
+        el.textContent = icon + val;
+      }
+    });
+  } catch (e) {
+    console.debug("i18n master non chargé :", e);
+  }
+}
+
+// Init
+applyI18n();
+refreshInstances();
+// Refresh auto toutes les 15s (au lieu de 10s) en mode "doux" :
+// - skip si l'utilisateur est en train de saisir dans un champ
+// - re-render complet seulement si un statut a changé
+setInterval(softRefreshInstances, 15000);
+
+// ─── Export config (xlsx par instance + zip global GHT) ──────────────
+async function exportInstanceXlsx(port) {
+  const includeSecrets = confirm(
+    "Inclure les SECRETS (mot de passe en clair, clé API) ?\n\n" +
+    "  • OK    : export complet (fichier sensible — stockez en lieu sûr)\n" +
+    "  • Annuler : export sécurisé (mot de passe HASHÉ, clé API vidée)"
+  );
+  try {
+    const url = '/api/master/instances/' + port + '/export-xlsx?include_secrets=' + (includeSecrets ? 'true' : 'false');
+    const r = await fetch(url, {headers: authHeaders()});
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'HTTP ' + r.status); }
+    const blob = await r.blob();
+    const filename = 'scribe_export_port' + port + '.xlsx';
+    triggerDownload(blob, filename);
+    toast('✓ Config exportée' + (includeSecrets ? ' (secrets inclus)' : ' (secrets hashés)'), 'ok');
+  } catch (e) {
+    toast('Export : ' + e.message, 'err');
+  }
+}
+
+async function exportAllGhtZip() {
+  const includeSecrets = confirm(
+    "Exporter tous les établissements (.zip)\n\n" +
+    "Inclure les SECRETS (mot de passe en clair, clé API) ?\n\n" +
+    "  • OK     : export complet (fichier sensible)\n" +
+    "  • Annuler : export sécurisé (mot de passe HASHÉ, clé API vidée)"
+  );
+  try {
+    const url = '/api/master/instances/export-all-zip?include_secrets=' + (includeSecrets ? 'true' : 'false');
+    const r = await fetch(url, {headers: authHeaders()});
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'HTTP ' + r.status); }
+    const blob = await r.blob();
+    const today = new Date().toISOString().slice(0, 10);
+    triggerDownload(blob, 'scribe_ght_export_' + today + '.zip');
+    toast('✓ GHT exporté en .zip', 'ok');
+  } catch (e) {
+    toast('Export GHT : ' + e.message, 'err');
+  }
+}
+
+async function importInstanceXlsx(port) {
+  // Vérifier instance arrêtée
+  const card = document.querySelector('[data-port="' + port + '"]');
+  if (card && card.classList.contains('actif')) {
+    toast('Arrêtez l\'instance avant d\'importer une nouvelle config.', 'warn');
+    return;
+  }
+  if (!confirm("Importer un .xlsx pour le port " + port + " ?\n\nLa config actuelle sera REMPLACÉE (UF, services, identité). Les incidents historiques en DB sont conservés.")) return;
+  // Créer un input file temporaire
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = '.xlsx';
+  inp.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const buf = await file.arrayBuffer();
+      const r = await fetch('/api/master/instances/' + port + '/import-xlsx', {
+        method: 'POST', headers: authHeaders(), body: buf,
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'HTTP ' + r.status); }
+      const data = await r.json();
+      toast('✓ ' + data.sigle + ' importé (' + data.uf_imported + ' UF)', 'ok');
+      refreshInstances();
+    } catch (e) {
+      toast('Import : ' + e.message, 'err');
+    }
+  };
+  inp.click();
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+
+// ─── Réinitialiser la DB d'une instance ──────────────────────────────
+async function resetInstanceDb(port) {
+  if (!confirm(
+    "⚠ Réinitialiser la base de données du port " + port + " ?\n\n" +
+    "Cela va EFFACER toutes les données saisies :\n" +
+    "  • Incidents\n" +
+    "  • Transferts\n" +
+    "  • Déclarations capacitaires\n" +
+    "  • Messages\n" +
+    "  • Cellule de crise\n\n" +
+    "Puis recréer la DB depuis le profil xlsx (UF, capacités, directeurs).\n\n" +
+    "Continuer ?"
+  )) return;
+  if (!confirm("Vraiment sûr ? Cette action est IRRÉVERSIBLE.")) return;
+  try {
+    const r = await fetch('/api/master/instances/' + port + '/reset-db', {
+      method: 'POST', headers: authHeaders(),
+    });
+    if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail || 'HTTP ' + r.status); }
+    const data = await r.json();
+    toast('✓ DB réinitialisée pour ' + data.sigle, 'ok');
+    refreshInstances();
+  } catch (e) {
+    toast('Reset DB : ' + e.message, 'err');
+  }
+}
+
+// ─── Relancer le wizard d'onboarding ─────────────────────────────────
+async function relaunchWizard() {
+  // On est dans une iframe — on doit reset le flag .onboarding_done côté serveur
+  // puis recharger la page master complète pour que le collecteur recharge
+  // automatiquement le wizard via /api/master/onboarding/ui
+  if (!confirm("Relancer l'assistant de configuration ?\n\n" +
+               "Les instances existantes seront conservées. " +
+               "Vous serez redirigé vers le wizard pour ajouter un nouvel établissement.")) {
+    return;
+  }
+  try {
+    const r = await fetch('/api/master/onboarding/reset', {method: 'POST', headers: authHeaders()});
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.detail || 'HTTP ' + r.status); }
+    // Recharger la page parente (le collecteur :9000) qui détectera show_wizard=true
+    // car .onboarding_done a été supprimé
+    if (window.parent && window.parent !== window) {
+      window.parent.location.reload();
+    } else {
+      window.location.href = '/api/master/onboarding/ui';
+    }
+  } catch (e) {
+    toast('Impossible de relancer le wizard : ' + e.message, 'err');
+  }
+}
+</script>
+
+</body>
+</html>
