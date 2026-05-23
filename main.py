@@ -89,6 +89,9 @@ def _build_csp() -> str:
 
     connect_src = " ".join(sorted(connect_origins))
 
+    # TODO ANSSI: retirer 'unsafe-inline' de script-src et style-src en migrant
+    # vers des nonces CSP. Chantier non trivial (refactor des onclick inline).
+    # En attendant, mitigation via Permissions-Policy stricte + Referrer-Policy.
     # frame-ancestors : autoriser self + origines configurées (pour iframe master)
     frame_ancestors_extra = os.getenv("SCRIBE_FRAME_ANCESTORS", "http://localhost:8565")
 
@@ -113,7 +116,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         # X-Frame-Options géré par frame-ancestors dans CSP
-        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["X-XSS-Protection"] = "0"  # v2.5.0: header déprécié, protection via CSP
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
         response.headers["Content-Security-Policy"] = _CSP
@@ -121,7 +124,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
-app = FastAPI(title="SCRIBE v2.4.8.3 Crisis OS", version="2.3.1")
+app = FastAPI(title="SCRIBE v2.5.0 Crisis OS", version="2.5.0")
 
 # CORS — restreint aux origines configurées (jamais wildcard en prod)
 _VPS = "http://localhost"

@@ -317,8 +317,12 @@ async def upload_plugin(
 
     try:
         with zipfile.ZipFile(io.BytesIO(content)) as zf:
-            # Vérifier qu'il y a un plugin.py à la racine ou dans un sous-dossier
+            # v2.5.0 patch sécu M5 : protection ZIP slip
             names = zf.namelist()
+            for _name in names:
+                if _name.startswith('/') or '..' in _name or '\\' in _name:
+                    raise HTTPException(400, "ZIP invalide : path traversal détecté")
+            # Vérifier qu'il y a un plugin.py à la racine ou dans un sous-dossier
             plugin_id = None
             for name in names:
                 if name.endswith("/plugin.py") or name == "plugin.py":

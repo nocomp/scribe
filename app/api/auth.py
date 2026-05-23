@@ -20,23 +20,74 @@ from app.models import User, Notification
 router   = APIRouter()
 security = HTTPBearer(auto_error=False)
 
-# SECRET_KEY : depuis env var en prod, sinon dérivée de façon déterministe
-# depuis le répertoire de travail (évite l'invalidation des tokens au redémarrage)
-def _derive_secret() -> str:
-    """Clé déterministe basée sur le chemin absolu du projet.
-    Stable entre redémarrages, unique par installation, sans fichier supplémentaire.
-    En production, toujours définir SCRIBE_SECRET dans l'environnement."""
-    import hashlib, pathlib
-    base = str(pathlib.Path(__file__).resolve().parent.parent.parent)
-    return hashlib.sha256(f"scribe-v2-{base}".encode()).hexdigest()
+# SECRET_KEY : depuis env var SCRIBE_SECRET (recommandé), sinon généré
+# aléatoirement et persisté dans data/.scribe_secret (chmod 600).
+# Plus de dérivation déterministe depuis le chemin (faille C1 audit pré-ANSSI).
+import logging as _logging_sec
+_logger_sec = _logging_sec.getLogger("scribe.auth")
 
-SECRET_KEY = os.getenv("SCRIBE_SECRET") or _derive_secret()
+def _load_or_generate_secret() -> str:
+    """Charge SCRIBE_SECRET depuis env, sinon depuis data/.scribe_secret,
+    sinon génère un secret aléatoire de 64 octets et le persiste."""
+    import pathlib, secrets as _secrets, stat as _stat
+    env_secret = os.getenv("SCRIBE_SECRET")
+    if env_secret:
+        return env_secret
+    project_root = pathlib.Path(__file__).resolve().parent.parent.parent
+    secret_file = project_root / "data" / ".scribe_secret"
+    if secret_file.exists():
+        try:
+            sec = secret_file.read_text(encoding="utf-8").strip()
+            if sec and len(sec) >= 32:
+                return sec
+        except Exception:
+            pass
+    # Génération
+    secret_file.parent.mkdir(parents=True, exist_ok=True)
+    new_secret = _secrets.token_urlsafe(64)
+    secret_file.write_text(new_secret, encoding="utf-8")
+    try:
+        os.chmod(secret_file, 0o600)
+    except Exception:
+        pass
+    _logger_sec.warning(
+        "⚠️  SCRIBE_SECRET non défini en environnement. "
+        "Secret aléatoire généré dans %s (chmod 600). "
+        "En production, définissez SCRIBE_SECRET dans les variables d'environnement.",
+        secret_file
+    )
+    return new_secret
+
+SECRET_KEY = _load_or_generate_secret()
 ALGORITHM  = "HS256"
-TOKEN_TTL  = 72  # heures — 3 jours (adapté aux crises G7 longues)
+# v2.5.0 patch sécurité : TTL réduit de 72h → 8h par défaut (configurable)
+# Pour les crises longues (G7), augmenter via SCRIBE_TOKEN_TTL_HOURS
+TOKEN_TTL  = int(os.getenv("SCRIBE_TOKEN_TTL_HOURS", "8"))
 
-# Credentials admin depuis variables d'environnement (jamais en dur en prod)
+# Credentials admin : SCRIBE_ADMIN_PASS doit être défini (fail-fast)
 ADMIN_USER = os.getenv("SCRIBE_ADMIN_USER", "dircrise")
-ADMIN_PASS = os.getenv("SCRIBE_ADMIN_PASS", "changeme")
+ADMIN_PASS = os.getenv("SCRIBE_ADMIN_PASS")
+if not ADMIN_PASS:
+    # Mode dev : générer un mdp aléatoire et l'afficher dans les logs
+    # Mode prod : définir SCRIBE_ADMIN_PASS et SCRIBE_REQUIRE_ADMIN_PASS=1
+    if os.getenv("SCRIBE_REQUIRE_ADMIN_PASS") == "1":
+        raise RuntimeError(
+            "SCRIBE_ADMIN_PASS non défini. Définissez un mot de passe fort "
+            "(>= 12 caractères) dans les variables d'environnement avant "
+            "de démarrer SCRIBE en production."
+        )
+    import secrets as _secrets2
+    ADMIN_PASS = _secrets2.token_urlsafe(16)
+    _logger_sec.warning(
+        "⚠️  SCRIBE_ADMIN_PASS non défini. Mot de passe admin généré : %s "
+        "(à conserver ou redéfinir via env var SCRIBE_ADMIN_PASS).",
+        ADMIN_PASS
+    )
+elif len(ADMIN_PASS) < 8:
+    _logger_sec.warning(
+        "⚠️  SCRIBE_ADMIN_PASS fait moins de 8 caractères. "
+        "Utilisez un mot de passe fort (>= 12 caractères recommandés)."
+    )
 
 # ── Hachage bcrypt (remplace SHA-256 sans sel) ────────────────────────────────
 _pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")

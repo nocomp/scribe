@@ -166,7 +166,7 @@ def start_instance(port: int, request: Request):
         # Toute autre exception : log complet + 500 avec message lisible
         import traceback
         logger.error(f"Erreur start port {port} : {traceback.format_exc()}")
-        raise HTTPException(500, f"Erreur lancement : {type(e).__name__}: {e}")
+        logger.exception("Erreur lancement instance"); raise HTTPException(500, "Erreur interne lors du lancement (voir logs serveur)")
     return {
         "ok":      True,
         "pid":     state.pid,
@@ -225,7 +225,7 @@ def reset_instance_db(port: int, request: Request):
     except Exception as e:
         import traceback
         logger.error(f"Reset DB échoué pour port {port} : {traceback.format_exc()}")
-        raise HTTPException(500, f"Erreur reset DB : {type(e).__name__}: {e}")
+        logger.exception("Erreur reset DB"); raise HTTPException(500, "Erreur interne lors du reset (voir logs serveur)")
     return {"ok": True, "sigle": state.config.sigle, "msg": "DB réinitialisée depuis le profil xlsx"}
 
 
@@ -531,7 +531,7 @@ def exercice_collecteur_start(request: Request):
     except Exception as e:
         import traceback
         logger.error(f"Erreur start collecteur exo : {traceback.format_exc()}")
-        raise HTTPException(500, f"Erreur lancement : {type(e).__name__}: {e}")
+        logger.exception("Erreur lancement instance"); raise HTTPException(500, "Erreur interne lors du lancement (voir logs serveur)")
 
 
 @router.post("/exercice/collecteur/stop")
@@ -581,7 +581,7 @@ def exercice_start_instance(port: int, request: Request):
     except Exception as e:
         import traceback
         logger.error(f"Erreur start exo port {port} : {traceback.format_exc()}")
-        raise HTTPException(500, f"Erreur lancement : {type(e).__name__}: {e}")
+        logger.exception("Erreur lancement instance"); raise HTTPException(500, "Erreur interne lors du lancement (voir logs serveur)")
     return {
         "ok":      True,
         "pid":     state.pid,
@@ -716,10 +716,15 @@ def onboarding_status():
 
 
 @router.post("/onboarding/finish")
-def onboarding_finish():
+def onboarding_finish(request: Request):
     """Marque l'onboarding comme terminé (création du flag .onboarding_done).
     v2.4.8.4 : nettoie aussi le flag wizard_force qui peut être actif si
-    l'utilisateur arrive ici via le bouton 🎯 Wizard."""
+    l'utilisateur arrive ici via le bouton 🎯 Wizard.
+    v2.5.0 patch sécu E5 : protégé par _check_admin (sauf premier boot)."""
+    # Si onboarding pas encore fait → autoriser (premier boot, pas encore d'admin)
+    # Si déjà fait et bouton wizard utilisé → exiger admin
+    if ONBOARDING_FLAG.exists():
+        _check_admin(request)
     try:
         ONBOARDING_FLAG.parent.mkdir(parents=True, exist_ok=True)
         ONBOARDING_FLAG.write_text(now_iso(), encoding="utf-8")
