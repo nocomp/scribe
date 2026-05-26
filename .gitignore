@@ -4,22 +4,21 @@ scribe.db
 *.sqlite
 *.sqlite3
 
+# Dossier des données
+data/*
+
 # ── Configuration générée (contient clés API et données établissement) ──
 app/static/config.js
 
 # ── State persistant des collecteurs (runtime, ne JAMAIS committer) ──
 # Sinon on pollue les nouveaux déploiements avec des résidus
-collecteur/collecteur_admin.json
-collecteur/collecteur_transferts.json
-collecteur/collecteur_incidents.json
-collecteur/collecteur_decisions.json
-collecteur/collecteur_sessions.json
-collecteur_exercice/collecteur_exo_admin.json
-collecteur_exercice/collecteur_exo_transferts.json
-collecteur_exercice/collecteur_exo_incidents.json
-collecteur_exercice/collecteur_exo_decisions.json
-collecteur_exercice/collecteur_exo_prets.json
-collecteur_exercice/collecteur_exo_sessions.json
+collecteur/*.json
+collecteur_exercice/*.json
+
+# marquers divers
+master/.onboarding_done
+master/*.json
+master/profil_base.xlsx
 
 # ── Pièces jointes des incidents ──
 uploads/*
@@ -62,3 +61,4 @@ logs/
 # ── v2321 — Config IA persistée (contient clé API en clair, NE JAMAIS COMMITTER) ──
 instance/ia_config.json
 instance/
+
