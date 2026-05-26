@@ -112,7 +112,7 @@ header{display:flex;flex-direction:column;align-items:stretch;background:linear-
 
 /* ══ INCIDENTS TAB ══ */
 #tab-veille{flex-direction:row}
-.entry-col{width:320px;min-width:260px;display:flex;flex-direction:column;border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;max-height:calc(100vh - 90px)}
+.entry-col{width:480px;min-width:320px;display:flex;flex-direction:column;border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;max-height:calc(100vh - 90px)}
 .view-col{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 
 /* MAP */

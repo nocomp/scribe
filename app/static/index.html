@@ -224,7 +224,7 @@
                 oninput="filterUFList()" onfocus="showUFDropdown()" onkeydown="ufKeyNav(event)"
                 style="padding-right:26px;width:100%;box-sizing:border-box">
               <span onclick="clearUF()" style="position:absolute;right:7px;top:50%;transform:translateY(-50%);color:var(--muted);cursor:pointer;font-size:12px">✕</span>
-              <div id="uf-dropdown" style="display:none;position:absolute;z-index:500;top:100%;left:0;right:0;max-height:180px;overflow-y:auto;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.4)"></div>
+              <div id="uf-dropdown" style="display:none;position:absolute;z-index:500;top:100%;left:0;right:0;max-height:200px;width:234px;overflow-y:auto;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.4)"></div>
             </div>
             <button type="button" onclick="ufAddCurrent()" title="Ajouter cette UF"
               style="flex-shrink:0;width:26px;height:26px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;line-height:1">＋</button>
@@ -285,14 +285,14 @@
       <div class="jalons-form">
         <div class="jalons-form-title">⏱ Jalons de résolution</div>
         <div class="jalon-presets">
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Passé d'ordinateur">Passé d'ordi</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="DSI contacté">DSI contacté</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="RSSI alerté">RSSI alerté</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Cellule activée">Cellule activée</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="CERT Santé notifié">CERT Santé</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Ordi plus utilisé">Ordi plus utilisé</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Contacter DSI">Contacter DSI</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Alerter RSSI">Alerter RSSI</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Activer Cellule de crise">Activer Cellule de crise</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Notifier CERT Santé">Notifier CERT Santé</button>
           <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Isolation réseau">Isolation réseau</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Sauvegarde vérifiée">Sauvegarde OK</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Retour à la normale">Retour normal</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Vérifier Sauvegarde">Vérifier Sauvegarde</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Retour à la normale">Retour normale</button>
         </div>
         <div class="jalon-custom-input">
           <input type="text" id="jalon-custom" placeholder="Jalon personnalisé...">
@@ -2241,3 +2241,12 @@
 
 </body>
 </html>
+
+
+
+
+
+
+
+
+

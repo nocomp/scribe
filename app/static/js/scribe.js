@@ -9741,8 +9741,8 @@ async function acvCreateAll() {
 
       // 2. Capacité : cadres déclarants — via capData déjà chargé
       try {
-        if (Array.isArray(window.capData)) {
-          window.capData.forEach(function(c) {
+        if (Array.isArray(capData)) {
+          capData.forEach(function(c) {
             var d = c.derniere_declaration;
             if (d && d.redacteur) cadres.add(String(d.redacteur).trim());
           });
@@ -10032,3 +10032,4 @@ async function aufBulkActivate(actif) {
     setInterval(checkAdminAndShow, 2000);
   }
 })();
+
