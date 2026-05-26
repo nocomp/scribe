@@ -1,638 +1,795 @@
-# 🏥 SCRIBE — Hospital Crisis Management Platform
+<div align="center">
 
-> 🇬🇧 **English version below** — La version française est en premier, l'anglais suit.
+<img src="screenshots/01-wizard-splash.png" alt="SCRIBE" width="720"/>
 
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![Version](https://img.shields.io/badge/version-2.5.0-green)](https://github.com/nocomp/scribe/releases)
-[![Stack](https://img.shields.io/badge/stack-FastAPI%20%7C%20SQLite%20%7C%20Leaflet-orange)](#stack-technique)
-[![Languages](https://img.shields.io/badge/i18n-FR%20EN%20DE%20ES%20IT%20NL%20PL%20PT-purple)](#multilingue)
+# 🏥 SCRIBE
 
-![SCRIBE — Bienvenue](screenshots/01-wizard-splash.png)
+### Open-Source Hospital Crisis Management Platform
+
+**Multi-site · Multi-language · On-premise · AGPL-3.0**
+
+![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.5.0-green.svg)
+![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)
+![Stars](https://img.shields.io/github/stars/nocomp/scribe?style=social)
+
+[**Quick Start**](#-quick-start) · [**Features**](#%EF%B8%8F-features) · [**Screenshots**](#-screenshots) · [**Architecture**](#%EF%B8%8F-architecture) · [**Contributing**](#-contributing) · [🇫🇷 **Version française**](#-version-française)
+
+</div>
+
+---
+
+## 🇬🇧 English
+
+> **In one sentence:** SCRIBE turns a shared Word document for crisis management into a real platform — fast, traced, multi-site, and free.
+
+### Why SCRIBE?
+
+When a major incident hits a hospital — a cyberattack, a mass casualty event, an epidemic peak, a Major Incident Plan activation — crisis directors are often forced to coordinate with the only tool they have at hand: a shared Word document.
+
+No real-time traceability. No reliable timestamps. No capacity overview. No territorial coordination. Just a document everyone edits at the same time, hoping nothing gets lost.
+
+**SCRIBE was built to change that.**
+
+It is a complete, mature, ready-to-deploy platform that gives crisis directors, CISOs, medical coordinators, and supervisors the structured information they need — without requiring a cloud, a vendor contract, or a six-month integration project.
+
+### 🎯 Built for healthcare facilities of every size
+
+From large teaching hospitals to community clinics. From a single facility to a territorial network coordinated by a regional health agency. SCRIBE scales down as gracefully as it scales up.
+
+### 🌍 Multilingual. European. Sovereign.
+
+- **Multilingual interface** (French, English, Italian, Spanish — more on the way)
+- **16 pre-configured timezones**, from Paris to Papeete, via Réunion, Martinique, and Guadeloupe
+- **100% on-premise** — patient data never leaves the facility
+- **Designed for European GDPR and healthcare data sovereignty constraints**
+
+### ✨ And freely given. Like the smile that greets you when you enter a hospital.
+
+Open source under AGPL-3.0. No commercial license, no enterprise edition, no premium tier. The whole platform, for everyone, forever.
+
+---
+
+## 📸 Screenshots
+
+<div align="center">
+
+### Guided wizard — your facility configured in 5 minutes
+
+<img src="screenshots/01-wizard-splash.png" alt="Welcome wizard" width="720"/>
+
+<img src="screenshots/02-wizard-step1-identity.png" alt="Wizard step 1 — Facility identity" width="720"/>
+
+<img src="screenshots/03-wizard-step2-timezone.png" alt="Wizard step 2 — Timezone selector with 16 options" width="720"/>
+
+<img src="screenshots/04-wizard-step5-recap.png" alt="Wizard step 5 — Final review" width="720"/>
+
+### The platform in action
+
+<img src="screenshots/05-supervision-collecteur.png" alt="Territorial supervision dashboard" width="720"/>
+
+<img src="screenshots/06-capacite-grille.png" alt="Capacity tracking with tension levels" width="720"/>
+
+<img src="screenshots/07-transferts-kanban.png" alt="Inter-facility patient transfers with live ambulance routing" width="720"/>
+
+</div>
+
+---
+
+## ⚙️ Features
+
+### Crisis logbook
+
+- Real-time structured event log, multi-user, timestamped to the second
+- Categorized incidents (CYBER, SANITARY, MIXED) with urgency levels
+- Filterable views by site, ward, time window, type, resolution status
+- Editable in-place, full audit trail
+
+### Capacity tracking
+
+- Capacity declarations per ward, by point-in-time (morning, midday, afternoon, evening)
+- Tension levels: **normal · tension · critical**
+- Visual grid showing bed occupancy across all wards in real time
+- Configurable thresholds, automatic alert when thresholds are crossed
+- Filter out wards with no beds, auto-fill of the declaring supervisor
+
+### Inter-facility patient transfers
+
+- Workflow: **EN_PREPARATION → EN_COURS → ARRIVE**
+- Live ambulance routing on a map (OSRM)
+- ETA in the recipient facility timezone
+- Mandatory reason for any status regression (e.g. ARRIVE → EN_COURS)
+- Full status history tracked in `historique_json`
+- Push to territorial collector for cross-site visibility
+
+### Crisis cell management
+
+- Decision chronology with regulatory basis (Plan Blanc, ORSAN, PCA)
+- Attendance log: who's in the crisis room, role, arrival timestamp
+- Directives broadcast to staff with read receipt
+- Autocomplete from configured stakeholder roster + live history
+
+### Territorial supervision
+
+- Master collector aggregating multiple facilities
+- Real-time view of regional status (incidents, capacity, transfers, alerts)
+- Designed for regional health agencies and crisis coordination cells
+- Patient data **stays in each facility** — only aggregated indicators reach the collector
+
+### Drill mode
+
+- Built-in scenario injector — train without touching production data
+- Animator console to play crisis scenarios in real time
+- Isolated databases per drill instance
+- Replayable scenarios in JSON
+
+### Administration
+
+- User management (roles: admin, director, observer)
+- Bulk user import via Excel
+- Unit of Work (UF) management via the UI — activate, deactivate, edit, add
+- Excel-driven facility configuration (units, capacity, directory, emergency phone numbers)
+- Bilingual UI throughout
+
+### Security
+
+- Bcrypt password storage with rate-limited login
+- Forced password change on first login (configurable)
+- JWT-based session tokens
+- Restrictive CORS and Content Security Policy
+- Secret key in environment variable
+- All security advisories follow a coordinated disclosure policy (see [SECURITY.md](SECURITY.md))
+
+---
+
+## 🚀 Quick Start
+
+### Requirements
+
+- Python 3.10 or higher
+- 200 MB free disk space
+- Modern web browser (Firefox, Chrome, Edge, Safari)
+
+### Linux / Mac
+
+```bash
+# 1. Download the latest release
+wget https://github.com/nocomp/scribe/releases/latest/download/scribe_v2500_master_public.zip
+
+# 2. Unzip
+unzip scribe_v2500_master_public.zip
+cd scribe_v2500
+
+# 3. Launch
+./lancer_scribe.sh
+
+# 4. Open in your browser
+open http://localhost:9000
+
+# 5. Login
+#    Username: supervision
+#    Password: changeme  (change immediately on first login)
+```
+
+### Windows
+
+1. Download `scribe_v2500_master_public.zip` from the [latest release](https://github.com/nocomp/scribe/releases/latest)
+2. Right-click → **Extract All**
+3. Double-click `LANCER_SCRIBE.bat`
+4. Open `http://localhost:9000` in your browser
+5. Login with `supervision` / `changeme` (and change the password immediately)
+
+### First steps after install
+
+Once logged in, follow the **onboarding wizard** (~5 minutes):
+
+1. Choose your start mode (guided wizard, Excel import, demo mode, or full territorial network deployment)
+2. Enter your facility identity (name, sigla, FINESS code, language)
+3. Pick your timezone (16 IANA timezones pre-configured + free entry)
+4. Configure your branding and AI provider (optional)
+5. Review and create the instance
+
+Your instance is now live on its own port (8000, 8001, ...) and ready to use.
+
+### Reset to a clean state
+
+If you need to wipe everything and start from scratch:
+
+```bash
+./lancer_scribe.sh --reset    # Linux/Mac
+LANCER_SCRIBE.bat --reset     # Windows
+```
+
+This clears the onboarding flag, removes all instance databases, and lets you re-run the wizard cleanly.
+
+---
+
+## 🏗️ Architecture
+
+### Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | FastAPI (Python) |
+| ORM | SQLAlchemy |
+| Database | SQLite (one DB per instance) |
+| Frontend | Vanilla JavaScript (SPA) |
+| Cartography | Leaflet.js + OSRM (ambulance routing) |
+| Tile provider | CartoDB Light |
+| AI (optional) | Albert (French government LLM) |
+| Design system | DSFR (Système de Design de l'État Français) |
+
+### Deployment topology
+
+```
+                    ┌─────────────────────────────────┐
+                    │  Master / Collector  :9000      │
+                    │  - Onboarding wizard            │
+                    │  - Territorial supervision      │
+                    │  - Multi-facility aggregator    │
+                    └────────────┬────────────────────┘
+                                 │
+              ┌──────────────────┼──────────────────┐
+              │                  │                  │
+        ┌─────▼─────┐      ┌─────▼─────┐      ┌─────▼─────┐
+        │ Facility A│      │ Facility B│      │ Facility C│
+        │   :8000   │      │   :8001   │      │   :8002   │
+        │           │      │           │      │           │
+        │ Own SQLite│      │ Own SQLite│      │ Own SQLite│
+        │ DB        │      │ DB        │      │ DB        │
+        └───────────┘      └───────────┘      └───────────┘
+        Patient data       Patient data       Patient data
+        STAYS LOCAL        STAYS LOCAL        STAYS LOCAL
+```
+
+Each facility runs an independent SCRIBE instance with its own database. The master collector aggregates only **non-nominative indicators** (incidents, capacity tension, transfer counts) — never patient names, identifiers, or medical data.
+
+### Why this matters for compliance
+
+- **GDPR**: patient data is processed only by the local facility, on its own infrastructure
+- **HDS** (French Health Data Hosting): no cloud dependency, no third-party data processor
+- **Sovereignty**: 100% on-premise, your data, your servers, your rules
+
+---
+
+## 🛠️ For Developers
+
+### Installation from source
+
+```bash
+git clone https://github.com/nocomp/scribe.git
+cd scribe
+pip install -r requirements.txt
+python collecteur/collecteur.py
+```
+
+### Project structure
+
+```
+scribe/
+├── main.py                      # FastAPI entry point (per-facility instance)
+├── app/
+│   ├── models.py                # SQLAlchemy models (22 tables)
+│   ├── database.py              # DB connection
+│   ├── api/                     # REST routes
+│   │   ├── v140.py              # Main app routes
+│   │   ├── admin_uf.py          # UF administration
+│   │   ├── cartographie.py      # Mapping and geolocation
+│   │   └── ...
+│   └── static/                  # SPA frontend
+│       ├── index.html
+│       └── js/scribe.js
+├── master/
+│   ├── master_routes.py         # Master routes (onboarding, instance management)
+│   ├── instances_manager.py     # Sub-process orchestration
+│   ├── onboarding.html          # Wizard UI
+│   └── instances.html           # Instance management UI
+├── collecteur/
+│   ├── collecteur.py            # Territorial collector (:9000)
+│   └── collecteur_admin.json    # Admin token (auto-generated on first launch)
+├── plugins/                     # Optional plugins (chat, exercise, etc.)
+└── data/instances/<SIGLE>/      # Per-instance databases
+```
+
+### Configuration
+
+Each facility's configuration lives in an XML file generated by the wizard. The wizard accepts an Excel template (`SCRIBE_config_etablissement.xlsx`) to bulk-load:
+
+- Units of Work (UF) with their ward, pole, and bed counts
+- Capacity reference
+- Phone directory (regular and emergency)
+- Cross-functional services (security, IT, logistics, pharmacy, etc.)
+
+### Contributing
+
+Issues and pull requests welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+Good first issues are tagged with [`good first issue`](https://github.com/nocomp/scribe/labels/good%20first%20issue).
+
+Translation contributions are especially welcome — see the `locales/` folder.
+
+---
+
+## 🗺️ Roadmap
+
+### Released ✅
+
+- **v2.5.0** — First public release (May 2026)
+- v2.4.x — Onboarding wizard, capacity tension levels, transfer history
+- v2.3.x — Drill module, exercise scenarios
+- v2.2.x — Territorial collector, multi-site aggregation
+
+### In progress 🚧
+
+- Mobile-first responsive views
+- Additional language packs (DE, NL, PT)
+- LDAP / Active Directory integration
+- FHIR-compatible data export
+
+### Planned 📋
+
+- Long-term: inter-facility messaging across regions
+- Long-term: ministerial supervision dashboard
+- Long-term: proactive AI decision support
+- Long-term: institutional memory and decision pattern learning
+
+---
+
+## 🤝 Contributing
+
+SCRIBE is an open project. Contributions are welcome from healthcare professionals, developers, translators, and anyone interested in hospital resilience.
+
+- **Found a bug?** Open an [issue](https://github.com/nocomp/scribe/issues/new?template=bug_report.md)
+- **Have an idea?** Open a [discussion](https://github.com/nocomp/scribe/discussions)
+- **Want to translate?** Fork `locales/` and submit a PR
+- **Want to deploy in your facility?** Reach out — happy to help
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and code style guidelines.
+
+### Code of Conduct
+
+We follow the [Contributor Covenant](https://www.contributor-covenant.org/). See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+---
+
+## 🔒 Security
+
+If you discover a security vulnerability, **please do not open a public issue**. Email `nocomp@gmail.com` instead.
+
+See [SECURITY.md](SECURITY.md) for the full disclosure policy.
+
+---
+
+## 📞 Support & Contact
+
+- **Issues**: https://github.com/nocomp/scribe/issues
+- **Discussions**: https://github.com/nocomp/scribe/discussions
+- **Email**: nocomp@gmail.com
+- **LinkedIn**: open to discussions with hospitals, CISOs, crisis directors, and contributors
+
+---
+
+## ⭐ Star the project
+
+If SCRIBE is useful to you, your team, or your facility — please **star the repo**. It helps other hospitals discover the project.
+
+---
+
+## 📜 License
+
+SCRIBE is licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0).
+
+This means you are free to:
+
+- ✅ Use SCRIBE in any healthcare facility, commercial or not
+- ✅ Modify SCRIBE to fit your needs
+- ✅ Redistribute SCRIBE and its modifications
+
+Under the condition that:
+
+- 📜 Any modifications you deploy publicly (including as a network service) must be released under AGPL-3.0
+- 📜 You preserve copyright notices and license attribution
+
+See [LICENSE](LICENSE) for the full text.
+
+---
+
+## 🙏 Acknowledgments
+
+SCRIBE was built in parallel with the author's CISO duties at a French hospital. Special thanks to the beta-testing teams who provided detailed feedback over months of testing — their input shaped the maturity of v2.5.0.
+
+Built with [FastAPI](https://fastapi.tiangolo.com/), [SQLAlchemy](https://www.sqlalchemy.org/), [Leaflet](https://leafletjs.com/), [OSRM](http://project-osrm.org/), and the [DSFR](https://www.systeme-de-design.gouv.fr/).
+
+---
+
+<div align="center">
+
+## 🇫🇷 Version française
+
+⬇️ **Faites défiler pour la version française complète** ⬇️
+
+</div>
 
 ---
 
 ## 🇫🇷 Version française
 
-### Qu'est-ce que SCRIBE ?
+> **En une phrase :** SCRIBE transforme le fichier Word partagé pour la gestion de crise en une vraie plateforme — rapide, tracée, multi-sites, et libre.
 
-**SCRIBE** est une plateforme open-source de **gestion de crise hospitalière** et de **suivi capacitaire temps réel**. Elle fournit une main courante numérique, une coordination inter-établissements, et un mode exercice complet pour l'entraînement des cellules de crise.
+### Pourquoi SCRIBE ?
 
-**Conçu pour un double usage :**
+Quand un incident majeur survient dans un hôpital — cyberattaque, afflux massif, pic épidémique, déclenchement du Plan Blanc — les directeurs de crise sont souvent forcés de coordonner avec le seul outil qu'ils ont sous la main : un document Word partagé.
 
-- **Mode nominal** — suivi quotidien des capacités lits/RH/matériel, déclarations par les cadres de service, tableau de bord pour la direction des soins.
-- **Mode crise** — main courante incidents, cellule de crise, kanban opérationnel, communiqués publics, transferts patients avec routing OSRM, coordination territoriale.
+Pas de traçabilité temps réel. Pas d'horodatage fiable. Pas de vision capacitaire globale. Pas de coordination territoriale. Juste un document que tout le monde modifie en même temps en espérant que rien ne se perde.
 
-**Pensé pour les non-techniciens** — cadres soignants, directeurs, gestionnaires de crise, RSSI. Aucun cloud, aucun LDAP requis, fonctionne en réseau isolé.
+**SCRIBE a été conçu pour changer cela.**
 
-### Pour qui ?
+C'est une plateforme complète, mature et prête au déploiement, qui donne aux directeurs de crise, aux RSSI, aux médecins coordinateurs et aux superviseurs l'information structurée dont ils ont besoin — sans cloud, sans contrat éditeur, sans projet d'intégration de six mois.
 
-- **Établissements hospitaliers** publics ou privés cherchant une main courante numérique souveraine pour leur PCA / Plan Blanc.
-- **GHT** (Groupements Hospitaliers de Territoire) ou groupements multi-sites pour la coordination territoriale.
-- **Formateurs et exercices de crise** — le mode exercice permet d'orchestrer des entraînements multi-sites avec scénarios injectés en temps réel.
-- **DOM-TOM et établissements multi-fuseaux** — gestion native de 16 fuseaux IANA (Tahiti, Mayotte, Réunion, Antilles, Saint-Pierre-et-Miquelon, etc.) + saisie libre.
+### 🎯 Pour toutes les tailles d'établissements
+
+Du CHU au centre hospitalier de proximité. D'un établissement unique à un réseau territorial coordonné par une ARS. SCRIBE s'adapte aussi élégamment vers le bas que vers le haut.
+
+### 🌍 Multilingue. Européen. Souverain.
+
+- **Interface multilingue** (français, anglais, italien, espagnol — d'autres à venir)
+- **16 fuseaux horaires pré-configurés**, de Paris à Papeete, en passant par La Réunion, la Martinique et la Guadeloupe
+- **100 % on-premise** — les données patients ne quittent jamais l'établissement
+- **Pensé pour les contraintes RGPD et HDS européennes**
+
+### ✨ Et offert. Comme le sourire qui vous accueille quand vous vous rendez à l'hôpital.
+
+Open source sous licence AGPL-3.0. Pas de licence commerciale, pas d'édition entreprise, pas d'offre premium. Toute la plateforme, pour tous, pour toujours.
 
 ---
 
-## Captures d'écran
+## 📸 Captures d'écran
 
-### Onboarding — Création d'un établissement en 5 minutes
+<div align="center">
 
-Au premier lancement, SCRIBE propose un wizard guidé. Quatre points de départ sont offerts : wizard guidé, import Excel, déploiement GHT complet, mode démo.
+### Wizard guidé — votre établissement configuré en 5 minutes
 
-![Splash de bienvenue](screenshots/01-wizard-splash.png)
+<img src="screenshots/01-wizard-splash.png" alt="Wizard de bienvenue" width="720"/>
 
-**Étape 1 — Identité de l'établissement**
+<img src="screenshots/02-wizard-step1-identity.png" alt="Wizard étape 1 — Identité" width="720"/>
 
-![Identité](screenshots/02-wizard-step1-identity.png)
+<img src="screenshots/03-wizard-step2-timezone.png" alt="Wizard étape 2 — Sélecteur de fuseau horaire avec 16 options" width="720"/>
 
-**Étape 2 — Site principal et fuseau horaire**
+<img src="screenshots/04-wizard-step5-recap.png" alt="Wizard étape 5 — Récapitulatif final" width="720"/>
 
-Géolocalisation automatique de l'adresse, sélection du fuseau horaire (automatique ou explicite parmi 16 fuseaux IANA).
+### La plateforme en action
 
-![Site et fuseau](screenshots/03-wizard-step2-site.png)
+<img src="screenshots/05-supervision-collecteur.png" alt="Supervision territoriale" width="720"/>
 
-**Étape 3 — Compte administrateur**
+<img src="screenshots/06-capacite-grille.png" alt="Suivi capacitaire avec niveaux de tension" width="720"/>
 
-![Compte admin](screenshots/04-wizard-step3-admin.png)
+<img src="screenshots/07-transferts-kanban.png" alt="Transferts inter-établissements avec trajectoire ambulance live" width="720"/>
 
-**Étape 4 — Intelligence artificielle (optionnelle)**
-
-SCRIBE fonctionne sans IA. Si vous souhaitez activer l'analyse de crise et l'aide à la décision, plusieurs fournisseurs sont supportés (Albert — IA souveraine du gouvernement français, OpenAI, Anthropic, Mistral, Ollama).
-
-![IA](screenshots/05-wizard-step4-ia.png)
-
-**Étape 5 — Récapitulatif et création**
-
-![Récap](screenshots/06-wizard-step5-recap.png)
-
-### Pilotage multi-instances
-
-Une seule interface pour lancer, configurer et superviser plusieurs établissements. Chaque instance a sa propre base de données isolée.
-
-![Pilotage instances](screenshots/07-supervision-instances.png)
-
-### Tableau de bord opérationnel
-
-Vue de synthèse : incidents actifs, capacité globale, transferts en cours, messagerie, main courante des dernières heures.
-
-![Tableau de bord](screenshots/08-tableau-de-bord.png)
-
-### VEILLE — Main courante des incidents
-
-Déclaration d'incident structurée : type (CYBER / SANITAIRE / MIXTE), niveau d'urgence (1 VEILLE → 4 CRITIQUE), impact fonctionnel, jalons de résolution. Carte des incidents géolocalisés.
-
-![Veille incidents](screenshots/09-veille-incidents.png)
-
-### SOINS — Cartographie de situation
-
-Vue d'ensemble des services transverses (Sécurité physique, Logistique, DPI/SIH, Messagerie, Biologie, Restauration, Blanchisserie, Pharmacie) et des services métiers (Urgences, Réa, Bloc, Médecine, Chirurgie, Pédiatrie, Soins critiques, etc.). Statut OK / Dégradé / Critique par service.
-
-![Soins cartographie](screenshots/10-soins-cartographie.png)
-
-### CAPACITÉ — Suivi des lits temps réel
-
-Déclaration par service et par pôle des lits disponibles (H / F / Indifférent), de la tension lits/RH, du statut opérationnel. Auto-remplissage du déclarant. Filtre "lits > 0 uniquement".
-
-![Capacité](screenshots/11-capacite-grille.png)
-
-### TRANSFERTS — Gestion des patients inter-établissements
-
-Kanban des transferts (En préparation / En cours / Arrivé / Annulé). Suivi de la trajectoire ambulance via OSRM. Justification obligatoire pour tout retour en arrière. **Les données nominatives ne remontent jamais au collecteur territorial** (HDS/RGPD).
-
-![Transferts](screenshots/12-transferts-kanban.png)
-
-### CELLULE — Salle de crise
-
-Registre des présences (Direction, ARS, Préfecture, SAMU, SDIS, DSI, RSSI, médecin coordinateur, etc.). Chronologie décisionnelle horodatée et signée.
-
-![Cellule de crise](screenshots/13-cellule-presences.png)
-
-### COMMUNIQUÉ — Statut public
-
-Page publique opposable accessible via QR code. Statuts des SI (messagerie, DPI, imagerie, téléphonie, VPN, applications métier) et de la prise en charge patients (urgences, blocs, consultations, hospitalisations).
-
-![Communiqué public](screenshots/14-communique-public.png)
-
-### RELÈVE — Passation de consignes
-
-Journal des consignes pour la prochaine équipe de garde. Accusé de réception nominatif.
-
-![Relève](screenshots/15-releve-consignes.png)
-
-### ANNUAIRE — Répertoire de crise
-
-Numéros de téléphonie nominale et de secours, contacts messagerie, par service et organisme partenaire (CERT Santé, ANSSI, ARS, Préfecture, SDIS, SAMU).
-
-![Annuaire](screenshots/16-annuaire.png)
-
-### ANALYSE — Debriefing post-crise
-
-Import d'une archive de gestion de crise (.zip exportée depuis SCRIBE) pour rejeu, analyse, et identification des axes d'amélioration. Comparaison possible entre deux gestions d'un même scénario.
-
-![Analyse](screenshots/17-analyse-archives.png)
-
-### BRANCARDAGE — Demandes de transport interne
-
-Gestion des demandes de brancardage par référence patient, priorité, mode de transport, UF origine et destination.
-
-![Brancardage](screenshots/18-brancardage.png)
-
-### MODE EXERCICE — Entraînement multi-sites
-
-SCRIBE intègre un mode exercice complet pour l'entraînement des cellules de crise, totalement isolé de la production (bases de données séparées).
-
-**Supervision exercice** — pilotage de 10 instances joueurs (ports 8660-8669) :
-
-![Exercice — supervision](screenshots/19-exercice-supervision.png)
-
-**Console animateur** — vue d'ensemble des sites participants et statuts publics :
-
-![Exercice — animateur](screenshots/20-exercice-supervision-sites.png)
-
-**Bibliothèque de scénarios** — 5 scénarios prêts à l'emploi (cyberattaque ransomware, panne électrique + cyber, afflux massif victimes, crise obstétricale, tension capacitaire) + création de scénarios personnalisés via formulaire ou XML. Génération assistée par IA possible.
-
-![Exercice — scénarios](screenshots/21-exercice-scenarios.png)
-
-**Contrôle de l'exercice** — démarrer / pause / arrêter, injecter un stimulus manuel, suivre le temps écoulé et le compteur de stimuli injectés :
-
-![Exercice — contrôle](screenshots/22-exercice-controle.png)
-
-**Timeline de stimuli** — activation/désactivation des stimuli prévus dans le scénario (alertes SOC, demandes ANSSI/ARS, décisions stratégiques attendues, etc.) :
-
-![Exercice — timeline](screenshots/23-exercice-stimuli-timeline.png)
-
-**Stimulus manuel** — injection à la volée d'un événement de déstabilisation pour tester la réactivité des joueurs :
-
-![Exercice — stimulus manuel](screenshots/24-exercice-stimulus-manuel.png)
-
-**Bilan temps réel** — état de chaque site joueur (en ligne, incidents ouverts, critiques, cyber, transferts), génération automatique d'un rapport HTML autonome en fin d'exercice (chronologie, KPIs, radar de compétences) :
-
-![Exercice — bilan](screenshots/25-exercice-bilan.png)
+</div>
 
 ---
 
-## Fonctionnalités
+## ⚙️ Fonctionnalités
 
-### 📋 Gestion de crise
+### Main courante de crise
 
-- **Main courante incidents** (CYBER / SANITAIRE / MIXTE, 4 niveaux d'urgence)
-- **Jalons de résolution** prédéfinis et personnalisables (DSI contacté, CERT Santé, Isolation réseau, Sauvegarde validée…)
-- **Cellule de crise** : présences horodatées + chronologie décisionnelle
-- **Kanban opérationnel** Backlog / En cours / En attente / Terminé, avec assignation et priorité
-- **Relève de garde** numérique avec accusés de réception
-- **Communiqué public** opposable avec QR code et page `/status`
-- **Annuaire de crise** : téléphonie nominale + secours, partenaires institutionnels
-- **REX** (retour d'expérience) post-crise avec analyse IA
+- Journal d'événements structuré temps réel, multi-acteurs, horodaté à la seconde
+- Incidents catégorisés (CYBER, SANITAIRE, MIXTE) avec niveaux d'urgence
+- Vues filtrables par site, service, fenêtre temporelle, type, statut de résolution
+- Édition en place, audit complet
 
-### 🛏️ Suivi capacitaire
+### Suivi capacitaire
 
-- **Déclarations capacitaires** par UF/service/pôle, avec lits H/F/I, tension lits/RH, statut opérationnel
-- **Référentiel UF** modifiable via interface admin ou import Excel
-- **Vue synthétique** par pôle et par site
-- **Configuration des sites secondaires** et services transverses
-- **Filtrage** "lits > 0 uniquement" pour focaliser sur les services actifs
+- Déclarations capacitaires par service, par point de situation (matin, midi, après-midi, soir)
+- Niveaux de tension : **normal · tension · critique**
+- Grille visuelle de l'occupation des lits sur tous les services en temps réel
+- Seuils configurables, alertes automatiques au franchissement
+- Filtrage des services sans lits, auto-remplissage du cadre déclarant
 
-### 🚑 Transferts patients
+### Transferts inter-établissements
 
-- **Kanban des transferts** En préparation / En cours / Arrivé / Annulé
-- **Trajectoire ambulance** calculée via OSRM (sans clé API)
-- **Recul de transfert** avec motif obligatoire et tracé
-- **Données nominatives strictement locales** — jamais remontées au collecteur
+- Workflow : **EN PRÉPARATION → EN COURS → ARRIVÉ**
+- Trajectoire ambulance live sur carte (OSRM)
+- ETA dans le fuseau horaire de l'établissement destinataire
+- Motif obligatoire pour tout retour en arrière (ex : ARRIVÉ → EN COURS)
+- Historique complet des changements de statut tracé dans `historique_json`
+- Remontée vers le collecteur territorial pour visibilité inter-sites
 
-### 📡 Coordination territoriale
+### Cellule de crise
 
-- **Collecteur territorial** centralisant la situation de plusieurs établissements
-- **Push automatique** toutes les 30 secondes
-- **Demandes inter-établissements** (lits, équipe, matériel) avec accusé de réception
-- **Messagerie inter-établissements**
-- **Statuts publics** des sites — vue territoriale en temps réel
-- **Cartographie** des sites avec niveau de crise
+- Chronologie des décisions avec base réglementaire (Plan Blanc, ORSAN, PCA)
+- Registre des présences : qui est en cellule, fonction, horodatage d'arrivée
+- Diffusion de consignes au personnel avec accusé de réception
+- Autocomplétion depuis l'annuaire configuré + historique vivant
 
-### 🎓 Mode exercice
+### Supervision territoriale
 
-- **10 instances joueurs** isolées (ports 8660-8669)
-- **Console animateur** dédiée (port 6565)
-- **5 scénarios prêts à l'emploi** : cyberattaque ransomware, panne électrique + cyber, afflux massif victimes, crise obstétricale multi-sites, tension capacitaire
-- **Création de scénarios** via formulaire, XML ou génération IA assistée
-- **Stimuli horodatés** activables/désactivables à la volée
-- **Stimulus manuel** pour déstabilisation à la volée
-- **Bilan temps réel** : statut de chaque joueur, incidents ouverts, transferts
-- **Rapport HTML autonome** post-exercice (chronologie, KPIs, radar de compétences, scénario idéal vs réalisé)
-- **Bases de données isolées** — aucune pollution de la production
+- Collecteur agrégeant plusieurs établissements
+- Vue temps réel de l'état territorial (incidents, capacité, transferts, alertes)
+- Conçu pour les ARS et les cellules régionales de coordination
+- Les données patients **restent dans chaque établissement** — seuls les indicateurs agrégés remontent
 
-### 🤖 Intelligence artificielle (optionnelle)
+### Mode exercice
 
-SCRIBE fonctionne **sans IA**. Si activée, l'IA est utilisée pour :
+- Injecteur de scénarios intégré — s'entraîner sans toucher la production
+- Console animateur pour jouer des scénarios de crise en temps réel
+- Bases isolées par instance d'exercice
+- Scénarios rejouables en JSON
 
-- Analyse capacitaire (suggestions de redéploiement)
-- Génération de scénarios d'exercice
-- Aide à la décision en cellule de crise
-- Debriefing post-crise
+### Administration
 
-**Fournisseurs supportés :**
+- Gestion des utilisateurs (rôles : admin, directeur, observateur)
+- Import en lot d'utilisateurs via Excel
+- Gestion des Unités Fonctionnelles via l'interface — activer, désactiver, éditer, ajouter
+- Configuration de l'établissement par fichier Excel (UF, capacité, annuaire, téléphonie de secours)
+- Interface bilingue partout
 
-- **Albert** — IA souveraine du gouvernement français (gratuite pour la fonction publique)
-- **OpenAI** (GPT-4, GPT-3.5)
-- **Anthropic** (Claude)
-- **Mistral**
-- **Ollama** — modèles locaux (Llama, Mistral, Qwen…)
-- **Google Gemini**
-- **Compatible OpenAI** (Groq, Together, etc.)
+### Sécurité
 
-### 🌐 Multilingue
-
-Interface disponible en **8 langues** : Français, English, Deutsch, Español, Italiano, Nederlands, Polski, Português.
-
-### 🌍 Multi-fuseaux
-
-16 fuseaux IANA pré-configurés couvrant la métropole, les DOM-TOM (Guadeloupe, Martinique, Guyane, La Réunion, Mayotte, Polynésie, Nouvelle-Calédonie, Saint-Pierre-et-Miquelon, Wallis-et-Futuna), et saisie libre pour tout autre fuseau. Chaque utilisateur voit les horodatages dans l'heure locale de son établissement.
-
-### 🔐 Sécurité et conformité
-
-- **Authentification** bcrypt + JWT, migration transparente depuis SHA-256
-- **MFA TOTP** disponible (Google Authenticator, Aegis, etc.)
-- **Rate limiting** sur les endpoints sensibles
-- **Headers HTTP** sécurisés, CORS restreint
-- **Notifications Web Push** (VAPID) optionnelles
-- **Conçu pour les contraintes HDS et RGPD** — pas d'audit officiel à ce stade
-- **Données nominatives patients** strictement locales, jamais remontées vers le collecteur
-- **Pas de cloud, pas de LDAP**, fonctionne en réseau isolé
+- Stockage des mots de passe en bcrypt avec rate limiting sur le login
+- Changement de mot de passe forcé à la première connexion (configurable)
+- Tokens de session JWT
+- CORS et Content Security Policy restrictives
+- Clé secrète en variable d'environnement
+- Toute remontée de vulnérabilité suit une politique de divulgation coordonnée (voir [SECURITY.md](SECURITY.md))
 
 ---
 
-## Démarrage rapide
+## 🚀 Démarrage rapide
 
-### Mode démo (5 minutes)
+### Prérequis
+
+- Python 3.10 ou supérieur
+- 200 Mo d'espace disque
+- Navigateur web moderne (Firefox, Chrome, Edge, Safari)
+
+### Linux / Mac
 
 ```bash
-# Linux / macOS
+# 1. Télécharger la dernière release
+wget https://github.com/nocomp/scribe/releases/latest/download/scribe_v2500_master_public.zip
+
+# 2. Décompresser
+unzip scribe_v2500_master_public.zip
+cd scribe_v2500
+
+# 3. Lancer
+./lancer_scribe.sh
+
+# 4. Ouvrir dans le navigateur
+open http://localhost:9000
+
+# 5. Se connecter
+#    Identifiant : supervision
+#    Mot de passe : changeme  (à changer immédiatement)
+```
+
+### Windows
+
+1. Téléchargez `scribe_v2500_master_public.zip` depuis la [dernière release](https://github.com/nocomp/scribe/releases/latest)
+2. Clic droit → **Extraire tout**
+3. Double-cliquez sur `LANCER_SCRIBE.bat`
+4. Ouvrez `http://localhost:9000` dans votre navigateur
+5. Connectez-vous avec `supervision` / `changeme` (à changer immédiatement)
+
+### Premières étapes après l'installation
+
+Une fois connecté, suivez le **wizard d'onboarding** (~5 minutes) :
+
+1. Choisissez votre mode de démarrage (wizard guidé, import Excel, mode démo, ou déploiement réseau territorial complet)
+2. Renseignez l'identité de votre établissement (nom, sigle, FINESS, langue)
+3. Choisissez votre fuseau horaire (16 fuseaux IANA pré-configurés + saisie libre)
+4. Configurez votre charte et votre fournisseur IA (optionnel)
+5. Validez et créez l'instance
+
+Votre instance est maintenant en ligne sur son propre port (8000, 8001, ...) et prête à l'emploi.
+
+### Repartir d'un état propre
+
+Si vous avez besoin de tout effacer et recommencer :
+
+```bash
+./lancer_scribe.sh --reset    # Linux/Mac
+LANCER_SCRIBE.bat --reset     # Windows
+```
+
+Cela nettoie le flag d'onboarding, supprime toutes les bases d'instance, et vous permet de relancer le wizard proprement.
+
+---
+
+## 🏗️ Architecture
+
+### Stack technique
+
+| Couche | Technologie |
+|-------|-----------|
+| Backend | FastAPI (Python) |
+| ORM | SQLAlchemy |
+| Base de données | SQLite (une base par instance) |
+| Frontend | JavaScript Vanilla (SPA) |
+| Cartographie | Leaflet.js + OSRM (routing ambulance) |
+| Fond de carte | CartoDB Light |
+| IA (optionnel) | Albert (LLM du gouvernement français) |
+| Design system | DSFR (Système de Design de l'État) |
+
+### Topologie de déploiement
+
+```
+                    ┌─────────────────────────────────┐
+                    │  Master / Collecteur  :9000     │
+                    │  - Wizard d'onboarding          │
+                    │  - Supervision territoriale     │
+                    │  - Agrégateur multi-établis.    │
+                    └────────────┬────────────────────┘
+                                 │
+              ┌──────────────────┼──────────────────┐
+              │                  │                  │
+        ┌─────▼─────┐      ┌─────▼─────┐      ┌─────▼─────┐
+        │ Étabt A   │      │ Étabt B   │      │ Étabt C   │
+        │   :8000   │      │   :8001   │      │   :8002   │
+        │           │      │           │      │           │
+        │ Base SQL  │      │ Base SQL  │      │ Base SQL  │
+        │ propre    │      │ propre    │      │ propre    │
+        └───────────┘      └───────────┘      └───────────┘
+        Données          Données            Données
+        patient LOCALES  patient LOCALES    patient LOCALES
+```
+
+Chaque établissement fait tourner une instance SCRIBE indépendante avec sa propre base. Le collecteur master n'agrège que **des indicateurs non-nominatifs** (incidents, tension capacitaire, comptages de transferts) — jamais de noms, identifiants ou données médicales patient.
+
+### Pourquoi c'est important pour la conformité
+
+- **RGPD** : les données patients sont traitées uniquement par l'établissement local, sur sa propre infrastructure
+- **HDS** (Hébergement de Données de Santé) : aucune dépendance cloud, aucun sous-traitant tiers de la donnée
+- **Souveraineté** : 100 % on-premise, vos données, vos serveurs, vos règles
+
+---
+
+## 🛠️ Pour les développeurs
+
+### Installation depuis les sources
+
+```bash
 git clone https://github.com/nocomp/scribe.git
 cd scribe
 pip install -r requirements.txt
-bash lancer_scribe.sh
-# → http://localhost:9000
-# Suivre le wizard d'onboarding
+python collecteur/collecteur.py
 ```
-
-```bat
-:: Windows
-LANCER_SCRIBE.bat
-:: → http://localhost:9000
-```
-
-```bash
-# Docker
-docker compose up -d
-# → http://localhost:9000
-```
-
-Une fois l'instance créée via le wizard, l'interface est accessible sur le port assigné (par défaut 8000) avec les identifiants choisis à l'étape 3.
-
-### Import d'une configuration existante
-
-Si vous disposez déjà d'un fichier de configuration Excel (`SCRIBE_config_etablissement.xlsx`), choisissez "Importer une config existante" au démarrage du wizard.
-
-### Déploiement multi-établissements
-
-Pour un déploiement GHT complet (plusieurs établissements + collecteur territorial), choisissez "Déployer un GHT complet" et importez le ZIP contenant les configurations.
-
----
-
-## Stack technique
-
-| Composant | Technologie |
-|---|---|
-| Backend | FastAPI (Python 3.11+) |
-| ORM | SQLAlchemy 2.x |
-| Base de données | SQLite (une DB par instance) |
-| Frontend | Vanilla JS (SPA) |
-| Cartographie | Leaflet.js + CartoDB Light |
-| Routing ambulances | OSRM (gratuit, sans clé) |
-| IA (optionnel) | Albert / OpenAI / Anthropic / Mistral / Ollama / Gemini |
-| Authentification | bcrypt + JWT |
-| MFA | pyotp (TOTP) |
-| Notifications Push | pywebpush (VAPID) |
-| Design system | DSFR (Système de Design de l'État français) |
-| Déploiement | Linux systemd, Docker, Windows |
-
-### Architecture
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│  MASTER (port 9000)                                          │
-│  Pilotage instances + Collecteur territorial + Mode exercice │
-└────────────┬─────────────────────────────────────────────────┘
-             │
-       ┌─────┴─────┬─────────┬─────────┬─────────┐
-       ▼           ▼         ▼         ▼         ▼
-   ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌──────────┐
-   │Inst.1  │ │Inst.2  │ │Inst.3  │ │  ...   │ │Exercice  │
-   │:8000   │ │:8001   │ │:8002   │ │        │ │:8660-9   │
-   │  DB    │ │  DB    │ │  DB    │ │        │ │DB isolées│
-   └────────┘ └────────┘ └────────┘ └────────┘ └──────────┘
-```
-
-Chaque instance a sa propre base SQLite stockée sous `data/instances/<SIGLE>/scribe.db`. Le master lance les instances comme sous-processus Python et expose une interface unique pour les superviser.
-
----
-
-## Pour les développeurs
 
 ### Structure du projet
 
 ```
-scribe_v2500/
-├── main.py                       # Entrée FastAPI d'une instance
-├── lancer_scribe.sh / .bat       # Lancement du master
+scribe/
+├── main.py                      # Point d'entrée FastAPI (instance par établissement)
 ├── app/
-│   ├── models.py                 # 22+ modèles SQLAlchemy
-│   ├── database.py
-│   ├── api/                      # Routes API (v140.py principal)
-│   ├── static/index.html         # SPA frontend
-│   └── lang/                     # FR/EN/DE/ES/IT/NL/PL/PT
-├── plugins/                      # 17 plugins fonctionnels
-│   ├── albert/                   # IA Albert
-│   ├── annuaire/
-│   ├── brancardage/
-│   ├── capacite/
-│   ├── cellule/
-│   ├── chat/
-│   ├── communique/
-│   ├── exercice/                 # Mode exercice complet
-│   ├── federation/               # Push vers collecteur territorial
-│   ├── inter_ght/                # Coordination inter-établissements
-│   ├── messagerie/
-│   ├── notifications/            # Web Push
-│   ├── rapport/                  # Archivage ZIP
-│   ├── releve/
-│   ├── rex/
-│   ├── transferts/
-│   └── tuteur/                   # Aide contextuelle
-├── master/                       # UI master + gestion instances
-│   ├── master_routes.py
-│   ├── instances_manager.py
-│   ├── onboarding.html           # Wizard 5 étapes
-│   ├── instances.html
-│   └── exercice.html
-├── collecteur/                   # Collecteur territorial (port 9000)
-├── collecteur_exercice/          # Collecteur exercice (port 6565)
-├── scenarios/                    # 5 scénarios JSON + XML template
-├── core/                         # Plugin loader, admin plugins
-└── data/instances/<SIGLE>/       # DBs par instance (créées au runtime)
+│   ├── models.py                # Modèles SQLAlchemy (22 tables)
+│   ├── database.py              # Connexion DB
+│   ├── api/                     # Routes REST
+│   │   ├── v140.py              # Routes principales
+│   │   ├── admin_uf.py          # Administration UF
+│   │   ├── cartographie.py     # Cartographie et géolocalisation
+│   │   └── ...
+│   └── static/                  # Frontend SPA
+│       ├── index.html
+│       └── js/scribe.js
+├── master/
+│   ├── master_routes.py         # Routes master (onboarding, gestion instances)
+│   ├── instances_manager.py     # Orchestration sous-process
+│   ├── onboarding.html          # UI du wizard
+│   └── instances.html           # UI de gestion des instances
+├── collecteur/
+│   ├── collecteur.py            # Collecteur territorial (:9000)
+│   └── collecteur_admin.json    # Token admin (auto-généré au 1er lancement)
+├── plugins/                     # Plugins optionnels (chat, exercice, etc.)
+└── data/instances/<SIGLE>/      # Bases par instance
 ```
 
-### Installer en dev
+### Configuration
 
-```bash
-git clone https://github.com/nocomp/scribe.git
-cd scribe
-python -m venv venv
-source venv/bin/activate         # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-bash lancer_scribe.sh
-```
+La configuration de chaque établissement vit dans un fichier XML généré par le wizard. Le wizard accepte un modèle Excel (`SCRIBE_config_etablissement.xlsx`) pour charger en lot :
+
+- Les Unités Fonctionnelles avec leur service, pôle et capacité en lits
+- Le référentiel capacitaire
+- L'annuaire téléphonique (normal et de secours)
+- Les services transverses (sécurité, SI, logistique, pharmacie, etc.)
 
 ### Contribuer
 
-- **Issues** : https://github.com/nocomp/scribe/issues
-- **Pull requests** bienvenues
-- Respecter la séparation **données nominatives = local uniquement**
-- Préserver les contraintes existantes en mode dégradé (papier, mode mobile, etc.)
+Issues et pull requests bienvenues. Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour les conventions.
 
-### Tests
+Les "good first issues" sont marquées avec le tag [`good first issue`](https://github.com/nocomp/scribe/labels/good%20first%20issue).
 
-```bash
-# Validation syntaxe Python
-python -m py_compile $(find . -name "*.py" -not -path "./venv/*")
-
-# Lancer une instance
-bash lancer_scribe.sh
-```
+Les contributions en traduction sont particulièrement bienvenues — voir le dossier `locales/`.
 
 ---
 
-## Conformité
+## 🗺️ Roadmap
 
-- **Open source AGPL-3.0** — toute modification déployée doit être publiée
-- **Conçu pour les contraintes HDS et RGPD** (pas d'audit officiel à ce stade)
-- **Données patients nominatives** restent strictement locales (ne remontent jamais au collecteur)
-- **Pas de cloud externe requis** — fonctionne en air gap
-- **Authentification forte** (bcrypt + JWT, MFA TOTP optionnel)
+### Livré ✅
+
+- **v2.5.0** — Première release publique (mai 2026)
+- v2.4.x — Wizard d'onboarding, niveaux de tension capacitaire, historique des transferts
+- v2.3.x — Module exercice, scénarios d'entraînement
+- v2.2.x — Collecteur territorial, agrégation multi-sites
+
+### En cours 🚧
+
+- Vues responsive mobile-first
+- Packs de langues supplémentaires (DE, NL, PT)
+- Intégration LDAP / Active Directory
+- Export de données compatible FHIR
+
+### Planifié 📋
+
+- Long terme : messagerie inter-établissements inter-régions
+- Long terme : tableau de bord de supervision ministérielle
+- Long terme : aide à la décision proactive par IA
+- Long terme : mémoire institutionnelle et apprentissage des patterns de décision
 
 ---
 
-## Contact
+## 🤝 Contribuer
 
-- **GitHub** : https://github.com/nocomp/scribe
+SCRIBE est un projet ouvert. Les contributions sont bienvenues de la part des professionnels de santé, des développeurs, des traducteurs, et de quiconque s'intéresse à la résilience hospitalière.
+
+- **Vous avez trouvé un bug ?** Ouvrez une [issue](https://github.com/nocomp/scribe/issues/new?template=bug_report.md)
+- **Vous avez une idée ?** Ouvrez une [discussion](https://github.com/nocomp/scribe/discussions)
+- **Vous voulez traduire ?** Forkez `locales/` et soumettez une PR
+- **Vous voulez déployer dans votre établissement ?** Contactez-moi — toujours heureux d'aider
+
+Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour la configuration de l'environnement de développement et les conventions de code.
+
+### Code de conduite
+
+Nous suivons le [Contributor Covenant](https://www.contributor-covenant.org/). Voir [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+---
+
+## 🔒 Sécurité
+
+Si vous découvrez une vulnérabilité de sécurité, **n'ouvrez pas d'issue publique**. Envoyez un email à `nocomp@gmail.com` à la place.
+
+Voir [SECURITY.md](SECURITY.md) pour la politique de divulgation complète.
+
+---
+
+## 📞 Support et contact
+
 - **Issues** : https://github.com/nocomp/scribe/issues
+- **Discussions** : https://github.com/nocomp/scribe/discussions
 - **Email** : nocomp@gmail.com
+- **LinkedIn** : ouvert aux échanges avec hôpitaux, RSSI, directeurs de crise, et contributeurs
 
 ---
 
-## 🇬🇧 English version
+## ⭐ Mettez le projet en favori
 
-### What is SCRIBE?
-
-**SCRIBE** is an open-source platform for **hospital crisis management** and **real-time capacity tracking**. It provides a digital incident log, inter-facility coordination, and a complete exercise mode for crisis cell training.
-
-**Designed for dual use:**
-
-- **Steady-state mode** — daily tracking of bed/HR/equipment capacity, declarations by service managers, dashboard for nursing and HR directors.
-- **Crisis mode** — incident log, crisis cell, operational kanban, public bulletins, patient transfers with OSRM routing, territorial coordination.
-
-**Built for non-technical users** — nursing managers, directors, crisis managers, CISOs. No cloud, no LDAP required, runs on isolated networks.
-
-### Who is it for?
-
-- **Public or private hospitals** looking for a sovereign digital incident log for their business continuity / disaster recovery plan.
-- **Multi-site healthcare groups** for territorial coordination.
-- **Crisis exercise trainers** — the exercise mode orchestrates multi-site drills with real-time scenario injection.
-- **Multi-timezone organizations** — native support for 16 IANA timezones + free-form entry.
-
-### Screenshots
-
-See the French version above — captures and feature walkthrough are language-agnostic.
-
-### Features
-
-#### 📋 Crisis management
-
-- **Incident log** (CYBER / HEALTHCARE / MIXED, 4 urgency levels)
-- **Resolution milestones** predefined and customizable
-- **Crisis cell**: timestamped attendance + decision chronology
-- **Operational kanban** Backlog / In progress / Pending / Done
-- **Shift handover** with acknowledgments
-- **Public bulletin** with QR code and `/status` page
-- **Crisis directory**: regular + backup phone lines, institutional partners
-- **Post-crisis feedback (REX)** with AI analysis
-
-#### 🛏️ Capacity tracking
-
-- **Capacity declarations** by functional unit / service / pole
-- **Beds available** (Male / Female / Mixed)
-- **Tension status** (beds, HR, operational)
-- **Editable UF reference** via admin UI or Excel import
-- **Synthetic view** by pole and by site
-
-#### 🚑 Patient transfers
-
-- **Transfer kanban** (In preparation / In progress / Arrived / Cancelled)
-- **Ambulance routing** via OSRM (no API key required)
-- **Transfer rollback** with mandatory reason and audit trail
-- **Patient-identifying data strictly local** — never sent to territorial collector
-
-#### 📡 Territorial coordination
-
-- **Territorial collector** centralizing the situation of multiple facilities
-- **Automatic push** every 30 seconds
-- **Inter-facility requests** (beds, staff, equipment)
-- **Inter-facility messaging**
-- **Public site status** — real-time territorial view
-- **Map view** of sites with crisis level
-
-#### 🎓 Exercise mode
-
-- **10 isolated player instances** (ports 8660-8669)
-- **Dedicated facilitator console** (port 6565)
-- **5 ready-to-use scenarios**: ransomware cyberattack, power outage + cyber, mass casualty incident, multi-site obstetric crisis, capacity tension
-- **Scenario creation** via form, XML, or AI-assisted generation
-- **Timestamped stimuli** activatable on the fly
-- **Manual stimulus** for ad-hoc destabilization
-- **Real-time dashboard**: each player's status, open incidents, transfers
-- **Standalone HTML report** post-exercise (chronology, KPIs, competency radar)
-- **Isolated databases** — no impact on production
-
-#### 🤖 AI (optional)
-
-SCRIBE works **without AI**. If enabled, AI is used for capacity analysis, scenario generation, decision support, and post-crisis debriefing.
-
-**Supported providers:**
-
-- **Albert** — French government sovereign AI (free for public sector)
-- **OpenAI** (GPT-4, GPT-3.5)
-- **Anthropic** (Claude)
-- **Mistral**
-- **Ollama** — local models (Llama, Mistral, Qwen…)
-- **Google Gemini**
-- **OpenAI-compatible** (Groq, Together, etc.)
-
-#### 🌐 Multilingual
-
-UI available in **8 languages**: French, English, German, Spanish, Italian, Dutch, Polish, Portuguese.
-
-#### 🌍 Multi-timezone
-
-16 pre-configured IANA timezones covering metropolitan France, French overseas territories, plus free-form entry for any other zone.
-
-#### 🔐 Security & compliance
-
-- **Authentication** bcrypt + JWT, transparent migration from SHA-256
-- **MFA TOTP** available (Google Authenticator, Aegis, etc.)
-- **Rate limiting** on sensitive endpoints
-- **Hardened HTTP headers**, restricted CORS
-- **Web Push notifications** (VAPID) optional
-- **Designed for HDS and GDPR constraints** — no official audit yet
-- **Patient-identifying data** strictly local, never sent to collector
-- **No cloud, no LDAP**, works on isolated networks
-
-### Quick start
-
-```bash
-# Linux / macOS
-git clone https://github.com/nocomp/scribe.git
-cd scribe
-pip install -r requirements.txt
-bash lancer_scribe.sh
-# → http://localhost:9000
-# Follow the onboarding wizard
-```
-
-```bat
-:: Windows
-LANCER_SCRIBE.bat
-:: → http://localhost:9000
-```
-
-```bash
-# Docker
-docker compose up -d
-# → http://localhost:9000
-```
-
-### Tech stack
-
-| Component | Technology |
-|---|---|
-| Backend | FastAPI (Python 3.11+) |
-| ORM | SQLAlchemy 2.x |
-| Database | SQLite (one DB per instance) |
-| Frontend | Vanilla JS (SPA) |
-| Maps | Leaflet.js + CartoDB Light |
-| Ambulance routing | OSRM (free, no key) |
-| AI (optional) | Albert / OpenAI / Anthropic / Mistral / Ollama / Gemini |
-| Authentication | bcrypt + JWT |
-| MFA | pyotp (TOTP) |
-| Push notifications | pywebpush (VAPID) |
-| Design system | DSFR (French government design system) |
-| Deployment | Linux systemd, Docker, Windows |
-
-### Architecture
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│  MASTER (port 9000)                                          │
-│  Instance management + Territorial collector + Exercise mode │
-└────────────┬─────────────────────────────────────────────────┘
-             │
-       ┌─────┴─────┬─────────┬─────────┬─────────┐
-       ▼           ▼         ▼         ▼         ▼
-   ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌──────────┐
-   │Inst.1  │ │Inst.2  │ │Inst.3  │ │  ...   │ │Exercise  │
-   │:8000   │ │:8001   │ │:8002   │ │        │ │:8660-9   │
-   │  DB    │ │  DB    │ │  DB    │ │        │ │isolated  │
-   └────────┘ └────────┘ └────────┘ └────────┘ └──────────┘
-```
-
-### For developers
-
-See the French project structure above. To install in dev:
-
-```bash
-git clone https://github.com/nocomp/scribe.git
-cd scribe
-python -m venv venv
-source venv/bin/activate         # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-bash lancer_scribe.sh
-```
-
-### Contributing
-
-- **Issues**: https://github.com/nocomp/scribe/issues
-- Pull requests welcome
-- Respect the principle: **patient-identifying data = local only**
-- Preserve existing degraded-mode constraints (paper backup, mobile, etc.)
-
-### Compliance
-
-- **Open source AGPL-3.0** — any deployed modification must be published
-- **Designed for HDS and GDPR constraints** (no official audit yet)
-- **Patient-identifying data** stays strictly local (never sent to collector)
-- **No external cloud required** — works air-gapped
-- **Strong authentication** (bcrypt + JWT, optional MFA TOTP)
-
-### Contact
-
-- **GitHub**: https://github.com/nocomp/scribe
-- **Issues**: https://github.com/nocomp/scribe/issues
-- **Email**: nocomp@gmail.com
+Si SCRIBE vous est utile, à vous, votre équipe ou votre établissement — **mettez une étoile au repo**. Cela aide d'autres hôpitaux à découvrir le projet.
 
 ---
 
-## License
+## 📜 Licence
 
-GNU Affero General Public License v3.0 — see [LICENSE](LICENSE).
+SCRIBE est sous licence **GNU Affero General Public License v3.0** (AGPL-3.0).
 
-SCRIBE is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, version 3 of the License.
+Cela signifie que vous êtes libres de :
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+- ✅ Utiliser SCRIBE dans n'importe quel établissement de santé, commercial ou non
+- ✅ Modifier SCRIBE pour l'adapter à vos besoins
+- ✅ Redistribuer SCRIBE et vos modifications
+
+À condition que :
+
+- 📜 Toute modification que vous déployez publiquement (y compris comme service réseau) doit être publiée sous AGPL-3.0
+- 📜 Vous préserviez les mentions de copyright et de licence
+
+Voir [LICENSE](LICENSE) pour le texte complet.
+
+---
+
+## 🙏 Remerciements
+
+SCRIBE a été construit en parallèle des missions de RSSI de son auteur dans un hôpital français. Remerciements particuliers aux équipes de bêta-test qui ont fourni des retours détaillés sur plusieurs mois — leur contribution a façonné la maturité de la v2.5.0.
+
+Construit avec [FastAPI](https://fastapi.tiangolo.com/), [SQLAlchemy](https://www.sqlalchemy.org/), [Leaflet](https://leafletjs.com/), [OSRM](http://project-osrm.org/) et le [DSFR](https://www.systeme-de-design.gouv.fr/).
