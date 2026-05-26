@@ -3,7 +3,8 @@
 <img src="screenshots/01-wizard-splash.png" alt="SCRIBE" width="720"/>
 
 # 🏥 SCRIBE
-
+🇫🇷 Version française
+⬇️ Faites défiler pour la version française complète ⬇️
 ### Open-Source Hospital Crisis Management Platform
 
 **Multi-site · Multi-language · On-premise · AGPL-3.0**
