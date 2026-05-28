@@ -15,7 +15,7 @@ app/static/config.js
 collecteur/*.json
 collecteur_exercice/*.json
 
-# marquers divers
+# marqueurs divers
 master/.onboarding_done
 master/*.json
 master/profil_base.xlsx
