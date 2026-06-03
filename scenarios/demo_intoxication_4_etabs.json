@@ -1,0 +1,270 @@
+{
+  "meta": {
+    "id": "demo_intoxication_4_etabs",
+    "titre": "🍽️ DÉMO — Intoxication collective territoriale (4 établissements)",
+    "description": "Scénario de démonstration territoriale. Une intoxication alimentaire collective dans une cantine d'entreprise du Sud-département frappe simultanément 4 établissements du GHT. Conçu pour faire émerger les angles morts qu'un seul établissement ne peut voir : événement territorial, transfert vers établissement saturé, Plan Blanc absent dans tout le GHT, isolement. Utilisé pour les screenshots de l'article LinkedIn sur l'Assistant SCRIBE 3.3.",
+    "sujet": "Intoxication alimentaire collective - 47 personnes dont 12 enfants",
+    "duree_min": 25,
+    "duree_reel_min": 25,
+    "ratio_compression": 1.0,
+    "complexite": "MOYENNE",
+    "type_crise": "SANITAIRE",
+    "objectifs_pedagogiques": [
+      "Démontrer la détection RT1 (événement territorial : plusieurs établissements simultanés)",
+      "Démontrer la détection RT2 (transfert vers établissement saturé)",
+      "Démontrer la détection RT3 (Plan Blanc absent dans tout le GHT)",
+      "Démontrer la détection RT4 (établissement isolé sans sollicitation territoriale)",
+      "Démontrer la détection RT5 (déclarations hétérogènes entre établissements)",
+      "Capturer les screenshots pour l'article LinkedIn"
+    ],
+    "categorie": "demo",
+    "tags": ["demo", "territorial", "supervision", "article", "screenshots", "intoxication"],
+    "nb_stimuli": 14
+  },
+  "acteurs": [
+    {
+      "sigle": "EXO1",
+      "role": "joueur",
+      "port": 8660,
+      "description": "Établissement principal - premier touché par l'afflux"
+    },
+    {
+      "sigle": "EXO2",
+      "role": "joueur",
+      "port": 8661,
+      "description": "Établissement voisin - 2ème vague d'arrivées"
+    },
+    {
+      "sigle": "EXO3",
+      "role": "joueur",
+      "port": 8662,
+      "description": "Établissement pédiatrique - reçoit les enfants"
+    },
+    {
+      "sigle": "EXO4",
+      "role": "joueur",
+      "port": 8663,
+      "description": "Établissement le plus distant - se croit épargné, isolement à détecter"
+    }
+  ],
+  "stimuli": [
+
+    {
+      "id": "S01",
+      "t_min": 0,
+      "type": "incident",
+      "cible": "EXO1",
+      "titre": "🚨 Afflux urgences - vomissements collectifs",
+      "description_animateur": "Point de départ. Premier signal : 12 personnes arrivent en moins de 20 min aux urgences avec vomissements + douleurs abdominales. Tous viennent de la cantine 'Le Saveur' (entreprise de 600 employés). Si rien n'est déclaré dans 3 min : R1 (incident sans tâche) côté EXO1.",
+      "action_attendue": "EXO1 déclare l'incident sanitaire U3.",
+      "payload": {
+        "fait": "Afflux urgences : 12 personnes en 20 min avec vomissements, douleurs abdominales, fièvre. Toutes du restaurant d'entreprise 'Le Saveur' (rue Joffre).",
+        "analyse": "Suspicion intoxication collective. Toxines pré-formées probables (Staph aureus ?). 600 employés exposés - vague d'arrivées attendue.",
+        "urgency": 3,
+        "type_crise": "SANITAIRE",
+        "impact_fonctionnel": true,
+        "unite_fonctionnelle": "URGENCES"
+      }
+    },
+
+    {
+      "id": "S02",
+      "t_min": 2,
+      "type": "incident",
+      "cible": "EXO2",
+      "titre": "🚨 Arrivées simultanées - 8 patients vomissements",
+      "description_animateur": "EXO2 reçoit aussi 8 personnes en 15 min du même restaurant. À ce stade : 2 établissements touchés - pas encore territorial (seuil RT1 = 3).",
+      "action_attendue": "EXO2 déclare l'incident.",
+      "payload": {
+        "fait": "8 patients en 15 min, même tableau clinique (vomissements aigus, douleurs abdominales). Tous du restaurant 'Le Saveur' du quartier industriel.",
+        "analyse": "Confirme intoxication alimentaire collective. Source unique probable.",
+        "urgency": 3,
+        "type_crise": "SANITAIRE",
+        "impact_fonctionnel": true,
+        "unite_fonctionnelle": "URGENCES"
+      }
+    },
+
+    {
+      "id": "S03",
+      "t_min": 4,
+      "type": "incident",
+      "cible": "EXO3",
+      "titre": "🚨 12 enfants reçus - pédiatrie débordée",
+      "description_animateur": "EXO3 (pédiatrique) reçoit 12 enfants du restaurant scolaire mitoyen. À ce stade : 3 établissements simultanés = SEUIL RT1 ATTEINT. L'Assistant territorial DOIT déclencher 'événement territorial' au prochain refresh.",
+      "action_attendue": "EXO3 déclare l'incident pédiatrique. Animateur : OUVRIR LE COLLECTEUR pour voir l'alerte territoriale RT1 apparaître.",
+      "payload": {
+        "fait": "12 enfants (5-12 ans) arrivés en 25 min depuis le restaurant scolaire de l'école primaire mitoyenne. Vomissements, déshydratation modérée. 2 cas sévères.",
+        "analyse": "Liaison restaurant entreprise / restaurant scolaire : même cuisine centrale probable. Risque scale-up massif si pas circonscrit.",
+        "urgency": 3,
+        "type_crise": "SANITAIRE",
+        "impact_fonctionnel": true,
+        "unite_fonctionnelle": "PEDIATRIE"
+      }
+    },
+
+    {
+      "id": "S04",
+      "t_min": 7,
+      "type": "incident",
+      "cible": "EXO1",
+      "titre": "📈 EXO1 : vague d'arrivées continue - capacité réanimation tendue",
+      "description_animateur": "EXO1 a maintenant 18 patients dont 3 en réa. Le service réa est presque saturé. Sert à préparer RT2 (transfert vers établissement saturé).",
+      "action_attendue": "EXO1 : déclarer service de réanimation en tension critique (statut_lits=critique) côté CAPACITÉ.",
+      "payload": {
+        "fait": "Total 18 patients dont 3 en réanimation (dyspnée, déshydratation sévère). Service réa : 8/8 lits occupés. 2 patients en attente.",
+        "analyse": "Saturation réa imminente. Toute admission supplémentaire nécessitera transfert.",
+        "urgency": 4,
+        "type_crise": "SANITAIRE",
+        "impact_fonctionnel": true,
+        "unite_fonctionnelle": "REANIMATION"
+      }
+    },
+
+    {
+      "id": "S05",
+      "t_min": 9,
+      "type": "stimulus_animateur",
+      "cible": "EXO1",
+      "titre": "🚨 ANIMATEUR : faire déclarer EXO1 en VIGILANCE (niveau 1)",
+      "description_animateur": "Demander au joueur EXO1 de déclarer une situation niveau 1 (vigilance) - PAS niveau 3. Sert à déclencher la règle RT5 (déclaration hétérogène) si EXO3 déclare niveau 3 ensuite.",
+      "action_attendue": "EXO1 va dans 'Déclaration' → niveau 1 (vigilance), type sanitaire.",
+      "payload": {
+        "instruction_joueur": "Allez dans l'onglet 'Déclaration de situation'. Sélectionnez : type=sanitaire, niveau=1 (vigilance). Validez."
+      }
+    },
+
+    {
+      "id": "S06",
+      "t_min": 11,
+      "type": "stimulus_animateur",
+      "cible": "EXO3",
+      "titre": "🚨 ANIMATEUR : faire déclarer EXO3 en CRISE (niveau 3)",
+      "description_animateur": "Au contraire d'EXO1, EXO3 (pédiatrie) déclare niveau 3 - crise. Cette hétérogénéité doit déclencher RT5.",
+      "action_attendue": "EXO3 va dans 'Déclaration' → niveau 3 (crise), type sanitaire.",
+      "payload": {
+        "instruction_joueur": "Allez dans 'Déclaration de situation'. Sélectionnez : type=sanitaire, niveau=3 (crise). Validez. Vous êtes dépassés, vous ouvrez en grand."
+      }
+    },
+
+    {
+      "id": "S07",
+      "t_min": 13,
+      "type": "transfert_entrant",
+      "cible": "EXO2",
+      "titre": "📥 EXO1 → EXO1 demande transfert réa vers EXO1 (saturé)",
+      "description_animateur": "EXO1 (qui est déclaré en SATURATION sur la réa) reçoit une demande de transfert réa entrant depuis EXO2 qui ne sait pas qu'EXO1 est saturé. Si EXO1 ACCEPTE par erreur, RT2 (transfert incohérent) se déclenche.",
+      "action_attendue": "EXO1 accepte le transfert. Animateur : voir RT2 apparaître côté collecteur.",
+      "payload": {
+        "patient_age": 54,
+        "patient_genre": "H",
+        "pathologie": "Insuffisance respiratoire aigüe post-intoxication, surveillance USIC requise.",
+        "ght_emetteur": "EXO2",
+        "ght_destinataire": "EXO1",
+        "urgence": "URGENT"
+      }
+    },
+
+    {
+      "id": "S08",
+      "t_min": 15,
+      "type": "incident",
+      "cible": "EXO4",
+      "titre": "🌵 EXO4 : 4 patients ambulants - se croit épargné",
+      "description_animateur": "EXO4 (le plus distant) reçoit aussi 4 patients mais en mode ambulatoire. Il ne sollicite pas le GHT (il ne se rend pas compte de l'ampleur). RT4 (isolement) doit se déclencher.",
+      "action_attendue": "EXO4 déclare 4 incidents U3 distincts. NE PAS solliciter d'autre établissement (volontairement).",
+      "payload": {
+        "fait": "4 patients adultes arrivés successivement, troubles digestifs. Origine restaurant 'Le Saveur' (mentionné par 2 patients). Pas de cas critique pour l'instant.",
+        "analyse": "Apparemment isolé. Ignore l'ampleur des autres établissements.",
+        "urgency": 3,
+        "type_crise": "SANITAIRE",
+        "impact_fonctionnel": false,
+        "unite_fonctionnelle": "URGENCES"
+      }
+    },
+
+    {
+      "id": "S09",
+      "t_min": 17,
+      "type": "stimulus_animateur",
+      "cible": "TOUS",
+      "titre": "📸 SCREENSHOT 1 : ouvrir le collecteur",
+      "description_animateur": "MOMENT DE CAPTURE. Sur l'écran animateur collecteur exercice, l'Assistant territorial doit afficher : RT1 (4 établissements critiques simultanés), RT2 (transfert vers EXO1 saturé), RT3 (aucun Plan Blanc), RT4 (EXO4 isolé), RT5 (EXO1 vigilance / EXO3 crise pour le même type). C'est LE screenshot principal pour l'article.",
+      "action_attendue": "Animateur : capturer l'écran du collecteur avec la carte Assistant territorial pleine d'alertes.",
+      "payload": {
+        "instruction_joueur": "AUCUNE ACTION JOUEUR - moment de capture animateur uniquement."
+      }
+    },
+
+    {
+      "id": "S10",
+      "t_min": 19,
+      "type": "incident",
+      "cible": "EXO3",
+      "titre": "⚠️ EXO3 : 2 cas pédiatriques s'aggravent - syndrome atypique",
+      "description_animateur": "Premier indice que ce n'est peut-être pas une simple intoxication. 2 enfants présentent des signes neurologiques. À explorer en débrief.",
+      "action_attendue": "EXO3 déclare l'incident.",
+      "payload": {
+        "fait": "2 enfants présentent des signes neurologiques inattendus (confusion, paresthésies). Diagnostic d'intoxication alimentaire à reconsidérer ?",
+        "analyse": "Symptomatologie atypique - botulisme ? agent chimique ? Investigation à approfondir avec ARS.",
+        "urgency": 4,
+        "type_crise": "SANITAIRE",
+        "impact_fonctionnel": true,
+        "unite_fonctionnelle": "PEDIATRIE"
+      }
+    },
+
+    {
+      "id": "S11",
+      "t_min": 21,
+      "type": "stimulus_animateur",
+      "cible": "EXO1",
+      "titre": "💡 ANIMATEUR : ouvrir Assistant local EXO1",
+      "description_animateur": "Côté joueur EXO1, ouvrir l'Assistant local. À ce stade EXO1 doit voir : R1 incident sans tâche + R3 sanitaire sans déclaration adéquate + R5 contradiction capacité-transfert. SCREENSHOT 2 : capture du panneau Assistant joueur.",
+      "action_attendue": "Joueur EXO1 : cliquer sur bulle 🎓 Assistant pour ouvrir. Animateur : capturer.",
+      "payload": {
+        "instruction_joueur": "Ouvrir l'Assistant (icône en bas à droite) et observer les alertes accumulées."
+      }
+    },
+
+    {
+      "id": "S12",
+      "t_min": 22,
+      "type": "stimulus_animateur",
+      "cible": "EXO1",
+      "titre": "💡 ANIMATEUR : cliquer Aide ARS sur EXO1",
+      "description_animateur": "SCREENSHOT 3 : cliquer le bouton '📞 Aide ARS' sur l'alerte sanitaire. La grande modale s'ouvre avec coordonnées + délai légal + risques. Puis cliquer 'Générer message-type' pour le mode wow.",
+      "action_attendue": "Joueur EXO1 : cliquer 📞 Aide ARS, puis '📋 Générer message-type'. Animateur capture les 2 états.",
+      "payload": {
+        "instruction_joueur": "Sur l'alerte sanitaire, cliquer 'Aide ARS' puis 'Générer message-type'."
+      }
+    },
+
+    {
+      "id": "S13",
+      "t_min": 24,
+      "type": "stimulus_animateur",
+      "cible": "EXO1",
+      "titre": "💡 ANIMATEUR : Point de situation Assistant",
+      "description_animateur": "SCREENSHOT 4 : cliquer '🎯 Point de situation' sur l'Assistant EXO1. Cela génère la synthèse stratégique IA en 5 sections. Bonus : si Albert configuré, montre la qualité de l'analyse IA.",
+      "action_attendue": "Joueur EXO1 : ouvrir Assistant → 🎯 Point de situation. Capture pendant que la synthèse se génère puis quand elle est complète.",
+      "payload": {
+        "instruction_joueur": "Cliquer 'Point de situation' dans l'Assistant local."
+      }
+    },
+
+    {
+      "id": "S14",
+      "t_min": 25,
+      "type": "stimulus_animateur",
+      "cible": "TOUS",
+      "titre": "🎓 ANIMATEUR : Débriefing flash post-exercice",
+      "description_animateur": "Onglet REX → Débrief session sur chaque instance. SCREENSHOT 5 : la modale débriefing avec timeline + indicateurs + analyse + bouton DOCX.",
+      "action_attendue": "Sur chaque instance joueur : Onglet REX → bouton 🎓 Débrief session. Capture.",
+      "payload": {
+        "instruction_joueur": "REX → Débrief session."
+      }
+    }
+
+  ]
+}

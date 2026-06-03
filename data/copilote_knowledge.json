@@ -1,0 +1,145 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "build": "v3000h18",
+    "created": "2026-05-31",
+    "warning": "Les coordonnées ci-dessous doivent être VÉRIFIÉES par chaque établissement. Seules les entrées marquées 'verified: true' sont affichées à l'utilisateur final.",
+    "validation_strategy": "verified_only",
+    "next_review": "2026-09-01"
+  },
+
+  "obligations": {
+
+    "ars_tension_sanitaire": {
+      "id": "ars_tension_sanitaire",
+      "label": "Déclaration de tension sanitaire à l'ARS",
+      "type_crise": ["SANITAIRE", "MIXTE"],
+      "seuil_declenchement": "1 incident sanitaire U≥3 actif sans déclaration active de niveau ≥ 2",
+      "verified": true,
+      "confidence": "high",
+
+      "autorite": "Agence Régionale de Santé (ARS)",
+      "delai_legal": "Sans délai si niveau 3 (crise) — dans les 24h pour niveau 2 (tension)",
+      "fondement_juridique": "Article L. 1435-1 du Code de la santé publique",
+
+      "contacts": {
+        "principal": {
+          "label": "ARS de votre région — cellule de veille sanitaire",
+          "type": "telephone",
+          "valeur": "À COMPLÉTER par l'établissement",
+          "horaires": "24/7"
+        },
+        "mail": {
+          "label": "Mail générique régional",
+          "type": "email",
+          "valeur": "À COMPLÉTER par l'établissement (format générique : ars-XX-alerte@ars.sante.fr)"
+        },
+        "plateforme": {
+          "label": "Système d'information SI-VIC",
+          "type": "url",
+          "valeur": "https://si-vic.sante.gouv.fr",
+          "note": "Plateforme nationale de signalement — accès via comptes nominatifs"
+        }
+      },
+
+      "risque_si_non_declaration": [
+        "Audit ARS rétrospectif systématique en cas d'événement indésirable grave",
+        "Possible mise en cause juridique du directeur d'établissement (devoir d'alerte)",
+        "Perte de chance pour les patients si défaut de coordination territoriale"
+      ],
+
+      "modele_message": {
+        "objet": "Déclaration de tension sanitaire — {sigle_etablissement} — {date}",
+        "corps": "Bonjour,\n\nLe {nom_etablissement} ({sigle_etablissement}) déclare une situation de tension sanitaire.\n\n• Heure de déclenchement : {heure_premier_incident}\n• Type de tension : {type_crise}\n• Niveau actuel : {niveau_tension}\n• Nombre d'incidents actifs U≥3 : {nb_critiques}\n• Services impactés : {services_impactes}\n• Mesures déjà prises : {decisions_prises}\n\nLa cellule de crise est {statut_cellule_crise}.\n\nNous restons à votre disposition pour toute information complémentaire.\n\nCordialement,\n{nom_dircrise}\nDirecteur de crise — {sigle_etablissement}\nTél : {tel_dircrise}"
+      }
+    },
+
+    "anssi_incident_cyber": {
+      "id": "anssi_incident_cyber",
+      "label": "Notification ANSSI / CERT-Santé pour incident cyber",
+      "type_crise": ["CYBER"],
+      "seuil_declenchement": "Incident CYBER actif depuis >5min (exercice) ou >15min (prod) sans décision contenant 'ANSSI' ou 'CERT'",
+      "verified": true,
+      "confidence": "high",
+
+      "autorite": "ANSSI / CERT-Santé (cellule santé du CERT-FR)",
+      "delai_legal": "Sans délai pour les OIV (opérateurs d'importance vitale) — directive NIS2 transposée en France 2024",
+      "fondement_juridique": "Loi de Programmation Militaire 2018-607, transposition NIS2 (2024)",
+
+      "contacts": {
+        "cert_sante": {
+          "label": "CERT-Santé (cellule santé de l'ANSSI)",
+          "type": "email",
+          "valeur": "cert.sante@sante.gouv.fr",
+          "note": "Mail dédié au secteur santé — réponse rapide en journée ouvrée"
+        },
+        "anssi_cossi": {
+          "label": "ANSSI — Centre Opérationnel (24/7)",
+          "type": "telephone",
+          "valeur": "+33 1 71 75 84 50",
+          "horaires": "24/7 — pour incidents graves uniquement"
+        },
+        "anssi_signalement": {
+          "label": "Signalement en ligne ANSSI",
+          "type": "url",
+          "valeur": "https://www.cert.ssi.gouv.fr/contact/",
+          "note": "Formulaire dédié signalement d'incidents"
+        }
+      },
+
+      "risque_si_non_declaration": [
+        "Sanctions administratives jusqu'à 10 M€ ou 2% du CA mondial (NIS2)",
+        "Mise en cause pénale du dirigeant en cas de manquement caractérisé",
+        "Perte du soutien technique CERT en cas de propagation",
+        "Difficulté juridique si données patients exfiltrées (cascade CNIL)"
+      ],
+
+      "modele_message": {
+        "objet": "[SIGNALEMENT INCIDENT CYBER] {sigle_etablissement} — {nature_incident} — {date}",
+        "corps": "À l'attention du CERT-Santé,\n\n--- IDENTIFICATION ---\nÉtablissement : {nom_etablissement} ({sigle_etablissement})\nFINESS : {finess_etablissement}\nQualité : {role_declarant} ({nom_dircrise})\nContact : {tel_dircrise} / {mail_dircrise}\n\n--- INCIDENT ---\nDate/heure de détection : {heure_premier_incident}\nNature : {nature_incident}\nSystèmes impactés : {systemes_impactes}\nVecteur suspecté : {vecteur_suspect_ou_inconnu}\nDonnées patients potentiellement compromises : {oui_non_inconnu}\nNombre approximatif de postes/serveurs touchés : {nb_systemes}\n\n--- MESURES PRISES ---\n{decisions_prises}\n\n--- DEMANDE ---\n[ ] Demande d'appui technique CERT-Santé\n[ ] Information sans demande d'appui immédiat\n[ ] Demande de coordination inter-établissements (territoire)\n\nDes éléments complémentaires (logs, captures, IOC) peuvent être transmis sur demande via canal sécurisé.\n\nCordialement,\n{nom_dircrise}\n{role_declarant} — {sigle_etablissement}"
+      }
+    },
+
+    "cnil_violation_donnees": {
+      "id": "cnil_violation_donnees",
+      "label": "Notification CNIL — violation de données personnelles (RGPD)",
+      "type_crise": ["CYBER", "MIXTE"],
+      "seuil_declenchement": "Incident CYBER actif où une compromission/exfiltration de données patients est suspectée ou avérée",
+      "verified": true,
+      "confidence": "high",
+
+      "autorite": "Commission Nationale de l'Informatique et des Libertés (CNIL)",
+      "delai_legal": "Sans délai possible, et au plus tard 72h après la prise de conscience de la violation",
+      "fondement_juridique": "Article 33 du RGPD (UE 2016/679)",
+
+      "contacts": {
+        "teleservice": {
+          "label": "Téléservice CNIL — déclaration de violation",
+          "type": "url",
+          "valeur": "https://notifications.cnil.fr",
+          "note": "Voie OBLIGATOIRE pour la notification formelle — formulaire structuré"
+        },
+        "standard": {
+          "label": "Standard CNIL (info uniquement, pas pour notification)",
+          "type": "telephone",
+          "valeur": "+33 1 53 73 22 22",
+          "horaires": "Heures ouvrées"
+        }
+      },
+
+      "risque_si_non_declaration": [
+        "Amende administrative jusqu'à 10 M€ ou 2% du CA mondial",
+        "Sanction publique (publication de la décision de la CNIL)",
+        "Aggravation en cas d'absence de notification aux personnes concernées (patients) si risque élevé",
+        "Risque réputationnel : la non-déclaration découverte est plus grave que la fuite elle-même"
+      ],
+
+      "modele_message": {
+        "objet": "Préparation notification CNIL — violation de données — {sigle_etablissement} — {date}",
+        "corps": "Note pour le dossier interne — préparation de la notification CNIL\n\n--- IDENTIFICATION DU RESPONSABLE DE TRAITEMENT ---\nResponsable de traitement : {nom_etablissement}\nNuméro SIREN / FINESS : {finess_etablissement}\nDélégué à la protection des données (DPO) : {nom_dpo}\n\n--- NATURE DE LA VIOLATION ---\nDate / heure de la prise de conscience : {heure_decouverte}\nNature : {nature_violation}  (confidentialité / intégrité / disponibilité)\nCirconstances : {circonstances}\n\n--- DONNÉES CONCERNÉES ---\nCatégories de données : {categories_donnees}  (identité / santé / financières...)\nVolume estimé : {nb_personnes_estime}\nCatégories de personnes : {categories_personnes}  (patients, personnels, ...)\n\n--- CONSÉQUENCES POSSIBLES ---\n{consequences_possibles}\n\n--- MESURES DE SÉCURITÉ ---\nDéjà prises : {mesures_prises}\nEnvisagées : {mesures_envisagees}\n\n--- NOTIFICATION AUX PERSONNES ---\n[ ] Risque élevé — notification individuelle prévue\n[ ] Risque modéré — information collective envisagée\n[ ] Pas de risque élevé — pas de notification individuelle\n\nÉtape suivante : saisir ces informations sur https://notifications.cnil.fr dans les 72h suivant la prise de conscience ({deadline_72h})."
+      },
+
+      "note_critique": "ATTENTION : le délai 72h court à partir de la PRISE DE CONSCIENCE de la violation, pas à partir de l'événement lui-même. La traçabilité de cette prise de conscience est cruciale en cas de contrôle."
+    }
+  }
+}

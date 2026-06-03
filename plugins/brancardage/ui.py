@@ -188,7 +188,7 @@ body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);hei
           </div>
           <div class="ff">
             <label>Service / UF destination</label>
-            <input type="text" id="f-uf-dest-ext" placeholder="ex: Urgences (autre site)">
+            <input type="text" id="f-uf-dest-ext" placeholder="ex: Urgences Thonon">
           </div>
         </div>
         <div style="margin-top:6px;padding:6px 10px;background:#ede9fe;border-radius:4px;font-size:10px;color:var(--purple);font-family:var(--mono)">

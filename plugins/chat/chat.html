@@ -28,12 +28,13 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,sans-serif;backgroun
   display:flex;align-items:center;justify-content:space-between;
 }
 #salon-header h2{font-family:var(--mo);font-size:11px;font-weight:700;letter-spacing:1px;opacity:.7}
-#btn-new-salon{
+#btn-new-salon, #btn-new-dm{
   width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.15);
-  border:none;color:#fff;cursor:pointer;font-size:16px;line-height:1;
+  border:none;color:#fff;cursor:pointer;font-size:13px;line-height:1;
   display:flex;align-items:center;justify-content:center;
 }
-#btn-new-salon:hover{background:rgba(255,255,255,.25)}
+#btn-new-salon{font-size:16px}
+#btn-new-salon:hover, #btn-new-dm:hover{background:rgba(255,255,255,.25)}
 #salon-list{flex:1;overflow-y:auto;padding:8px 0}
 .salon-section-title{
   font-family:var(--mo);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.4);
@@ -190,10 +191,29 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,sans-serif;backgroun
 #pj-input{display:none}
 
 /* ── Modal nouveau salon ── */
-#modal-salon{
+#modal-salon, #modal-dm{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;
   align-items:center;justify-content:center;
 }
+/* ── v3.4 (h34) — Items utilisateurs dans la modale DM ── */
+.dm-user-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;
+  border-bottom:1px solid var(--bd);transition:background .12s;
+}
+.dm-user-item:last-child{border-bottom:none}
+.dm-user-item:hover{background:var(--s2)}
+.dm-user-avatar{
+  width:32px;height:32px;border-radius:50%;background:var(--p);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mo);font-size:11px;font-weight:700;flex-shrink:0;
+}
+.dm-user-info{flex:1;min-width:0}
+.dm-user-name{font-family:var(--mo);font-size:11px;font-weight:700;color:var(--tx)}
+.dm-user-meta{font-family:var(--mo);font-size:9px;color:var(--mu);margin-top:2px}
+.dm-user-status{
+  width:8px;height:8px;border-radius:50%;background:#64748b;flex-shrink:0;
+}
+.dm-user-status.online{background:#22c55e}
 .modal-box{
   background:var(--s);border-radius:10px;width:420px;max-width:95vw;overflow:hidden;
 }
@@ -260,6 +280,8 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,sans-serif;backgroun
   <div id="col-salons">
     <div id="salon-header">
       <h2>SALONS</h2>
+      <button id="btn-new-dm" onclick="chat_openDM()" title="Démarrer une conversation privée"
+              style="margin-right:4px">💬</button>
       <button id="btn-new-salon" onclick="chat_openNewSalon()" title="Nouveau salon">+</button>
     </div>
     <div id="salon-list">
@@ -374,6 +396,31 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,sans-serif;backgroun
   </div>
 </div>
 
+<!-- v3.4 (h34) — Modal nouvelle conversation privée (DM 1-à-1) -->
+<div id="modal-dm">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-hdr">
+      <h3>💬 NOUVELLE CONVERSATION PRIVÉE</h3>
+      <button class="modal-close" onclick="chat_closeDM()">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-family:var(--mo);font-size:10px;color:var(--mu);margin-bottom:10px;line-height:1.5">
+        Sélectionnez un destinataire. La conversation sera <strong>strictement privée</strong>
+        entre vous deux : invisible des autres utilisateurs et de l'administration.
+      </div>
+      <div class="mff">
+        <label>Rechercher un utilisateur</label>
+        <input type="text" id="dm-search" placeholder="Tapez un nom..."
+               oninput="chat_filterDMUsers(this.value)"
+               style="width:100%;font-family:var(--mo);font-size:11px">
+      </div>
+      <div id="dm-user-list" style="max-height:300px;overflow-y:auto;border:1px solid var(--bd);border-radius:4px;margin-top:8px">
+        <div style="padding:20px;text-align:center;color:var(--mu);font-family:var(--mo);font-size:10px">Chargement…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -431,12 +478,31 @@ var _pingTimer = null;
 var _newColor = "#003189";
 var _myUserId = null;
 
+// v3.0.0 — Circuit breaker pour les appels collecteur depuis instance joueur.
+// Variables au scope GLOBAL du script (pas dans chat_init) pour que les
+// fonctions chat_syncCollecteur / chat_pushPresence définies plus bas
+// puissent les lire (sinon ReferenceError au runtime).
+var _chatCollFailCount = 0;
+var _chatCollDisabled = false;
+var _chatSyncTimer = null;
+var _chatPresenceTimer = null;
+window._chatCollNoteFail = function() {
+  _chatCollFailCount++;
+  if (_chatCollFailCount >= 3 && !_chatCollDisabled) {
+    _chatCollDisabled = true;
+    if (_chatSyncTimer) clearInterval(_chatSyncTimer);
+    if (_chatPresenceTimer) clearInterval(_chatPresenceTimer);
+    console.warn("SCRIBE Chat: sync collecteur désactivée (3 x 401). Probablement mode exercice sans token fédération valide.");
+  }
+};
+
 // ── Init ─────────────────────────────────────────────────────────────────────
 function chat_init() {
   chat_loadPresence();
   chat_loadSalons();
   _pingTimer = setInterval(chat_ping, 30000);
   chat_ping();
+
   // Charger la config fédération pour la sync chat inter-GHT
   // IMPORTANT : on récupère _mysigle ET on démarre le sync dans le MÊME .then()
   // pour éviter une race où chat_syncCollecteur tournerait avant que _mysigle
@@ -447,18 +513,25 @@ function chat_init() {
     if (!fed) return;
     // 1. _mysigle FIRST (essentiel pour le filtre anti-doublon)
     if (fed.etablissement) _mysigle = fed.etablissement || "";
-    // 2. Sync collecteur seulement si fed prête ET sigle connu
-    if (fed.ready && fed.collecteur_url && _mysigle) {
+    // 2. v3000h22 — Sync chat inter-instances RÉACTIVÉE en mode exercice.
+    // Le collecteur exercice (port 8565) accepte le token fédération de
+    // l'instance via _check_any_auth(). Le circuit breaker se déclenche
+    // automatiquement après 3 x 401 si jamais ça ne marche pas — donc on
+    // tente, et on s'auto-coupe seulement si nécessaire.
+    if (fed.ready && fed.collecteur_url && fed.token && _mysigle) {
       _fedBase = fed.collecteur_url.replace("/api/push", "");
       _fedToken = fed.token || "";
       _syncReady = true;
-      // Démarrer la sync toutes les 3 secondes
-      setInterval(chat_syncCollecteur, 3000);
-      // Présence inter-GHT toutes les 30 secondes
-      setInterval(chat_pushPresence, 30000);
+      // Démarrer le polling messages + présence
+      chat_syncCollecteur();
       chat_pushPresence();
+      _chatSyncTimer = setInterval(chat_syncCollecteur, 4000);    // pull messages 4s
+      _chatPresenceTimer = setInterval(chat_pushPresence, 25000); // ping présence 25s
+      console.info("SCRIBE Chat: sync collecteur activée → " + _fedBase + " (sigle " + _mysigle + ")");
     } else if (fed.ready && fed.collecteur_url && !_mysigle) {
       console.warn("SCRIBE Chat: fédération prête mais sigle absent — sync collecteur désactivée pour éviter doublons");
+    } else {
+      console.info("SCRIBE Chat: fédération non configurée → sync collecteur désactivée");
     }
   }).catch(function(){});
 
@@ -509,10 +582,16 @@ function chat_loadSalons() {
 
 function chat_renderSalons() {
   var list = document.getElementById("salon-list");
+  // v3.4 (h34) — Trois sections : DM (conversations privées), territorial, local
+  var dms = _salons.filter(function(s) { return s.is_dm || s.type === "dm"; });
   var terr = _salons.filter(function(s) { return s.type === "territorial"; });
   var local = _salons.filter(function(s) { return s.type === "local"; });
 
   var html = "";
+  if (dms.length) {
+    html += "<div class='salon-section-title'>&#128172; Conversations privées</div>";
+    html += dms.map(chat_renderSalonItem).join("");
+  }
   if (terr.length) {
     html += "<div class='salon-section-title'>&#127760; Territorial G7</div>";
     html += terr.map(chat_renderSalonItem).join("");
@@ -533,9 +612,19 @@ function chat_renderSalonItem(s) {
   var activeStyle = (active && s.couleur)
     ? " style='border-left:3px solid " + col + ";background:rgba(0,0,0,.15)'"
     : "";
+  // v3.4 (h34) — Pour les DM, afficher le nom du peer plutôt que "#dm-X-Y"
+  var isDM = (s.is_dm || s.type === "dm");
+  var nameLabel, iconLabel;
+  if (isDM) {
+    nameLabel = s.peer_display_name || s.nom_affiche || ("Conversation privée");
+    iconLabel = "&#128172;";  // 💬
+  } else {
+    nameLabel = "#" + _esc(s.nom);
+    iconLabel = _esc(s.icone);
+  }
   return "<div class='salon-item" + active + "' data-salon-id='" + s.id + "'" + activeStyle + " onclick='chat_openSalonById(" + s.id + ")'>" +
-    "<span class='salon-icon'>" + _esc(s.icone) + "</span>" +
-    "<span class='salon-name' style='color:" + (active ? col : "") + "'>#" + _esc(s.nom) + "</span>" +
+    "<span class='salon-icon'>" + iconLabel + "</span>" +
+    "<span class='salon-name' style='color:" + (active ? col : "") + "'>" + (isDM ? _esc(nameLabel) : nameLabel) + "</span>" +
     ght +
   "</div>";
 }
@@ -553,8 +642,16 @@ function chat_openSalon(sJson) {
   _lastMsgId = 0;
   _messages = [];
 
-  document.getElementById("chat-salon-title").textContent = "#" + s.nom;
-  document.getElementById("chat-salon-desc").textContent = s.description || "";
+  // v3.4 (h34) — Pour les DM, afficher le nom du peer dans le bandeau
+  var isDM = (s.is_dm || s.type === "dm");
+  if (isDM) {
+    var label = s.peer_display_name || s.nom_affiche || "Conversation privée";
+    document.getElementById("chat-salon-title").textContent = "💬 " + label;
+    document.getElementById("chat-salon-desc").textContent = "Conversation strictement privée — invisible des autres utilisateurs";
+  } else {
+    document.getElementById("chat-salon-title").textContent = "#" + s.nom;
+    document.getElementById("chat-salon-desc").textContent = s.description || "";
+  }
 
   // Vider le feed immédiatement pour feedback visuel
   var feed = document.getElementById("msg-feed");
@@ -1212,6 +1309,88 @@ function chat_createSalon() {
     }).catch(function(e) { _toast("Erreur création : " + e, "err"); });
 }
 
+// ── v3.4 (h34) — Conversation privée (DM 1-à-1) ───────────────────────────────
+var _dmAllUsers = [];  // cache des utilisateurs récupérés
+
+function chat_openDM() {
+  document.getElementById("modal-dm").style.display = "flex";
+  document.getElementById("dm-search").value = "";
+  var list = document.getElementById("dm-user-list");
+  list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-family:var(--mo);font-size:10px">Chargement…</div>';
+  // Charger l'annuaire (route déjà utilisée par mobile et messagerie web)
+  _api("/api/v1/auth/annuaire-messagerie")
+    .then(function(r) { return r.ok ? r.json() : []; })
+    .then(function(users) {
+      _dmAllUsers = Array.isArray(users) ? users : [];
+      chat_renderDMUsers(_dmAllUsers);
+    })
+    .catch(function() {
+      list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-family:var(--mo);font-size:10px">Erreur de chargement de l\'annuaire</div>';
+    });
+}
+
+function chat_closeDM() {
+  document.getElementById("modal-dm").style.display = "none";
+}
+
+function chat_filterDMUsers(query) {
+  var q = (query || "").toLowerCase().trim();
+  if (!q) { chat_renderDMUsers(_dmAllUsers); return; }
+  var filtered = _dmAllUsers.filter(function(u) {
+    var name = (u.display_name || "").toLowerCase();
+    var uname = (u.username || "").toLowerCase();
+    var svc = (u.service || "").toLowerCase();
+    return name.indexOf(q) >= 0 || uname.indexOf(q) >= 0 || svc.indexOf(q) >= 0;
+  });
+  chat_renderDMUsers(filtered);
+}
+
+function chat_renderDMUsers(users) {
+  var list = document.getElementById("dm-user-list");
+  if (!users.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--mu);font-family:var(--mo);font-size:10px">Aucun utilisateur trouvé</div>';
+    return;
+  }
+  var html = users.map(function(u) {
+    var initials = (u.display_name || u.username || "?").trim().split(/\s+/).slice(0, 2).map(function(p) { return p[0]; }).join("").toUpperCase();
+    var statusClass = u.online ? "online" : "";
+    var meta = [u.service, u.role].filter(Boolean).join(" · ");
+    return '<div class="dm-user-item" onclick="chat_startDM(' + u.id + ', \'' + (u.display_name || u.username).replace(/'/g, "\\'") + '\')">' +
+      '<div class="dm-user-avatar">' + initials + '</div>' +
+      '<div class="dm-user-info">' +
+        '<div class="dm-user-name">' + (u.display_name || u.username) + '</div>' +
+        '<div class="dm-user-meta">' + meta + '</div>' +
+      '</div>' +
+      '<div class="dm-user-status ' + statusClass + '" title="' + (u.online ? "En ligne" : "Hors ligne") + '"></div>' +
+    '</div>';
+  }).join("");
+  list.innerHTML = html;
+}
+
+function chat_startDM(peerUserId, displayName) {
+  _api("/api/v1/chat/dm/start", {
+    method: "POST",
+    body: JSON.stringify({peer_user_id: peerUserId})
+  })
+    .then(function(r) {
+      if (!r.ok) { return r.json().then(function(d) { throw new Error(d.detail || "Erreur"); }); }
+      return r.json();
+    })
+    .then(function(salon) {
+      _toast("Conversation avec " + displayName + " prête", "ok");
+      chat_closeDM();
+      // Recharger la liste de salons et ouvrir le DM
+      chat_loadSalons();
+      setTimeout(function() {
+        chat_openSalonById(salon.id);
+      }, 250);
+    })
+    .catch(function(e) {
+      _toast("Erreur : " + e.message, "err");
+    });
+}
+
+
 // ── Mobile ────────────────────────────────────────────────────────────────────
 function chat_toggleSalons() {
   document.getElementById("col-salons").classList.toggle("mobile-open");
@@ -1228,113 +1407,139 @@ function chat_popout() {
 // ── Exposer dans window ───────────────────────────────────────────────────────
 
 // ── Sync inter-GHT via collecteur ─────────────────────────────────────────
+// v3000h22 — Réactivation en mode exercice. Le collecteur (port 8565 exo
+// ou 9000 prod) accepte le token fédération via _check_any_auth().
+
+// Track le dernier message ID reçu par salon (clé = salon_nom)
+var _chatLastSyncId = {};
+
 function chat_syncCollecteur() {
-  if (!_syncReady) return;
-  // Sync des salons territoriaux du collecteur
-  fetch(_fedBase + "/api/chat/salons", {
-    headers: {Authorization: "Bearer " + _fedToken}
-  }).then(function(r) { return r.ok ? r.json() : []; })
-  .then(function(collSalons) {
-    collSalons.forEach(function(cs) {
-      // Si salon territorial pas encore local → le créer
-      var exists = _salons.some(function(s) { return s.nom === cs.nom && s.type === "territorial"; });
-      if (!exists && cs.nom) {
-        _api("/api/v1/chat/salons", {
-          method: "POST",
-          body: JSON.stringify({nom: cs.nom, type: "territorial", icone: cs.icone || "💬",
-                                couleur: cs.couleur || "#7c3aed", description: cs.description || ""})
-        }).then(function(r) {
-          if (r.ok) chat_loadSalons();
-        }).catch(function(){});
+  if (_chatCollDisabled || !_syncReady || !_fedBase || !_fedToken) return;
+  // Pour chaque salon territorial connu, pull les nouveaux messages
+  (_salons || []).forEach(function(salon) {
+    if (!salon || salon.type !== "territorial") return;
+    var key = salon.nom;
+    var since = _chatLastSyncId[key] || 0;
+    var url = _fedBase + "/api/chat/messages?salon_nom=" + encodeURIComponent(key)
+              + "&since_id=" + since;
+    fetch(url, {
+      headers: {"Authorization": "Bearer " + _fedToken},
+    }).then(function(r) {
+      if (r.status === 401 || r.status === 403) {
+        if (typeof window._chatCollNoteFail === "function") {
+          window._chatCollNoteFail();
+        }
+        return null;
       }
-    });
-  }).catch(function(){});
-  if (!_currentSalon) return;
-  var salonNom = _currentSalon.nom;
-  var sinceId = _chatSyncIds[salonNom] || 0;
-
-  // 1. Pull : récupérer les nouveaux messages du collecteur
-  fetch(_fedBase + "/api/chat/messages?salon_nom=" + encodeURIComponent(salonNom) + "&since_id=" + sinceId, {
-    headers: {Authorization: "Bearer " + _fedToken}
-  }).then(function(r) {
-    return r.ok ? r.json() : [];
-  }).then(function(msgs) {
-    msgs.forEach(function(m) {
-      // ── Anti-doublon 1 : ignorer nos propres messages (par sigle)
-      // Comparaison case-insensitive + trim pour tolérer les écarts de
-      // formatage entre le sigle du config.js et celui imposé par la
-      // mappage du collecteur (ex: "hopital 1" vs "HOPITAL 1").
-      var sigleLocal = (_mysigle || "").trim().toLowerCase();
-      var sigleMsg   = (m.auteur_sigle || "").trim().toLowerCase();
-      if (sigleLocal && sigleMsg && sigleMsg === sigleLocal) return;
-
-      // ── Anti-doublon 2 : déjà affiché par son id collecteur
-      if (document.getElementById("msg-coll-" + m.id)) return;
-
-      // ── Anti-doublon 3 (ceinture-bretelle) : si _mysigle n'était
-      // pas encore chargé au moment où le message a été créé localement,
-      // le filtre 1 a pu rater. On regarde si on a un message LOCAL
-      // identique (même auteur+contenu, ±15s) → si oui, on ne réaffiche pas.
-      // Important pour l'utilisateur qui voit son propre message
-      // remonter du collecteur.
-      var mTime = m.horodatage ? new Date(m.horodatage).getTime() : 0;
-      var isDup = _messages.some(function(local) {
-        if (!local || local.origine === "ght") return false;
-        if (local.auteur_nom !== m.auteur_nom) return false;
-        if (local.contenu !== m.contenu) return false;
-        var lTime = local.horodatage ? new Date(local.horodatage).getTime() : 0;
-        return Math.abs(lTime - mTime) < 15000; // 15s de tolérance
+      return r.ok ? r.json() : null;
+    }).then(function(msgs) {
+      if (!Array.isArray(msgs) || !msgs.length) return;
+      // Filtrer ceux qui viennent de NOUS (on les a déjà localement)
+      var foreign = msgs.filter(function(m) {
+        return m && m.auteur_sigle !== _mysigle;
       });
-      if (isDup) return;
-
-      // Créer un pseudo-message au format local
-      var pseudo = {
-        id:           "coll-" + m.id,
-        salon_id:     _currentSalon ? _currentSalon.id : 0,
-        auteur_id:    null,
-        auteur_nom:   m.auteur_nom,
-        auteur_sigle: m.auteur_sigle,
-        contenu:      m.contenu,
-        mentions:     m.mentions || [],
-        reply_to:     null,
-        horodatage:   m.horodatage,
-        supprime:     false,
-        origine:      "ght",
-        pj:           m.pj || [],
-      };
-      _messages.push(pseudo);
-      chat_appendMessage(pseudo);
-      if (m.id > (_chatSyncIds[salonNom] || 0)) {
-        _chatSyncIds[salonNom] = m.id;
+      // Mettre à jour le since_id avec le max reçu (même nos propres messages)
+      var maxId = msgs.reduce(function(acc, m) {
+        return (m && m.id > acc) ? m.id : acc;
+      }, since);
+      _chatLastSyncId[key] = maxId;
+      if (!foreign.length) return;
+      // Injecter dans la mémoire locale et afficher si salon courant
+      if (!_messages[salon.id]) _messages[salon.id] = [];
+      foreign.forEach(function(m) {
+        // Anti-doublon par contenu (au cas où)
+        var dup = _messages[salon.id].some(function(existing) {
+          return existing.contenu === m.contenu
+              && existing.auteur_sigle === m.auteur_sigle
+              && Math.abs(
+                  (new Date(existing.horodatage).getTime() || 0) -
+                  (new Date(m.horodatage).getTime() || 0)
+                 ) < 5000;
+        });
+        if (dup) return;
+        // Format compatible affichage local
+        var msg = {
+          id:            "ght-" + m.id,
+          auteur_id:     null,
+          auteur_nom:    m.auteur_nom || m.auteur_sigle,
+          auteur_sigle:  m.auteur_sigle,
+          contenu:       m.contenu,
+          mentions:      m.mentions || [],
+          horodatage:    m.horodatage,
+          origine:       "ght",
+          pj:            m.pj || [],
+          reply_to_id:   m.reply_to_id || null,
+        };
+        _messages[salon.id].push(msg);
+        if (_currentSalon && _currentSalon.id === salon.id) {
+          chat_appendMessage(msg);
+        }
+      });
+      if (_currentSalon && _currentSalon.id === salon.id) {
+        var feed = document.getElementById("msg-feed");
+        if (feed) feed.scrollTop = 9999999;
       }
+    }).catch(function(e) {
+      // Erreur réseau silencieuse (le circuit breaker s'en chargera si trop)
     });
-  }).catch(function(){});
-
-  // 2. Pull présence inter-GHT
-  fetch(_fedBase + "/api/chat/presence", {
-    headers: {Authorization: "Bearer " + _fedToken}
-  }).then(function(r) {
-    return r.ok ? r.json() : {};
-  }).then(function(data) {
-    // Merger avec la présence locale
-    _presenceGHT = data;
-    chat_renderPresenceMerged();
-  }).catch(function(){});
+  });
 }
 
 var _presenceGHT = {};
 
 function chat_pushPresence() {
-  if (!_syncReady) return;
-  // Pousser la présence locale vers le collecteur
-  var users = Object.values(_presence).reduce(function(acc, arr) {
-    return acc.concat(arr);
-  }, []);
-  if (!users.length) return;
-  fetch(_fedBase + "/api/chat/presence", {
+  if (_chatCollDisabled || !_syncReady || !_fedBase || !_fedToken) return;
+  // 1. Push notre présence
+  var displayName = "";
+  try {
+    if (window.parent && window.parent.SCRIBE_CONFIG) {
+      displayName = window.parent.SCRIBE_CONFIG.user_display_name
+                 || window.parent.SCRIBE_CONFIG.username
+                 || "";
+    }
+  } catch(e) {}
+  if (!displayName) {
+    // fallback : décoder le JWT côté client pour avoir le username
+    try {
+      var tok = _tok();
+      if (tok) {
+        var parts = tok.split(".");
+        if (parts.length === 3) {
+          var payload = JSON.parse(atob(parts[1].replace(/-/g,"+").replace(/_/g,"/")));
+          displayName = payload.username || payload.sub || "";
+        }
+      }
+    } catch(e) {}
+  }
+  if (!displayName) displayName = _mysigle;
+  fetch(_fedBase + "/api/chat/presence/ping", {
     method: "POST",
-    headers: {Authorization: "Bearer " + _fedToken, "Content-Type": "application/json"},
-    body: JSON.stringify({users: users})
+    headers: {"Authorization": "Bearer " + _fedToken, "Content-Type": "application/json"},
+    body: JSON.stringify({
+      sigle: _mysigle,
+      display_name: displayName,
+      user_id: Math.abs(("" + displayName + _mysigle).split("").reduce(function(a,c){return a*31+c.charCodeAt(0);},0)) % 1000000,
+    }),
+  }).then(function(r) {
+    if (r.status === 401 || r.status === 403) {
+      if (typeof window._chatCollNoteFail === "function") window._chatCollNoteFail();
+    }
+  }).catch(function(){});
+
+  // 2. Pull la présence des autres établissements
+  fetch(_fedBase + "/api/chat/presence", {
+    headers: {"Authorization": "Bearer " + _fedToken},
+  }).then(function(r) {
+    return r.ok ? r.json() : null;
+  }).then(function(data) {
+    if (!data || typeof data !== "object") return;
+    // data = { sigle: [{user_id, display_name, last_seen}, ...], ... }
+    _presenceGHT = {};
+    Object.keys(data).forEach(function(sigle) {
+      if (sigle === _mysigle) return;  // Skip nous-même
+      _presenceGHT[sigle] = data[sigle] || [];
+    });
+    chat_renderPresenceMerged();
   }).catch(function(){});
 }
 

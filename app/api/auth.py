@@ -163,6 +163,49 @@ def require_admin(user: Optional[User] = Depends(get_current_user)):
     return user
 
 
+# v3.4 (h34) — Système de rôles RGPD-compliant.
+# Permet de restreindre l'accès à une route à certains rôles applicatifs.
+# Le rôle 'admin' court-circuite toujours les checks (il a tous les droits).
+#
+# Usage :
+#   @router.get("/brancardage/missions")
+#   def list_missions(user: User = Depends(require_role("soignant"))):
+#       ...
+#
+# Plusieurs rôles autorisés :
+#   user: User = Depends(require_role("soignant", "cellule_crise"))
+def require_role(*allowed_roles: str):
+    """Factory : retourne une dépendance qui exige un des rôles listés.
+
+    Le rôle 'admin' est implicitement autorisé partout (super-utilisateur).
+    Si l'utilisateur n'est pas connecté ou n'a pas le bon rôle → 403.
+
+    Cette fonction sert d'autorisation. L'authentification (token JWT)
+    est faite en amont par get_current_user.
+    """
+    def _checker(user: Optional[User] = Depends(get_current_user)) -> User:
+        if not user:
+            raise HTTPException(status_code=401, detail="Non authentifié")
+        # 'admin' a tous les droits applicatifs
+        if user.role == "admin":
+            return user
+        if user.role not in allowed_roles:
+            _logger_sec.info(
+                f"require_role: accès refusé pour user={user.username} "
+                f"role={user.role}, allowed={allowed_roles}"
+            )
+            raise HTTPException(
+                status_code=403,
+                detail=f"Cette ressource n'est pas accessible à votre rôle ({user.role})"
+            )
+        return user
+    return _checker
+
+
+# Valeurs canoniques des rôles. Utilisé pour valider les inputs admin.
+ROLES_CANONIQUES = ("admin", "cellule_crise", "soignant")
+
+
 # ── Schémas ──────────────────────────────────────────────
 
 class LoginIn(BaseModel):
@@ -211,6 +254,18 @@ def ensure_admin(db: Session):
         if not existing.hashed_password.startswith("$2"):
             existing.hashed_password = _hash(ADMIN_PASS)
             db.commit()
+        # v3.0.0 — En MODE EXERCICE uniquement : forcer la resynchronisation du
+        # mot de passe admin sur ADMIN_PASS. Raison : le mdp exercice est fixe et
+        # non secret ("Exercice2026!"), et le collecteur animateur DOIT pouvoir se
+        # logger pour injecter les stimuli. Si la DB exercice a été créée avec un
+        # ancien mdp (random), le login échouait → 0 stimulus. Ce forçage ne
+        # s'applique JAMAIS en production (SCRIBE_EXERCICE_MODE != 1) pour ne pas
+        # écraser un mot de passe admin légitimement modifié.
+        elif os.getenv("SCRIBE_EXERCICE_MODE", "0") == "1" and ADMIN_PASS:
+            if not verify_password(ADMIN_PASS, existing.hashed_password):
+                existing.hashed_password = _hash(ADMIN_PASS)
+                existing.active = True
+                db.commit()
 
 
 # ── Endpoints ────────────────────────────────────────────
@@ -316,7 +371,25 @@ def update_user(uid: int, body: UserUpdate, admin: User = Depends(require_admin)
     if not u: raise HTTPException(404, "Utilisateur non trouvé")
     if body.display_name is not None: u.display_name = body.display_name
     if body.password     is not None: u.hashed_password = _hash(body.password)
-    if body.role         is not None: u.role = body.role
+    if body.role         is not None:
+        # v3.4 (h34) — Valider le rôle (anti-typo, anti-rôle inconnu).
+        if body.role not in ROLES_CANONIQUES:
+            raise HTTPException(
+                400,
+                f"Rôle invalide '{body.role}'. Rôles autorisés : {', '.join(ROLES_CANONIQUES)}"
+            )
+        # Empêcher un admin de se rétrograder lui-même (anti-lockout).
+        if u.id == admin.id and u.role == "admin" and body.role != "admin":
+            raise HTTPException(
+                400,
+                "Impossible de retirer votre propre rôle admin. "
+                "Demandez à un autre administrateur."
+            )
+        _logger_sec.info(
+            f"role_change: {admin.username} a modifié {u.username} : "
+            f"{u.role} → {body.role}"
+        )
+        u.role = body.role
     if body.perimetre    is not None: u.perimetre = body.perimetre
     if body.active       is not None: u.active = body.active
     db.commit(); db.refresh(u); return u

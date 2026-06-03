@@ -5,23 +5,77 @@
 // Bandeau MODE EXERCICE — lu depuis config.js
 (function() {
   try {
-    if (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.exercice_mode) {
+    // v3.0.0 — Le manager exercice écrit SCRIBE_CONFIG.exercice.mode (imbriqué).
+    // L'ancienne forme plate exercice_mode reste lue pour rétrocompatibilité.
+    var _cfg = (typeof SCRIBE_CONFIG !== 'undefined') ? SCRIBE_CONFIG : null;
+    var _exoMode = _cfg && (
+      (_cfg.exercice && _cfg.exercice.mode) || _cfg.exercice_mode
+    );
+    var _exoSigle = _cfg && (
+      (_cfg.exercice && _cfg.exercice.sigle) || _cfg.exercice_sigle
+    );
+    if (_exoMode) {
       var banner = document.getElementById('exo-mode-banner');
       var sigle = document.getElementById('exo-sigle-label');
       if (banner) {
         banner.style.display = 'flex';
         document.body.classList.add('exo-mode');
       }
-      if (sigle && SCRIBE_CONFIG.exercice_sigle) {
-        sigle.textContent = SCRIBE_CONFIG.exercice_sigle;
+      if (sigle && _exoSigle) {
+        sigle.textContent = _exoSigle;
       }
+      // v3.0.0 — Mémoriser pour le splash screen (déclenché après auth).
+      window.__exoModeActive = true;
+      window.__exoSigle = _exoSigle || '';
     }
   } catch(e) {}
 })();
+
+// v3.0.0 — Splash screen mode exercice.
+// Appelé après que l'utilisateur soit authentifié, depuis initAfterLogin (ou
+// équivalent). Affiche une modale plein écran qui force la déclaration "prêt"
+// avant d'accéder au dashboard.
+function showExoSplashIfNeeded() {
+  try {
+    if (!window.__exoModeActive) return;
+    // Ne pas re-afficher si déjà passé pendant cette session navigateur
+    if (sessionStorage.getItem('exo_pret_done') === '1') return;
+    var splash = document.getElementById('exo-splash');
+    if (!splash) return;
+    var sigleLabel = document.getElementById('exo-splash-sigle');
+    if (sigleLabel && window.__exoSigle) {
+      sigleLabel.textContent = window.__exoSigle;
+    }
+    splash.style.display = 'flex';
+  } catch(e) {}
+}
+
+// v3.0.0 — Variante du déclarer prêt utilisée par le splash : appelle l'API +
+// ferme la modale + mémorise pour la session.
+function declareJoueurPretAndClose() {
+  var btn = document.getElementById('exo-splash-pret-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Envoi...'; }
+  // Appel API standard via declareJoueurPret (le bouton du bandeau passe à ✓ PRÊT)
+  try { declareJoueurPret(); } catch(e) {}
+  // Fermeture du splash (la décision est prise, on n'attend pas la réponse)
+  setTimeout(function() {
+    sessionStorage.setItem('exo_pret_done', '1');
+    var splash = document.getElementById('exo-splash');
+    if (splash) splash.style.display = 'none';
+  }, 350);
+}
+
 function declareJoueurPret() {
   var btn = document.getElementById('exo-pret-btn');
   var username = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.display_name : 'Joueur';
-  var sigle = (typeof SCRIBE_CONFIG !== 'undefined') ? (SCRIBE_CONFIG.exercice_sigle || SCRIBE_CONFIG.etablissement?.sigle || '?') : '?';
+  // v3.0.0 — lire d'abord la forme imbriquée exercice.sigle
+  var sigle = '?';
+  try {
+    sigle = (SCRIBE_CONFIG.exercice && SCRIBE_CONFIG.exercice.sigle)
+            || SCRIBE_CONFIG.exercice_sigle
+            || (SCRIBE_CONFIG.etablissement && SCRIBE_CONFIG.etablissement.sigle)
+            || '?';
+  } catch(e) {}
   // Pousser vers le collecteur exercice via la fédération
   var fedUrl = '';
   try { fedUrl = SCRIBE_CONFIG.federation?.collecteur_url?.replace('/api/push', '') || ''; } catch(e) {}
@@ -36,7 +90,8 @@ function declareJoueurPret() {
     if (r.ok) {
       if (btn) { btn.textContent = '✓ PRÊT'; btn.classList.add('ready'); btn.disabled = true; }
     } else {
-      alert('Erreur déclaration — réessayez');
+      // Échec API : on garde quand même le visuel "prêt" côté UX
+      if (btn) { btn.textContent = '✓ PRÊT (local)'; btn.classList.add('ready'); btn.disabled = true; }
     }
   }).catch(function() {
     // Fallback : juste confirmer visuellement
@@ -370,7 +425,49 @@ function openPluginTab(pluginId, tabId, btn) {
   }
 }
 
+// v3.4 (h35) — Map des rôles autorisés par onglet (utilisée par openTab + applyRoleVisibility)
+// Le rôle 'admin' a accès à tout via court-circuit.
+function _isTabAllowedForRole(btnEl, role) {
+  if (!btnEl) return true;
+  if (role === 'admin') return true;
+  const dataRoles = btnEl.getAttribute('data-roles');
+  if (!dataRoles) return true;  // Pas de restriction → tout le monde
+  const allowed = dataRoles.split(',').map(s => s.trim());
+  return allowed.indexOf(role) >= 0;
+}
+
+// v3.4 (h35) — Affiche/cache les onglets selon le rôle de l'utilisateur connecté.
+// Appelée juste après le login (initAfterLogin) et chaque fois que le user change.
+function applyRoleVisibility() {
+  if (!currentUser || !currentUser.role) return;
+  const role = currentUser.role;
+  document.querySelectorAll('.tab-btn[data-roles]').forEach(btn => {
+    const dataRoles = btn.getAttribute('data-roles');
+    if (!dataRoles) return;
+    const allowed = dataRoles.split(',').map(s => s.trim());
+    const isAllowed = (role === 'admin') || allowed.indexOf(role) >= 0;
+    // On masque les onglets non autorisés. L'admin gardera ses onglets visibles
+    // grâce à du code existant ailleurs (display:none initial puis display='block').
+    if (!isAllowed) {
+      btn.style.display = 'none';
+    }
+  });
+  // Si l'onglet courant n'est plus autorisé → bascule vers le dashboard
+  const activeBtn = document.querySelector('.tab-btn.active');
+  if (activeBtn && !_isTabAllowedForRole(activeBtn, role)) {
+    const dashboardBtn = document.getElementById('tab-btn-dashboard');
+    if (dashboardBtn) openTab('tab-dashboard', dashboardBtn);
+  }
+}
+
 function openTab(id, btn) {
+  // v3.4 (h35) — Garde-fou : vérifier l'autorisation au runtime.
+  // En théorie, les onglets non autorisés sont masqués par applyRoleVisibility(),
+  // mais un user pourrait y accéder via console JS ou state préservé.
+  if (currentUser && currentUser.role && btn && !_isTabAllowedForRole(btn, currentUser.role)) {
+    toast("Rubrique non autorisée pour votre rôle (" + currentUser.role + ")", "err");
+    return;
+  }
   localStorage.setItem('scribe_last_tab', id);
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -668,6 +765,30 @@ async function applyPluginNav() {
       btn.style.display = activeIds.has(pluginId) ? '' : 'none';
     });
 
+    // v3.4 (h35) — Supprimer les onglets dynamiques de plugins qui ne sont plus
+    // dans la réponse (cas de changement d'utilisateur ou de désactivation
+    // côté admin). Sans cela, un onglet brancardage créé pour un soignant
+    // restait visible après reconnexion en cellule_crise.
+    document.querySelectorAll('[id^="tab-btn-"]').forEach(btn => {
+      const id = btn.id.replace(/^tab-btn-/, '');
+      // Ne pas toucher aux boutons statiques (qui ne sont pas dans PLUGIN_TAB_MAP)
+      if (Object.values(PLUGIN_TAB_MAP).indexOf(btn.id) >= 0) return;
+      // Boutons réellement statiques (non liés à un plugin)
+      const staticIds = ['tab-btn-dashboard','tab-btn-incidents','tab-btn-soins',
+        'tab-btn-capacite','tab-btn-transferts','tab-btn-cellule','tab-btn-kanban',
+        'tab-btn-communique','tab-btn-releve','tab-btn-annuaire','tab-btn-analyse',
+        'tab-btn-rex','tab-btn-messagerie','tab-btn-admin-uf','tab-btn-declarations'];
+      if (staticIds.indexOf(btn.id) >= 0) return;
+      // Bouton dynamique d'un plugin : le supprimer si plugin pas dans la liste
+      if (!activeIds.has(id)) {
+        btn.remove();
+        // Supprimer aussi le tab-content correspondant
+        document.querySelectorAll('.tab-content').forEach(tc => {
+          if (tc.id && (tc.id.indexOf(id) >= 0)) tc.remove();
+        });
+      }
+    });
+
     // 2. Créer dynamiquement les onglets des plugins uploadés (non statiques)
     const nav = document.getElementById('main-nav');
     const appContent = document.getElementById('app-content');
@@ -778,6 +899,9 @@ async function initAfterLogin() {
   if (app) { app.style.display='flex'; app.style.flex='1'; app.style.flexDirection='column'; app.style.overflow='hidden'; app.style.minHeight='0'; }
   // Laisser le DOM se rendre avant initMap
   await new Promise(r => setTimeout(r, 50));
+  // v3.0.0 — Splash exercice : afficher la modale "Je suis prêt" si on est en
+  // mode exercice et que le joueur ne s'est pas encore déclaré dans cette session.
+  try { showExoSplashIfNeeded(); } catch(e) {}
   initMap();
   await loadSites();
   await loadUfToPole();
@@ -786,7 +910,9 @@ async function initAfterLogin() {
   // réagisse vite aux stimuli injectés (3s au lieu de 12s en mode normal).
   var _refreshMs = 12000;
   try {
-    if (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.exercice_mode) {
+    var _cfgE = (typeof SCRIBE_CONFIG !== 'undefined') ? SCRIBE_CONFIG : null;
+    var _isExo = _cfgE && ((_cfgE.exercice && _cfgE.exercice.mode) || _cfgE.exercice_mode);
+    if (_isExo) {
       _refreshMs = 3000;
     }
   } catch(e) {}
@@ -794,6 +920,20 @@ async function initAfterLogin() {
   renderAnnuaire();
   loadIaBadge();
   await applyPluginNav();
+  // v3.4 (h35) — Masquer les onglets non autorisés selon le rôle du user connecté.
+  // Doit être appelé APRÈS applyPluginNav (qui peut afficher/cacher des onglets
+  // selon les plugins actifs).
+  try { applyRoleVisibility(); } catch(e) { console.warn('[role visibility]', e); }
+  // Si le dernier onglet sélectionné est interdit, bascule sur le dashboard
+  try {
+    const lastTab = localStorage.getItem('scribe_last_tab');
+    if (lastTab && lastTab !== 'tab-dashboard') {
+      const lastBtn = document.querySelector(`[onclick*="${lastTab}"]`);
+      if (lastBtn && lastBtn.style.display === 'none') {
+        localStorage.removeItem('scribe_last_tab');
+      }
+    }
+  } catch(e) {}
   // Dashboard : charger les données et lancer le rafraîchissement
   loadDashboard();
   if (_dbInterval) clearInterval(_dbInterval);
@@ -823,6 +963,15 @@ async function initAfterLogin() {
   // v2322 — Démarrer le système Tuteur (Hook 2A : rappel discret + observations)
   // Armé automatiquement en mode exercice ou si actif_en_prod=true côté config
   try { tuteurInit(); } catch(e) { console.warn('[tuteur] init failed:', e); }
+
+  // v3.0.0 — Démarrer le widget Coach proactif (bulle flottante bas-droite).
+  // Activé conditionnellement (seulement si le plugin tuteur est actif).
+  // Auto-détection via /api/v1/plugins/active.
+  try {
+    if (typeof window.coachInit === 'function') {
+      window.coachInit();
+    }
+  } catch(e) { console.warn('[coach] init failed:', e); }
 }
 
 // v2.4.6 — Patch global pour timezone configurée (option B du sélecteur wizard)
@@ -2838,6 +2987,8 @@ async function submitIncident() {
     intervenant_nom: document.getElementById('intervenant_nom').value,
     intervenant_contact: document.getElementById('intervenant_contact').value,
     impact_fonctionnel: document.getElementById('impact_fonctionnel')?.checked || false,
+    // v3.4 (h34) — Exposition explicite côté personnel soignant.
+    visible_soignant: document.getElementById('visible_soignant')?.checked || false,
     estimated_resolution, jalons_labels:[...jalonsList]
   };
 
@@ -2856,6 +3007,7 @@ async function submitIncident() {
     document.getElementById('resolution-hours').value='';
     document.getElementById('attachments-input').value='';
     var _impF = document.getElementById('impact_fonctionnel'); if (_impF) _impF.checked = false;
+    var _visS = document.getElementById('visible_soignant'); if (_visS) _visS.checked = false;
     jalonsList=[]; renderJalonTags();
     document.querySelectorAll('.jalon-preset-btn').forEach(b=>b.classList.remove('active'));
     clearUF(); // reset multi-UF
@@ -3406,7 +3558,7 @@ async function msgOpenComposeDirect(userId, displayName) {
 function renderAnnuaire(filter='') {
   const rawData = annuaireMode==='secours' ? ANNUAIRE_SECOURS : ANNUAIRE_NORMAL;
   // v2.4.8 : normaliser le mapping backend (service/interne/direct/mobile/site/note)
-  // → frontend (service/tel/local/note). Bug fix : "undefined" partout sinon.
+  // → frontend (service/tel/local/note). Bug Polynésie : "undefined" partout.
   const data = (rawData || []).map(e => {
     if (!e) return null;
     // Si l'entrée a déjà tel/local (ancien format), on garde tel quel
@@ -3987,7 +4139,15 @@ async function tuteurInit() {
   } catch(e) { TUTEUR.config = {seuil_inactivite_exercice_min: 1, seuil_inactivite_prod_min: 12, actif_en_prod: false}; }
 
   // Mode exercice : armé automatiquement
-  const isExercice = (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.exercice_mode);
+  // v3.0.0 — Lire les 2 formes : SCRIBE_CONFIG.exercice.mode (imbriqué, écrit par
+  // le manager exercice) ET SCRIBE_CONFIG.exercice_mode (plat, rétrocompat).
+  let isExercice = false;
+  try {
+    isExercice = !!(SCRIBE_CONFIG && (
+      (SCRIBE_CONFIG.exercice && SCRIBE_CONFIG.exercice.mode) ||
+      SCRIBE_CONFIG.exercice_mode
+    ));
+  } catch(e) {}
   const armer = isExercice || (TUTEUR.config && TUTEUR.config.actif_en_prod);
   if (!armer) {
     console.log('[tuteur] non armé (mode prod sans actif_en_prod)');
@@ -3996,11 +4156,33 @@ async function tuteurInit() {
   TUTEUR.enabled = true;
 
   // Restaurer ou démarrer une session
+  // v3.0.0 — Le localStorage survit aux resets DB. Une session restaurée peut
+  // donc référencer un ID qui n'existe plus en base (cas mode exercice avec DB
+  // reset à chaque démarrage). On vérifie d'abord la validité auprès du backend ;
+  // si la session est invalide ou terminée, on en démarre une nouvelle.
   const stored = localStorage.getItem('tuteur_session_id');
+  let sessionValid = false;
   if (stored) {
-    TUTEUR.sessionId = parseInt(stored, 10);
-    console.log('[tuteur] session restaurée:', TUTEUR.sessionId);
-  } else {
+    const sid = parseInt(stored, 10);
+    try {
+      const r = await apiFetch('/api/v1/tuteur/session/' + sid);
+      if (r.ok) {
+        const data = await r.json();
+        // Session valide ET pas terminée
+        if (data && data.id === sid && !data.ended_at) {
+          TUTEUR.sessionId = sid;
+          sessionValid = true;
+          console.log('[tuteur] session restaurée:', sid);
+        }
+      }
+    } catch(e) { /* on retombera sur le démarrage nouveau */ }
+    if (!sessionValid) {
+      // Session obsolète : purger le localStorage
+      localStorage.removeItem('tuteur_session_id');
+      console.log('[tuteur] session', sid, 'obsolète (DB reset?) → démarrage nouvelle session');
+    }
+  }
+  if (!sessionValid) {
     await tuteurStartSession(isExercice ? 'exercice' : 'prod');
   }
 
@@ -4021,24 +4203,40 @@ async function tuteurStartSession(mode) {
     ? (SCRIBE_CONFIG.etablissement.sigle || '?') : '?';
   const scenarioId = (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.exercice_sigle)
     ? SCRIBE_CONFIG.exercice_sigle : null;
-  try {
-    const r = await apiFetch('/api/v1/tuteur/session/start', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        mode: mode,
-        instance_sigle: sigle,
-        scenario_id: scenarioId,
-        intention_pedago: localStorage.getItem('tuteur_intention') || null,
-      }),
-    });
-    const d = await r.json();
-    if (d.id) {
-      TUTEUR.sessionId = d.id;
-      localStorage.setItem('tuteur_session_id', String(d.id));
-      console.log('[tuteur] session démarrée:', d.id);
+  // v3.0.0 — Retry 1 fois en cas d'échec réseau/timing au démarrage
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const r = await apiFetch('/api/v1/tuteur/session/start', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          mode: mode,
+          instance_sigle: sigle,
+          scenario_id: scenarioId,
+          intention_pedago: localStorage.getItem('tuteur_intention') || null,
+        }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error('HTTP ' + r.status + ': ' + (err.detail || ''));
+      }
+      const d = await r.json();
+      if (d.id) {
+        TUTEUR.sessionId = d.id;
+        localStorage.setItem('tuteur_session_id', String(d.id));
+        console.log('[tuteur] session démarrée:', d.id, '(tentative', attempt + ')');
+        return;
+      }
+      throw new Error('Réponse sans id : ' + JSON.stringify(d));
+    } catch(e) {
+      if (attempt === 1) {
+        console.warn('[tuteur] start tentative 1 échouée, retry dans 800ms :', e.message);
+        await new Promise(res => setTimeout(res, 800));
+      } else {
+        console.error('[tuteur] start a définitivement échoué :', e.message);
+      }
     }
-  } catch(e) { console.warn('[tuteur] start failed:', e); }
+  }
 }
 
 async function tuteurEndSession() {
@@ -4136,7 +4334,7 @@ function tuteurShowRappelPopup(rappelId, contenu) {
     '<div style="display:flex;align-items:start;gap:10px;margin-bottom:10px">' +
       '<div style="font-size:1.5rem">🎓</div>' +
       '<div style="flex:1">' +
-        '<div style="font-size:.75rem;color:#64748b;letter-spacing:1px;margin-bottom:2px">MON COACH</div>' +
+        '<div style="font-size:.75rem;color:#64748b;letter-spacing:1px;margin-bottom:2px">MON ASSISTANT</div>' +
         '<div id="tuteur-rappel-content" style="font-size:.9rem;color:#0f172a;line-height:1.4"></div>' +
       '</div>' +
       '<button id="tuteur-rappel-close" style="background:transparent;border:none;font-size:1.2rem;color:#64748b;cursor:pointer;padding:0 4px" title="Fermer">×</button>' +
@@ -4811,7 +5009,7 @@ function _scenBuildBody() {
   const body = {
     titre,
     description: (document.getElementById('scen-description').value || '').trim(),
-    cible_sigle: (document.getElementById('scen-cible').value || 'DEMO').trim(),
+    cible_sigle: (document.getElementById('scen-cible').value || 'DEMO1').trim(),
     anonymize: document.getElementById('scen-anonymize').checked,
     include_incidents: document.getElementById('scen-inc-incidents').checked,
     include_messages:  document.getElementById('scen-inc-messages').checked,
@@ -5150,21 +5348,65 @@ async function loadAdminUsers() {
     const users = await r.json();
     const el = document.getElementById('admin-user-list');
     if (!users.length) { el.innerHTML = '<div class="empty-state">Aucun compte</div>'; return; }
-    el.innerHTML = users.map(u => `
+    // v3.4 (h34) — Rôles canoniques avec labels parlants
+    const roleLabels = {
+      'cellule_crise': 'Cellule de crise',
+      'soignant':      'Soignant',
+      'admin':         'Admin',
+    };
+    el.innerHTML = users.map(u => {
+      const roleOptions = ['cellule_crise', 'soignant', 'admin'].map(r =>
+        `<option value="${r}"${r===u.role?' selected':''}>${roleLabels[r]||r}</option>`
+      ).join('');
+      const currentLabel = roleLabels[u.role] || u.role;
+      return `
       <div class="user-row" style="cursor:pointer"
            onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
         <input type="checkbox" class="user-select-cb" data-uid="${u.id}" onclick="event.stopPropagation();adminUpdateSelectCount()"
                style="width:14px;height:14px;cursor:pointer;flex-shrink:0">
         <span class="user-row-name">${u.display_name}</span>
         <span class="user-row-meta">@${u.username}</span>
-        <span class="role-${u.role}">${u.role}</span>
+        <select onchange="event.stopPropagation();adminChangeRole(${u.id}, this.value, '${(u.display_name||u.username).replace(/'/g,'')}')"
+                onclick="event.stopPropagation()"
+                class="role-${u.role}"
+                style="font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer"
+                title="Changer le rôle (impacte les droits d'accès)">
+          ${roleOptions}
+        </select>
         ${u.perimetre ? `<span style="font-family:var(--mono);font-size:9px;color:var(--muted)">${u.perimetre}</span>` : ''}
         <span style="font-family:var(--mono);font-size:9px;color:${u.active?'#4ade80':'#f87171'}">${u.active?'Actif':'Inactif'}</span>
         <button class="kc-btn" title="Modifier le mot de passe" onclick="event.stopPropagation();selectUserForPw(${u.id},'${(u.display_name||u.username).replace(/'/g,'')}')">🔑</button>
         ${u.role !== 'admin' ? `<button class="kc-btn" style="margin-left:2px" onclick="event.stopPropagation();toggleUserActive(${u.id},${u.active})">${u.active?'Désactiver':'Activer'}</button>
         <button class="kc-btn" style="color:#f87171" onclick="event.stopPropagation();deleteUser(${u.id})">✕</button>` : ''}
-      </div>`).join('');
+      </div>`;
+    }).join('');
   } catch(e) { console.error(e); }
+}
+
+// v3.4 (h34) — Changement de rôle depuis le dropdown inline
+async function adminChangeRole(uid, newRole, displayName) {
+  if (!confirm(`Changer le rôle de ${displayName} pour "${newRole}" ?\n\nL'utilisateur devra se reconnecter pour que les nouveaux droits prennent effet.`)) {
+    loadAdminUsers(); // rollback du dropdown
+    return;
+  }
+  try {
+    const r = await apiFetch('/api/v1/auth/users/' + uid, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json', ...authHeaders()},
+      body: JSON.stringify({role: newRole})
+    });
+    if (!r.ok) {
+      const d = await r.json();
+      toast(d.detail || 'Erreur changement de rôle', 'err');
+      loadAdminUsers();
+      return;
+    }
+    toast(`✓ ${displayName} → ${newRole}`, 'ok');
+    loadAdminUsers();
+  } catch(e) {
+    toast('Erreur réseau', 'err');
+    loadAdminUsers();
+  }
 }
 
 function adminSelectAllUsers() {
@@ -5233,18 +5475,24 @@ async function pollIGHTBadge() {
   // Mettre à jour le badge inter-GHT même sans ouvrir l'onglet
   if (!_fedStatus) { try { await loadFedStatus(); } catch(e) {} }
   let total = 0;
+  // v3.0.0 — Respect du circuit breaker collecteur
+  const collActif = !_collecteurDisabled && _fedStatus?.ready && _fedStatus?.collecteur_url;
   // Compter les demandes non traitées
   try {
     const r = await apiFetch('/api/v1/interght/demandes');
     if (r.ok) {
       const local = await r.json();
       // + demandes distantes si collecteur dispo
-      if (_fedStatus?.ready && _fedStatus?.collecteur_url) {
+      if (collActif) {
         const collBase = _fedStatus.collecteur_url.replace('/api/push','');
         const rc = await fetch(collBase + '/api/demandes', {
           headers:{'Authorization':'Bearer '+(_fedStatus.token||'')}
         });
-        if (rc.ok) {
+        if (rc.status === 401) {
+          _collecteurFailCount = (_collecteurFailCount || 0) + 1;
+          if (_collecteurFailCount >= 3) _collecteurDisabled = true;
+        } else if (rc.ok) {
+          _collecteurFailCount = 0;
           const allRemote = await rc.json();
           const monSigle = (SCRIBE_CONFIG?.etablissement?.sigle||'').toUpperCase();
           const remoteDems = allRemote.filter(d =>
@@ -5255,12 +5503,15 @@ async function pollIGHTBadge() {
         }
       }
       // Messages non lus
-      if (_fedStatus?.ready && _fedStatus?.collecteur_url) {
+      if (collActif && !_collecteurDisabled) {
         const collBase = _fedStatus.collecteur_url.replace('/api/push','');
         const rm = await fetch(collBase + '/api/messages', {
           headers:{'Authorization':'Bearer '+(_fedStatus.token||'')}
         });
-        if (rm.ok) {
+        if (rm.status === 401) {
+          _collecteurFailCount = (_collecteurFailCount || 0) + 1;
+          if (_collecteurFailCount >= 3) _collecteurDisabled = true;
+        } else if (rm.ok) {
           const msgs = await rm.json();
           const all = [...(msgs.received||[]), ...(msgs.sent||[])];
           // Compter les messages reçus des 24 dernières heures non encore vus
@@ -5584,6 +5835,176 @@ function openRexModal() {
   });
   document.getElementById('rex-modal').classList.add('open');
 }
+
+// ─── v3.2.0 (S7) — Modale Débrief session ───────────────────────────────────
+async function openDebriefModal() {
+  // 1. Créer l'overlay
+  closeDebriefModal();
+  const overlay = document.createElement('div');
+  overlay.id = 'debrief-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.55);'
+    + 'z-index:99999;display:flex;align-items:center;justify-content:center;'
+    + 'padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:14px;width:880px;max-width:100%;
+                max-height:calc(100vh - 40px);overflow:hidden;display:flex;
+                flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.32);">
+      <div style="background:linear-gradient(135deg,#003189,#1e40af);color:white;
+                  padding:14px 20px;display:flex;align-items:center;gap:12px;">
+        <div style="font-size:24px">🎓</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:16px">Débriefing de la session</div>
+          <div style="font-size:12px;opacity:0.85" id="debrief-subtitle">Chargement…</div>
+        </div>
+        <a id="debrief-dl-btn" href="#" download style="background:white;color:#003189;
+           padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;
+           text-decoration:none;display:none">📄 Télécharger DOCX</a>
+        <button id="debrief-close-btn" style="background:rgba(255,255,255,0.18);
+           color:white;border:none;width:32px;height:32px;border-radius:6px;
+           cursor:pointer;font-size:18px;font-weight:700">✕</button>
+      </div>
+      <div id="debrief-body" style="padding:20px;overflow:auto;flex:1;
+                                     font-family:system-ui,-apple-system,sans-serif">
+        <div style="text-align:center;color:#94a3b8;padding:60px 20px;">
+          <div style="font-size:32px;margin-bottom:12px">⏳</div>
+          <div>Reconstitution de la session en cours…</div>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('debrief-close-btn').onclick = closeDebriefModal;
+  overlay.onclick = function(e) { if (e.target === overlay) closeDebriefModal(); };
+
+  // 2. Charger les données débrief
+  try {
+    const r = await apiFetch('/api/v1/tuteur/debrief?with_ia=true');
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.detail || ('HTTP ' + r.status));
+    }
+    const data = await r.json();
+    renderDebriefBody(data);
+  } catch(e) {
+    const body = document.getElementById('debrief-body');
+    if (body) body.innerHTML = `<div style="color:#e1000f;padding:30px;text-align:center">
+      Erreur : ${escapeHtmlSafe(e.message)}<br>
+      <span style="font-size:11px;color:#94a3b8">
+        Si vous n'avez pas encore démarré de session tuteur, ouvrez l'onglet "Mon Assistant" puis revenez ici.
+      </span>
+    </div>`;
+  }
+}
+
+function closeDebriefModal() {
+  const o = document.getElementById('debrief-overlay');
+  if (o) o.remove();
+}
+
+function escapeHtmlSafe(s) {
+  return String(s || '').replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function renderDebriefBody(data) {
+  const sub = document.getElementById('debrief-subtitle');
+  if (sub) {
+    const sigle = data.session_sigle || '?';
+    const user  = data.session_username || '?';
+    const dur   = (data.indicators && data.indicators.duree_str) || '?';
+    sub.textContent = `${sigle} — ${user} — durée ${dur}`;
+  }
+  // Lien DOCX
+  const dl = document.getElementById('debrief-dl-btn');
+  if (dl && data.session_id) {
+    dl.href = '/api/v1/tuteur/debrief/' + data.session_id + '/docx?with_ia=true';
+    dl.style.display = 'inline-block';
+  }
+
+  const ind = data.indicators || {};
+  const events = data.events || [];
+  const ana = data.analyse || {};
+
+  // Indicateurs en cartes
+  const kpiCard = (label, val, color) =>
+    `<div style="background:#f1f5f9;border-radius:8px;padding:10px 12px;text-align:center;flex:1;min-width:110px">
+       <div style="font-size:20px;font-weight:700;color:${color||'#003189'}">${escapeHtmlSafe(val)}</div>
+       <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px">${escapeHtmlSafe(label)}</div>
+     </div>`;
+
+  // Chronologie
+  const eventsHtml = events.length === 0
+    ? '<div style="color:#94a3b8;padding:20px;text-align:center;font-size:13px">Aucun événement enregistré.</div>'
+    : events.map(function(e) {
+        const kindColors = {
+          incident:    '#e1000f',
+          decision:    '#10b981',
+          task:        '#3b82f6',
+          transfert:   '#8b5cf6',
+          declaration: '#f59e0b',
+          coach:       '#0ea5e9',
+        };
+        const c = kindColors[e.kind] || '#64748b';
+        return `<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:12.5px">
+          <span style="color:#94a3b8;font-family:monospace;width:50px;flex-shrink:0">${escapeHtmlSafe(e.when_hm||'—')}</span>
+          <span style="color:${c};font-weight:600;text-transform:uppercase;width:80px;flex-shrink:0;font-size:10px;padding-top:2px">${escapeHtmlSafe(e.kind||'')}</span>
+          <span style="flex:1">${escapeHtmlSafe(e.summary||'')}</span>
+        </div>`;
+      }).join('');
+
+  // Analyse — bandeau de transparence sur la source
+  const sourceLabel = ana.source === 'ia'
+    ? `✨ Analyse produite par IA (${ana.ai_provider||'inconnu'}) — <b>À VALIDER PAR L'ANIMATEUR</b>`
+    : '⚙️ Analyse heuristique locale (IA non disponible)';
+  const sourceBg = ana.source === 'ia' ? '#fef3c7' : '#f1f5f9';
+
+  const ulItems = (arr) => (arr||[]).map(function(s) {
+    return '<li style="margin-bottom:4px">' + escapeHtmlSafe(s) + '</li>';
+  }).join('') || '<li style="color:#94a3b8">(rien)</li>';
+
+  const body = document.getElementById('debrief-body');
+  if (!body) return;
+  body.innerHTML = `
+    <h3 style="margin:0 0 12px;color:#003189;font-size:14px;text-transform:uppercase;letter-spacing:0.5px">📊 Indicateurs</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px">
+      ${kpiCard('incidents', ind.nb_incidents || 0)}
+      ${kpiCard('critiques (U≥3)', ind.nb_incidents_critiques || 0, '#e1000f')}
+      ${kpiCard('décisions', ind.nb_decisions || 0, '#10b981')}
+      ${kpiCard('tâches', ind.nb_tasks || 0, '#3b82f6')}
+      ${kpiCard('alertes copilote', ind.nb_alerts_coach || 0, '#f59e0b')}
+      ${kpiCard('T1 décision', ind.t1_decision_str || '—')}
+      ${kpiCard('T1 tâche', ind.t1_task_str || '—')}
+    </div>
+
+    <h3 style="margin:0 0 12px;color:#003189;font-size:14px;text-transform:uppercase;letter-spacing:0.5px">⏱️ Chronologie</h3>
+    <div style="max-height:260px;overflow:auto;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;margin-bottom:24px">
+      ${eventsHtml}
+    </div>
+
+    <h3 style="margin:0 0 8px;color:#003189;font-size:14px;text-transform:uppercase;letter-spacing:0.5px">🎯 Analyse proposée</h3>
+    <div style="background:${sourceBg};border-radius:6px;padding:8px 12px;font-size:11.5px;margin-bottom:14px">${sourceLabel}</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px">
+      <div style="background:#ecfdf5;border-radius:8px;padding:12px;border-left:3px solid #10b981">
+        <div style="font-weight:700;font-size:12px;color:#065f46;margin-bottom:6px">✓ POINTS FORTS</div>
+        <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.5">${ulItems(ana.points_forts)}</ul>
+      </div>
+      <div style="background:#fef3c7;border-radius:8px;padding:12px;border-left:3px solid #f59e0b">
+        <div style="font-weight:700;font-size:12px;color:#92400e;margin-bottom:6px">⚠ POINTS D'ATTENTION</div>
+        <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.5">${ulItems(ana.attention)}</ul>
+      </div>
+      <div style="background:#dbeafe;border-radius:8px;padding:12px;border-left:3px solid #3b82f6">
+        <div style="font-weight:700;font-size:12px;color:#1e3a8a;margin-bottom:6px">💬 À EXPLORER EN DÉBRIEF</div>
+        <ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.5">${ulItems(ana.a_explorer)}</ul>
+      </div>
+    </div>
+
+    <div style="background:#f8fafc;border-radius:8px;padding:14px;font-size:11.5px;color:#64748b;text-align:center">
+      💡 Pour conserver une trace officielle du débriefing, téléchargez le <b>brouillon REX au format Word</b>
+      via le bouton en haut à droite et complétez-le après le débriefing collectif.
+    </div>
+  `;
+}
 function closeRexModal() { document.getElementById('rex-modal').classList.remove('open'); }
 
 async function saveRex() {
@@ -5789,8 +6210,15 @@ async function checkTransfertsSortants() {
   }
 }
 
+// v3.0.0 — Circuit breaker pour les appels collecteur depuis instance joueur.
+// Si l'auth échoue plusieurs fois de suite, on cesse d'appeler pendant la session
+// pour ne pas polluer la console avec des 401 récurrents.
+let _collecteurFailCount = 0;
+let _collecteurDisabled = false;
+
 async function loadTransfertsEntrants() {
   trIncoming = [];
+  if (_collecteurDisabled) return;
   if (!_fedStatus) await loadFedStatus();
   if (!_fedStatus?.ready || !_fedStatus?.collecteur_url) return;
   try {
@@ -5798,14 +6226,20 @@ async function loadTransfertsEntrants() {
     const r = await fetch(collBase + '/api/transferts-en-cours', {
       headers: {'Authorization': 'Bearer ' + (_fedStatus.token || '')}
     });
+    if (r.status === 401) {
+      _collecteurFailCount++;
+      if (_collecteurFailCount >= 3) {
+        _collecteurDisabled = true;
+        console.warn('[fed] Appels collecteur désactivés (3 x 401) — relogin nécessaire');
+      }
+      return;
+    }
     if (r.ok) {
+      _collecteurFailCount = 0;  // reset au premier succès
       const data = await r.json();
-      // Filtrer les déjà confirmés (évite réapparition)
       const filtree = data.filter(t => !_trArrivesConfirmes.has(`${t.id_local}_${t.ght_emetteur}`));
-      // Nettoyer les confirmés locaux de plus de 2h
       const cutoff = new Date(Date.now() - 2*3600*1000).toISOString();
       _trArrivesLocaux = _trArrivesLocaux.filter(t => t._confirmed_at > cutoff);
-      // Fusionner : données collecteur + confirmés locaux (pour colonne ARRIVE)
       trIncoming = [...filtree];
       _trArrivesLocaux.forEach(t => {
         if (!trIncoming.find(x => x.id_local == t.id_local && x.ght_emetteur == t.ght_emetteur))
@@ -6123,7 +6557,7 @@ async function trOpenEdit(id) {
     'tr-ipp':t.ipp,'tr-ddn':t.date_naissance,
     'tr-redacteur':currentUser?(currentUser.display_name||currentUser.username):(t.redacteur||''),
     // v2.4.8 : ETA — convertir UTC → heure locale pour l'input datetime-local
-    // (bug fuseau : avant on injectait l'UTC brut, l'input l'affichait
+    // (bug Polynésie : avant on injectait l'UTC brut, l'input l'affichait
     //  comme local, et à la sauvegarde new Date(local).toISOString() re-décalait
     //  de +4h → +8h après 2 éditions)
     'tr-comment':t.commentaire,'tr-eta': t.eta ? _utcToLocalInput(t.eta) : ''
@@ -6185,7 +6619,7 @@ async function trSave() {
   const redc=document.getElementById('tr-redacteur').value.trim();
   // v2.4.6 : l'input datetime-local renvoie "YYYY-MM-DDTHH:MM" en heure LOCALE
   // du navigateur. On le convertit en ISO UTC pour que le backend stocke en UTC
-  // cohérent (UTC-10 : 13:30 local → 23:30Z, Paris : 13:30 local → 11:30Z).
+  // cohérent (Polynésie : 13:30 local → 23:30Z, Paris : 13:30 local → 11:30Z).
   // v2.4.8 : l'input datetime-local renvoie "YYYY-MM-DDTHH:MM" en heure
   // locale (du navigateur OU de la TZ configurée). On utilise _localInputToUtc
   // qui inverse correctement la conversion appliquée par _utcToLocalInput,
@@ -7845,7 +8279,7 @@ function capToggleSynthese() {
 }
 
 // v2.4.7 : toggle "Lits > 0 uniquement" (persisté en localStorage)
-// v2.4.8 : "Lits > 0" coché par défaut.
+// v2.4.8 : "Lits > 0" coché par défaut (demande Polynésie).
 // Sauf si l'utilisateur l'a explicitement désactivé (-> localStorage = "0")
 let capFilterLitsOnly = (localStorage.getItem('cap_filter_lits') !== '0');
 function capToggleFilterLits() {
@@ -9228,7 +9662,7 @@ async function submitForcedPw() {
 }
 
 async function importComptes() {
-  // v2.4.8.2 : le bon ID était "import-users-file" pas "import-file"
+  // v2.4.8.2 : le bon ID était "import-users-file" pas "import-file" (bug Polynésie)
   const fileInput = document.getElementById('import-users-file');
   const resultEl  = document.getElementById('import-result');
   if (!fileInput || !fileInput.files || !fileInput.files[0]) {
@@ -9741,8 +10175,8 @@ async function acvCreateAll() {
 
       // 2. Capacité : cadres déclarants — via capData déjà chargé
       try {
-        if (Array.isArray(capData)) {
-          capData.forEach(function(c) {
+        if (Array.isArray(window.capData)) {
+          window.capData.forEach(function(c) {
             var d = c.derniere_declaration;
             if (d && d.redacteur) cadres.add(String(d.redacteur).trim());
           });
@@ -10032,4 +10466,3 @@ async function aufBulkActivate(actif) {
     setInterval(checkAdminAndShow, 2000);
   }
 })();
-

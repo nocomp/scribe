@@ -32,8 +32,8 @@ router = APIRouter()
 def _get_base_urls(session: ExoSession) -> dict:
     """Construit le dict {sigle: url} depuis les sites actifs de la session."""
     EXO_PORTS = {
-        "DEMO": 8660, "DEMO2": 8661, "DEMO3": 8662,
-        "DEMO4": 8663, "DEMO5": 8664, "DEMO6": 8665, "DEMO7": 8666,
+        "DEMO1": 8660, "DEMO2": 8661, "DEMO5": 8662,
+        "DEMO6": 8663, "DEMO7": 8664, "DEMO5": 8665, "DEMO6": 8666,
     }
     host = os.getenv("SCRIBE_EXO_HOST", "http://localhost")
     sites = json.loads(session.sites_actifs or "[]")
@@ -65,7 +65,7 @@ class ScenarioCreate(BaseModel):
 class ScenarioGenerate(BaseModel):
     sujet: str
     nb_sites: int = 1
-    sites: List[str] = ["DEMO"]
+    sites: List[str] = ["DEMO1"]
     duree_exercice_min: int = 60
     duree_reel_min: int = 240
     complexite: str = "MOYEN"
@@ -521,7 +521,7 @@ def log_action(body: ActionLogCreate, db: Session = Depends(get_db),
     if session and session.started_at:
         t_elapsed = int((datetime.now(timezone.utc) - session.started_at.replace(tzinfo=timezone.utc)).total_seconds())
 
-    sigle = os.getenv("SCRIBE_EXO_SIGLE", "DEMO")
+    sigle = os.getenv("SCRIBE_EXO_SIGLE", "DEMO1")
     a = ExoActionLog(
         session_uid=body.session_uid,
         t_exercice_s=t_elapsed,

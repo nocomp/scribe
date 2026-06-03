@@ -185,7 +185,7 @@ print(f"      ✓ {transv} UF transverses")
 # ── 5. Admin ───────────────────────────────────────────────────────────────
 print("\n[5/5] Compte admin...")
 
-login, password = "dircrise", "changeme"
+login, password = "dircrise", "Scribe2026!"
 # Lire les credentials depuis config.xml (pas config.js qui appartient à une autre instance)
 _admin_xml = os.environ.get("SCRIBE_CONFIG_FILE") or (sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "config.xml"))
 try:
@@ -265,7 +265,7 @@ if os.path.exists(_xml_path):
         if _admin_el is not None:
             _admin = {
                 "login":    (_admin_el.findtext("login")    or "dircrise").strip(),
-                "password": (_admin_el.findtext("password") or "changeme").strip(),
+                "password": (_admin_el.findtext("password") or "Scribe2026!").strip(),
             }
 
         _cfg = {

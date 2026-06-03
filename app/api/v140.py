@@ -713,7 +713,7 @@ import hashlib as _hashlib
 from fastapi import UploadFile, File
 import io as _io
 
-IMPORT_TEMP_PASSWORD = "changeme"
+IMPORT_TEMP_PASSWORD = "Scribe2026!"
 IMPORT_TEMP_HASH     = _hashlib.sha256(IMPORT_TEMP_PASSWORD.encode()).hexdigest()
 IMPORT_VALID_ROLES   = {"admin", "directeur", "observateur"}
 

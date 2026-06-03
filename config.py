@@ -56,7 +56,7 @@ ROUTING: dict = {
 IA: dict = {
     # "albert" | "openai" | "anthropic" | "gemini" | "mistral" | "ollama" | "openai_compat" | "none"
     "provider": os.getenv("SCRIBE_IA_PROVIDER", "albert"),
-    "api_key":  os.getenv("SCRIBE_IA_KEY",      ""),
+    "api_key":  os.getenv("SCRIBE_IA_KEY", ""),  # Set via env var. Get a key at https://albert.api.etalab.gouv.fr/
     "model":    os.getenv("SCRIBE_IA_MODEL",     ""),
     "base_url": os.getenv("SCRIBE_IA_URL",       ""),
 
@@ -136,7 +136,7 @@ PLUGINS: dict[str, bool] = {
     "messagerie": True,
     # v2307 → v2320 : Plugin inter_ght normalement désactivé en public car
     # le chat temps réel couvre les besoins d'échanges inter-établissements.
-    # Activé ici pour build privé où l'onglet est attendu.
+    # Activé ici pour build privé Arc Alpin / G7 où l'onglet est attendu.
     "inter_ght":  True,
     "federation": True,
     "albert":     True,
@@ -166,7 +166,7 @@ PLUGIN_META: dict[str, dict] = {
     "albert":     {"label": "ASSISTANT IA", "icon": "🤖", "order": 120, "tab": False},
     "exercice":   {"label": "EXERCICE",    "icon": "🎯", "order": 88,  "tab": True},
     "notifications": {"label": "NOTIFICATIONS", "icon": "🔔", "order": 95, "tab": False},
-    "tuteur":     {"label": "MON COACH",   "icon": "🎓", "order": 115, "tab": True},
+    "tuteur":     {"label": "MON ASSISTANT",   "icon": "🎓", "order": 115, "tab": True},
 }
 
 # ── FEDERATION ────────────────────────────────────────────────────────────────
@@ -175,13 +175,13 @@ FEDERATION: dict = {
     "demo_port":           int(os.getenv("SCRIBE_DEMO_PORT",      "7474")),
     "demo_collector_port": int(os.getenv("SCRIBE_DEMO_COLL_PORT", "7373")),
     "instances": [
-        {"sigle": "DEMO",      "port": 8000},
+        {"sigle": "DEMO1",      "port": 8000},
         {"sigle": "DEMO2",    "port": 8001},
-        {"sigle": "DEMO3", "port": 8002},
-        {"sigle": "DEMO4",   "port": 8003},
-        {"sigle": "DEMO5",      "port": 8004},
-        {"sigle": "DEMO6",       "port": 8005},
-        {"sigle": "DEMO7",      "port": 8006},
+        {"sigle": "DEMO5", "port": 8002},
+        {"sigle": "DEMO6",   "port": 8003},
+        {"sigle": "DEMO7",      "port": 8004},
+        {"sigle": "DEMO5",       "port": 8005},
+        {"sigle": "DEMO6",      "port": 8006},
     ],
 }
 
@@ -190,7 +190,7 @@ FEDERATION: dict = {
 # (lus dynamiquement depuis config.js par le frontend, ou ici comme défauts).
 LOGIN: dict = {
     # Ligne de sous-titre sous le logo (nom de l'établissement + contexte)
-    # Exemples : "DEMO — Crisis OS" | "CHU Grenoble — Cellule de Crise"
+    # Exemples : "DEMO1 — Crisis OS" | "CHU Grenoble — Cellule de Crise"
     "subtitle":    os.getenv("SCRIBE_LOGIN_SUBTITLE",   "Votre Établissement — Crisis OS"),
 
     # Texte en bas de la login box (contexte réseau, mention légale, etc.)

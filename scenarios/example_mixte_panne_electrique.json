@@ -22,8 +22,8 @@
   },
   "acteurs": [
     {
-      "sigle": "DEMO1",
-      "nom_etablissement": "Hôpital de Démonstration (DEMO1)",
+      "sigle": "CHAG",
+      "nom_etablissement": "Centre Hospitalier Annecy Genevois (CHAG)",
       "role": "coordinateur",
       "port": 8660,
       "joueurs": [
@@ -38,7 +38,7 @@
   ],
   "stimuli": [
     {
-      "id": "S01", "t_min": 0, "type": "incident", "cible": "DEMO1",
+      "id": "S01", "t_min": 0, "type": "incident", "cible": "CHAG",
       "titre": "⚡ PANNE ÉLECTRIQUE GÉNÉRALE",
       "description_animateur": "Incident déclencheur à 6h30. Heure critique (relèves, petits déj patients, préparation blocs).",
       "action_attendue": "Activer cellule de crise technique. Vérifier les groupes électrogènes.",
@@ -50,7 +50,7 @@
       }
     },
     {
-      "id": "S02", "t_min": 5, "type": "incident", "cible": "DEMO1",
+      "id": "S02", "t_min": 5, "type": "incident", "cible": "CHAG",
       "titre": "🔴 Groupe secours site B en échec",
       "description_animateur": "Aggravation : un des groupes de secours ne démarre pas. Situation critique pour ce bâtiment.",
       "action_attendue": "Mobiliser prestataire, décider de transférer les patients critiques du site B.",
@@ -62,18 +62,18 @@
       }
     },
     {
-      "id": "S03", "t_min": 10, "type": "message", "cible": "DEMO1",
+      "id": "S03", "t_min": 10, "type": "message", "cible": "CHAG",
       "titre": "Enedis : intervention dans 90 min",
       "description_animateur": "Enedis confirme une panne secteur. Intervention sous 90 minutes, rétablissement inconnu.",
       "action_attendue": "Planifier 2-3h de mode dégradé minimum.",
       "payload": {
         "expediteur": "ENEDIS",
-        "sujet": "Panne confirmée secteur Demo Centre",
-        "contenu": "Panne confirmée sur le transformateur 20kV du secteur Demo Centre. Équipe technique engagée, arrivée sur site ~90 min. Rétablissement estimé 3-4h. Nous vous confirmerons dès que possible."
+        "sujet": "Panne confirmée secteur Annecy Centre",
+        "contenu": "Panne confirmée sur le transformateur 20kV du secteur Annecy Centre. Équipe technique engagée, arrivée sur site ~90 min. Rétablissement estimé 3-4h. Nous vous confirmerons dès que possible."
       }
     },
     {
-      "id": "S04", "t_min": 18, "type": "incident", "cible": "DEMO1",
+      "id": "S04", "t_min": 18, "type": "incident", "cible": "CHAG",
       "titre": "🔴 Activité réseau anormale détectée (EDR)",
       "description_animateur": "Pendant la panne, une alerte cyber arrive. Coïncidence ou exploitation de la confusion ?",
       "action_attendue": "Activer cellule cyber EN PARALLÈLE de la cellule technique.",
@@ -85,7 +85,7 @@
       }
     },
     {
-      "id": "S05", "t_min": 24, "type": "decision", "cible": "DEMO1",
+      "id": "S05", "t_min": 24, "type": "decision", "cible": "CHAG",
       "titre": "DÉCISION : transfert 12 résidents EHPAD site B",
       "description_animateur": "Décision cruciale : évacuer le site B avant épuisement batteries.",
       "action_attendue": "Coordination avec brancardage, ambulances externes, établissements d'accueil.",
@@ -96,7 +96,7 @@
       }
     },
     {
-      "id": "S06", "t_min": 30, "type": "message", "cible": "DEMO1",
+      "id": "S06", "t_min": 30, "type": "message", "cible": "CHAG",
       "titre": "CERT Santé : alerte secteur santé",
       "description_animateur": "Le CERT Santé signale une vague d'attaques nationale. Contexte clarifie.",
       "action_attendue": "Prendre la décision d'isoler ou pas, sachant qu'on a déjà la panne.",
@@ -107,7 +107,7 @@
       }
     },
     {
-      "id": "S07", "t_min": 38, "type": "incident", "cible": "DEMO1",
+      "id": "S07", "t_min": 38, "type": "incident", "cible": "CHAG",
       "titre": "Retour partiel alimentation (site A uniquement)",
       "description_animateur": "Une partie de l'alim revient. Soulagement partiel, mais site B toujours en panne.",
       "action_attendue": "Prioriser les services à remettre en route.",
@@ -119,7 +119,7 @@
       }
     },
     {
-      "id": "S08", "t_min": 45, "type": "decision", "cible": "DEMO1",
+      "id": "S08", "t_min": 45, "type": "decision", "cible": "CHAG",
       "titre": "DÉCISION : Stratégie de relance SI en contexte cyber",
       "description_animateur": "Faut-il remonter le SI en sachant qu'on a des IOC cyber ? Dilemme technique.",
       "action_attendue": "Décision avec arbitrage DSI/RSSI/Médecine.",
@@ -130,7 +130,7 @@
       }
     },
     {
-      "id": "S09", "t_min": 52, "type": "message", "cible": "DEMO1",
+      "id": "S09", "t_min": 52, "type": "message", "cible": "CHAG",
       "titre": "ARS : point situation consolidé",
       "description_animateur": "L'ARS demande un bilan consolidé des deux crises.",
       "action_attendue": "Produire un bilan croisé technique + cyber.",
@@ -141,7 +141,7 @@
       }
     },
     {
-      "id": "S10", "t_min": 58, "type": "decision", "cible": "DEMO1",
+      "id": "S10", "t_min": 58, "type": "decision", "cible": "CHAG",
       "titre": "DÉCISION : communication publique coordonnée",
       "description_animateur": "Comment parler de deux crises ? Transparence vs stabilité de la confiance publique.",
       "action_attendue": "Communiqué unique, message coordonné avec ARS.",

@@ -331,12 +331,35 @@ class InstanceManager:
         if state.statut == "actif" and state.pid and _pid_alive(state.pid):
             raise ValueError(f"Instance déjà active (PID {state.pid})")
 
-        # Vérifier que le port n'est pas déjà occupé par un autre processus
-        if _port_in_use(port):
-            raise ValueError(
-                f"Port {port} déjà utilisé par un autre processus. "
-                "Arrêtez-le ou choisissez un autre port."
-            )
+        # v3.0.0 — Libération prudente du port si occupé par un process SCRIBE
+        # orphelin (instance mal arrêtée). Process tiers : non touchés.
+        try:
+            from master.port_cleanup import free_port_if_scribe
+            r = free_port_if_scribe(port)
+            if r["status"] == "foreign":
+                raise ValueError(
+                    f"Port {port} occupé par un process tiers "
+                    f"(PID {r.get('pid', '?')}). "
+                    f"SCRIBE ne touche pas aux process qu'il n'a pas lancés. "
+                    f"Arrêtez-le manuellement avant de relancer l'instance."
+                )
+            if r["status"] == "failed_kill":
+                raise ValueError(
+                    f"Port {port} occupé par un process SCRIBE (PID {r.get('pid', '?')}) "
+                    f"qui n'a pas pu être terminé. Tuez-le manuellement."
+                )
+            if r["status"] == "freed":
+                logger.info(f"Port {port} libéré (instance SCRIBE orpheline terminée)")
+        except ValueError:
+            raise
+        except Exception as _e:
+            logger.warning(f"port_cleanup KO pour {port} : {_e}")
+            # Fallback : check minimal sans cleanup
+            if _port_in_use(port):
+                raise ValueError(
+                    f"Port {port} déjà utilisé par un autre processus. "
+                    "Arrêtez-le ou choisissez un autre port."
+                )
 
         cfg = state.config
 
@@ -730,7 +753,7 @@ class InstanceManager:
             else:
                 hospital_principal = Hospital(
                     nom=hospital_nom,
-                    latitude=state.config.latitude or 48.8566,    # Paris par défaut
+                    latitude=state.config.latitude or 45.8992,    # Annecy par défaut
                     longitude=state.config.longitude or 6.1294,
                 )
                 sess.add(hospital_principal)

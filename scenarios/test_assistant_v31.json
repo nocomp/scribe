@@ -1,0 +1,228 @@
+{
+  "meta": {
+    "id": "test_assistant_v31_2026",
+    "titre": "🎓 TEST ASSISTANT v3.1 — Évaluation des 7 règles",
+    "description": "Scénario calibré pour déclencher successivement les 7 règles du copilote stratégique. Crise cyber + tension capacitaire en parallèle. À jouer SANS rien faire au début pour observer les déclenchements, puis avec corrections pour valider l'extinction des alertes.",
+    "sujet": "Exercice d'évaluation du copilote SCRIBE — escalade cyber + tension capacité",
+    "duree_min": 30,
+    "duree_reel_min": 30,
+    "ratio_compression": 1.0,
+    "complexite": "MOYENNE",
+    "type_crise": "MIXTE",
+    "objectifs_pedagogiques": [
+      "Valider le déclenchement de la règle R1 (incident U≥3 sans tâche)",
+      "Valider la règle R2 (cyber sans notification ANSSI tracée)",
+      "Valider la règle R3 (sanitaire U≥3 sans déclaration de tension)",
+      "Valider la règle R4 — ALERT (déclaration vigilance + U3)",
+      "Valider la règle R5 — ALERT (capacité critique + transferts)",
+      "Valider la règle R6 — ALERT (3 incidents U3 sans Plan Blanc)",
+      "Valider la règle R7 (pôle critique absent en cyber)",
+      "Tester le bouton 🎯 Point de situation à 3 moments",
+      "Tester l'historique 🔔 (messages traités restent visibles)"
+    ],
+    "categorie": "test",
+    "tags": ["test", "assistant", "v31", "evaluation", "7regles"],
+    "nb_stimuli": 12
+  },
+  "acteurs": [
+    {
+      "sigle": "EXO1",
+      "role": "joueur",
+      "port": 8660,
+      "description": "Établissement principal qui joue l'exercice"
+    },
+    {
+      "sigle": "EXO2",
+      "role": "joueur",
+      "port": 8661,
+      "description": "Établissement partenaire pour transferts entrants"
+    }
+  ],
+  "stimuli": [
+
+    {
+      "id": "S01",
+      "t_min": 0,
+      "type": "incident",
+      "cible": "EXO1",
+      "titre": "🔴 ALERTE SOC : Activité ransomware détectée sur SRV-DATA01",
+      "description_animateur": "Point de départ. Premier incident CYBER de haute urgence. Cette urgency=4 déclenchera R1 si aucune tâche n'est créée dans les 3 minutes.",
+      "action_attendue": "Créer une tâche Kanban liée à l'incident. (Ne pas le faire pour tester R1.)",
+      "payload": {
+        "fait": "Activité ransomware détectée sur SRV-DATA01 — chiffrement de partages réseau (RH, imagerie, comptabilité). Alerte EDR CrowdStrike.",
+        "analyse": "Pattern de chiffrement rapide. IOC: ransom_note.txt présent.",
+        "urgency": 4,
+        "type_crise": "CYBER",
+        "impact_fonctionnel": true,
+        "unite_fonctionnelle": "SI"
+      }
+    },
+
+    {
+      "id": "S02",
+      "t_min": 1,
+      "type": "incident",
+      "cible": "EXO1",
+      "titre": "🟠 DECT muets dans plusieurs services",
+      "description_animateur": "Second incident — téléphonie HS. Sert à compter pour R6 (≥3 U3) si on garde urgency≥3.",
+      "action_attendue": "Aucune si test R6 visé.",
+      "payload": {
+        "fait": "Téléphonie IP hors service suite à l'isolement VLAN. Postes DECT muets en chirurgie, médecine, urgences.",
+        "analyse": "Conséquence probable de l'isolement réseau préventif. Risque de retard sur appels urgents.",
+        "urgency": 3,
+        "type_crise": "CYBER",
+        "impact_fonctionnel": true,
+        "unite_fonctionnelle": "TÉLÉPHONIE"
+      }
+    },
+
+    {
+      "id": "S03",
+      "t_min": 2,
+      "type": "incident",
+      "cible": "EXO1",
+      "titre": "🟠 PACS imagerie inaccessible",
+      "description_animateur": "Troisième incident U3 — atteint le seuil R6 (≥3 U3 sans Plan Blanc). Si à t+3 min aucune décision PB tracée → ALERT.",
+      "action_attendue": "Déclarer Plan Blanc pour annuler R6. Ne PAS le faire si test R6 visé.",
+      "payload": {
+        "fait": "PACS imagerie médicale : serveurs inaccessibles. Les radiologues ne peuvent plus consulter les examens. 3 patients en urgence bloqués.",
+        "analyse": "Impact direct sur la prise en charge — risque de retard diagnostic.",
+        "urgency": 3,
+        "type_crise": "CYBER",
+        "impact_fonctionnel": true,
+        "unite_fonctionnelle": "PACS"
+      }
+    },
+
+    {
+      "id": "S04",
+      "t_min": 3,
+      "type": "declaration",
+      "cible": "EXO1",
+      "titre": "🚨 STIMULUS animateur : déclarer la situation en VIGILANCE",
+      "description_animateur": "Instruction explicite au joueur : aller déclarer une 'situation' niveau VIGILANCE (1). Sert à déclencher R4 (contradiction VIGILANCE + U3 actifs).",
+      "action_attendue": "Joueur : Aller dans 'Déclaration' et créer une déclaration niveau VIGILANCE (1). Devrait déclencher l'alerte R4 au prochain poll.",
+      "payload": {
+        "instruction_joueur": "DIRCRISE, vous devez déclarer la situation à l'ARS. Choisissez niveau VIGILANCE pour temporiser pendant l'analyse technique.",
+        "type_declaration_attendu": "cyber",
+        "niveau_attendu": 1
+      }
+    },
+
+    {
+      "id": "S05",
+      "t_min": 5,
+      "type": "incident",
+      "cible": "EXO1",
+      "titre": "🟡 Tension lits PSY",
+      "description_animateur": "Incident sanitaire U3 → déclenche R3 si aucune déclaration sanitaire active de niveau ≥ 2.",
+      "action_attendue": "Ne rien faire de spécifique pour tester R3.",
+      "payload": {
+        "fait": "Service PSY : 24 lits occupés sur 24. 3 patients en attente aux urgences depuis 4h. Risque de refus d'admission.",
+        "analyse": "Tension capacitaire qui pourrait justifier une déclaration ALERTE sanitaire à l'ARS.",
+        "urgency": 3,
+        "type_crise": "SANITAIRE",
+        "impact_fonctionnel": false,
+        "unite_fonctionnelle": "PSYCHIATRIE"
+      }
+    },
+
+    {
+      "id": "S06",
+      "t_min": 7,
+      "type": "transfert_entrant",
+      "cible": "EXO1",
+      "titre": "📥 Demande transfert entrant depuis EXO2 (patient cardio)",
+      "description_animateur": "Inject d'un transfert entrant depuis EXO2. Le joueur doit ACCEPTER ce transfert. Sert pour R5 si capacité aussi en critique.",
+      "action_attendue": "ACCEPTER le transfert depuis l'onglet TRANSFERTS.",
+      "payload": {
+        "patient_age": 67,
+        "patient_genre": "H",
+        "pathologie": "Infarctus du myocarde aigu, post-angioplastie, surveillance USIC requise.",
+        "ght_emetteur": "EXO2",
+        "urgence": "URGENT"
+      }
+    },
+
+    {
+      "id": "S07",
+      "t_min": 8,
+      "type": "declaration_capacite",
+      "cible": "EXO1",
+      "titre": "🚨 STIMULUS animateur : déclarer capacité USIC en tension critique",
+      "description_animateur": "Instruction au joueur d'aller dans CAPACITÉ et déclarer USIC en statut_lits='critique' OU tension_activee=2. Avec le transfert accepté en S06, déclenche R5.",
+      "action_attendue": "Joueur : Aller dans CAPACITÉ, déclarer pôle USIC en tension critique (statut_lits=critique). Devrait déclencher R5 au prochain poll.",
+      "payload": {
+        "instruction_joueur": "Le cadre USIC vous informe : 8 lits sur 8 occupés, 2 patients en attente. Vous devez documenter cette tension critique dans CAPACITÉ.",
+        "pole_cible": "USIC",
+        "statut_attendu": "critique"
+      }
+    },
+
+    {
+      "id": "S08",
+      "t_min": 10,
+      "type": "rappel_animateur",
+      "cible": "EXO1",
+      "titre": "💡 Animateur : tester le bouton 🎯 Point de situation",
+      "description_animateur": "Inviter le joueur à cliquer sur 🎯 Point de situation dans le panneau Assistant. Vérifier que la synthèse arrive structurée en 5 blocs (Situation / Court / Moyen / Long / Priorités).",
+      "action_attendue": "Joueur : Ouvrir Assistant (🎓), cliquer 'Point de situation'. Observer le rendu.",
+      "payload": {
+        "instruction_joueur": "Faites un point de situation via l'Assistant. À ce stade, vous avez ~5 incidents, peu de tâches, des contradictions actives. L'IA doit le détecter."
+      }
+    },
+
+    {
+      "id": "S09",
+      "t_min": 13,
+      "type": "rappel_animateur",
+      "cible": "EXO1",
+      "titre": "💡 Animateur : tester le bouton 🔔 Historique",
+      "description_animateur": "Inviter le joueur à cliquer sur 🔔 Historique. Vérifier que TOUS les messages reçus depuis le début sont visibles, y compris ceux déjà traités (grisés avec mention 'traité').",
+      "action_attendue": "Joueur : Cliquer 🔔 Historique. Compter les messages. Au moins 3-4 alertes/markers présents.",
+      "payload": {
+        "instruction_joueur": "Vérifiez que vous pouvez revoir les notifications passées via le bouton Historique."
+      }
+    },
+
+    {
+      "id": "S10",
+      "t_min": 16,
+      "type": "rappel_animateur",
+      "cible": "EXO1",
+      "titre": "✨ Animateur : tester la création de 3 tâches sur une alerte",
+      "description_animateur": "Sur n'importe quelle alerte coach contenant un incident, cliquer '✨ Créer 3 tâches'. Vérifier qu'Albert (ou fallback) propose 3 actions cohérentes et qu'elles arrivent en BACKLOG.",
+      "action_attendue": "Joueur : cliquer Créer 3 tâches sur l'alerte R1 → vérifier que 3 tâches arrivent dans Kanban.",
+      "payload": {
+        "instruction_joueur": "Sur une alerte coach, déclenchez la création de tâches."
+      }
+    },
+
+    {
+      "id": "S11",
+      "t_min": 20,
+      "type": "rappel_animateur",
+      "cible": "EXO1",
+      "titre": "❓ Animateur : tester le champ Conseil libre",
+      "description_animateur": "Inviter le joueur à taper une question libre dans le panneau Assistant. Ex: 'Dois-je activer le PRI ?' ou 'Qui doit notifier l'ANSSI ?'",
+      "action_attendue": "Joueur : taper une question dans le champ bas du panneau Assistant + Entrée.",
+      "payload": {
+        "instruction_joueur": "Posez une question concrète à l'Assistant. Ex: 'Faut-il prévenir la CNIL maintenant ?'"
+      }
+    },
+
+    {
+      "id": "S12",
+      "t_min": 25,
+      "type": "rappel_animateur",
+      "cible": "EXO1",
+      "titre": "🔧 Animateur : tester l'extinction des alertes",
+      "description_animateur": "Le joueur doit corriger les contradictions une par une et observer que les alertes correspondantes ne sont PLUS réémises au prochain poll (60s) : créer décision 'Plan Blanc activé', requalifier la déclaration en TENSION/CRISE, créer une décision contenant 'ANSSI' et 'CERT-Santé'. Vérifier la persistance des messages traités dans Historique.",
+      "action_attendue": "Joueur : 1) créer une décision 'Plan Blanc activé' → éteint R6. 2) requalifier déclaration en niveau 2 → éteint R4. 3) créer décision 'ANSSI notifiée par téléphone à 14h22' → éteint R2.",
+      "payload": {
+        "instruction_joueur": "Corrigez les 3 contradictions et vérifiez que les alertes correspondantes ne reviennent pas (mais restent visibles dans l'Historique)."
+      }
+    }
+
+  ]
+}

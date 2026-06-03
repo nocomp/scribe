@@ -281,6 +281,36 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
 
 <!-- ── TAB SUPERVISION ── -->
 <div id="tab-supervision" class="tab-pane active">
+
+  <!-- v3000h20 — Assistant territorial (vue stratégique en premier) -->
+  <div class="card" id="territorial-assistant-card" style="border-left:3px solid #003189">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="card-title" style="margin:0;display:flex;align-items:center;gap:8px">
+        🎓 Assistant territorial
+        <span id="ta-badge" style="background:#e1000f;color:white;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;display:none">0 alerte</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="ta-clock" style="font-family:var(--mo);font-size:10px;color:var(--mu)">—</span>
+        <button class="btn btn-blue" onclick="refreshTerritorial()" style="font-size:9px;padding:4px 10px">↻ Actualiser</button>
+      </div>
+    </div>
+
+    <!-- Résumé compact GHT -->
+    <div id="ta-summary" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:14px">
+      <div class="b-kpi"><div class="b-kpi-label">Établissements actifs</div><div class="b-kpi-val" id="ta-online">—</div></div>
+      <div class="b-kpi"><div class="b-kpi-label">Avec incidents critiques</div><div class="b-kpi-val" id="ta-crit-sites" style="color:var(--red)">—</div></div>
+      <div class="b-kpi"><div class="b-kpi-label">Plans Blancs actifs</div><div class="b-kpi-val" id="ta-pb">—</div></div>
+      <div class="b-kpi"><div class="b-kpi-label">Alertes territoriales</div><div class="b-kpi-val" id="ta-nb-alertes" style="color:var(--red)">—</div></div>
+    </div>
+
+    <!-- Liste des alertes -->
+    <div id="ta-alertes-list" style="display:flex;flex-direction:column;gap:8px">
+      <div style="text-align:center;padding:20px;color:var(--mu);font-size:11px;font-style:italic">
+        Chargement…
+      </div>
+    </div>
+  </div>
+
   <div class="inst-grid" id="inst-grid">
     <div style="font-family:monospace;font-size:10px;color:var(--mu)">Chargement...</div>
   </div>
@@ -413,7 +443,7 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
     <div style="font-family:var(--mo);font-size:9px;color:var(--mu);font-weight:700;letter-spacing:.5px;margin-bottom:6px;border-bottom:1px solid var(--bd);padding-bottom:6px">PARAMÈTRES DE GÉNÉRATION IA</div>
     <div class="form-row">
       <label>Sujet / contexte clinique *</label>
-      <textarea id="ia-sujet" placeholder="Ex: Femme enceinte hémorragie au bloc + prématuré. Saturation maternité DEMO1. Coordination SAMU et transfert vers DEMO2 nécessaires."></textarea>
+      <textarea id="ia-sujet" placeholder="Ex: Femme enceinte hémorragie au bloc + prématuré. Saturation maternité CHANGE. Coordination SAMU et transfert vers DEMO2 nécessaires."></textarea>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
       <div class="form-row"><label>Durée exercice</label>
@@ -567,13 +597,13 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
     <div class="form-row">
       <label>Sites participants</label>
       <div class="sites-row" id="ia-sites-sel">
-        <div class="site-chip on" data-s="DEMO1" onclick="toggleChip(this)">DEMO1</div>
-        <div class="site-chip" data-s="DEMO2" onclick="toggleChip(this)">DEMO2</div>
-        <div class="site-chip" data-s="DEMO3" onclick="toggleChip(this)">DEMO3</div>
-        <div class="site-chip" data-s="DEMO4" onclick="toggleChip(this)">DEMO4</div>
-        <div class="site-chip" data-s="DEMO5" onclick="toggleChip(this)">DEMO5</div>
-        <div class="site-chip" data-s="DEMO6" onclick="toggleChip(this)">DEMO6</div>
-        <div class="site-chip" data-s="DEMO7" onclick="toggleChip(this)">DEMO7</div>
+        <div class="site-chip on" data-s="EXO1" onclick="toggleChip(this)">Site Exercice 1</div>
+        <div class="site-chip" data-s="EXO2" onclick="toggleChip(this)">Site Exercice 2</div>
+        <div class="site-chip" data-s="EXO3" onclick="toggleChip(this)">Site Exercice 3</div>
+        <div class="site-chip" data-s="EXO4" onclick="toggleChip(this)">Site Exercice 4</div>
+        <div class="site-chip" data-s="EXO5" onclick="toggleChip(this)">Site Exercice 5</div>
+        <div class="site-chip" data-s="EXO6" onclick="toggleChip(this)">Site Exercice 6</div>
+        <div class="site-chip" data-s="EXO7" onclick="toggleChip(this)">Site Exercice 7</div>
       </div>
     </div>
     <div id="ia-loading" class="ia-loading" style="display:none"><span class="spin">⏳</span> SCRIBE génère votre scénario (30-60s)...</div>
@@ -623,13 +653,13 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
       <div class="form-row">
         <label>Sites participants</label>
         <div class="sites-row" id="exo-sites-sel">
-          <div class="site-chip on" data-s="DEMO1" onclick="toggleChip(this)">DEMO1</div>
-          <div class="site-chip on" data-s="DEMO2" onclick="toggleChip(this)">DEMO2</div>
-          <div class="site-chip" data-s="DEMO3" onclick="toggleChip(this)">DEMO3</div>
-          <div class="site-chip" data-s="DEMO4" onclick="toggleChip(this)">DEMO4</div>
-          <div class="site-chip" data-s="DEMO5" onclick="toggleChip(this)">DEMO5</div>
-          <div class="site-chip" data-s="DEMO6" onclick="toggleChip(this)">DEMO6</div>
-          <div class="site-chip" data-s="DEMO7" onclick="toggleChip(this)">DEMO7</div>
+          <div class="site-chip on" data-s="EXO1" onclick="toggleChip(this)">Site Exercice 1</div>
+          <div class="site-chip on" data-s="EXO2" onclick="toggleChip(this)">Site Exercice 2</div>
+          <div class="site-chip" data-s="EXO3" onclick="toggleChip(this)">Site Exercice 3</div>
+          <div class="site-chip" data-s="EXO4" onclick="toggleChip(this)">Site Exercice 4</div>
+          <div class="site-chip" data-s="EXO5" onclick="toggleChip(this)">Site Exercice 5</div>
+          <div class="site-chip" data-s="EXO6" onclick="toggleChip(this)">Site Exercice 6</div>
+          <div class="site-chip" data-s="EXO7" onclick="toggleChip(this)">Site Exercice 7</div>
         </div>
       </div>
     </div>
@@ -744,7 +774,7 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
           </div>
           <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Établissement destination</label>
             <select id="adhoc-tr-dest" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
-              <option value="DEMO1">DEMO1</option><option value="DEMO2">DEMO2</option><option value="DEMO3">DEMO3</option><option value="DEMO4">DEMO4</option><option value="DEMO5">DEMO5</option><option value="DEMO6">DEMO6</option><option value="DEMO7">DEMO7</option>
+              <option value="DEMO1">CHANGE</option><option value="DEMO2">DEMO2</option><option value="DEMO5">DEMO5</option><option value="DEMO6">DEMO6</option><option value="DEMO7">DEMO7</option><option value="DEMO5">DEMO5</option><option value="DEMO6">DEMO6</option>
             </select>
           </div>
         </div>
@@ -1072,10 +1102,85 @@ var _bilanTimer = null;
 function startBilanRefresh(){
   refreshBilan();
   if (_bilanTimer) clearInterval(_bilanTimer);
-  _bilanTimer = setInterval(refreshBilan, 5000);  // refresh 5s en mode bilan actif
+  _bilanTimer = setInterval(refreshBilan, 5000);
 }
 function stopBilanRefresh(){
   if (_bilanTimer) { clearInterval(_bilanTimer); _bilanTimer = null; }
+}
+
+// v3000h20 — Assistant territorial : fetch + rendu
+function escapeHtmlTA(s) {
+  return String(s||'').replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function refreshTerritorial() {
+  api('/api/territorial-assistant')
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(data){
+      if (!data) return;
+      renderTerritorial(data);
+    })
+    .catch(function(e){
+      console.warn('[territorial] erreur:', e);
+    });
+}
+
+function renderTerritorial(data) {
+  var sum = data.summary || {};
+  var alertes = data.alertes || [];
+
+  document.getElementById('ta-online').textContent = (sum.etablissements_online || 0) + ' / ' + (sum.total_etablissements || 0);
+  document.getElementById('ta-crit-sites').textContent = sum.etablissements_avec_critiques || 0;
+  document.getElementById('ta-pb').textContent = sum.plans_blancs_actifs || 0;
+  document.getElementById('ta-nb-alertes').textContent = alertes.length;
+
+  var badge = document.getElementById('ta-badge');
+  if (alertes.length > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = alertes.length + ' alerte' + (alertes.length > 1 ? 's' : '');
+  } else {
+    badge.style.display = 'none';
+  }
+
+  var clock = document.getElementById('ta-clock');
+  if (clock && data.generated_at) {
+    try {
+      var d = new Date(data.generated_at);
+      clock.textContent = d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    } catch(e) {}
+  }
+
+  var list = document.getElementById('ta-alertes-list');
+  if (!list) return;
+  if (alertes.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:18px;color:var(--mu);font-size:11px;font-style:italic">'
+      + '✓ Aucun signal territorial détecté actuellement.</div>';
+    return;
+  }
+
+  list.innerHTML = alertes.map(function(a) {
+    var color = a.niveau === 'alert' ? '#e1000f' : '#003189';
+    var bgColor = a.niveau === 'alert' ? '#fef2f2' : '#eff6ff';
+    var concernes = (a.etablissements_concernes || []).join(', ');
+    return [
+      '<div style="background:' + bgColor + ';border-left:4px solid ' + color + ';',
+      '     border-radius:6px;padding:12px 14px">',
+      '  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">',
+      '    <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:' + color + ';',
+      '          letter-spacing:0.5px">' + (a.niveau === 'alert' ? 'ALERTE' : 'Attention') + '</span>',
+      concernes ? '    <span style="font-size:10px;color:var(--mu)">• ' + escapeHtmlTA(concernes) + '</span>' : '',
+      '  </div>',
+      '  <div style="font-size:13px;font-weight:600;margin-bottom:4px;color:#0f172a">',
+      '    ' + escapeHtmlTA(a.titre || ''),
+      '  </div>',
+      '  <div style="font-size:12px;line-height:1.5;color:#1e293b">',
+      '    ' + escapeHtmlTA(a.message || ''),
+      '  </div>',
+      '</div>',
+    ].join('');
+  }).join('');
 }
 
 function refreshBilan(){
@@ -1187,6 +1292,11 @@ function init(){
   loadSupervision();
   loadScenarios();
   startStatusPolling();
+  // v3000h20 — Démarrer polling Assistant territorial dès le chargement,
+  // indépendamment de l'onglet sélectionné (l'Assistant est dans tab-supervision
+  // qui est l'onglet actif par défaut)
+  refreshTerritorial();
+  setInterval(refreshTerritorial, 5000);
   setInterval(function(){
     var now=new Date();
     document.getElementById('topbar-time').textContent=now.toLocaleTimeString('fr-FR');
@@ -1694,7 +1804,7 @@ function submitGenIA(){
   document.getElementById('ia-loading').style.display='block';
   document.getElementById('btn-gen').disabled=true;
   api('/api/exercice/generate',{method:'POST',body:JSON.stringify({
-    sujet:sujet,nb_sites:sites.length||1,sites:sites.length?sites:['DEMO'],
+    sujet:sujet,nb_sites:sites.length||1,sites:sites.length?sites:['DEMO1'],
     duree_exercice_min:parseInt(document.getElementById('ia-duree').value)||60,
     duree_reel_min:parseInt(document.getElementById('ia-duree-reel').value)||240,
     type_crise:document.getElementById('ia-type').value,
@@ -2126,7 +2236,7 @@ function openAdhocModal(){
   } catch(e){}
   if(!sites.length){
     // Fallback : lister toutes les instances G7 (le backend rejettera si non connectée)
-    sites=['DEMO','DEMO2','DEMO3','DEMO4','DEMO5','DEMO6','DEMO7'];
+    sites=['DEMO1','DEMO2','DEMO5','DEMO6','DEMO7','DEMO5','DEMO6'];
   }
   sites.forEach(function(s){
     var opt=document.createElement('option');

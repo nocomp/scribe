@@ -154,8 +154,10 @@ def update_instance(port: int, payload: InstanceUpdate, request: Request):
 def start_instance(port: int, request: Request):
     _check_admin(request)
     try:
-        # URL collecteur : on récupère l'URL d'origine de la requête
-        host = request.headers.get("host", "localhost:9000").split(":")[0]
+        # v3000h17 — Priorité au hostname configuré (fichier hostname.conf),
+        # sinon fallback sur le Host: de la requête courante (auto-détection).
+        from master.hostname_config import get_external_host
+        host = get_external_host(request=request, fallback="localhost")
         collecteur_port = request.url.port or 9000
         collecteur_url = f"http://{host}:{collecteur_port}"
         state = get_manager().start(port, collecteur_url=collecteur_url)
@@ -227,6 +229,30 @@ def reset_instance_db(port: int, request: Request):
         logger.error(f"Reset DB échoué pour port {port} : {traceback.format_exc()}")
         logger.exception("Erreur reset DB"); raise HTTPException(500, "Erreur interne lors du reset (voir logs serveur)")
     return {"ok": True, "sigle": state.config.sigle, "msg": "DB réinitialisée depuis le profil xlsx"}
+
+
+@router.post("/free-ports")
+def free_all_scribe_ports_route(request: Request):
+    """v3.0.0 — Libère prudemment TOUS les ports SCRIBE étendus
+    (master + instances + collecteurs + démo). Ne tue que les process
+    clairement identifiables comme SCRIBE — les process tiers sont signalés
+    mais jamais touchés.
+
+    Utile en cas de bazar (process orphelins après crash, reboot incomplet,
+    etc.) sans avoir à redémarrer la machine."""
+    _check_admin(request)
+    try:
+        from master.port_cleanup import free_all_scribe_ports, summarize_results
+        results = free_all_scribe_ports()
+        return {
+            "ok": True,
+            "summary": summarize_results(results),
+            "results": results,
+        }
+    except Exception as e:
+        import traceback
+        logger.error(f"free-ports échoué : {traceback.format_exc()}")
+        raise HTTPException(500, "Erreur lors de la libération des ports (voir logs)")
 
 
 @router.post("/instances/custom", status_code=201)
@@ -860,7 +886,7 @@ def onboarding_create_instance(payload: WizardInstanceCreate, request: Request):
     # v2.4.8 : marquer l'onboarding comme terminé automatiquement dès qu'une
     # instance non-démo a été configurée. Évite que le wizard se relance en
     # navigation privée quand l'utilisateur a déjà importé/configuré un
-    # établissement (le client appelait /onboarding/finish
+    # établissement (bug Polynésie : le client appelait /onboarding/finish
     # dans certains cas mais pas tous → flag manquant au redémarrage).
     # v2.4.8.4 : helper nettoie aussi wizard_force éventuel
     _mark_onboarding_done()
@@ -1205,3 +1231,47 @@ def lifecycle_register(app):
                 logger.info(f"Master : {count_exo} instance(s) exercice arrêtée(s)")
         except Exception as e:
             logger.warning(f"Master shutdown exercice : {e}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# v3000h17 — Configuration du hostname externe
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/setup-hostname")
+def get_hostname_setup(request: Request):
+    """Retourne l'état actuel du hostname + suggestions."""
+    from master.hostname_config import (
+        get_configured_hostname, suggest_hostnames, get_external_host,
+    )
+    return {
+        "configured": get_configured_hostname(),
+        "effective":  get_external_host(request=request, fallback="localhost"),
+        "suggestions": suggest_hostnames(),
+        "current_request_host": (request.headers.get("host") or "").split(":")[0],
+    }
+
+
+class HostnameUpdate(BaseModel):
+    hostname: str
+
+
+@router.post("/setup-hostname")
+def set_hostname_setup(payload: HostnameUpdate, request: Request):
+    """Configure le hostname externe (écrit hostname.conf à la racine)."""
+    _check_admin(request)
+    from master.hostname_config import set_configured_hostname
+    try:
+        set_configured_hostname(payload.hostname)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True, "hostname": payload.hostname,
+            "message": "Hostname configuré. Redémarrer les instances pour appliquer."}
+
+
+@router.get("/hostname-page", response_class=HTMLResponse)
+def hostname_page(request: Request):
+    """Page de configuration du hostname (HTML standalone, accessible sans auth)."""
+    page_path = pathlib.Path(__file__).parent / "setup_hostname.html"
+    if not page_path.exists():
+        return HTMLResponse("<p>setup_hostname.html introuvable</p>", status_code=500)
+    return HTMLResponse(page_path.read_text(encoding="utf-8"))

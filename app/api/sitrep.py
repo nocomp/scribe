@@ -37,6 +37,10 @@ class IncidentCreate(BaseModel):
     estimated_resolution: Optional[datetime] = None
     # v2182 : panne opérationnelle (respirateur HS, DPI down, etc.) vs événement clinique
     impact_fonctionnel: Optional[bool] = False
+    # v3.4 (h34) : expose l'incident au personnel soignant (brancardiers, IDE coordo)
+    # Cocher pour les pannes qui impactent l'activité soignante : DPI HS,
+    # ascenseur, équipement médical, indisponibilité service.
+    visible_soignant: Optional[bool] = False
     # Jalons prédéfinis (liste de labels)
     jalons_labels: Optional[List[str]] = []
 
@@ -62,6 +66,7 @@ class IncidentOut(BaseModel):
     jalons: Optional[str]
     albert_avis: Optional[str]
     impact_fonctionnel: Optional[bool] = False
+    visible_soignant: Optional[bool] = False  # v3.4 (h34)
     class Config:
         from_attributes = True
         # v2.3.88 — Les datetimes SQLite sont naïves mais stockées en UTC
@@ -126,6 +131,26 @@ def create_incident(entry: IncidentCreate, db: Session = Depends(get_db)):
         )
     except Exception:
         pass
+    # v3.0.0 — Hook tuteur backend : observer la création d'incident côté serveur,
+    # pas seulement depuis le navigateur joueur. Indispensable pour que l'Assistant
+    # détecte les incidents injectés par stimuli (qui n'ont aucun navigateur dans
+    # la boucle). Fail-safe : une erreur n'empêche jamais la création de l'incident.
+    try:
+        from plugins.tuteur.backend_observer import observe_backend
+        observe_backend(
+            db=db,
+            type_observation="INCIDENT_CREE",
+            target_type="incident",
+            target_id=new_incident.id,
+            detail={
+                "fait":       (entry.fait or "")[:120],
+                "urgency":    int(entry.urgency or 2),
+                "type_crise": (entry.type_crise or "")[:60],
+                "source":     "api",  # vs "stimulus_collecteur"
+            },
+        )
+    except Exception:
+        pass
     return new_incident
 
 
@@ -135,14 +160,64 @@ def get_history(
     urgency: Optional[int] = None,
     status: Optional[str] = None,
     type_crise: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
 ):
+    """
+    Liste les incidents.
+
+    v3.4 (h34) — Filtrage RGPD selon le rôle :
+    - admin, cellule_crise : voient tous les incidents (comportement historique).
+    - soignant : voit uniquement les incidents tels que :
+        * visible_soignant=True (exposés explicitement par la cellule de crise), OU
+        * il existe une Task assignée à l'utilisateur sur cet incident, OU
+        * il existe une BrancardageMission liée à cet incident dont
+          l'agent est l'utilisateur.
+    - autres rôles (ou non authentifié) : tableau vide (sécurité par défaut).
+
+    Cette projection limite l'exposition de données dont le soignant n'a pas
+    besoin opérationnellement, conformément au principe de minimisation RGPD.
+    """
     q = db.query(SitrepEntry)
     if site:       q = q.filter(SitrepEntry.site_id == site)
     if urgency:    q = q.filter(SitrepEntry.urgency == urgency)
     if status:     q = q.filter(SitrepEntry.status == status)
     if type_crise: q = q.filter(SitrepEntry.type_crise == type_crise)
-    return q.order_by(SitrepEntry.timestamp.desc()).all()
+
+    # Filtrage selon rôle
+    role = (user.role if user else "") or ""
+    if role in ("admin", "cellule_crise"):
+        # Accès complet (comportement historique)
+        return q.order_by(SitrepEntry.timestamp.desc()).all()
+
+    if role == "soignant":
+        from sqlalchemy import or_, exists
+        from app.models import Task
+        try:
+            from plugins.brancardage.models import BrcMission
+            has_branc = True
+        except Exception:
+            has_branc = False
+        # Condition 1 : visible_soignant=True
+        cond_visible = SitrepEntry.visible_soignant == True  # noqa: E712
+        # Condition 2 : tâche assignée à l'utilisateur
+        cond_task = exists().where(
+            (Task.incident_id == SitrepEntry.id) &
+            (Task.assignee == user.username)
+        )
+        conditions = [cond_visible, cond_task]
+        # Condition 3 (optionnelle) : mission de brancardage liée
+        if has_branc and hasattr(BrcMission, "incident_id"):
+            cond_branc = exists().where(
+                (BrcMission.incident_id == SitrepEntry.id) &
+                (BrcMission.agent_nom == user.display_name)
+            )
+            conditions.append(cond_branc)
+        q = q.filter(or_(*conditions))
+        return q.order_by(SitrepEntry.timestamp.desc()).all()
+
+    # Rôle inconnu ou non authentifié : aucun incident
+    return []
 
 
 @router.put("/{incident_id}/status")

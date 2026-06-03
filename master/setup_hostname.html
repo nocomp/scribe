@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>SCRIBE — Configuration du hostname public</title>
+<style>
+  :root {
+    --bleu-france: #003189;
+    --bleu-france-clair: #1e40af;
+    --rouge: #e1000f;
+    --gris-fond: #f8fafc;
+    --gris-trait: #e2e8f0;
+    --gris-texte: #64748b;
+    --noir: #0f172a;
+  }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--gris-fond);
+    margin: 0;
+    padding: 40px 20px;
+    color: var(--noir);
+    min-height: 100vh;
+  }
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .header {
+    background: linear-gradient(135deg, var(--bleu-france), var(--bleu-france-clair));
+    color: white;
+    padding: 24px 32px;
+  }
+  .header h1 {
+    margin: 0 0 4px;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .header .sub {
+    font-size: 13px;
+    opacity: 0.85;
+  }
+  .body {
+    padding: 28px 32px;
+  }
+  .info-box {
+    background: #eff6ff;
+    border-left: 3px solid var(--bleu-france);
+    padding: 14px 16px;
+    border-radius: 6px;
+    margin-bottom: 24px;
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .info-box strong { color: var(--bleu-france); }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gris-texte);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .current {
+    background: var(--gris-fond);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+  .current .val {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--bleu-france);
+    font-weight: 600;
+  }
+  .suggestions {
+    margin-bottom: 24px;
+  }
+  .suggestion-btn {
+    display: block;
+    width: 100%;
+    background: white;
+    border: 1px solid var(--gris-trait);
+    padding: 10px 14px;
+    border-radius: 8px;
+    text-align: left;
+    cursor: pointer;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: var(--noir);
+    transition: all 0.15s;
+  }
+  .suggestion-btn:hover {
+    background: #f1f5f9;
+    border-color: var(--bleu-france);
+  }
+  .suggestion-btn .val {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--bleu-france);
+    font-weight: 600;
+  }
+  .suggestion-btn .src {
+    font-size: 11px;
+    color: var(--gris-texte);
+    margin-left: 6px;
+  }
+  input[type="text"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid var(--gris-trait);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    box-sizing: border-box;
+    margin-bottom: 16px;
+  }
+  input[type="text"]:focus {
+    outline: none;
+    border-color: var(--bleu-france);
+  }
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+  }
+  button.primary {
+    background: var(--bleu-france);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    flex: 1;
+  }
+  button.primary:hover { background: var(--bleu-france-clair); }
+  button.primary:disabled { opacity: 0.6; cursor: wait; }
+  button.secondary {
+    background: white;
+    color: var(--noir);
+    border: 1px solid var(--gris-trait);
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .status {
+    margin-top: 16px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    display: none;
+  }
+  .status.ok { display: block; background: #ecfdf5; color: #065f46; border-left: 3px solid #10b981; }
+  .status.err { display: block; background: #fef2f2; color: #991b1b; border-left: 3px solid var(--rouge); }
+  .footnote {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--gris-trait);
+    font-size: 11.5px;
+    color: var(--gris-texte);
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🌐 Configuration du hostname public</h1>
+    <div class="sub">Définit l'URL utilisée pour les liens entre composants SCRIBE</div>
+  </div>
+  <div class="body">
+
+    <div class="info-box">
+      <strong>Quand configurer ?</strong> Si vous accédez à SCRIBE depuis un VPS,
+      un serveur LAN, ou un hostname public (ex: <code>vps-xxx.ovh.net</code>),
+      configurez ici la valeur exacte à utiliser dans les liens entre instances
+      et collecteurs. Sans configuration, SCRIBE détecte automatiquement le
+      hostname à partir de la requête en cours (suffisant pour la plupart des cas).
+    </div>
+
+    <div class="current">
+      <label>Configuration actuelle</label>
+      <div>Configuré : <span class="val" id="cur-configured">—</span></div>
+      <div style="margin-top:4px">Effectif : <span class="val" id="cur-effective">—</span></div>
+    </div>
+
+    <label>Suggestions détectées</label>
+    <div class="suggestions" id="suggestions">Chargement…</div>
+
+    <label for="hostname-input">Hostname personnalisé</label>
+    <input type="text" id="hostname-input"
+           placeholder="ex: localhost  ou  192.168.1.42"
+           autocomplete="off">
+
+    <div class="actions">
+      <button class="primary" id="save-btn">Enregistrer</button>
+      <button class="secondary" id="cancel-btn">Annuler</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div class="footnote">
+      <strong>Notes techniques :</strong><br>
+      • La valeur est stockée dans <code>hostname.conf</code> à la racine du projet.<br>
+      • La variable d'environnement <code>SCRIBE_EXTERNAL_HOST</code> est prioritaire si définie.<br>
+      • Pour appliquer un changement, redémarrez les instances exercice en cours (collecteur compris).<br>
+      • Pour revenir à l'auto-détection : supprimer le fichier <code>hostname.conf</code> et redémarrer.
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/api/master/setup-hostname';
+
+async function loadState() {
+  try {
+    const r = await fetch(API);
+    const data = await r.json();
+    document.getElementById('cur-configured').textContent =
+      data.configured || '(non configuré — fallback dynamique)';
+    document.getElementById('cur-effective').textContent =
+      data.effective || '—';
+    const sug = document.getElementById('suggestions');
+    sug.innerHTML = (data.suggestions || []).map(function(s) {
+      return '<button class="suggestion-btn" data-value="' + escapeAttr(s.value) + '">' +
+             '<span class="val">' + escapeHtml(s.value) + '</span>' +
+             '<span class="src"> — ' + escapeHtml(s.label.split('(')[1] ? s.label.split('(')[1].replace(')','') : s.source) + '</span>' +
+             '</button>';
+    }).join('') || '<i style="color:#94a3b8">Aucune suggestion</i>';
+    sug.querySelectorAll('.suggestion-btn').forEach(function(b) {
+      b.onclick = function() {
+        document.getElementById('hostname-input').value = b.getAttribute('data-value');
+      };
+    });
+    // Pré-remplir avec la valeur effective courante si non configuré
+    if (!data.configured && data.effective) {
+      document.getElementById('hostname-input').value = data.effective;
+    } else if (data.configured) {
+      document.getElementById('hostname-input').value = data.configured;
+    }
+  } catch(e) {
+    showStatus('Erreur chargement : ' + e.message, 'err');
+  }
+}
+
+function escapeHtml(s) {
+  return String(s||'').replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
+
+function showStatus(msg, kind) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status ' + kind;
+}
+
+async function save() {
+  const btn = document.getElementById('save-btn');
+  const val = document.getElementById('hostname-input').value.trim();
+  if (!val) { showStatus('Hostname vide.', 'err'); return; }
+  btn.disabled = true;
+  btn.textContent = '⏳ Enregistrement…';
+  try {
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({hostname: val}),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || ('HTTP ' + r.status));
+    showStatus('✓ ' + (data.message || 'Configuré'), 'ok');
+    loadState();
+  } catch(e) {
+    showStatus('Erreur : ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enregistrer';
+  }
+}
+
+document.getElementById('save-btn').onclick = save;
+document.getElementById('cancel-btn').onclick = function() {
+  history.length > 1 ? history.back() : window.close();
+};
+document.getElementById('hostname-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') save();
+});
+loadState();
+</script>
+</body>
+</html>

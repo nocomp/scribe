@@ -1,0 +1,135 @@
+<scribe>
+  <etablissement>
+    <nom>GHT Alpes-Dauphiné</nom>
+    <sigle>DEMO4</sigle>
+    <finess>380000001</finess>
+  </etablissement>
+  <admin>
+    <login>dircrise</login>
+    <password>Scribe2026!</password>
+    <nom_affiche>Directeur de Crise</nom_affiche>
+  </admin>
+  <sites>
+    <site>
+      <nom>CHU Grenoble Alpes — La Tronche</nom>
+      <adresse>Avenue du Maquis du Grésivaudan, 38700 La Tronche</adresse>
+      <latitude>45.1978</latitude>
+      <longitude>5.7482</longitude>
+    </site>
+    <site>
+      <nom>CH Alpes-Isère — Saint-Égrève</nom>
+      <adresse>3 Rue de la Gare, 38120 Saint-Égrève</adresse>
+      <latitude>45.2281</latitude>
+      <longitude>5.6841</longitude>
+    </site>
+    <site>
+      <nom>CH de Voiron</nom>
+      <adresse>10 Route de la Brunerie, 38500 Voiron</adresse>
+      <latitude>45.3582</latitude>
+      <longitude>5.5843</longitude>
+    </site>
+    <site>
+      <nom>CH Fabrice Marchiol — La Mure</nom>
+      <adresse>62 Rue des Alpes, 38350 La Mure</adresse>
+      <latitude>44.9048</latitude>
+      <longitude>5.7878</longitude>
+    </site>
+    <site>
+      <nom>CH de Saint-Laurent-du-Pont</nom>
+      <adresse>280 Chemin des Martins, 38380 Saint-Laurent-du-Pont</adresse>
+      <latitude>45.3855</latitude>
+      <longitude>5.7328</longitude>
+    </site>
+    <site>
+      <nom>CH de Tullins</nom>
+      <adresse>18 Boulevard Michel Perret, 38210 Tullins</adresse>
+      <latitude>45.2974</latitude>
+      <longitude>5.4839</longitude>
+    </site>
+    <site>
+      <nom>CH de Rives</nom>
+      <adresse>134 Rue de la République, 38140 Rives</adresse>
+      <latitude>45.3512</latitude>
+      <longitude>5.5105</longitude>
+    </site>
+    <site>
+      <nom>CH de Saint-Geoire-en-Valdaine</nom>
+      <adresse>Rue de Plampalais, 38620 Saint-Geoire-en-Valdaine</adresse>
+      <latitude>45.4578</latitude>
+      <longitude>5.6355</longitude>
+    </site>
+    <site>
+      <nom>CH Rhumatologique d'Uriage</nom>
+      <adresse>1750 Route d'Uriage, 38410 Saint-Martin-d'Uriage</adresse>
+      <latitude>45.1436</latitude>
+      <longitude>5.8344</longitude>
+    </site>
+  </sites>
+  <directeurs>
+    <directeur>
+      <nom>Mme Monique SORRENTINO</nom>
+      <fonction>Directrice Générale — CHU</fonction>
+      <abreviation>DG</abreviation>
+    </directeur>
+    <directeur>
+      <nom>M. Éric DÉTREZ</nom>
+      <fonction>Directeur Général Délégué</fonction>
+      <abreviation>DGA</abreviation>
+    </directeur>
+    <directeur>
+      <nom>M. A. LEROY</nom>
+      <fonction>Directeur des Systèmes d'Information</fonction>
+      <abreviation>DSI</abreviation>
+    </directeur>
+    <directeur>
+      <nom>Mme D. PETIT</nom>
+      <fonction>Directrice des Soins</fonction>
+      <abreviation>DS</abreviation>
+    </directeur>
+    <directeur>
+      <nom>M. E. THOMAS</nom>
+      <fonction>Directeur des Ressources Humaines</fonction>
+      <abreviation>DRH</abreviation>
+    </directeur>
+    <directeur>
+      <nom>Mme F. ROBERT</nom>
+      <fonction>Directrice des Affaires Financières</fonction>
+      <abreviation>DAF</abreviation>
+    </directeur>
+  </directeurs>
+  <annuaire_normal>
+    <contact service="STANDARD" local="Accueil principal" tel="0" />
+    <contact service="URGENCES" local="Accueil urgences" tel="1001" />
+    <contact service="REANIMATION" local="Salle de soins" tel="2001" />
+    <contact service="BLOC OPERATOIRE" local="Regulation" tel="3001" />
+    <contact service="CADRE DE NUIT" local="Bureau" tel="9000" />
+    <contact service="PHARMACIE" local="Secretariat" tel="E005" />
+    <contact service="DSI INFORMATIQUE" local="Support" tel="E003" />
+    <contact service="DIRECTION" local="Secretariat DG" tel="E001" />
+  </annuaire_normal>
+  <annuaire_secours>
+    <contact service="URGENCES SECOURS" local="GSM de garde" tel="06 13 00 10 01" note="24h/24" />
+    <contact service="DIRECTION SECOURS" local="GSM DG" tel="06 13 00 10 04" note="Astreinte" />
+    <contact service="DSI SECOURS" local="GSM DSI" tel="06 13 00 10 05" note="Astreinte" />
+    <contact service="SAMU 15" local="Regulation medicale" tel="15" />
+    <contact service="CERT SANTE" local="Signalement cyber" tel="cert-sante@esante.gouv.fr" note="Cyber" />
+  </annuaire_secours>
+  <langue>fr</langue>
+  <federation>
+    <enabled>true</enabled>
+    <collecteur_url>http://localhost:9000/api/push</collecteur_url>
+    <token>token_ghtad38_demo_2026</token>
+    <intervalle_secondes>30</intervalle_secondes>
+    <sync_crise>true</sync_crise>
+    <share_details>true</share_details>
+    <share_min_urgency>1</share_min_urgency>
+    <sync_sanitaire>true</sync_sanitaire>
+    <share_capacite_details>true</share_capacite_details>
+  </federation>
+  <ia>
+    <fournisseur>albert</fournisseur>
+    <cle_api></cle_api>
+    <modele>mistralai/Ministral-3-8B-Instruct-2512</modele>
+    <url_base>https://albert.api.etalab.gouv.fr/v1/chat/completions</url_base>
+  </ia>
+</scribe>

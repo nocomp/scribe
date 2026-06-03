@@ -23,10 +23,17 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, require_role
 from plugins.brancardage.models import BrcMission, BrcHistorique
 
 router = APIRouter()
+
+# v3.4 (h34) — Toutes les routes brancardage sont réservées au rôle 'soignant'
+# (et à l'admin via court-circuit dans require_role). La cellule de crise n'a
+# pas un besoin légitime au sens RGPD de voir les flux patient nominatifs.
+# Pour ouvrir l'accès à la cellule de crise, ajouter "cellule_crise" dans
+# require_role(...) — à valider avec la DPO.
+_require_branc = require_role("soignant")
 
 STATUTS = ["EN_ATTENTE", "EN_COURS", "TERMINE", "ANNULE"]
 STATUT_LABELS = {"EN_ATTENTE": "En attente", "EN_COURS": "En cours",
@@ -119,7 +126,7 @@ def _creer_transfert(db, m, user):
     except Exception: pass
 
 @router.get("/missions")
-def list_missions(statut: Optional[str]=None, db: Session=Depends(get_db), user=Depends(get_current_user)):
+def list_missions(statut: Optional[str]=None, db: Session=Depends(get_db), user=Depends(_require_branc)):
     if not user: raise HTTPException(401)
     q = db.query(BrcMission)
     if statut: q = q.filter(BrcMission.statut==statut)
@@ -127,19 +134,19 @@ def list_missions(statut: Optional[str]=None, db: Session=Depends(get_db), user=
     return [_fmt(m) for m in q.order_by(BrcMission.priorite.asc(), BrcMission.created_at.asc()).all()]
 
 @router.get("/missions/all")
-def list_all(limit: int=200, db: Session=Depends(get_db), user=Depends(get_current_user)):
+def list_all(limit: int=200, db: Session=Depends(get_db), user=Depends(_require_branc)):
     if not user: raise HTTPException(401)
     return [_fmt(m) for m in db.query(BrcMission).order_by(BrcMission.created_at.desc()).limit(limit).all()]
 
 @router.get("/missions/{mission_id}")
-def get_mission(mission_id: int, db: Session=Depends(get_db), user=Depends(get_current_user)):
+def get_mission(mission_id: int, db: Session=Depends(get_db), user=Depends(_require_branc)):
     if not user: raise HTTPException(401)
     m = db.query(BrcMission).filter(BrcMission.id==mission_id).first()
     if not m: raise HTTPException(404)
     return _fmt(m)
 
 @router.get("/missions/{mission_id}/historique")
-def get_historique(mission_id: int, db: Session=Depends(get_db), user=Depends(get_current_user)):
+def get_historique(mission_id: int, db: Session=Depends(get_db), user=Depends(_require_branc)):
     if not user: raise HTTPException(401)
     rows = db.query(BrcHistorique).filter(BrcHistorique.mission_id==mission_id).order_by(BrcHistorique.created_at.asc()).all()
     return [{"id":h.id,"ancien":h.ancien_stat,"nouveau":h.nouveau_stat,
@@ -148,7 +155,7 @@ def get_historique(mission_id: int, db: Session=Depends(get_db), user=Depends(ge
              "at":h.created_at.isoformat() if h.created_at else None} for h in rows]
 
 @router.post("/missions")
-def create_mission(body: MissionCreate, db: Session=Depends(get_db), user=Depends(get_current_user)):
+def create_mission(body: MissionCreate, db: Session=Depends(get_db), user=Depends(_require_branc)):
     if not user: raise HTTPException(401)
     if not body.ref_patient.strip(): raise HTTPException(400,"Référence patient requise")
     if not body.uf_origine.strip() or not body.uf_destination.strip():
@@ -180,7 +187,7 @@ def create_mission(body: MissionCreate, db: Session=Depends(get_db), user=Depend
 
 @router.post("/missions/{mission_id}/prendre_en_charge")
 def prendre_en_charge(mission_id: int, body: PriseEnCharge,
-                      db: Session=Depends(get_db), user=Depends(get_current_user)):
+                      db: Session=Depends(get_db), user=Depends(_require_branc)):
     if not user: raise HTTPException(401)
     m = db.query(BrcMission).filter(BrcMission.id==mission_id).first()
     if not m: raise HTTPException(404)
@@ -197,7 +204,7 @@ def prendre_en_charge(mission_id: int, body: PriseEnCharge,
 
 @router.patch("/missions/{mission_id}")
 def update_status(mission_id: int, body: MissionPatch,
-                  db: Session=Depends(get_db), user=Depends(get_current_user)):
+                  db: Session=Depends(get_db), user=Depends(_require_branc)):
     if not user: raise HTTPException(401)
     m = db.query(BrcMission).filter(BrcMission.id==mission_id).first()
     if not m: raise HTTPException(404)
@@ -211,7 +218,7 @@ def update_status(mission_id: int, body: MissionPatch,
 
 @router.post("/missions/{mission_id}/arrivee")
 def accuser_arrivee(mission_id: int, body: ArriveeIn,
-                    db: Session=Depends(get_db), user=Depends(get_current_user)):
+                    db: Session=Depends(get_db), user=Depends(_require_branc)):
     if not user: raise HTTPException(401)
     m = db.query(BrcMission).filter(BrcMission.id==mission_id).first()
     if not m: raise HTTPException(404)
@@ -222,14 +229,14 @@ def accuser_arrivee(mission_id: int, body: ArriveeIn,
     db.commit(); return _fmt(m)
 
 @router.get("/sync")
-def sync_missions(db: Session=Depends(get_db), user=Depends(get_current_user)):
+def sync_missions(db: Session=Depends(get_db), user=Depends(_require_branc)):
     if not user: raise HTTPException(401)
     q = db.query(BrcMission).filter(BrcMission.type_transport=="AMBULANCE",
                                      BrcMission.statut.notin_(["TERMINE","ANNULE"]))
     return [_fmt(m) for m in q.order_by(BrcMission.created_at.desc()).limit(50).all()]
 
 @router.get("/stats")
-def get_stats(db: Session=Depends(get_db), user=Depends(get_current_user)):
+def get_stats(db: Session=Depends(get_db), user=Depends(_require_branc)):
     if not user: raise HTTPException(401)
     today=datetime.now(timezone.utc).date().isoformat()
     return {"total":db.query(BrcMission).count(),

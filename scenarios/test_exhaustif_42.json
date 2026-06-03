@@ -2,7 +2,7 @@
   "meta": {
     "id": "test_exhaustif_42_20260427_050751",
     "titre": "TEST exhaustif — 6 types x 7 sites",
-    "description": "Scenario de validation technique. Injecte 42 stimuli (6 types : message, incident, capacite, brancardage, transfert, decision) sur les 7 instances exercice (DEMO1, DEMO2, DEMO3, DEMO4, DEMO5, DEMO6, DEMO7). Chaque stimulus est tague [TEST-<SIGLE>-<TYPE>-Sxxx] pour identification facile.",
+    "description": "Scenario de validation technique. Injecte 42 stimuli (6 types : message, incident, capacite, brancardage, transfert, decision) sur les 7 instances exercice (CHAG, GHTLMB, CHRUMILLY, HDLEMAN, HPMB, CHB, CHPG). Chaque stimulus est tague [TEST-<SIGLE>-<TYPE>-Sxxx] pour identification facile.",
     "sujet": "Validation exhaustive du moteur d'exercice.",
     "duree_min": 22,
     "duree_reel_min": 88,
@@ -24,14 +24,14 @@
   },
   "acteurs": [
     {
-      "sigle": "DEMO1",
-      "nom_etablissement": "Site exercice DEMO1",
+      "sigle": "CHAG",
+      "nom_etablissement": "Site exercice CHAG",
       "role": "joueur",
       "port": 8660,
       "joueurs": [
         {
           "username": "dircrise",
-          "display_name": "Directeur de Crise DEMO1",
+          "display_name": "Directeur de Crise CHAG",
           "role_exercice": "Directeur de crise — site test",
           "responsabilites": [
             "Verifier la reception des stimuli"
@@ -40,14 +40,14 @@
       ]
     },
     {
-      "sigle": "DEMO2",
-      "nom_etablissement": "Site exercice DEMO2",
+      "sigle": "GHTLMB",
+      "nom_etablissement": "Site exercice GHTLMB",
       "role": "joueur",
       "port": 8661,
       "joueurs": [
         {
           "username": "dircrise",
-          "display_name": "Directeur de Crise DEMO2",
+          "display_name": "Directeur de Crise GHTLMB",
           "role_exercice": "Directeur de crise — site test",
           "responsabilites": [
             "Verifier la reception des stimuli"
@@ -56,14 +56,14 @@
       ]
     },
     {
-      "sigle": "DEMO3",
-      "nom_etablissement": "Site exercice DEMO3",
+      "sigle": "CHRUMILLY",
+      "nom_etablissement": "Site exercice CHRUMILLY",
       "role": "joueur",
       "port": 8662,
       "joueurs": [
         {
           "username": "dircrise",
-          "display_name": "Directeur de Crise DEMO3",
+          "display_name": "Directeur de Crise CHRUMILLY",
           "role_exercice": "Directeur de crise — site test",
           "responsabilites": [
             "Verifier la reception des stimuli"
@@ -72,14 +72,14 @@
       ]
     },
     {
-      "sigle": "DEMO4",
-      "nom_etablissement": "Site exercice DEMO4",
+      "sigle": "HDLEMAN",
+      "nom_etablissement": "Site exercice HDLEMAN",
       "role": "joueur",
       "port": 8663,
       "joueurs": [
         {
           "username": "dircrise",
-          "display_name": "Directeur de Crise DEMO4",
+          "display_name": "Directeur de Crise HDLEMAN",
           "role_exercice": "Directeur de crise — site test",
           "responsabilites": [
             "Verifier la reception des stimuli"
@@ -88,14 +88,14 @@
       ]
     },
     {
-      "sigle": "DEMO5",
-      "nom_etablissement": "Site exercice DEMO5",
+      "sigle": "HPMB",
+      "nom_etablissement": "Site exercice HPMB",
       "role": "joueur",
       "port": 8664,
       "joueurs": [
         {
           "username": "dircrise",
-          "display_name": "Directeur de Crise DEMO5",
+          "display_name": "Directeur de Crise HPMB",
           "role_exercice": "Directeur de crise — site test",
           "responsabilites": [
             "Verifier la reception des stimuli"
@@ -104,14 +104,14 @@
       ]
     },
     {
-      "sigle": "DEMO6",
-      "nom_etablissement": "Site exercice DEMO6",
+      "sigle": "CHB",
+      "nom_etablissement": "Site exercice CHB",
       "role": "joueur",
       "port": 8665,
       "joueurs": [
         {
           "username": "dircrise",
-          "display_name": "Directeur de Crise DEMO6",
+          "display_name": "Directeur de Crise CHB",
           "role_exercice": "Directeur de crise — site test",
           "responsabilites": [
             "Verifier la reception des stimuli"
@@ -120,14 +120,14 @@
       ]
     },
     {
-      "sigle": "DEMO7",
-      "nom_etablissement": "Site exercice DEMO7",
+      "sigle": "CHPG",
+      "nom_etablissement": "Site exercice CHPG",
       "role": "joueur",
       "port": 8666,
       "joueurs": [
         {
           "username": "dircrise",
-          "display_name": "Directeur de Crise DEMO7",
+          "display_name": "Directeur de Crise CHPG",
           "role_exercice": "Directeur de crise — site test",
           "responsabilites": [
             "Verifier la reception des stimuli"
@@ -141,26 +141,26 @@
       "id": "S001",
       "t_min": 0,
       "type": "message",
-      "cible": "DEMO1",
-      "titre": "[TEST-DEMO1-MESSAGE] S001",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur DEMO1 a t_min=0.00",
-      "action_attendue": "Verifier reception cote instance DEMO1 dans la section appropriee",
+      "cible": "CHAG",
+      "titre": "[TEST-CHAG-MESSAGE] S001",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur CHAG a t_min=0.00",
+      "action_attendue": "Verifier reception cote instance CHAG dans la section appropriee",
       "payload": {
         "expediteur": "TEST-EXTERNE",
-        "sujet": "[TEST-DEMO1-MSG-S001] Message externe de test",
-        "contenu": "[TEST S001] Message externe simule pour DEMO1. Si tu vois ce message dans la messagerie de l'instance DEMO1, le stimulus type=message fonctionne. t_min=0.00."
+        "sujet": "[TEST-CHAG-MSG-S001] Message externe de test",
+        "contenu": "[TEST S001] Message externe simule pour CHAG. Si tu vois ce message dans la messagerie de l'instance CHAG, le stimulus type=message fonctionne. t_min=0.00."
       }
     },
     {
       "id": "S002",
       "t_min": 0.5,
       "type": "incident",
-      "cible": "DEMO1",
-      "titre": "[TEST-DEMO1-INCIDENT] S002",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur DEMO1 a t_min=0.50",
-      "action_attendue": "Verifier reception cote instance DEMO1 dans la section appropriee",
+      "cible": "CHAG",
+      "titre": "[TEST-CHAG-INCIDENT] S002",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur CHAG a t_min=0.50",
+      "action_attendue": "Verifier reception cote instance CHAG dans la section appropriee",
       "payload": {
-        "fait": "[TEST-DEMO1-INC-S002] Incident de test injecte a t_min=0.50",
+        "fait": "[TEST-CHAG-INC-S002] Incident de test injecte a t_min=0.50",
         "analyse": "Stimulus de validation. Doit apparaitre dans VEILLE.",
         "urgency": 3,
         "type_crise": "MIXTE",
@@ -173,34 +173,34 @@
       "id": "S003",
       "t_min": 1,
       "type": "capacite",
-      "cible": "DEMO1",
-      "titre": "[TEST-DEMO1-CAPACITE] S003",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur DEMO1 a t_min=1.00",
-      "action_attendue": "Verifier reception cote instance DEMO1 dans la section appropriee",
+      "cible": "CHAG",
+      "titre": "[TEST-CHAG-CAPACITE] S003",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur CHAG a t_min=1.00",
+      "action_attendue": "Verifier reception cote instance CHAG dans la section appropriee",
       "payload": {
         "unite": "URGENCES",
         "redacteur": "Test Animateur",
         "statut_lits": "tension",
         "statut_rh": "complet",
         "statut_materiel": "ok",
-        "commentaire_general": "[TEST-DEMO1-CAP-S003] Declaration capacite tension (test)"
+        "commentaire_general": "[TEST-CHAG-CAP-S003] Declaration capacite tension (test)"
       }
     },
     {
       "id": "S004",
       "t_min": 1.5,
       "type": "brancardage",
-      "cible": "DEMO1",
-      "titre": "[TEST-DEMO1-BRANCARDAGE] S004",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur DEMO1 a t_min=1.50",
-      "action_attendue": "Verifier reception cote instance DEMO1 dans la section appropriee",
+      "cible": "CHAG",
+      "titre": "[TEST-CHAG-BRANCARDAGE] S004",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur CHAG a t_min=1.50",
+      "action_attendue": "Verifier reception cote instance CHAG dans la section appropriee",
       "payload": {
         "uf_origine": "Urgences",
         "uf_destination": "Imagerie",
         "priorite": "P2",
         "type_transport": "BRANCARD",
-        "ref_patient": "TEST-DEMO1-BRC-S004",
-        "motif": "[TEST-DEMO1-BRC-S004] Mission brancardage de test",
+        "ref_patient": "TEST-CHAG-BRC-S004",
+        "motif": "[TEST-CHAG-BRC-S004] Mission brancardage de test",
         "commentaire": "Stimulus de validation type=brancardage"
       }
     },
@@ -208,16 +208,16 @@
       "id": "S005",
       "t_min": 2,
       "type": "transfert",
-      "cible": "DEMO1",
-      "titre": "[TEST-DEMO1-TRANSFERT] S005",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur DEMO1 a t_min=2.00",
-      "action_attendue": "Verifier reception cote instance DEMO1 dans la section appropriee",
+      "cible": "CHAG",
+      "titre": "[TEST-CHAG-TRANSFERT] S005",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur CHAG a t_min=2.00",
+      "action_attendue": "Verifier reception cote instance CHAG dans la section appropriee",
       "payload": {
-        "etablissement_origine": "DEMO1",
-        "etablissement_destination": "DEMO7",
+        "etablissement_origine": "CHAG",
+        "etablissement_destination": "CHPG",
         "unite_origine": "Urgences",
         "unite_destination": "Reanimation",
-        "motif": "[TEST-DEMO1-TRF-S005] Transfert de test vers DEMO7",
+        "motif": "[TEST-CHAG-TRF-S005] Transfert de test vers CHPG",
         "nom": "TEST-PATIENT-5",
         "ipp": "TEST0005",
         "statut": "DEMANDE",
@@ -228,12 +228,12 @@
       "id": "S006",
       "t_min": 2.5,
       "type": "decision",
-      "cible": "DEMO1",
-      "titre": "[TEST-DEMO1-DECISION] S006",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur DEMO1 a t_min=2.50",
-      "action_attendue": "Verifier reception cote instance DEMO1 dans la section appropriee",
+      "cible": "CHAG",
+      "titre": "[TEST-CHAG-DECISION] S006",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur CHAG a t_min=2.50",
+      "action_attendue": "Verifier reception cote instance CHAG dans la section appropriee",
       "payload": {
-        "contenu": "[TEST-DEMO1-DEC-S006] Decision de cellule de crise (test)",
+        "contenu": "[TEST-CHAG-DEC-S006] Decision de cellule de crise (test)",
         "responsable": "Directeur de Crise",
         "base_reglementaire": "Test exhaustif validation"
       }
@@ -242,26 +242,26 @@
       "id": "S007",
       "t_min": 3,
       "type": "message",
-      "cible": "DEMO2",
-      "titre": "[TEST-DEMO2-MESSAGE] S007",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur DEMO2 a t_min=3.00",
-      "action_attendue": "Verifier reception cote instance DEMO2 dans la section appropriee",
+      "cible": "GHTLMB",
+      "titre": "[TEST-GHTLMB-MESSAGE] S007",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur GHTLMB a t_min=3.00",
+      "action_attendue": "Verifier reception cote instance GHTLMB dans la section appropriee",
       "payload": {
         "expediteur": "TEST-EXTERNE",
-        "sujet": "[TEST-DEMO2-MSG-S007] Message externe de test",
-        "contenu": "[TEST S007] Message externe simule pour DEMO2. Si tu vois ce message dans la messagerie de l'instance DEMO2, le stimulus type=message fonctionne. t_min=3.00."
+        "sujet": "[TEST-GHTLMB-MSG-S007] Message externe de test",
+        "contenu": "[TEST S007] Message externe simule pour GHTLMB. Si tu vois ce message dans la messagerie de l'instance GHTLMB, le stimulus type=message fonctionne. t_min=3.00."
       }
     },
     {
       "id": "S008",
       "t_min": 3.5,
       "type": "incident",
-      "cible": "DEMO2",
-      "titre": "[TEST-DEMO2-INCIDENT] S008",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur DEMO2 a t_min=3.50",
-      "action_attendue": "Verifier reception cote instance DEMO2 dans la section appropriee",
+      "cible": "GHTLMB",
+      "titre": "[TEST-GHTLMB-INCIDENT] S008",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur GHTLMB a t_min=3.50",
+      "action_attendue": "Verifier reception cote instance GHTLMB dans la section appropriee",
       "payload": {
-        "fait": "[TEST-DEMO2-INC-S008] Incident de test injecte a t_min=3.50",
+        "fait": "[TEST-GHTLMB-INC-S008] Incident de test injecte a t_min=3.50",
         "analyse": "Stimulus de validation. Doit apparaitre dans VEILLE.",
         "urgency": 3,
         "type_crise": "MIXTE",
@@ -274,34 +274,34 @@
       "id": "S009",
       "t_min": 4,
       "type": "capacite",
-      "cible": "DEMO2",
-      "titre": "[TEST-DEMO2-CAPACITE] S009",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur DEMO2 a t_min=4.00",
-      "action_attendue": "Verifier reception cote instance DEMO2 dans la section appropriee",
+      "cible": "GHTLMB",
+      "titre": "[TEST-GHTLMB-CAPACITE] S009",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur GHTLMB a t_min=4.00",
+      "action_attendue": "Verifier reception cote instance GHTLMB dans la section appropriee",
       "payload": {
         "unite": "URGENCES",
         "redacteur": "Test Animateur",
         "statut_lits": "tension",
         "statut_rh": "complet",
         "statut_materiel": "ok",
-        "commentaire_general": "[TEST-DEMO2-CAP-S009] Declaration capacite tension (test)"
+        "commentaire_general": "[TEST-GHTLMB-CAP-S009] Declaration capacite tension (test)"
       }
     },
     {
       "id": "S010",
       "t_min": 4.5,
       "type": "brancardage",
-      "cible": "DEMO2",
-      "titre": "[TEST-DEMO2-BRANCARDAGE] S010",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur DEMO2 a t_min=4.50",
-      "action_attendue": "Verifier reception cote instance DEMO2 dans la section appropriee",
+      "cible": "GHTLMB",
+      "titre": "[TEST-GHTLMB-BRANCARDAGE] S010",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur GHTLMB a t_min=4.50",
+      "action_attendue": "Verifier reception cote instance GHTLMB dans la section appropriee",
       "payload": {
         "uf_origine": "Urgences",
         "uf_destination": "Imagerie",
         "priorite": "P2",
         "type_transport": "BRANCARD",
-        "ref_patient": "TEST-DEMO2-BRC-S010",
-        "motif": "[TEST-DEMO2-BRC-S010] Mission brancardage de test",
+        "ref_patient": "TEST-GHTLMB-BRC-S010",
+        "motif": "[TEST-GHTLMB-BRC-S010] Mission brancardage de test",
         "commentaire": "Stimulus de validation type=brancardage"
       }
     },
@@ -309,16 +309,16 @@
       "id": "S011",
       "t_min": 5,
       "type": "transfert",
-      "cible": "DEMO2",
-      "titre": "[TEST-DEMO2-TRANSFERT] S011",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur DEMO2 a t_min=5.00",
-      "action_attendue": "Verifier reception cote instance DEMO2 dans la section appropriee",
+      "cible": "GHTLMB",
+      "titre": "[TEST-GHTLMB-TRANSFERT] S011",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur GHTLMB a t_min=5.00",
+      "action_attendue": "Verifier reception cote instance GHTLMB dans la section appropriee",
       "payload": {
-        "etablissement_origine": "DEMO2",
-        "etablissement_destination": "DEMO7",
+        "etablissement_origine": "GHTLMB",
+        "etablissement_destination": "CHPG",
         "unite_origine": "Urgences",
         "unite_destination": "Reanimation",
-        "motif": "[TEST-DEMO2-TRF-S011] Transfert de test vers DEMO7",
+        "motif": "[TEST-GHTLMB-TRF-S011] Transfert de test vers CHPG",
         "nom": "TEST-PATIENT-11",
         "ipp": "TEST0011",
         "statut": "DEMANDE",
@@ -329,12 +329,12 @@
       "id": "S012",
       "t_min": 5.5,
       "type": "decision",
-      "cible": "DEMO2",
-      "titre": "[TEST-DEMO2-DECISION] S012",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur DEMO2 a t_min=5.50",
-      "action_attendue": "Verifier reception cote instance DEMO2 dans la section appropriee",
+      "cible": "GHTLMB",
+      "titre": "[TEST-GHTLMB-DECISION] S012",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur GHTLMB a t_min=5.50",
+      "action_attendue": "Verifier reception cote instance GHTLMB dans la section appropriee",
       "payload": {
-        "contenu": "[TEST-DEMO2-DEC-S012] Decision de cellule de crise (test)",
+        "contenu": "[TEST-GHTLMB-DEC-S012] Decision de cellule de crise (test)",
         "responsable": "Directeur de Crise",
         "base_reglementaire": "Test exhaustif validation"
       }
@@ -343,26 +343,26 @@
       "id": "S013",
       "t_min": 6,
       "type": "message",
-      "cible": "DEMO3",
-      "titre": "[TEST-DEMO3-MESSAGE] S013",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur DEMO3 a t_min=6.00",
-      "action_attendue": "Verifier reception cote instance DEMO3 dans la section appropriee",
+      "cible": "CHRUMILLY",
+      "titre": "[TEST-CHRUMILLY-MESSAGE] S013",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur CHRUMILLY a t_min=6.00",
+      "action_attendue": "Verifier reception cote instance CHRUMILLY dans la section appropriee",
       "payload": {
         "expediteur": "TEST-EXTERNE",
-        "sujet": "[TEST-DEMO3-MSG-S013] Message externe de test",
-        "contenu": "[TEST S013] Message externe simule pour DEMO3. Si tu vois ce message dans la messagerie de l'instance DEMO3, le stimulus type=message fonctionne. t_min=6.00."
+        "sujet": "[TEST-CHRUMILLY-MSG-S013] Message externe de test",
+        "contenu": "[TEST S013] Message externe simule pour CHRUMILLY. Si tu vois ce message dans la messagerie de l'instance CHRUMILLY, le stimulus type=message fonctionne. t_min=6.00."
       }
     },
     {
       "id": "S014",
       "t_min": 6.5,
       "type": "incident",
-      "cible": "DEMO3",
-      "titre": "[TEST-DEMO3-INCIDENT] S014",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur DEMO3 a t_min=6.50",
-      "action_attendue": "Verifier reception cote instance DEMO3 dans la section appropriee",
+      "cible": "CHRUMILLY",
+      "titre": "[TEST-CHRUMILLY-INCIDENT] S014",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur CHRUMILLY a t_min=6.50",
+      "action_attendue": "Verifier reception cote instance CHRUMILLY dans la section appropriee",
       "payload": {
-        "fait": "[TEST-DEMO3-INC-S014] Incident de test injecte a t_min=6.50",
+        "fait": "[TEST-CHRUMILLY-INC-S014] Incident de test injecte a t_min=6.50",
         "analyse": "Stimulus de validation. Doit apparaitre dans VEILLE.",
         "urgency": 3,
         "type_crise": "MIXTE",
@@ -375,34 +375,34 @@
       "id": "S015",
       "t_min": 7,
       "type": "capacite",
-      "cible": "DEMO3",
-      "titre": "[TEST-DEMO3-CAPACITE] S015",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur DEMO3 a t_min=7.00",
-      "action_attendue": "Verifier reception cote instance DEMO3 dans la section appropriee",
+      "cible": "CHRUMILLY",
+      "titre": "[TEST-CHRUMILLY-CAPACITE] S015",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur CHRUMILLY a t_min=7.00",
+      "action_attendue": "Verifier reception cote instance CHRUMILLY dans la section appropriee",
       "payload": {
         "unite": "URGENCES",
         "redacteur": "Test Animateur",
         "statut_lits": "tension",
         "statut_rh": "complet",
         "statut_materiel": "ok",
-        "commentaire_general": "[TEST-DEMO3-CAP-S015] Declaration capacite tension (test)"
+        "commentaire_general": "[TEST-CHRUMILLY-CAP-S015] Declaration capacite tension (test)"
       }
     },
     {
       "id": "S016",
       "t_min": 7.5,
       "type": "brancardage",
-      "cible": "DEMO3",
-      "titre": "[TEST-DEMO3-BRANCARDAGE] S016",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur DEMO3 a t_min=7.50",
-      "action_attendue": "Verifier reception cote instance DEMO3 dans la section appropriee",
+      "cible": "CHRUMILLY",
+      "titre": "[TEST-CHRUMILLY-BRANCARDAGE] S016",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur CHRUMILLY a t_min=7.50",
+      "action_attendue": "Verifier reception cote instance CHRUMILLY dans la section appropriee",
       "payload": {
         "uf_origine": "Urgences",
         "uf_destination": "Imagerie",
         "priorite": "P2",
         "type_transport": "BRANCARD",
-        "ref_patient": "TEST-DEMO3-BRC-S016",
-        "motif": "[TEST-DEMO3-BRC-S016] Mission brancardage de test",
+        "ref_patient": "TEST-CHRUMILLY-BRC-S016",
+        "motif": "[TEST-CHRUMILLY-BRC-S016] Mission brancardage de test",
         "commentaire": "Stimulus de validation type=brancardage"
       }
     },
@@ -410,16 +410,16 @@
       "id": "S017",
       "t_min": 8,
       "type": "transfert",
-      "cible": "DEMO3",
-      "titre": "[TEST-DEMO3-TRANSFERT] S017",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur DEMO3 a t_min=8.00",
-      "action_attendue": "Verifier reception cote instance DEMO3 dans la section appropriee",
+      "cible": "CHRUMILLY",
+      "titre": "[TEST-CHRUMILLY-TRANSFERT] S017",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur CHRUMILLY a t_min=8.00",
+      "action_attendue": "Verifier reception cote instance CHRUMILLY dans la section appropriee",
       "payload": {
-        "etablissement_origine": "DEMO3",
-        "etablissement_destination": "DEMO7",
+        "etablissement_origine": "CHRUMILLY",
+        "etablissement_destination": "CHPG",
         "unite_origine": "Urgences",
         "unite_destination": "Reanimation",
-        "motif": "[TEST-DEMO3-TRF-S017] Transfert de test vers DEMO7",
+        "motif": "[TEST-CHRUMILLY-TRF-S017] Transfert de test vers CHPG",
         "nom": "TEST-PATIENT-17",
         "ipp": "TEST0017",
         "statut": "DEMANDE",
@@ -430,12 +430,12 @@
       "id": "S018",
       "t_min": 8.5,
       "type": "decision",
-      "cible": "DEMO3",
-      "titre": "[TEST-DEMO3-DECISION] S018",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur DEMO3 a t_min=8.50",
-      "action_attendue": "Verifier reception cote instance DEMO3 dans la section appropriee",
+      "cible": "CHRUMILLY",
+      "titre": "[TEST-CHRUMILLY-DECISION] S018",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur CHRUMILLY a t_min=8.50",
+      "action_attendue": "Verifier reception cote instance CHRUMILLY dans la section appropriee",
       "payload": {
-        "contenu": "[TEST-DEMO3-DEC-S018] Decision de cellule de crise (test)",
+        "contenu": "[TEST-CHRUMILLY-DEC-S018] Decision de cellule de crise (test)",
         "responsable": "Directeur de Crise",
         "base_reglementaire": "Test exhaustif validation"
       }
@@ -444,26 +444,26 @@
       "id": "S019",
       "t_min": 9,
       "type": "message",
-      "cible": "DEMO4",
-      "titre": "[TEST-DEMO4-MESSAGE] S019",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur DEMO4 a t_min=9.00",
-      "action_attendue": "Verifier reception cote instance DEMO4 dans la section appropriee",
+      "cible": "HDLEMAN",
+      "titre": "[TEST-HDLEMAN-MESSAGE] S019",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur HDLEMAN a t_min=9.00",
+      "action_attendue": "Verifier reception cote instance HDLEMAN dans la section appropriee",
       "payload": {
         "expediteur": "TEST-EXTERNE",
-        "sujet": "[TEST-DEMO4-MSG-S019] Message externe de test",
-        "contenu": "[TEST S019] Message externe simule pour DEMO4. Si tu vois ce message dans la messagerie de l'instance DEMO4, le stimulus type=message fonctionne. t_min=9.00."
+        "sujet": "[TEST-HDLEMAN-MSG-S019] Message externe de test",
+        "contenu": "[TEST S019] Message externe simule pour HDLEMAN. Si tu vois ce message dans la messagerie de l'instance HDLEMAN, le stimulus type=message fonctionne. t_min=9.00."
       }
     },
     {
       "id": "S020",
       "t_min": 9.5,
       "type": "incident",
-      "cible": "DEMO4",
-      "titre": "[TEST-DEMO4-INCIDENT] S020",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur DEMO4 a t_min=9.50",
-      "action_attendue": "Verifier reception cote instance DEMO4 dans la section appropriee",
+      "cible": "HDLEMAN",
+      "titre": "[TEST-HDLEMAN-INCIDENT] S020",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur HDLEMAN a t_min=9.50",
+      "action_attendue": "Verifier reception cote instance HDLEMAN dans la section appropriee",
       "payload": {
-        "fait": "[TEST-DEMO4-INC-S020] Incident de test injecte a t_min=9.50",
+        "fait": "[TEST-HDLEMAN-INC-S020] Incident de test injecte a t_min=9.50",
         "analyse": "Stimulus de validation. Doit apparaitre dans VEILLE.",
         "urgency": 3,
         "type_crise": "MIXTE",
@@ -476,34 +476,34 @@
       "id": "S021",
       "t_min": 10,
       "type": "capacite",
-      "cible": "DEMO4",
-      "titre": "[TEST-DEMO4-CAPACITE] S021",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur DEMO4 a t_min=10.00",
-      "action_attendue": "Verifier reception cote instance DEMO4 dans la section appropriee",
+      "cible": "HDLEMAN",
+      "titre": "[TEST-HDLEMAN-CAPACITE] S021",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur HDLEMAN a t_min=10.00",
+      "action_attendue": "Verifier reception cote instance HDLEMAN dans la section appropriee",
       "payload": {
         "unite": "URGENCES",
         "redacteur": "Test Animateur",
         "statut_lits": "tension",
         "statut_rh": "complet",
         "statut_materiel": "ok",
-        "commentaire_general": "[TEST-DEMO4-CAP-S021] Declaration capacite tension (test)"
+        "commentaire_general": "[TEST-HDLEMAN-CAP-S021] Declaration capacite tension (test)"
       }
     },
     {
       "id": "S022",
       "t_min": 10.5,
       "type": "brancardage",
-      "cible": "DEMO4",
-      "titre": "[TEST-DEMO4-BRANCARDAGE] S022",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur DEMO4 a t_min=10.50",
-      "action_attendue": "Verifier reception cote instance DEMO4 dans la section appropriee",
+      "cible": "HDLEMAN",
+      "titre": "[TEST-HDLEMAN-BRANCARDAGE] S022",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur HDLEMAN a t_min=10.50",
+      "action_attendue": "Verifier reception cote instance HDLEMAN dans la section appropriee",
       "payload": {
         "uf_origine": "Urgences",
         "uf_destination": "Imagerie",
         "priorite": "P2",
         "type_transport": "BRANCARD",
-        "ref_patient": "TEST-DEMO4-BRC-S022",
-        "motif": "[TEST-DEMO4-BRC-S022] Mission brancardage de test",
+        "ref_patient": "TEST-HDLEMAN-BRC-S022",
+        "motif": "[TEST-HDLEMAN-BRC-S022] Mission brancardage de test",
         "commentaire": "Stimulus de validation type=brancardage"
       }
     },
@@ -511,16 +511,16 @@
       "id": "S023",
       "t_min": 11,
       "type": "transfert",
-      "cible": "DEMO4",
-      "titre": "[TEST-DEMO4-TRANSFERT] S023",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur DEMO4 a t_min=11.00",
-      "action_attendue": "Verifier reception cote instance DEMO4 dans la section appropriee",
+      "cible": "HDLEMAN",
+      "titre": "[TEST-HDLEMAN-TRANSFERT] S023",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur HDLEMAN a t_min=11.00",
+      "action_attendue": "Verifier reception cote instance HDLEMAN dans la section appropriee",
       "payload": {
-        "etablissement_origine": "DEMO4",
-        "etablissement_destination": "DEMO7",
+        "etablissement_origine": "HDLEMAN",
+        "etablissement_destination": "CHPG",
         "unite_origine": "Urgences",
         "unite_destination": "Reanimation",
-        "motif": "[TEST-DEMO4-TRF-S023] Transfert de test vers DEMO7",
+        "motif": "[TEST-HDLEMAN-TRF-S023] Transfert de test vers CHPG",
         "nom": "TEST-PATIENT-23",
         "ipp": "TEST0023",
         "statut": "DEMANDE",
@@ -531,12 +531,12 @@
       "id": "S024",
       "t_min": 11.5,
       "type": "decision",
-      "cible": "DEMO4",
-      "titre": "[TEST-DEMO4-DECISION] S024",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur DEMO4 a t_min=11.50",
-      "action_attendue": "Verifier reception cote instance DEMO4 dans la section appropriee",
+      "cible": "HDLEMAN",
+      "titre": "[TEST-HDLEMAN-DECISION] S024",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur HDLEMAN a t_min=11.50",
+      "action_attendue": "Verifier reception cote instance HDLEMAN dans la section appropriee",
       "payload": {
-        "contenu": "[TEST-DEMO4-DEC-S024] Decision de cellule de crise (test)",
+        "contenu": "[TEST-HDLEMAN-DEC-S024] Decision de cellule de crise (test)",
         "responsable": "Directeur de Crise",
         "base_reglementaire": "Test exhaustif validation"
       }
@@ -545,26 +545,26 @@
       "id": "S025",
       "t_min": 12,
       "type": "message",
-      "cible": "DEMO5",
-      "titre": "[TEST-DEMO5-MESSAGE] S025",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur DEMO5 a t_min=12.00",
-      "action_attendue": "Verifier reception cote instance DEMO5 dans la section appropriee",
+      "cible": "HPMB",
+      "titre": "[TEST-HPMB-MESSAGE] S025",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur HPMB a t_min=12.00",
+      "action_attendue": "Verifier reception cote instance HPMB dans la section appropriee",
       "payload": {
         "expediteur": "TEST-EXTERNE",
-        "sujet": "[TEST-DEMO5-MSG-S025] Message externe de test",
-        "contenu": "[TEST S025] Message externe simule pour DEMO5. Si tu vois ce message dans la messagerie de l'instance DEMO5, le stimulus type=message fonctionne. t_min=12.00."
+        "sujet": "[TEST-HPMB-MSG-S025] Message externe de test",
+        "contenu": "[TEST S025] Message externe simule pour HPMB. Si tu vois ce message dans la messagerie de l'instance HPMB, le stimulus type=message fonctionne. t_min=12.00."
       }
     },
     {
       "id": "S026",
       "t_min": 12.5,
       "type": "incident",
-      "cible": "DEMO5",
-      "titre": "[TEST-DEMO5-INCIDENT] S026",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur DEMO5 a t_min=12.50",
-      "action_attendue": "Verifier reception cote instance DEMO5 dans la section appropriee",
+      "cible": "HPMB",
+      "titre": "[TEST-HPMB-INCIDENT] S026",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur HPMB a t_min=12.50",
+      "action_attendue": "Verifier reception cote instance HPMB dans la section appropriee",
       "payload": {
-        "fait": "[TEST-DEMO5-INC-S026] Incident de test injecte a t_min=12.50",
+        "fait": "[TEST-HPMB-INC-S026] Incident de test injecte a t_min=12.50",
         "analyse": "Stimulus de validation. Doit apparaitre dans VEILLE.",
         "urgency": 3,
         "type_crise": "MIXTE",
@@ -577,34 +577,34 @@
       "id": "S027",
       "t_min": 13,
       "type": "capacite",
-      "cible": "DEMO5",
-      "titre": "[TEST-DEMO5-CAPACITE] S027",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur DEMO5 a t_min=13.00",
-      "action_attendue": "Verifier reception cote instance DEMO5 dans la section appropriee",
+      "cible": "HPMB",
+      "titre": "[TEST-HPMB-CAPACITE] S027",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur HPMB a t_min=13.00",
+      "action_attendue": "Verifier reception cote instance HPMB dans la section appropriee",
       "payload": {
         "unite": "URGENCES",
         "redacteur": "Test Animateur",
         "statut_lits": "tension",
         "statut_rh": "complet",
         "statut_materiel": "ok",
-        "commentaire_general": "[TEST-DEMO5-CAP-S027] Declaration capacite tension (test)"
+        "commentaire_general": "[TEST-HPMB-CAP-S027] Declaration capacite tension (test)"
       }
     },
     {
       "id": "S028",
       "t_min": 13.5,
       "type": "brancardage",
-      "cible": "DEMO5",
-      "titre": "[TEST-DEMO5-BRANCARDAGE] S028",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur DEMO5 a t_min=13.50",
-      "action_attendue": "Verifier reception cote instance DEMO5 dans la section appropriee",
+      "cible": "HPMB",
+      "titre": "[TEST-HPMB-BRANCARDAGE] S028",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur HPMB a t_min=13.50",
+      "action_attendue": "Verifier reception cote instance HPMB dans la section appropriee",
       "payload": {
         "uf_origine": "Urgences",
         "uf_destination": "Imagerie",
         "priorite": "P2",
         "type_transport": "BRANCARD",
-        "ref_patient": "TEST-DEMO5-BRC-S028",
-        "motif": "[TEST-DEMO5-BRC-S028] Mission brancardage de test",
+        "ref_patient": "TEST-HPMB-BRC-S028",
+        "motif": "[TEST-HPMB-BRC-S028] Mission brancardage de test",
         "commentaire": "Stimulus de validation type=brancardage"
       }
     },
@@ -612,16 +612,16 @@
       "id": "S029",
       "t_min": 14,
       "type": "transfert",
-      "cible": "DEMO5",
-      "titre": "[TEST-DEMO5-TRANSFERT] S029",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur DEMO5 a t_min=14.00",
-      "action_attendue": "Verifier reception cote instance DEMO5 dans la section appropriee",
+      "cible": "HPMB",
+      "titre": "[TEST-HPMB-TRANSFERT] S029",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur HPMB a t_min=14.00",
+      "action_attendue": "Verifier reception cote instance HPMB dans la section appropriee",
       "payload": {
-        "etablissement_origine": "DEMO5",
-        "etablissement_destination": "DEMO7",
+        "etablissement_origine": "HPMB",
+        "etablissement_destination": "CHPG",
         "unite_origine": "Urgences",
         "unite_destination": "Reanimation",
-        "motif": "[TEST-DEMO5-TRF-S029] Transfert de test vers DEMO7",
+        "motif": "[TEST-HPMB-TRF-S029] Transfert de test vers CHPG",
         "nom": "TEST-PATIENT-29",
         "ipp": "TEST0029",
         "statut": "DEMANDE",
@@ -632,12 +632,12 @@
       "id": "S030",
       "t_min": 14.5,
       "type": "decision",
-      "cible": "DEMO5",
-      "titre": "[TEST-DEMO5-DECISION] S030",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur DEMO5 a t_min=14.50",
-      "action_attendue": "Verifier reception cote instance DEMO5 dans la section appropriee",
+      "cible": "HPMB",
+      "titre": "[TEST-HPMB-DECISION] S030",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur HPMB a t_min=14.50",
+      "action_attendue": "Verifier reception cote instance HPMB dans la section appropriee",
       "payload": {
-        "contenu": "[TEST-DEMO5-DEC-S030] Decision de cellule de crise (test)",
+        "contenu": "[TEST-HPMB-DEC-S030] Decision de cellule de crise (test)",
         "responsable": "Directeur de Crise",
         "base_reglementaire": "Test exhaustif validation"
       }
@@ -646,26 +646,26 @@
       "id": "S031",
       "t_min": 15,
       "type": "message",
-      "cible": "DEMO6",
-      "titre": "[TEST-DEMO6-MESSAGE] S031",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur DEMO6 a t_min=15.00",
-      "action_attendue": "Verifier reception cote instance DEMO6 dans la section appropriee",
+      "cible": "CHB",
+      "titre": "[TEST-CHB-MESSAGE] S031",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur CHB a t_min=15.00",
+      "action_attendue": "Verifier reception cote instance CHB dans la section appropriee",
       "payload": {
         "expediteur": "TEST-EXTERNE",
-        "sujet": "[TEST-DEMO6-MSG-S031] Message externe de test",
-        "contenu": "[TEST S031] Message externe simule pour DEMO6. Si tu vois ce message dans la messagerie de l'instance DEMO6, le stimulus type=message fonctionne. t_min=15.00."
+        "sujet": "[TEST-CHB-MSG-S031] Message externe de test",
+        "contenu": "[TEST S031] Message externe simule pour CHB. Si tu vois ce message dans la messagerie de l'instance CHB, le stimulus type=message fonctionne. t_min=15.00."
       }
     },
     {
       "id": "S032",
       "t_min": 15.5,
       "type": "incident",
-      "cible": "DEMO6",
-      "titre": "[TEST-DEMO6-INCIDENT] S032",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur DEMO6 a t_min=15.50",
-      "action_attendue": "Verifier reception cote instance DEMO6 dans la section appropriee",
+      "cible": "CHB",
+      "titre": "[TEST-CHB-INCIDENT] S032",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur CHB a t_min=15.50",
+      "action_attendue": "Verifier reception cote instance CHB dans la section appropriee",
       "payload": {
-        "fait": "[TEST-DEMO6-INC-S032] Incident de test injecte a t_min=15.50",
+        "fait": "[TEST-CHB-INC-S032] Incident de test injecte a t_min=15.50",
         "analyse": "Stimulus de validation. Doit apparaitre dans VEILLE.",
         "urgency": 3,
         "type_crise": "MIXTE",
@@ -678,34 +678,34 @@
       "id": "S033",
       "t_min": 16,
       "type": "capacite",
-      "cible": "DEMO6",
-      "titre": "[TEST-DEMO6-CAPACITE] S033",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur DEMO6 a t_min=16.00",
-      "action_attendue": "Verifier reception cote instance DEMO6 dans la section appropriee",
+      "cible": "CHB",
+      "titre": "[TEST-CHB-CAPACITE] S033",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur CHB a t_min=16.00",
+      "action_attendue": "Verifier reception cote instance CHB dans la section appropriee",
       "payload": {
         "unite": "URGENCES",
         "redacteur": "Test Animateur",
         "statut_lits": "tension",
         "statut_rh": "complet",
         "statut_materiel": "ok",
-        "commentaire_general": "[TEST-DEMO6-CAP-S033] Declaration capacite tension (test)"
+        "commentaire_general": "[TEST-CHB-CAP-S033] Declaration capacite tension (test)"
       }
     },
     {
       "id": "S034",
       "t_min": 16.5,
       "type": "brancardage",
-      "cible": "DEMO6",
-      "titre": "[TEST-DEMO6-BRANCARDAGE] S034",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur DEMO6 a t_min=16.50",
-      "action_attendue": "Verifier reception cote instance DEMO6 dans la section appropriee",
+      "cible": "CHB",
+      "titre": "[TEST-CHB-BRANCARDAGE] S034",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur CHB a t_min=16.50",
+      "action_attendue": "Verifier reception cote instance CHB dans la section appropriee",
       "payload": {
         "uf_origine": "Urgences",
         "uf_destination": "Imagerie",
         "priorite": "P2",
         "type_transport": "BRANCARD",
-        "ref_patient": "TEST-DEMO6-BRC-S034",
-        "motif": "[TEST-DEMO6-BRC-S034] Mission brancardage de test",
+        "ref_patient": "TEST-CHB-BRC-S034",
+        "motif": "[TEST-CHB-BRC-S034] Mission brancardage de test",
         "commentaire": "Stimulus de validation type=brancardage"
       }
     },
@@ -713,16 +713,16 @@
       "id": "S035",
       "t_min": 17,
       "type": "transfert",
-      "cible": "DEMO6",
-      "titre": "[TEST-DEMO6-TRANSFERT] S035",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur DEMO6 a t_min=17.00",
-      "action_attendue": "Verifier reception cote instance DEMO6 dans la section appropriee",
+      "cible": "CHB",
+      "titre": "[TEST-CHB-TRANSFERT] S035",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur CHB a t_min=17.00",
+      "action_attendue": "Verifier reception cote instance CHB dans la section appropriee",
       "payload": {
-        "etablissement_origine": "DEMO6",
-        "etablissement_destination": "DEMO7",
+        "etablissement_origine": "CHB",
+        "etablissement_destination": "CHPG",
         "unite_origine": "Urgences",
         "unite_destination": "Reanimation",
-        "motif": "[TEST-DEMO6-TRF-S035] Transfert de test vers DEMO7",
+        "motif": "[TEST-CHB-TRF-S035] Transfert de test vers CHPG",
         "nom": "TEST-PATIENT-35",
         "ipp": "TEST0035",
         "statut": "DEMANDE",
@@ -733,12 +733,12 @@
       "id": "S036",
       "t_min": 17.5,
       "type": "decision",
-      "cible": "DEMO6",
-      "titre": "[TEST-DEMO6-DECISION] S036",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur DEMO6 a t_min=17.50",
-      "action_attendue": "Verifier reception cote instance DEMO6 dans la section appropriee",
+      "cible": "CHB",
+      "titre": "[TEST-CHB-DECISION] S036",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur CHB a t_min=17.50",
+      "action_attendue": "Verifier reception cote instance CHB dans la section appropriee",
       "payload": {
-        "contenu": "[TEST-DEMO6-DEC-S036] Decision de cellule de crise (test)",
+        "contenu": "[TEST-CHB-DEC-S036] Decision de cellule de crise (test)",
         "responsable": "Directeur de Crise",
         "base_reglementaire": "Test exhaustif validation"
       }
@@ -747,26 +747,26 @@
       "id": "S037",
       "t_min": 18,
       "type": "message",
-      "cible": "DEMO7",
-      "titre": "[TEST-DEMO7-MESSAGE] S037",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur DEMO7 a t_min=18.00",
-      "action_attendue": "Verifier reception cote instance DEMO7 dans la section appropriee",
+      "cible": "CHPG",
+      "titre": "[TEST-CHPG-MESSAGE] S037",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=message sur CHPG a t_min=18.00",
+      "action_attendue": "Verifier reception cote instance CHPG dans la section appropriee",
       "payload": {
         "expediteur": "TEST-EXTERNE",
-        "sujet": "[TEST-DEMO7-MSG-S037] Message externe de test",
-        "contenu": "[TEST S037] Message externe simule pour DEMO7. Si tu vois ce message dans la messagerie de l'instance DEMO7, le stimulus type=message fonctionne. t_min=18.00."
+        "sujet": "[TEST-CHPG-MSG-S037] Message externe de test",
+        "contenu": "[TEST S037] Message externe simule pour CHPG. Si tu vois ce message dans la messagerie de l'instance CHPG, le stimulus type=message fonctionne. t_min=18.00."
       }
     },
     {
       "id": "S038",
       "t_min": 18.5,
       "type": "incident",
-      "cible": "DEMO7",
-      "titre": "[TEST-DEMO7-INCIDENT] S038",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur DEMO7 a t_min=18.50",
-      "action_attendue": "Verifier reception cote instance DEMO7 dans la section appropriee",
+      "cible": "CHPG",
+      "titre": "[TEST-CHPG-INCIDENT] S038",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=incident sur CHPG a t_min=18.50",
+      "action_attendue": "Verifier reception cote instance CHPG dans la section appropriee",
       "payload": {
-        "fait": "[TEST-DEMO7-INC-S038] Incident de test injecte a t_min=18.50",
+        "fait": "[TEST-CHPG-INC-S038] Incident de test injecte a t_min=18.50",
         "analyse": "Stimulus de validation. Doit apparaitre dans VEILLE.",
         "urgency": 3,
         "type_crise": "MIXTE",
@@ -779,34 +779,34 @@
       "id": "S039",
       "t_min": 19,
       "type": "capacite",
-      "cible": "DEMO7",
-      "titre": "[TEST-DEMO7-CAPACITE] S039",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur DEMO7 a t_min=19.00",
-      "action_attendue": "Verifier reception cote instance DEMO7 dans la section appropriee",
+      "cible": "CHPG",
+      "titre": "[TEST-CHPG-CAPACITE] S039",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=capacite sur CHPG a t_min=19.00",
+      "action_attendue": "Verifier reception cote instance CHPG dans la section appropriee",
       "payload": {
         "unite": "URGENCES",
         "redacteur": "Test Animateur",
         "statut_lits": "tension",
         "statut_rh": "complet",
         "statut_materiel": "ok",
-        "commentaire_general": "[TEST-DEMO7-CAP-S039] Declaration capacite tension (test)"
+        "commentaire_general": "[TEST-CHPG-CAP-S039] Declaration capacite tension (test)"
       }
     },
     {
       "id": "S040",
       "t_min": 19.5,
       "type": "brancardage",
-      "cible": "DEMO7",
-      "titre": "[TEST-DEMO7-BRANCARDAGE] S040",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur DEMO7 a t_min=19.50",
-      "action_attendue": "Verifier reception cote instance DEMO7 dans la section appropriee",
+      "cible": "CHPG",
+      "titre": "[TEST-CHPG-BRANCARDAGE] S040",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=brancardage sur CHPG a t_min=19.50",
+      "action_attendue": "Verifier reception cote instance CHPG dans la section appropriee",
       "payload": {
         "uf_origine": "Urgences",
         "uf_destination": "Imagerie",
         "priorite": "P2",
         "type_transport": "BRANCARD",
-        "ref_patient": "TEST-DEMO7-BRC-S040",
-        "motif": "[TEST-DEMO7-BRC-S040] Mission brancardage de test",
+        "ref_patient": "TEST-CHPG-BRC-S040",
+        "motif": "[TEST-CHPG-BRC-S040] Mission brancardage de test",
         "commentaire": "Stimulus de validation type=brancardage"
       }
     },
@@ -814,16 +814,16 @@
       "id": "S041",
       "t_min": 20,
       "type": "transfert",
-      "cible": "DEMO7",
-      "titre": "[TEST-DEMO7-TRANSFERT] S041",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur DEMO7 a t_min=20.00",
-      "action_attendue": "Verifier reception cote instance DEMO7 dans la section appropriee",
+      "cible": "CHPG",
+      "titre": "[TEST-CHPG-TRANSFERT] S041",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=transfert sur CHPG a t_min=20.00",
+      "action_attendue": "Verifier reception cote instance CHPG dans la section appropriee",
       "payload": {
-        "etablissement_origine": "DEMO7",
-        "etablissement_destination": "DEMO6",
+        "etablissement_origine": "CHPG",
+        "etablissement_destination": "CHB",
         "unite_origine": "Urgences",
         "unite_destination": "Reanimation",
-        "motif": "[TEST-DEMO7-TRF-S041] Transfert de test vers DEMO6",
+        "motif": "[TEST-CHPG-TRF-S041] Transfert de test vers CHB",
         "nom": "TEST-PATIENT-41",
         "ipp": "TEST0041",
         "statut": "DEMANDE",
@@ -834,12 +834,12 @@
       "id": "S042",
       "t_min": 20.5,
       "type": "decision",
-      "cible": "DEMO7",
-      "titre": "[TEST-DEMO7-DECISION] S042",
-      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur DEMO7 a t_min=20.50",
-      "action_attendue": "Verifier reception cote instance DEMO7 dans la section appropriee",
+      "cible": "CHPG",
+      "titre": "[TEST-CHPG-DECISION] S042",
+      "description_animateur": "Test exhaustif : injecter un stimulus type=decision sur CHPG a t_min=20.50",
+      "action_attendue": "Verifier reception cote instance CHPG dans la section appropriee",
       "payload": {
-        "contenu": "[TEST-DEMO7-DEC-S042] Decision de cellule de crise (test)",
+        "contenu": "[TEST-CHPG-DEC-S042] Decision de cellule de crise (test)",
         "responsable": "Directeur de Crise",
         "base_reglementaire": "Test exhaustif validation"
       }

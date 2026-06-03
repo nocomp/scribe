@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SCRIBE v2.4.8.3 | Crisis OS</title>
+<title>SCRIBE v3.4.0-alpha2 | Crisis OS</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="/api/config.js"></script>
@@ -16,7 +16,31 @@
   <span id="exo-sigle-label" style="font-size:10px;opacity:.8"></span>
   <button id="exo-pret-btn" onclick="declareJoueurPret()">✋ Me déclarer PRÊT</button>
 </div>
+
+<!-- v3.0.0 — Splash screen mode exercice : modale plein écran qui s'affiche au
+     chargement d'une instance en mode exercice. Le joueur doit cliquer "Je suis prêt"
+     avant d'accéder au dashboard. Géré côté JS par showExoSplashIfNeeded(). -->
+<div id="exo-splash" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.92);z-index:99999;align-items:center;justify-content:center;backdrop-filter:blur(8px)">
+  <div style="background:#fff;max-width:560px;width:92%;padding:36px 32px;border-radius:14px;box-shadow:0 24px 64px rgba(0,0,0,0.35);text-align:center;font-family:system-ui,-apple-system,'Segoe UI',sans-serif">
+    <div style="font-size:60px;margin-bottom:8px">🎯</div>
+    <h2 style="margin:0 0 8px;color:#003189;font-size:24px">Mode Exercice</h2>
+    <div id="exo-splash-sigle" style="font-family:ui-monospace,monospace;font-size:13px;color:#64748b;margin-bottom:18px"></div>
+    <p style="font-size:15px;color:#334155;line-height:1.55;margin:0 0 24px">
+      Vous êtes sur le point de participer à une <strong>simulation de crise</strong>.
+      Toutes les données sont fictives. L'animateur démarrera l'exercice dès que tous les joueurs auront cliqué « Je suis prêt ».
+    </p>
+    <button id="exo-splash-pret-btn" onclick="declareJoueurPretAndClose()"
+            style="background:#16a34a;color:#fff;border:none;padding:14px 40px;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(22,163,74,0.35);font-family:inherit">
+      ✋ Je suis prêt pour l'exercice
+    </button>
+    <div style="margin-top:20px;font-size:12px;color:#94a3b8">
+      Une fois prêt·e, vous accédez au tableau de bord. L'animateur peut commencer.
+    </div>
+  </div>
+</div>
+
 <script src="/static/js/scribe.js"></script>
+<script src="/static/js/coach.js"></script>
 
 <header id="main-header" style="display:none">
   <div class="header-top">
@@ -65,26 +89,26 @@
   </div>
   </div><!-- /.header-top -->
   <nav class="tabs" id="main-nav" style="display:none">
-    <button class="tab-btn active" onclick="openTab('tab-dashboard',this)" id="tab-btn-dashboard" data-i18n-label="nav.dashboard" data-i18n-icon="🏠">🏠 TABLEAU DE BORD</button>
-    <button class="tab-btn" id="tab-btn-incidents" onclick="openTab('tab-veille',this)" data-i18n-label="nav.veille" data-i18n-icon="📋">📋 INCIDENTS<span id="incidents-badge" style="display:none;background:#dc2626;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
-    <button class="tab-btn"        onclick="openTab('tab-soins',this)" id="tab-btn-soins" data-i18n-label="nav.soins" data-i18n-icon="🏥">🏥 SOINS</button>
-    <button class="tab-btn"        onclick="openTab('tab-capacite',this)" id="tab-btn-capacite" data-i18n-label="nav.capacite" data-i18n-icon="🛏">🛏 CAPACITÉ<span id="capacite-badge" style="display:none;background:#dc2626;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
-    <button class="tab-btn"        onclick="openTab('tab-transferts',this)" id="tab-btn-transferts" data-i18n-label="nav.transferts" data-i18n-icon="🚑">🚑 TRANSFERTS<span id="transfert-badge" style="display:none;background:#f97316;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
-    <button class="tab-btn"        onclick="openTab('tab-cellule',this)" id="tab-btn-cellule" data-i18n-label="nav.cellule" data-i18n-icon="🏛️">🏛️ CELLULE<span id="cellule-badge" style="display:none;background:#0ea5e9;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
-    <button class="tab-btn"        onclick="openTab('tab-kanban',this)" id="tab-btn-kanban" data-i18n-label="nav.kanban" data-i18n-icon="📋">📋 KANBAN<span id="kanban-badge" style="display:none;background:#7c3aed;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
-    <button class="tab-btn"        onclick="openTab('tab-communique',this)" id="tab-btn-communique" data-i18n-label="nav.communique" data-i18n-icon="📢">📢 COMMUNIQUÉ<span id="communique-badge" style="display:none;background:#f59e0b;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
-    <button class="tab-btn"        onclick="openTab('tab-releve',this)" id="tab-btn-releve" data-i18n-label="nav.releve" data-i18n-icon="🔄">🔄 RELÈVE</button>
-    <button class="tab-btn"        onclick="openTab('tab-annuaire',this)" id="tab-btn-annuaire" data-i18n-label="nav.annuaire" data-i18n-icon="📞">📞 ANNUAIRE</button>
-    <button class="tab-btn"        onclick="openTab('tab-analyse',this)" id="tab-btn-analyse" data-i18n-label="nav.analyse" data-i18n-icon="🔬">🔬 ANALYSE</button>
-    <button class="tab-btn"        onclick="openTab('tab-rex',this)" id="tab-btn-rex" data-i18n-label="nav.rex" data-i18n-icon="📊">📊 REX</button>
-    <button class="tab-btn"        onclick="openTab('tab-messagerie',this)" id="tab-btn-messagerie" data-i18n-label="nav.messagerie" data-i18n-icon="✉️">✉️ MESSAGERIE<span id="msg-badge" style="display:none;background:#ef4444;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <button class="tab-btn active" onclick="openTab('tab-dashboard',this)" id="tab-btn-dashboard" data-roles="cellule_crise,soignant,admin" data-i18n-label="nav.dashboard" data-i18n-icon="🏠">🏠 TABLEAU DE BORD</button>
+    <button class="tab-btn" id="tab-btn-incidents" onclick="openTab('tab-veille',this)" data-roles="cellule_crise,soignant,admin" data-i18n-label="nav.veille" data-i18n-icon="📋">📋 INCIDENTS<span id="incidents-badge" style="display:none;background:#dc2626;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <button class="tab-btn"        onclick="openTab('tab-soins',this)" id="tab-btn-soins" data-roles="cellule_crise,admin" data-i18n-label="nav.soins" data-i18n-icon="🏥">🏥 SOINS</button>
+    <button class="tab-btn"        onclick="openTab('tab-capacite',this)" id="tab-btn-capacite" data-roles="cellule_crise,admin" data-i18n-label="nav.capacite" data-i18n-icon="🛏">🛏 CAPACITÉ<span id="capacite-badge" style="display:none;background:#dc2626;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <button class="tab-btn"        onclick="openTab('tab-transferts',this)" id="tab-btn-transferts" data-roles="soignant,admin" data-i18n-label="nav.transferts" data-i18n-icon="🚑">🚑 TRANSFERTS<span id="transfert-badge" style="display:none;background:#f97316;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <button class="tab-btn"        onclick="openTab('tab-cellule',this)" id="tab-btn-cellule" data-roles="cellule_crise,admin" data-i18n-label="nav.cellule" data-i18n-icon="🏛️">🏛️ CELLULE<span id="cellule-badge" style="display:none;background:#0ea5e9;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <button class="tab-btn"        onclick="openTab('tab-kanban',this)" id="tab-btn-kanban" data-roles="cellule_crise,admin" data-i18n-label="nav.kanban" data-i18n-icon="📋">📋 KANBAN<span id="kanban-badge" style="display:none;background:#7c3aed;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <button class="tab-btn"        onclick="openTab('tab-communique',this)" id="tab-btn-communique" data-roles="cellule_crise,admin" data-i18n-label="nav.communique" data-i18n-icon="📢">📢 COMMUNIQUÉ<span id="communique-badge" style="display:none;background:#f59e0b;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
+    <button class="tab-btn"        onclick="openTab('tab-releve',this)" id="tab-btn-releve" data-roles="cellule_crise,admin" data-i18n-label="nav.releve" data-i18n-icon="🔄">🔄 RELÈVE</button>
+    <button class="tab-btn"        onclick="openTab('tab-annuaire',this)" id="tab-btn-annuaire" data-roles="cellule_crise,soignant,admin" data-i18n-label="nav.annuaire" data-i18n-icon="📞">📞 ANNUAIRE</button>
+    <button class="tab-btn"        onclick="openTab('tab-analyse',this)" id="tab-btn-analyse" data-roles="cellule_crise,admin" data-i18n-label="nav.analyse" data-i18n-icon="🔬">🔬 ANALYSE</button>
+    <button class="tab-btn"        onclick="openTab('tab-rex',this)" id="tab-btn-rex" data-roles="cellule_crise,admin" data-i18n-label="nav.rex" data-i18n-icon="📊">📊 REX</button>
+    <button class="tab-btn"        onclick="openTab('tab-messagerie',this)" id="tab-btn-messagerie" data-roles="cellule_crise,soignant,admin" data-i18n-label="nav.messagerie" data-i18n-icon="✉️">✉️ MESSAGERIE<span id="msg-badge" style="display:none;background:#ef4444;color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-left:4px;font-weight:700"></span></button>
     <!-- v2.4.8.3 — Onglet ADMIN UF : masqué par défaut, affiché si user.role === 'admin' -->
-    <button class="tab-btn" style="display:none" onclick="openTab('tab-admin-uf',this)" id="tab-btn-admin-uf">⚙️ ADMIN UF</button>
+    <button class="tab-btn" style="display:none" onclick="openTab('tab-admin-uf',this)" id="tab-btn-admin-uf" data-roles="admin">⚙️ ADMIN UF</button>
     <!-- v2307 — Onglet INTER-GHT masqué par défaut. Le plugin inter_ght est
          désactivé depuis cette version (le chat natif couvre le besoin).
          Le bouton reste dans le DOM pour que l'auto-découverte puisse le
          ré-afficher si un admin réactive le plugin via l'admin → Plugins. -->
-    <button class="tab-btn" style="display:none" onclick="openTab('tab-declarations',this)" id="tab-btn-declarations">📡 INTER-GHT<span id="ight-badge" style="display:none;margin-left:4px;background:#7c3aed;color:#fff;border-radius:8px;padding:0 5px;font-size:9px"></span></button>
+    <button class="tab-btn" style="display:none" onclick="openTab('tab-declarations',this)" id="tab-btn-declarations" data-roles="cellule_crise,admin">📡 INTER-GHT<span id="ight-badge" style="display:none;margin-left:4px;background:#7c3aed;color:#fff;border-radius:8px;padding:0 5px;font-size:9px"></span></button>
   </nav>
 </header>
 
@@ -166,7 +190,7 @@
             <div id="db-poles" style="display:flex;flex-direction:column;gap:7px"></div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">SCRIBE</div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">Arc Alpin G7</div>
             <div id="db-g7" style="display:flex;flex-direction:column;gap:6px"></div>
           </div>
         </div>
@@ -224,7 +248,7 @@
                 oninput="filterUFList()" onfocus="showUFDropdown()" onkeydown="ufKeyNav(event)"
                 style="padding-right:26px;width:100%;box-sizing:border-box">
               <span onclick="clearUF()" style="position:absolute;right:7px;top:50%;transform:translateY(-50%);color:var(--muted);cursor:pointer;font-size:12px">✕</span>
-              <div id="uf-dropdown" style="display:none;position:absolute;z-index:500;top:100%;left:0;right:0;max-height:200px;width:234px;overflow-y:auto;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.4)"></div>
+              <div id="uf-dropdown" style="display:none;position:absolute;z-index:500;top:100%;left:0;right:0;max-height:180px;overflow-y:auto;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.4)"></div>
             </div>
             <button type="button" onclick="ufAddCurrent()" title="Ajouter cette UF"
               style="flex-shrink:0;width:26px;height:26px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;line-height:1">＋</button>
@@ -263,6 +287,23 @@
         </label>
       </div>
 
+      <!-- v3.4 (h34) — Visibilité côté personnel soignant -->
+      <div class="field" style="background:var(--surface2);padding:8px 10px;border-radius:5px;border:1px solid var(--border)">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin:0">
+          <input type="checkbox" id="visible_soignant" style="margin-top:3px;flex-shrink:0">
+          <span>
+            <b style="font-size:12px">👁 Visible pour le personnel soignant</b>
+            <span style="display:block;font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4">
+              Cocher si cet incident impacte le travail soignant et doit être visible
+              par les brancardiers et les IDE coordinateurs de transferts : panne logiciel
+              métier (DPI, prescription, biologie, imagerie), ascenseur HS, panne
+              d'équipement médical, indisponibilité d'un secteur de soins, coupure
+              fluides médicaux. Par défaut décoché : conformité RGPD (minimisation).
+            </span>
+          </span>
+        </label>
+      </div>
+
       <div class="field"><label>Fait — Quoi ?</label>
         <textarea id="fait" placeholder="Description factuelle..." rows="3"></textarea>
       </div>
@@ -285,14 +326,14 @@
       <div class="jalons-form">
         <div class="jalons-form-title">⏱ Jalons de résolution</div>
         <div class="jalon-presets">
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Ordi plus utilisé">Ordi plus utilisé</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Contacter DSI">Contacter DSI</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Alerter RSSI">Alerter RSSI</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Activer Cellule de crise">Activer Cellule de crise</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Notifier CERT Santé">Notifier CERT Santé</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Passé d'ordinateur">Passé d'ordi</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="DSI contacté">DSI contacté</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="RSSI alerté">RSSI alerté</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Cellule activée">Cellule activée</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="CERT Santé notifié">CERT Santé</button>
           <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Isolation réseau">Isolation réseau</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Vérifier Sauvegarde">Vérifier Sauvegarde</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Retour à la normale">Retour normale</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Sauvegarde vérifiée">Sauvegarde OK</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Retour à la normale">Retour normal</button>
         </div>
         <div class="jalon-custom-input">
           <input type="text" id="jalon-custom" placeholder="Jalon personnalisé...">
@@ -792,12 +833,17 @@
               <div class="admin-field"><label>Identifiant</label><input type="text" id="nu-username" placeholder="ex: jdupont"></div>
               <div class="admin-field"><label>Nom affiché</label><input type="text" id="nu-display" placeholder="ex: M. Dupont"></div>
               <div class="admin-field"><label>Mot de passe</label><input type="password" id="nu-pass" placeholder="••••••••"></div>
-              <div class="admin-field"><label>Groupe</label>
+              <div class="admin-field"><label>Rôle</label>
                 <select id="nu-role">
-                  <option value="collaborateur">Collaborateur (directeur, cadre...)</option>
-                  <option value="soignant">Soignant (accès lecture+saisie)</option>
+                  <option value="cellule_crise">Cellule de crise (directeur, RSSI, cadre supérieur)</option>
+                  <option value="soignant">Soignant (brancardage, transferts patient)</option>
                   <option value="admin">Admin (accès total)</option>
                 </select>
+                <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px;line-height:1.4">
+                  <strong>Cellule de crise</strong> : pilotage de crise, incidents, capacité, communiqués<br>
+                  <strong>Soignant</strong> : flux patient nominatif (brancardage, transferts internes)<br>
+                  <strong>Admin</strong> : tout + gestion des comptes
+                </div>
               </div>
               <div class="admin-field" style="grid-column:1/-1"><label>Périmètre (optionnel)</label><input type="text" id="nu-perimetre" placeholder="ex: CANCEROLOGIE, DNA, ANNECY..."></div>
             </div>
@@ -893,7 +939,7 @@
               </div>
               <div>
                 <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">SIGLE CIBLE</label>
-                <input type="text" id="scen-cible" value="DEMO"
+                <input type="text" id="scen-cible" value="DEMO1"
                        style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
               </div>
             </div>
@@ -1213,6 +1259,7 @@
   <div class="rex-header">
     <h2>📊 Retour d'Expérience (REX)</h2>
     <button class="btn-new-rex" onclick="openRexModal()">+ Nouveau REX</button>
+    <button class="btn-new-rex" style="background:#003189;color:white" onclick="openDebriefModal()">🎓 Débrief session</button>
     <a class="btn-export" href="/api/v1/sitrep/export-csv" download style="margin-left:auto">📥 Export CSV incidents</a>
   </div>
   <div class="rex-body" id="rex-body">
@@ -2241,12 +2288,3 @@
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-

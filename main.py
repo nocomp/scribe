@@ -89,11 +89,30 @@ def _build_csp() -> str:
 
     connect_src = " ".join(sorted(connect_origins))
 
-    # TODO ANSSI: retirer 'unsafe-inline' de script-src et style-src en migrant
-    # vers des nonces CSP. Chantier non trivial (refactor des onclick inline).
-    # En attendant, mitigation via Permissions-Policy stricte + Referrer-Policy.
-    # frame-ancestors : autoriser self + origines configurées (pour iframe master)
-    frame_ancestors_extra = os.getenv("SCRIBE_FRAME_ANCESTORS", "http://localhost:8565")
+    # v3000h33 — frame-ancestors : autoriser self + origines configurées
+    # ET le hostname externe configuré via hostname.conf, sur les ports
+    # 8565 (collecteur exercice) et 9000 (collecteur prod). Sans ça, quand
+    # l'utilisateur accède via le hostname VPS (au lieu de localhost),
+    # le navigateur bloque l'iframing des instances joueurs dans la
+    # console animateur exercice.
+    frame_ancestors_list = ["http://localhost:8565", "http://localhost:9000"]
+    try:
+        from master.hostname_config import get_configured_hostname
+        ext_host = get_configured_hostname()
+        if ext_host:
+            for port in ("8565", "9000"):
+                frame_ancestors_list.append(f"http://{ext_host}:{port}")
+                frame_ancestors_list.append(f"https://{ext_host}:{port}")
+    except Exception as e:
+        logger.warning(f"Lecture hostname pour frame-ancestors impossible : {e}")
+    # Override via env var possible (rétro-compat)
+    env_extra = os.getenv("SCRIBE_FRAME_ANCESTORS", "")
+    if env_extra:
+        for orig in env_extra.split(","):
+            orig = orig.strip()
+            if orig and orig not in frame_ancestors_list:
+                frame_ancestors_list.append(orig)
+    frame_ancestors_extra = " ".join(frame_ancestors_list)
 
     return (
         "default-src 'self'; "
@@ -184,11 +203,17 @@ app.include_router(v140.router,         prefix="/api/v1",              tags=["v1
 
 
 @app.get("/api/v1/plugins/active")
-def get_active_plugins():
+def get_active_plugins(request: Request):
     """
     Retourne les plugins actifs selon l'état DB.
     Inclut les plugins auto-découverts (uploadés).
     Retourne le MANIFEST complet pour permettre la création dynamique d'onglets.
+
+    v3.4 (h34) — Filtrage selon le rôle de l'utilisateur.
+    Si un plugin déclare `allowed_roles` dans son MANIFEST, il n'apparaît que
+    pour les utilisateurs ayant un de ces rôles. L'admin voit tous les plugins.
+    Si `allowed_roles` est absent du manifest → comportement historique
+    (visible par tous).
     """
     import pathlib, importlib
     from config import PLUGINS, PLUGIN_META, get_plugin_enabled
@@ -199,6 +224,34 @@ def get_active_plugins():
         db_state = _load_db_state(db)
     finally:
         db.close()
+
+    # v3.4 (h34) — Récupération du rôle utilisateur courant (pour filtrage).
+    # Inline pour éviter une dépendance forte au moment du chargement de main.
+    # Si on n'arrive pas à le récupérer (anonyme, token invalide…), user=None
+    # → comportement de fallback : on n'expose pas les plugins restreints.
+    user_role = ""
+    is_admin = False
+    try:
+        from app.api.auth import _decode_token
+        from app.models import User
+        auth_hdr = request.headers.get("authorization", "")
+        if auth_hdr.lower().startswith("bearer "):
+            tok = auth_hdr[7:].strip()
+            payload = _decode_token(tok)
+            db2 = SessionLocal()
+            try:
+                u = db2.query(User).filter(
+                    User.id == int(payload.get("sub", 0)),
+                    User.active == True,
+                ).first()
+                if u:
+                    user_role = u.role or ""
+                    is_admin = (user_role == "admin")
+            finally:
+                db2.close()
+    except Exception:
+        # Anonyme ou token KO → rôle vide, on filtre les plugins restreints
+        pass
 
     # Fusionner PLUGINS + plugins physiquement présents
     all_pids = set(PLUGINS.keys())
@@ -212,13 +265,14 @@ def get_active_plugins():
     for pid in all_pids:
         if not get_plugin_enabled(pid, db_state, default=False):
             continue
-        # v2186a — ne pas lister l'onglet exercice dans une instance de prod.
-        # Même condition que dans core/plugin_loader.py : seul le mode exercice
-        # (lancer_exercice.sh) doit afficher cet onglet côté joueur.
+        # v3.0.0 — L'onglet EXERCICE ne doit JAMAIS apparaître dans une instance
+        # joueur. Le pilotage d'exercice (scénarios, stimuli, contrôle) se fait
+        # exclusivement depuis la console animateur (port 8565). Côté joueur, seul
+        # le bandeau "MODE EXERCICE" + bouton "Me déclarer prêt" subsistent (gérés
+        # par index.html via config.js, pas par cet onglet). Le plugin reste chargé
+        # en backend (tables, routes) mais invisible côté UI.
         if pid == "exercice":
-            import os as _os
-            if _os.getenv("SCRIBE_EXERCICE_MODE", "0") != "1":
-                continue
+            continue
         # Priorité : MANIFEST chargé en mémoire > fichier plugin.py > PLUGIN_META
         manifest = dict(_loaded_plugins.get(pid, {}))
         if not manifest:
@@ -228,6 +282,10 @@ def get_active_plugins():
             except Exception:
                 pass
         meta = PLUGIN_META.get(pid, {})
+        # v3.4 (h34) — Filtrage selon rôle utilisateur via allowed_roles du manifest
+        allowed_roles = manifest.get("allowed_roles")
+        if allowed_roles and not is_admin and user_role not in allowed_roles:
+            continue
         result.append({
             "id":      pid,
             "label":   manifest.get("label") or meta.get("label",  pid.upper()),
@@ -318,9 +376,15 @@ def _run_migrations():
         # Migration expediteur_nom / destinataire_nom sur messages_internes
         if "expediteur_nom" not in cols: cx.execute("ALTER TABLE messages_internes ADD COLUMN expediteur_nom TEXT")
         if "destinataire_nom" not in cols: cx.execute("ALTER TABLE messages_internes ADD COLUMN destinataire_nom TEXT")
-        # Migration rôles : directeur → collaborateur, observateur → soignant
-        cx.execute("UPDATE users SET role='collaborateur' WHERE role='directeur'")
-        cx.execute("UPDATE users SET role='soignant' WHERE role='observateur'")
+        # v3.4 (h34) — Migration des rôles vers le nouveau modèle RGPD.
+        # Mapping :
+        #   directeur, observateur, collaborateur → cellule_crise (rôle hérité)
+        # Le rôle `soignant` est NOUVEAU et doit être attribué explicitement par
+        # un admin via l'UI (jamais par migration automatique). Pour éviter
+        # qu'un observateur historique se retrouve avec accès brancardage par
+        # erreur, on les bascule tous en cellule_crise (zéro régression).
+        # Le rôle `admin` est préservé.
+        cx.execute("UPDATE users SET role='cellule_crise' WHERE role IN ('directeur','observateur','collaborateur')")
         # v2315 — Colonnes MFA TOTP sur users
         if "mfa_enabled"      not in user_cols: cx.execute("ALTER TABLE users ADD COLUMN mfa_enabled INTEGER DEFAULT 0")
         if "mfa_secret"       not in user_cols: cx.execute("ALTER TABLE users ADD COLUMN mfa_secret TEXT")
@@ -329,6 +393,29 @@ def _run_migrations():
         sitrep_cols = [r[1] for r in cx.execute("PRAGMA table_info(sitrep_entries)")]
         if "impact_fonctionnel" not in sitrep_cols:
             cx.execute("ALTER TABLE sitrep_entries ADD COLUMN impact_fonctionnel INTEGER DEFAULT 0")
+        # v3.4 (h34) — Visibilité côté soignant sur incidents.
+        # Par défaut décoché (0) : l'incident n'est pas exposé au personnel
+        # soignant sauf via une tâche ou mission de brancardage qui le pointe.
+        # La cellule de crise coche explicitement pour exposer un incident
+        # impactant l'activité soignante (panne DPI, ascenseur, équipement
+        # médical, indisponibilité service).
+        if "visible_soignant" not in sitrep_cols:
+            cx.execute("ALTER TABLE sitrep_entries ADD COLUMN visible_soignant INTEGER DEFAULT 0")
+        # v3.4 (h34) — Visibilité salons chat (DM 1-à-1 + salons restreints).
+        salon_cols = [r[1] for r in cx.execute("PRAGMA table_info(chat_salons)")]
+        if salon_cols and "visibility" not in salon_cols:
+            cx.execute("ALTER TABLE chat_salons ADD COLUMN visibility TEXT DEFAULT 'all'")
+        # Table chat_salon_members (DM 1-à-1 et salons à accès restreint).
+        # SQLite crée la table via Base.metadata.create_all() mais on garantit
+        # son existence ici aussi (et son schéma) pour les DB historiques.
+        cx.execute("""
+            CREATE TABLE IF NOT EXISTS chat_salon_members (
+                salon_id  INTEGER NOT NULL,
+                user_id   INTEGER NOT NULL,
+                joined_at TIMESTAMP,
+                PRIMARY KEY (salon_id, user_id)
+            )
+        """)
         cx.commit(); cx.close()
     except Exception as e:
         logger.warning(f"Migration: {e}")
@@ -423,7 +510,7 @@ async def public_status():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "2.5.0", "build": "v2500"}
+    return {"status": "ok", "version": "3.4.0-alpha2", "build": "v3000h35"}
 
 
 @app.get("/api/push-test")
@@ -488,4 +575,41 @@ def debug_info():
 
 if __name__ == "__main__":
     port = int(os.environ.get("SCRIBE_PORT", 8000))
+
+    # v3.0.0 — Nettoyage prudent des ports SCRIBE avant démarrage.
+    # Stratégie : on tue UNIQUEMENT les process clairement identifiables comme
+    # SCRIBE (commande contient main.py / collecteur* / scribe). Tout autre
+    # process est laissé intact. Évite l'erreur récurrente [Errno 10048] /
+    # [Errno 98] "Address already in use" causée par des process orphelins.
+    try:
+        from master.port_cleanup import (
+            free_port_if_scribe, free_all_scribe_ports, summarize_results,
+        )
+        # Toujours libérer le port d'écoute du master lui-même
+        r = free_port_if_scribe(port)
+        if r["status"] in ("freed", "failed_kill", "foreign", "unidentified"):
+            import logging as _lg
+            _lg.getLogger("scribe.boot").info(
+                f"Port master {port}: {r['status']} — {r.get('detail', '')}"
+            )
+        # Cleanup étendu (tous les ports SCRIBE) si SCRIBE_PORT_CLEANUP_ALL=1
+        # Permet à l'utilisateur de demander un grand ménage au boot du master.
+        if os.environ.get("SCRIBE_PORT_CLEANUP_ALL", "0") == "1":
+            results = free_all_scribe_ports()
+            import logging as _lg
+            _lg.getLogger("scribe.boot").info(
+                f"Cleanup étendu ports SCRIBE : {summarize_results(results)}"
+            )
+            # Signaler les process tiers détectés (l'utilisateur doit décider)
+            for r in results:
+                if r["status"] == "foreign":
+                    _lg.getLogger("scribe.boot").warning(
+                        f"  Port {r['port']} occupé par tiers (PID {r['pid']}): "
+                        f"{r.get('cmdline', '')[:120]}"
+                    )
+    except Exception as _e:
+        # Échec du cleanup = non bloquant, on tente de démarrer quand même
+        import logging as _lg
+        _lg.getLogger("scribe.boot").warning(f"port_cleanup ignoré : {_e}")
+
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

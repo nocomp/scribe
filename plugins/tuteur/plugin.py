@@ -18,13 +18,13 @@ from fastapi import FastAPI
 
 MANIFEST = {
     "id":          "tuteur",
-    "label":       "MON COACH",
+    "label":       "MON ASSISTANT",
     "icon":        "🎓",
     "order":       115,
     "description": "Compagnon d'apprentissage : intention, rappels, debriefing IA",
     "api_prefix":  "/api/v1/tuteur",
     "tab_id":      "tab-tuteur",
-    "has_tab":     False,  # v2.4.4 : désactivé tant que pas finalisé (plugin gardé en réserve)
+    "has_tab":     True,   # v3.0.0 : onglet MON ASSISTANT activé (compagnon d'apprentissage)
     "legacy":      False,
 }
 
@@ -35,6 +35,28 @@ def register(app: FastAPI) -> None:
     from plugins.tuteur.models import Base as TuteurBase
     from app.database import engine
     TuteurBase.metadata.create_all(bind=engine, checkfirst=True)
+
+    # 1bis. v3.1.0 — Migration légère SQLite : ajouter la colonne `niveau`
+    # à plugin_tuteur_coach_messages si une DB existante ne l'a pas encore.
+    # Idempotent : si la colonne existe déjà, on ne fait rien.
+    try:
+        from sqlalchemy import inspect, text
+        insp = inspect(engine)
+        if "plugin_tuteur_coach_messages" in insp.get_table_names():
+            cols = {c["name"] for c in insp.get_columns("plugin_tuteur_coach_messages")}
+            if "niveau" not in cols:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        "ALTER TABLE plugin_tuteur_coach_messages "
+                        "ADD COLUMN niveau VARCHAR(10) DEFAULT 'marker' NOT NULL"
+                    ))
+    except Exception as e:
+        # Migration non bloquante : si elle échoue, la table reste utilisable
+        # via les valeurs par défaut SQLAlchemy.
+        import logging
+        logging.getLogger("scribe.tuteur.plugin").warning(
+            f"Migration niveau: {e}"
+        )
 
     # 2. Routes API
     from plugins.tuteur.routes import router

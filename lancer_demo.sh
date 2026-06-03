@@ -11,7 +11,7 @@ APP_PORT=7474
 COLL_PORT=7373
 DEMO_DB="$SCRIPT_DIR/scribe_demo_perm.db"
 DEMO_INST="$SCRIPT_DIR/instances/demo_perm"
-DEMO_CONFIG="$SCRIPT_DIR/config_chag_demo.xml"
+DEMO_CONFIG="$SCRIPT_DIR/config.xml"
 LOG_DIR="$SCRIPT_DIR/logs"
 PIDFILE_APP="$SCRIPT_DIR/demo_app.pid"
 PIDFILE_COLL="$SCRIPT_DIR/demo_coll.pid"
@@ -111,7 +111,7 @@ echo "  ╠═══════════════════════
 echo "  ║  App        : http://localhost:$APP_PORT       ║"
 echo "  ║  Collecteur : http://localhost:$COLL_PORT       ║"
 echo "  ║  Reset      : toutes les heures             ║"
-echo "  ║  Login      : dircrise / changeme        ║"
+echo "  ║  Login      : dircrise / Scribe2026!        ║"
 echo "  ╚══════════════════════════════════════════════╝"
 echo ""
 

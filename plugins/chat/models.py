@@ -13,12 +13,30 @@ class ChatSalon(Base):
     description = Column(String(300), nullable=True)
     couleur     = Column(String(10),  default="#003189")
     icone       = Column(String(10),  default="💬")
-    type        = Column(String(20),  default="local")   # local | territorial
+    type        = Column(String(20),  default="local")   # local | territorial | dm
     cree_par_id = Column(Integer,     nullable=True)
     cree_at     = Column(DateTime,    default=lambda: datetime.now(timezone.utc))
     archive     = Column(Boolean,     default=False)
     ordre       = Column(Integer,     default=100)
     systeme     = Column(Boolean,     default=False)     # salons par défaut non supprimables
+    # v3.4 (h34) — Visibilité des salons.
+    # "all"           : salon public, visible par tous (comportement historique)
+    # "members_only"  : visible uniquement par les utilisateurs présents dans
+    #                   chat_salon_members. Utilisé pour les DM 1-à-1 et les
+    #                   salons à accès restreint.
+    visibility  = Column(String(20),  default="all")
+
+
+class ChatSalonMember(Base):
+    """v3.4 (h34) — Membres d'un salon à visibility=members_only.
+
+    Pour un DM 1-à-1, exactement 2 lignes (les 2 participants).
+    Pour les salons publics, la table est vide (visibility=all → pas de check).
+    """
+    __tablename__ = "chat_salon_members"
+    salon_id  = Column(Integer, primary_key=True)
+    user_id   = Column(Integer, primary_key=True)
+    joined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class ChatMessage(Base):
@@ -26,8 +44,8 @@ class ChatMessage(Base):
     id          = Column(Integer, primary_key=True)
     salon_id    = Column(Integer, nullable=False)
     auteur_id   = Column(Integer, nullable=True)         # None = message système ou inter-GHT
-    auteur_nom  = Column(String(200), nullable=False)    # "Directeur de Crise [DEMO]"
-    auteur_sigle= Column(String(20),  nullable=True)     # "DEMO"
+    auteur_nom  = Column(String(200), nullable=False)    # "Directeur de Crise [DEMO1]"
+    auteur_sigle= Column(String(20),  nullable=True)     # "DEMO1"
     contenu     = Column(Text,  nullable=False)
     mentions    = Column(Text,  default="[]")            # JSON list de mentions
     reply_to_id = Column(Integer, nullable=True)         # citation

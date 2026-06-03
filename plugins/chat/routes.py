@@ -8,7 +8,11 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.api.auth import get_current_user
-from plugins.chat.models import ChatSalon, ChatMessage, ChatPJ, ChatPresence, ChatConfig
+from app.models import User
+from plugins.chat.models import (
+    ChatSalon, ChatMessage, ChatPJ, ChatPresence, ChatConfig,
+    ChatSalonMember,  # v3.4 (h34) — membres des salons à visibilité restreinte
+)
 
 router = APIRouter()
 
@@ -90,13 +94,63 @@ def _fmt_message(m: ChatMessage, db: Session) -> dict:
         "pj":           [{"id": p.id, "nom": p.nom_fichier, "taille": p.taille_octets} for p in pjs],
     }
 
-def _fmt_salon(s: ChatSalon) -> dict:
-    return {
+def _fmt_salon(s: ChatSalon, db: Optional[Session] = None, current_user_id: Optional[int] = None) -> dict:
+    """Sérialise un salon. Pour les DM 1-à-1, calcule le nom et l'icône du
+    peer (l'autre participant) afin que le frontend affiche un libellé clair
+    type 'Marie Dupont' plutôt que 'dm-3-7' (qui est l'ID technique interne).
+    """
+    out = {
         "id": s.id, "nom": s.nom, "description": s.description,
         "couleur": s.couleur, "icone": s.icone, "type": s.type,
         "cree_par_id": s.cree_par_id, "cree_at": s.cree_at.isoformat() if s.cree_at else None,
         "archive": s.archive, "ordre": s.ordre, "systeme": s.systeme,
+        # v3.4 (h34) — visibilité et flag DM pour le frontend
+        "visibility": getattr(s, "visibility", "all") or "all",
+        "is_dm": (s.type == "dm"),
     }
+    # Pour un DM, calculer les infos du peer
+    if s.type == "dm" and db is not None and current_user_id is not None:
+        try:
+            members = db.query(ChatSalonMember).filter(ChatSalonMember.salon_id == s.id).all()
+            peer_ids = [m.user_id for m in members if m.user_id != current_user_id]
+            if peer_ids:
+                peer = db.query(User).filter(User.id == peer_ids[0]).first()
+                if peer:
+                    out["peer_user_id"] = peer.id
+                    out["peer_display_name"] = peer.display_name or peer.username
+                    out["peer_username"] = peer.username
+                    # Surcharger le nom affiché : c'est le nom du peer plutôt
+                    # que le nom technique du salon "dm-X-Y"
+                    out["nom_affiche"] = peer.display_name or peer.username
+        except Exception:
+            pass
+    return out
+
+
+def _user_can_access_salon(salon: ChatSalon, user_id: int, db: Session) -> bool:
+    """v3.4 (h34) — Vérifie qu'un utilisateur peut accéder à un salon.
+
+    Règle :
+    - salon avec visibility='all' ou pas de visibility (legacy) → tout le monde y accède
+    - salon avec visibility='members_only' (DM ou salons restreints) → seuls les
+      membres listés dans chat_salon_members peuvent y accéder
+    - admin a accès partout (super-utilisateur)
+
+    Le check admin se fait en amont par le caller s'il le souhaite ; ici on
+    se contente du check membership pour rester un helper neutre.
+    """
+    visibility = getattr(salon, "visibility", "all") or "all"
+    if visibility == "all":
+        return True
+    # members_only : check membership
+    is_member = (
+        db.query(ChatSalonMember)
+        .filter(ChatSalonMember.salon_id == salon.id,
+                ChatSalonMember.user_id == user_id)
+        .first()
+        is not None
+    )
+    return is_member
 
 def _init_salons(db: Session):
     if db.query(ChatSalon).count() > 0:
@@ -125,10 +179,28 @@ def _log_mc(db, user, contenu_court: str):
 
 @router.get("/salons")
 def list_salons(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    """Liste les salons visibles par l'utilisateur courant.
+
+    v3.4 (h34) — Filtrage selon membership :
+    - Salons publics (visibility='all' ou legacy) : visibles par tous
+    - Salons restreints (visibility='members_only', incl. DM) :
+      visibles uniquement par les membres listés dans chat_salon_members
+    - Admin : voit tous les salons (visibilité supervision)
+    """
     if not user: raise HTTPException(401)
     _init_salons(db)
-    salons = db.query(ChatSalon).filter(ChatSalon.archive == False).order_by(ChatSalon.ordre, ChatSalon.nom).all()
-    return [_fmt_salon(s) for s in salons]
+    salons = (
+        db.query(ChatSalon)
+        .filter(ChatSalon.archive == False)
+        .order_by(ChatSalon.ordre, ChatSalon.nom)
+        .all()
+    )
+    is_admin = (getattr(user, "role", "") == "admin")
+    out = []
+    for s in salons:
+        if is_admin or _user_can_access_salon(s, user.id, db):
+            out.append(_fmt_salon(s, db=db, current_user_id=user.id))
+    return out
 
 
 class SalonIn(BaseModel):
@@ -168,6 +240,87 @@ def delete_salon(salon_id: int, db: Session = Depends(get_db), user=Depends(get_
     db.commit()
     return {"ok": True}
 
+
+# ── v3.4 (h34) — Salons privés DM 1-à-1 ────────────────────────────────────────
+
+class DMStart(BaseModel):
+    """Démarrer (ou rouvrir) un salon privé entre l'utilisateur courant et
+    un autre utilisateur. Si un DM existe déjà entre ces deux utilisateurs,
+    le même salon est retourné (pas de duplication)."""
+    peer_user_id: int
+
+
+@router.post("/dm/start")
+def dm_start(body: DMStart, db: Session = Depends(get_db), user=Depends(get_current_user)):
+    """Crée un salon DM 1-à-1 entre l'utilisateur courant et le peer indiqué.
+
+    Comportement idempotent : si un salon DM entre les deux participants
+    existe déjà, retourne son ID au lieu d'en créer un nouveau.
+
+    Le salon créé est :
+    - type='dm', visibility='members_only'
+    - nom = "dm-{minId}-{maxId}" (techniquement, non affiché à l'utilisateur)
+    - 2 lignes insérées dans chat_salon_members
+
+    Le frontend ne doit JAMAIS afficher le 'nom' du salon DM. Il doit utiliser
+    'peer_display_name' calculé par _fmt_salon(...).
+    """
+    if not user:
+        raise HTTPException(401)
+    if body.peer_user_id == user.id:
+        raise HTTPException(400, "Impossible de démarrer une conversation avec soi-même")
+    peer = db.query(User).filter(User.id == body.peer_user_id, User.active == True).first()
+    if not peer:
+        raise HTTPException(404, "Utilisateur destinataire introuvable")
+
+    # Cherche un salon DM existant entre les deux utilisateurs.
+    # Approche : on prend tous les salons DM dont l'utilisateur courant est
+    # membre, puis on vérifie lequel a aussi le peer comme membre.
+    existing = (
+        db.query(ChatSalon)
+        .join(ChatSalonMember, ChatSalonMember.salon_id == ChatSalon.id)
+        .filter(ChatSalon.type == "dm",
+                ChatSalon.archive == False,
+                ChatSalonMember.user_id == user.id)
+        .all()
+    )
+    for s in existing:
+        # Salon DM dont le current user est membre. Vérifier que le peer l'est aussi.
+        peer_is_member = (
+            db.query(ChatSalonMember)
+            .filter(ChatSalonMember.salon_id == s.id,
+                    ChatSalonMember.user_id == peer.id)
+            .first()
+            is not None
+        )
+        if peer_is_member:
+            return _fmt_salon(s, db=db, current_user_id=user.id)
+
+    # Aucun salon existant — créer le DM
+    min_id = min(user.id, peer.id)
+    max_id = max(user.id, peer.id)
+    salon = ChatSalon(
+        nom=f"dm-{min_id}-{max_id}",
+        description=None,
+        couleur="#003189",
+        icone="💬",
+        type="dm",
+        visibility="members_only",
+        cree_par_id=user.id,
+        ordre=10,  # affiché en haut dans la liste mobile
+        systeme=False,
+    )
+    db.add(salon)
+    db.flush()  # récupérer l'ID
+
+    # Insérer les 2 lignes member
+    db.add(ChatSalonMember(salon_id=salon.id, user_id=user.id))
+    db.add(ChatSalonMember(salon_id=salon.id, user_id=peer.id))
+    db.commit()
+    db.refresh(salon)
+    return _fmt_salon(salon, db=db, current_user_id=user.id)
+
+
 # ── Messages ───────────────────────────────────────────────────────────────────
 
 @router.get("/salons/{salon_id}/messages")
@@ -179,6 +332,13 @@ def get_messages(
     user=Depends(get_current_user)
 ):
     if not user: raise HTTPException(401)
+    # v3.4 (h34) — Check membership pour les salons à visibilité restreinte
+    salon = db.query(ChatSalon).filter(ChatSalon.id == salon_id).first()
+    if not salon:
+        raise HTTPException(404, "Salon introuvable")
+    is_admin = (getattr(user, "role", "") == "admin")
+    if not is_admin and not _user_can_access_salon(salon, user.id, db):
+        raise HTTPException(403, "Accès refusé à ce salon")
     q = db.query(ChatMessage).filter(ChatMessage.salon_id == salon_id)
     if before_id:
         q = q.filter(ChatMessage.id < before_id)
@@ -210,6 +370,10 @@ def post_message(
     if not user: raise HTTPException(401)
     salon = db.query(ChatSalon).filter(ChatSalon.id == salon_id).first()
     if not salon: raise HTTPException(404)
+    # v3.4 (h34) — Check membership pour salons restreints (DM 1-à-1)
+    is_admin = (getattr(user, "role", "") == "admin")
+    if not is_admin and not _user_can_access_salon(salon, user.id, db):
+        raise HTTPException(403, "Accès refusé à ce salon")
     # Contenu optionnel si des PJs sont attachées
     if not body.contenu and not body.pj_ids and not body.pj_inline:
         raise HTTPException(400, "Message vide")

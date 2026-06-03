@@ -8,7 +8,7 @@ Usage :
 Fonctionnement :
   - Lit le fichier Excel (onglet 'Comptes utilisateurs')
   - Crée les comptes absents, met à jour les existants
-  - Mot de passe temporaire : changeme  (changement obligatoire à la première connexion)
+  - Mot de passe temporaire : Scribe2026!  (changement obligatoire à la première connexion)
   - Les comptes admin existants ne sont jamais écrasés
 
 v2.4.8.2 — IMPORTANT pour les utilisateurs du master :
@@ -98,7 +98,7 @@ Base.metadata.create_all(bind=engine)
 from app.models import User
 
 # Mot de passe temporaire
-TEMP_PASSWORD = "changeme"
+TEMP_PASSWORD = "Scribe2026!"
 TEMP_HASH     = hashlib.sha256(TEMP_PASSWORD.encode()).hexdigest()
 
 VALID_ROLES = {"admin", "directeur", "observateur"}

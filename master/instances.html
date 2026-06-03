@@ -346,6 +346,8 @@
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn-secondary" onclick="relaunchWizard()" title="Relancer l'assistant de configuration">🎯 Wizard</button>
+        <button class="btn-secondary" onclick="window.open('/api/master/hostname-page','_blank')" title="Configurer le hostname public utilisé pour les liens entre instances et collecteurs">🌐 Hostname</button>
+        <button class="btn-secondary" onclick="freeAllPorts()" title="Libère les ports SCRIBE occupés par d'anciens process orphelins (ne touche jamais aux process tiers)">🔓 Libérer ports</button>
         <button class="btn-secondary" onclick="exportAllGhtZip()" title="Exporter toutes les instances configurées en un .zip (1 xlsx par instance)">📦 Exporter GHT (.zip)</button>
         <button class="btn-secondary" onclick="refreshInstances()">🔄 Rafraîchir</button>
       </div>
@@ -371,7 +373,7 @@
         </div>
         <div class="field">
           <label data-i18n-label="master.field_address">Adresse</label>
-          <input type="text" id="custom-adresse" placeholder="Rue de l'hôpital, Paris">
+          <input type="text" id="custom-adresse" placeholder="Rue de l'hôpital, Annecy">
           <div class="meta">(géolocalisation après création)</div>
         </div>
         <div class="field">
@@ -688,7 +690,7 @@ function renderInstances() {
             ? `<button class="btn-secondary" disabled style="opacity:.6">⏳ Arrêt…</button>`
             : isActive
               ? `<button class="btn-secondary" onclick="showCreds(${cfg.port})" title="Voir les identifiants admin"><span style="font-style:italic;font-weight:700;font-family:Georgia,serif">i</span></button>
-                 <a class="btn-secondary" href="http://localhost:${cfg.port}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block" title="Ouvrir l'instance dans un nouvel onglet">↗ Ouvrir</a>
+                 <a class="btn-secondary" href="http://${window.location.hostname}:${cfg.port}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block" title="Ouvrir l'instance dans un nouvel onglet">↗ Ouvrir</a>
                  <button class="btn-secondary" onclick="exportInstanceXlsx(${cfg.port})" title="Exporter cette config en .xlsx">💾</button>
                  <button class="btn-stop" onclick="stopInst(${cfg.port})">⏸ ARRÊTER</button>`
               : `<button class="btn-start" onclick="startInst(${cfg.port})">▶ LANCER</button>
@@ -743,7 +745,7 @@ async function startInst(port) {
       try {
         // On tente un fetch HEAD/GET sans auth — si ça répond (même 401),
         // c'est que l'instance est UP
-        const probe = await fetch(`http://localhost:${port}/`, {
+        const probe = await fetch(`http://${window.location.hostname}:${port}/`, {
           mode: "no-cors",
           credentials: "omit",
         }).catch(() => null);
@@ -758,7 +760,7 @@ async function startInst(port) {
 
     _startingPorts.delete(port);
     if (ok) {
-      showFeedback(`✓ Instance accessible sur http://localhost:${port}`);
+      showFeedback(`✓ Instance accessible sur http://${window.location.hostname}:${port}`);
     } else {
       showFeedback(`⚠ Instance lancée mais ne répond pas. Voir data/instances/Site_${port}/scribe.log`);
     }
@@ -868,7 +870,7 @@ async function geocode(port) {
   } catch (e) {
     let msg = e.message;
     if (msg.includes("Aucun résultat")) {
-      msg += "\n\nSuggestions :\n• Format : 'numéro rue, ville' (avec virgule)\n• Exemple : '1 avenue de l'hôpital, Paris'\n• Ou simplement : 'Paris, France'";
+      msg += "\n\nSuggestions :\n• Format : 'numéro rue, ville' (avec virgule)\n• Exemple : '1 avenue de l'hôpital, Metz-Tessy'\n• Ou simplement : 'Annecy, France'";
     } else if (msg.includes("502") || msg.includes("indisponible")) {
       msg = "Service de géocodage indisponible. Vous pouvez saisir lat/lon manuellement.";
     }
@@ -1255,6 +1257,35 @@ async function relaunchWizard() {
     }
   } catch (e) {
     toast('Impossible de relancer le wizard : ' + e.message, 'err');
+  }
+}
+
+// ─── v3.0.0 — Libérer les ports SCRIBE occupés par des process orphelins ──
+async function freeAllPorts() {
+  if (!confirm("Libérer tous les ports SCRIBE occupés par d'anciens process orphelins ?\n\n" +
+               "Seuls les process clairement identifiables comme SCRIBE seront terminés.\n" +
+               "Les process tiers (autres applications) ne seront JAMAIS touchés.\n\n" +
+               "Utile après un crash ou si une instance refuse de démarrer.")) {
+    return;
+  }
+  try {
+    const r = await fetch('/api/master/free-ports', {method: 'POST', headers: authHeaders()});
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.detail || 'HTTP ' + r.status); }
+    const data = await r.json();
+    // Construire un rapport lisible
+    let rapport = `Libération terminée — ${data.summary || ''}\n\n`;
+    const freed   = (data.results || []).filter(x => x.status === 'freed');
+    const foreign = (data.results || []).filter(x => x.status === 'foreign');
+    const failed  = (data.results || []).filter(x => x.status === 'failed_kill');
+    if (freed.length)   rapport += `✓ Libérés : ${freed.map(x => `:${x.port}(PID ${x.pid})`).join(', ')}\n`;
+    if (foreign.length) rapport += `⚠ Process tiers détectés (NON tués) :\n` +
+                                    foreign.map(x => `  :${x.port} — PID ${x.pid}`).join('\n') + '\n';
+    if (failed.length)  rapport += `⚠ Échecs terminaison : ${failed.map(x => `:${x.port}`).join(', ')}\n`;
+    if (!freed.length && !foreign.length && !failed.length) rapport += 'Tous les ports SCRIBE étaient déjà libres.';
+    alert(rapport);
+    refreshInstances();
+  } catch (e) {
+    alert("Erreur libération ports : " + e.message);
   }
 }
 </script>

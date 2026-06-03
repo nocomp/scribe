@@ -42,6 +42,10 @@ from master.instances_manager import (
     _pid_alive,
 )
 
+# v3000h17 — hostname externe (résout les "localhost:8565" hardcodés
+# qui cassent l'utilisation sur VPS ou en LAN)
+from master.hostname_config import get_external_host
+
 logger = logging.getLogger("scribe.master.exercice")
 
 # [EXO] Chemins isolés du mode prod
@@ -84,13 +88,26 @@ class ExerciceInstanceConfig:
 
     def __post_init__(self):
         if not self.sigle:
-            self.sigle = f"Exo_{self.port}"
+            # v3.0.0 — Sigle par défaut aligné sur EXO_INSTANCES du collecteur
+            # exercice (8660→EXO1, 8661→EXO2, ..., 8666→EXO7). Hors plage,
+            # fallback sur Exo_{port}.
+            _exo_map = {8660:"EXO1",8661:"EXO2",8662:"EXO3",
+                        8663:"EXO4",8664:"EXO5",8665:"EXO6",8666:"EXO7"}
+            self.sigle = _exo_map.get(self.port, f"Exo_{self.port}")
         if not self.nom:
-            self.nom = self.sigle
+            # v3.0.0 — Nom lisible si sigle EXOn (sinon = sigle)
+            if self.sigle.startswith("EXO") and self.sigle[3:].isdigit():
+                self.nom = f"Site Exercice {self.sigle[3:]}"
+            else:
+                self.nom = self.sigle
         if not self.admin_password:
-            # [EXO] Mot de passe par défaut différent de prod
-            # (visible dans l'UI animateur, pas un secret)
-            self.admin_password = generate_password()
+            # v3.0.0 — Mot de passe exercice FIXE et standard : "Exercice2026!".
+            # Indispensable pour que le collecteur animateur (port 8565) puisse
+            # se logger sur chaque instance pour injecter les stimuli — il utilise
+            # ce mot de passe en dur dans _login_instance(). Un mdp aléatoire ici
+            # cassait l'injection (0 stimulus). Ce n'est pas un secret : c'est un
+            # identifiant d'exercice partagé, connu des joueurs.
+            self.admin_password = "Exercice2026!"
 
 
 @dataclass
@@ -226,10 +243,12 @@ class ExerciceManager:
             1 for s in self.instances.values()
             if s.pid and _pid_alive(s.pid)
         )
+        # v3000h17 — utiliser le hostname externe configuré (au lieu de localhost)
+        ext_host = get_external_host(fallback="localhost")
         return {
             "collecteur_actif":     coll_alive,
             "collecteur_pid":       coll_pid if coll_alive else None,
-            "collecteur_url":       f"http://localhost:{EXO_COLLECTEUR_PORT}",
+            "collecteur_url":       f"http://{ext_host}:{EXO_COLLECTEUR_PORT}",
             "collecteur_started_at": self.collecteur_started_at if coll_alive else None,
             "instances_actives":    actives,
             "instances_total":      len(self.instances),
@@ -257,12 +276,33 @@ class ExerciceManager:
                 f"collecteur_exercice.py introuvable : {EXO_COLLECTEUR_SCRIPT}"
             )
 
-        # Vérifier que le port n'est pas déjà occupé par un autre process
-        if _port_in_use(EXO_COLLECTEUR_PORT):
-            raise ValueError(
-                f"Port {EXO_COLLECTEUR_PORT} déjà occupé. Vérifiez qu'un autre "
-                f"collecteur exercice n'est pas déjà lancé."
-            )
+        # v3.0.0 — Libération prudente du port si occupé par un process SCRIBE
+        # orphelin. Process tiers : on n'y touche pas, on remonte une erreur claire.
+        try:
+            from master.port_cleanup import free_port_if_scribe
+            r = free_port_if_scribe(EXO_COLLECTEUR_PORT)
+            if r["status"] == "foreign":
+                raise ValueError(
+                    f"Port {EXO_COLLECTEUR_PORT} occupé par un process tiers "
+                    f"(PID {r.get('pid', '?')}). Arrêtez-le manuellement."
+                )
+            if r["status"] == "failed_kill":
+                raise ValueError(
+                    f"Port {EXO_COLLECTEUR_PORT} occupé par un collecteur SCRIBE "
+                    f"qui n'a pas pu être terminé. Tuez-le manuellement."
+                )
+            if r["status"] == "freed":
+                logger.info(f"Port {EXO_COLLECTEUR_PORT} libéré (collecteur orphelin terminé)")
+        except ValueError:
+            raise
+        except Exception as _e:
+            # Fallback minimal si port_cleanup indisponible
+            logger.warning(f"port_cleanup KO pour {EXO_COLLECTEUR_PORT} : {_e}")
+            if _port_in_use(EXO_COLLECTEUR_PORT):
+                raise ValueError(
+                    f"Port {EXO_COLLECTEUR_PORT} déjà occupé. Vérifiez qu'un autre "
+                    f"collecteur exercice n'est pas déjà lancé."
+                )
 
         # Préparer répertoires
         coll_dir = EXO_COLLECTEUR_SCRIPT.parent
@@ -398,6 +438,35 @@ class ExerciceManager:
         if state.statut == "actif" and state.pid and _pid_alive(state.pid):
             return state  # idempotent
 
+        # v3.0.0 — Libération prudente du port s'il est occupé par un process
+        # SCRIBE orphelin. Évite l'erreur Windows [winerror 10048] / Linux
+        # [Errno 98] "Address already in use" quand une ancienne instance
+        # n'a pas été arrêtée proprement (crash, kill brutal, etc.).
+        # Les process tiers (non-SCRIBE) ne sont JAMAIS touchés.
+        try:
+            from master.port_cleanup import free_port_if_scribe
+            r = free_port_if_scribe(port)
+            if r["status"] == "foreign":
+                # Process tiers : on n'a pas le droit de le tuer, on remonte
+                # un message clair plutôt que de laisser uvicorn planter.
+                raise ValueError(
+                    f"Port {port} occupé par un process tiers "
+                    f"(PID {r.get('pid', '?')}). "
+                    f"SCRIBE ne touche pas aux process qu'il n'a pas lancés. "
+                    f"Arrêtez-le manuellement avant de relancer l'instance."
+                )
+            if r["status"] == "failed_kill":
+                raise ValueError(
+                    f"Port {port} occupé par un process SCRIBE (PID {r.get('pid', '?')}) "
+                    f"qui n'a pas pu être terminé. Tuez-le manuellement et réessayez."
+                )
+            if r["status"] == "freed":
+                logger.info(f"Port {port} libéré (process SCRIBE orphelin PID {r.get('pid', '?')} terminé)")
+        except ValueError:
+            raise  # remonte les erreurs claires
+        except Exception as _e:
+            logger.warning(f"port_cleanup ignoré pour {port} : {_e}")
+
         # [EXO] Le collecteur exercice doit être actif pour que la fédération
         # marche. On le démarre si nécessaire (commodité).
         coll_status = self.get_status()
@@ -423,8 +492,14 @@ class ExerciceManager:
         state.db_path = str(inst_dir / "scribe.db")
         state.log_path = str(inst_dir / "scribe.log")
 
-        if not state.fed_token:
-            state.fed_token = generate_token()
+        # v3000h23 — Token fédération CANONIQUE pour mode exercice.
+        # Le collecteur exercice (collecteur_exercice.py) ne reconnaît QUE les
+        # tokens préchargés par load_tokens() : "token_exo_{sigle.lower()}_2026".
+        # Si on génère un token aléatoire, le collecteur renvoie 401 → aucune
+        # remontée → Assistant territorial vide + chat inter-instances cassé.
+        canonical_token = f"token_exo_{state.config.sigle.lower()}_2026"
+        if state.fed_token != canonical_token:
+            state.fed_token = canonical_token
 
         # Bootstrap DB (UF + capacité + admin) — on réutilise la logique
         # d'instances_manager via une import lazy
@@ -466,8 +541,22 @@ class ExerciceManager:
             "DATABASE_URL":         f"sqlite:///{state.db_path}",
             "SCRIBE_CONFIG_JS":     str(config_js_path),
             "SCRIBE_CONFIG_FILE":   str(config_xml_path),
+            # v3.0.0 — Secret JWT FIXE et partagé pour toutes les instances
+            # exercice. Sans ça, chaque (re)démarrage d'instance génère un secret
+            # aléatoire → les tokens des sessions ouvertes deviennent invalides →
+            # déconnexion au refresh (surtout pendant les phases de test où on
+            # relance souvent les instances). Comme c'est un environnement
+            # d'exercice (données non réelles), un secret partagé fixe est
+            # acceptable et évite les déconnexions intempestives.
+            "SCRIBE_SECRET":        "scribe-exercice-secret-partage-non-sensible-v3",
             "SCRIBE_ADMIN_LOGIN":   cfg.admin_login,
             "SCRIBE_ADMIN_PWD":     cfg.admin_password,
+            # v3.0.0 — FIX CRITIQUE : app/api/auth.py lit SCRIBE_ADMIN_USER et
+            # SCRIBE_ADMIN_PASS (pas _LOGIN/_PWD). Sans ces noms-là, ensure_admin()
+            # ne recevait jamais le bon mot de passe → le compte dircrise n'avait
+            # pas "Exercice2026!" → login collecteur échoue → 0 stimulus injecté.
+            "SCRIBE_ADMIN_USER":    cfg.admin_login,
+            "SCRIBE_ADMIN_PASS":    cfg.admin_password,
             "SCRIBE_LATITUDE":      str(cfg.latitude or ""),
             "SCRIBE_LONGITUDE":     str(cfg.longitude or ""),
             "SCRIBE_ADRESSE":       cfg.adresse or "",
@@ -665,7 +754,9 @@ class ExerciceManager:
           - exercice.mode = true (déclenche le bandeau dans index.html)
         """
         cfg = state.config
-        push_url = f"http://localhost:{EXO_COLLECTEUR_PORT}/api/push"
+        # v3000h17 — hostname externe (résout les "localhost" sur VPS/LAN)
+        ext_host = get_external_host(fallback="localhost")
+        push_url = f"http://{ext_host}:{EXO_COLLECTEUR_PORT}/api/push"
 
         cfg_js = {
             "etablissement": {

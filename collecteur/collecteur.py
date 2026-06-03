@@ -368,9 +368,9 @@ async def accept_pending(token_prefix: str, body: dict = {}):
     logger.info(f"Établissement accepté : {sigle} (token: {token[:12]}...)")
     return {"ok": True, "sigle": sigle, "message": f"{sigle} enrôlé avec succès"}
 
-@app.post("/api/admin/tokens/demo", dependencies=[Depends(require_admin)])
+@app.post("/api/admin/tokens/arc-alpin", dependencies=[Depends(require_admin)])
 async def register_demo_tokens():
-    """Enregistre les 4 tokens démo démo — utile si l'auto-register a échoué."""
+    """Enregistre les 4 tokens Arc Alpin démo — utile si l'auto-register a échoué."""
     added = []
     for tok, sigle in DEMO_TOKENS.items():
         if tok not in tokens:
@@ -378,7 +378,7 @@ async def register_demo_tokens():
             added.append(sigle)
     if added:
         save_tokens()
-        logger.info(f"Tokens démo enregistrés manuellement : {added}")
+        logger.info(f"Tokens Arc Alpin enregistrés manuellement : {added}")
     return {"ok": True, "added": added, "total": len(tokens),
             "message": f"{len(added)} token(s) ajouté(s), {len(tokens)} token(s) total"}
 
@@ -955,7 +955,8 @@ async def chat_get_presence(credentials=Depends(security)):
 async def get_annuaire_interght():
     import httpx
     result = []
-    PORT_MAP = {}
+    PORT_MAP = {"DEMO1":"8000","DEMO2":"8001","DEMO3":"8002","DEMO4":"8003",
+                "DEMO5":"8002","DEMO6":"8003","DEMO7":"8004","DEMO5":"8005","DEMO6":"8006"}
     for token, sigle in tokens.items():
         etab_data = etablissements.get(sigle)
         if not etab_data:
@@ -1093,6 +1094,83 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--b
 /* KPI BAR */
 #kpi-bar{display:flex;align-items:center;gap:0;background:#003189;border-bottom:3px solid #e1000f;flex-shrink:0;height:36px}
 .kpi-cell{display:flex;align-items:center;gap:7px;padding:0 16px;border-right:1px solid var(--border);height:100%}
+.kpi-clickable{transition:background .15s}
+.kpi-clickable:hover{background:rgba(255,255,255,.07)}
+
+/* ── KPI Modale (v3000h31) ── */
+#kpi-modal-backdrop{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9998;
+  align-items:center;justify-content:center;backdrop-filter:blur(2px);
+}
+#kpi-modal-backdrop.show{display:flex}
+#kpi-modal{
+  background:var(--s0);border:1px solid var(--border);border-radius:8px;
+  width:780px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden;
+}
+.kpi-modal-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,var(--s1),var(--s0));flex-shrink:0;
+}
+.kpi-modal-title{
+  font-family:var(--head);font-size:14px;font-weight:700;letter-spacing:1.2px;
+  color:var(--text);display:flex;align-items:center;gap:10px;
+}
+.kpi-modal-count{
+  font-family:var(--mono);font-size:10px;background:var(--blue);color:white;
+  padding:2px 9px;border-radius:10px;letter-spacing:1px;
+}
+.kpi-modal-close{
+  background:transparent;color:var(--muted);border:1px solid var(--border);
+  width:28px;height:28px;border-radius:4px;font-size:14px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.kpi-modal-close:hover{background:var(--s2);color:var(--text)}
+.kpi-modal-body{
+  flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:14px;
+}
+.kpi-group{background:var(--s1);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.kpi-group-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;background:var(--s2);border-bottom:1px solid var(--border);
+}
+.kpi-group-name{
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:1px;color:var(--text);
+  display:flex;align-items:center;gap:8px;
+}
+.kpi-group-level{
+  font-family:var(--mono);font-size:8px;padding:2px 7px;border-radius:8px;letter-spacing:1px;
+}
+.kpi-group-count{
+  font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;
+}
+.kpi-group-items{display:flex;flex-direction:column}
+.kpi-item{
+  padding:10px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;font-size:12px;
+}
+.kpi-item:last-child{border-bottom:none}
+.kpi-item-urg{
+  font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 7px;
+  border-radius:3px;flex-shrink:0;min-width:24px;text-align:center;letter-spacing:1px;
+}
+.kpi-item-urg.u4{background:rgba(225,0,15,.2);color:#e1000f}
+.kpi-item-urg.u3{background:rgba(249,115,22,.2);color:#f97316}
+.kpi-item-urg.u2{background:rgba(245,197,24,.15);color:#f5c518}
+.kpi-item-urg.u1{background:rgba(0,207,255,.1);color:var(--cyan)}
+.kpi-item-type{
+  font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;
+  background:var(--s2);padding:2px 6px;border-radius:3px;flex-shrink:0;
+}
+.kpi-item-text{flex:1;color:var(--text);line-height:1.4;min-width:0;word-break:break-word}
+.kpi-item-site{
+  font-family:var(--mono);font-size:9px;color:var(--muted2);
+  margin-top:3px;letter-spacing:0.5px;
+}
+.kpi-modal-empty{
+  text-align:center;padding:40px;color:var(--muted);font-size:12px;font-style:italic;font-family:var(--mono);
+}
 .kpi-label{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:rgba(255,255,255,.7);text-transform:uppercase}
 .kpi-val{font-family:var(--mono);font-size:14px;font-weight:700;color:#ffffff}
 .kpi-val.ok{color:var(--green)}.kpi-val.warn{color:var(--yellow)}.kpi-val.crit{color:var(--red)}
@@ -1232,10 +1310,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--b
   <div id="coll-default-hint" style="display:none;background:#e3e3fd;border-radius:4px;padding:10px 12px;font-family:monospace;font-size:10px;color:#000091;line-height:1.5;text-align:left;margin-top:4px">
     <strong>Première connexion ?</strong><br>
     Identifiant : <code style="background:rgba(0,0,145,.1);padding:1px 4px;border-radius:2px">supervision</code><br>
-    Mot de passe : <code style="background:rgba(0,0,145,.1);padding:1px 4px;border-radius:2px">changeme</code><br>
+    Mot de passe : <code style="background:rgba(0,0,145,.1);padding:1px 4px;border-radius:2px">Scribe2026!</code><br>
     <span style="font-size:9px;opacity:.7">À changer après le premier login (onglet Comptes).</span>
   </div>
-  <div style="font-family:monospace;font-size:9px;color:#94a3b8;text-align:center;margin-top:8px">SCRIBE — Crisis OS Open Source<br>Accès réservé aux personnels autorisés</div>
+  <div style="font-family:monospace;font-size:9px;color:#94a3b8;text-align:center;margin-top:8px">© Centre Hospitalier Annecy-Genevois — SCRIBE Crisis OS<br>Accès réservé aux personnels autorisés</div>
 </div>
 </div>
 <script>
@@ -1301,16 +1379,16 @@ async function collLogin() {
 
   <!-- KPI BAR -->
   <div id="kpi-bar">
-    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v2.5.0</div>
+    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.4.0-alpha2</div>
     <div class="kpi-cell"><span class="kpi-label">GHT</span><span class="kpi-val" id="k-ght">—</span></div>
     <div class="kpi-cell" style="cursor:pointer" title="Délai avant masquage incidents résolus (clic pour modifier)">
       <span class="kpi-label">RÉSOLU → masqué</span>
       <span class="kpi-val" id="k-hide-delay" onclick="promptHideDelay()" style="font-size:13px">30min</span>
     </div>
-    <div class="kpi-cell"><span class="kpi-label">Sites</span><span class="kpi-val" id="k-etab" title="">—</span></div>
-    <div class="kpi-cell"><span class="kpi-label">En attente</span><span class="kpi-val warn" id="k-pending">0</span></div>
-    <div class="kpi-cell"><span class="kpi-label">Incidents actifs</span><span class="kpi-val" id="k-inc">—</span></div>
-    <div class="kpi-cell"><span class="kpi-label">Critiques</span><span class="kpi-val crit" id="k-crit">—</span></div>
+    <div class="kpi-cell kpi-clickable" style="cursor:pointer" onclick="openKpiModal('sites')" title="Cliquer pour voir tous les sites par établissement"><span class="kpi-label">Sites</span><span class="kpi-val" id="k-etab" title="">—</span></div>
+    <div class="kpi-cell kpi-clickable" style="cursor:pointer" onclick="openKpiModal('pending')" title="Cliquer pour voir les établissements en attente d'enrôlement"><span class="kpi-label">En attente</span><span class="kpi-val warn" id="k-pending">0</span></div>
+    <div class="kpi-cell kpi-clickable" style="cursor:pointer" onclick="openKpiModal('incidents')" title="Cliquer pour voir les incidents actifs groupés par établissement"><span class="kpi-label">Incidents actifs</span><span class="kpi-val" id="k-inc">—</span></div>
+    <div class="kpi-cell kpi-clickable" style="cursor:pointer" onclick="openKpiModal('critiques')" title="Cliquer pour voir les incidents critiques (U≥3) groupés par établissement"><span class="kpi-label">Critiques</span><span class="kpi-val crit" id="k-crit">—</span></div>
     <div class="kpi-cell"><span class="kpi-label">Messages non lus</span><span class="kpi-val" id="k-msg">—</span></div>
     <div id="kpi-clock">--:--:--</div>
     <div id="kpi-refresh" style="display:flex;align-items:center;gap:6px">
@@ -1323,6 +1401,7 @@ async function collLogin() {
   <!-- TABS -->
   <div id="header">
     <button class="tab-btn active" onclick="switchTab('supervision',this)">⬡ SUPERVISION</button>
+    <button class="tab-btn" onclick="switchTab('assistant',this)" style="color:#003189;font-weight:700">🎓 ASSISTANT<span id="ta-tab-badge" style="background:#e1000f;color:white;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;display:none;margin-left:4px">0</span></button>
     <button class="tab-btn" onclick="switchTab('carto',this)">⊕ CARTOGRAPHIE</button>
     <button class="tab-btn" onclick="switchTab('messagerie',this)">✉ MESSAGES<span id="msg-badge-hdr"></span></button>
     <button class="tab-btn" onclick="switchTab('statuts',this)">▦ STATUTS PUBLICS</button>
@@ -1351,6 +1430,16 @@ async function collLogin() {
           <div id="pending-list"></div>
         </div>
         <!-- Relay section -->
+        <!-- Fix tokens section -->
+        <div style="border-bottom:1px solid var(--border);padding:6px 12px;background:rgba(249,115,22,.04)">
+          <div style="font-family:var(--mono);font-size:8px;color:var(--muted2);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
+            <span>🔧 TOKENS ARC ALPIN</span>
+            <button onclick="registerArcAlpinTokens()" style="font-family:var(--mono);font-size:7px;padding:2px 8px;background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.4);border-radius:3px;color:#f97316;cursor:pointer">
+              ⚡ Enregistrer
+            </button>
+          </div>
+          <div style="font-family:var(--mono);font-size:7px;color:var(--muted)">Si supervision vide → cliquer pour forcer l'enregistrement des tokens démo</div>
+        </div>
         <div id="relay-section" style="border-bottom:1px solid var(--border);padding:8px 12px">
           <div style="font-family:var(--mono);font-size:8px;letter-spacing:1px;color:var(--muted2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
             <span>⇪ RELAIS UPSTREAM</span>
@@ -1366,6 +1455,53 @@ async function collLogin() {
           <div class="dp-empty-icon">⬡</div>
           <span style="font-family:var(--mono);font-size:10px;letter-spacing:1px">Sélectionnez un établissement</span>
         </div>
+      </div>
+    </div>
+
+    <!-- ASSISTANT TERRITORIAL (v3000h28) -->
+    <div class="tab-pane" id="pane-assistant" style="overflow-y:auto;padding:14px 16px;flex-direction:column;align-items:stretch">
+
+      <!-- Bandeau supérieur compact -->
+      <div style="display:flex;align-items:center;gap:14px;background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:10px 16px;margin-bottom:14px;flex-shrink:0">
+        <div style="font-size:22px;flex-shrink:0">🎓</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:var(--head);font-size:14px;font-weight:700;letter-spacing:1px;color:#003189">ASSISTANT TERRITORIAL</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:0.5px">Détecte les angles morts inter-établissements que personne ne peut voir seul</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Dernière maj</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text);background:var(--s2);padding:4px 10px;border-radius:4px;border:1px solid var(--border)">
+          <span id="ta-clock">—</span>
+        </div>
+        <button onclick="refreshTerritorial()" style="background:var(--s2);color:var(--text);border:1px solid var(--border);padding:5px 12px;border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:9px;letter-spacing:1px">↻ ACTUALISER</button>
+      </div>
+
+      <!-- 4 KPI en ligne, compacts -->
+      <div id="ta-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;flex-shrink:0">
+        <div style="background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:10px 14px;border-left:3px solid var(--blue)">
+          <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px">Établissements actifs</div>
+          <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text);margin-top:4px" id="ta-online">—</div>
+        </div>
+        <div style="background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:10px 14px;border-left:3px solid var(--red)">
+          <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px">Avec incidents critiques</div>
+          <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--red);margin-top:4px" id="ta-crit-sites">—</div>
+        </div>
+        <div style="background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:10px 14px;border-left:3px solid var(--green)">
+          <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px">Plans Blancs actifs</div>
+          <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--text);margin-top:4px" id="ta-pb">—</div>
+        </div>
+        <div style="background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:10px 14px;border-left:3px solid var(--orange)">
+          <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px">Alertes territoriales</div>
+          <div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--orange);margin-top:4px" id="ta-nb-alertes">—</div>
+        </div>
+      </div>
+
+      <!-- Titre section + alertes -->
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin:0 0 10px 4px;display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span style="display:inline-block;width:6px;height:6px;background:var(--orange);border-radius:50%"></span>
+        Signaux territoriaux détectés
+      </div>
+      <div id="ta-alertes-list" style="display:flex;flex-direction:column;gap:8px;padding-bottom:20px">
+        <div style="text-align:center;padding:24px;color:var(--muted);font-size:11px;font-family:var(--mono);font-style:italic">Chargement…</div>
       </div>
     </div>
 
@@ -1442,6 +1578,23 @@ async function collLogin() {
   </div><!-- /main -->
 </div><!-- /app -->
 
+<!-- KPI Modal (v3000h31) — clic sur compteur barre KPI -->
+<div id="kpi-modal-backdrop" onclick="if(event.target===this)closeKpiModal()">
+  <div id="kpi-modal">
+    <div class="kpi-modal-hdr">
+      <div class="kpi-modal-title">
+        <span id="kpi-modal-icon">📋</span>
+        <span id="kpi-modal-title-text">—</span>
+        <span class="kpi-modal-count" id="kpi-modal-count">0</span>
+      </div>
+      <button class="kpi-modal-close" onclick="closeKpiModal()" title="Fermer (Esc)">✕</button>
+    </div>
+    <div class="kpi-modal-body" id="kpi-modal-body">
+      <div class="kpi-modal-empty">Chargement…</div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Add Relay -->
 <div class="modal-overlay" id="modal-add-relay">
   <div class="modal-box">
@@ -1517,7 +1670,7 @@ async function collLogin() {
       <div id="accept-info" style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.8;padding:8px 10px;background:var(--s3);border-radius:5px;border:1px solid var(--border2)"></div>
       <div>
         <label class="form-label">SIGLE OFFICIEL</label>
-        <input id="accept-sigle" type="text" class="form-input" placeholder="ex: DEMO1">
+        <input id="accept-sigle" type="text" class="form-input" placeholder="ex: CHANGE">
       </div>
       <input id="accept-token" type="hidden">
     </div>
@@ -2191,8 +2344,8 @@ function renderRelays(relays) {
     <button onclick="deleteRelay(${i})" style="font-family:var(--mono);font-size:7px;padding:2px 5px;background:transparent;border:1px solid rgba(255,45,85,.3);border-radius:3px;color:var(--red);cursor:pointer">✕</button>
   </div>`).join('');
 }
-async function registerDemoTokens() {
-  const r = await fetch('/api/admin/tokens/demo', {
+async function registerArcAlpinTokens() {
+  const r = await fetch('/api/admin/tokens/arc-alpin', {
     method: 'POST',
     headers: {'Authorization': 'Bearer ' + ADMIN_TOKEN}
   });
@@ -2382,6 +2535,284 @@ async function changePass(login) {
   }).catch(()=>null);
   if (r && r.ok) alert('Mot de passe modifié');
   else alert('Erreur');
+}
+
+// ── v3000h25 — Assistant territorial ──────────────────────────────────────
+function escapeHtmlTA(s) {
+  return String(s||'').replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function refreshTerritorial() {
+  fetch('/api/territorial-assistant')
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(data){
+      if (!data) return;
+      renderTerritorial(data);
+    })
+    .catch(function(e){
+      console.warn('[territorial] erreur:', e);
+    });
+}
+
+function renderTerritorial(data) {
+  var sum = data.summary || {};
+  var alertes = data.alertes || [];
+
+  var elOnline = document.getElementById('ta-online');
+  var elCrit = document.getElementById('ta-crit-sites');
+  var elPB = document.getElementById('ta-pb');
+  var elNbA = document.getElementById('ta-nb-alertes');
+  var elBadge = document.getElementById('ta-tab-badge');
+  var elClock = document.getElementById('ta-clock');
+
+  if (elOnline) elOnline.textContent = (sum.etablissements_online || 0) + ' / ' + (sum.total_etablissements || 0);
+  if (elCrit) elCrit.textContent = sum.etablissements_avec_critiques || 0;
+  if (elPB) elPB.textContent = sum.plans_blancs_actifs || 0;
+  if (elNbA) elNbA.textContent = alertes.length;
+
+  if (elBadge) {
+    if (alertes.length > 0) {
+      elBadge.style.display = 'inline-block';
+      elBadge.textContent = alertes.length;
+    } else {
+      elBadge.style.display = 'none';
+    }
+  }
+
+  if (elClock && data.generated_at) {
+    try {
+      var d = new Date(data.generated_at);
+      elClock.textContent = d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    } catch(e) {}
+  }
+
+  var list = document.getElementById('ta-alertes-list');
+  if (!list) return;
+  if (alertes.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:12px;font-style:italic">'
+      + '\u2713 Aucun signal territorial d\u00e9tect\u00e9 actuellement.</div>';
+    return;
+  }
+
+  list.innerHTML = alertes.map(function(a) {
+    var color = a.niveau === 'alert' ? '#dc2626' : '#003189';
+    var bgGradient = a.niveau === 'alert'
+      ? 'linear-gradient(135deg, rgba(220,38,38,0.08), rgba(220,38,38,0.02))'
+      : 'linear-gradient(135deg, rgba(0,49,137,0.08), rgba(0,49,137,0.02))';
+    var concernes = (a.etablissements_concernes || []).join(', ');
+    var niveauLabel = a.niveau === 'alert' ? 'ALERTE TERRITORIALE' : 'SIGNAL';
+    return [
+      '<div style="background:' + bgGradient + ';border:1px solid ' + color + '40;border-left:4px solid ' + color + ';',
+      '     border-radius:8px;padding:14px 16px">',
+      '  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">',
+      '    <span style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1.5px;color:' + color + ';',
+      '          background:' + color + '20;padding:3px 8px;border-radius:10px">' + niveauLabel + '</span>',
+      concernes ? '    <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">' + escapeHtmlTA(concernes) + '</span>' : '',
+      '  </div>',
+      '  <div style="font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text)">',
+      '    ' + escapeHtmlTA(a.titre || ''),
+      '  </div>',
+      '  <div style="font-size:12.5px;line-height:1.5;color:var(--text);opacity:0.9">',
+      '    ' + escapeHtmlTA(a.message || ''),
+      '  </div>',
+      '</div>',
+    ].join('');
+  }).join('');
+}
+
+// Démarrer le polling de l'Assistant territorial dès le chargement
+window.addEventListener('load', function() {
+  refreshTerritorial();
+  setInterval(refreshTerritorial, 5000);
+});
+
+// ── v3000h31 — Modale KPI cliquables ─────────────────────────────────────
+function escapeHtmlKpi(s) {
+  return String(s||'').replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function openKpiModal(type) {
+  var backdrop = document.getElementById('kpi-modal-backdrop');
+  var icon = document.getElementById('kpi-modal-icon');
+  var titleText = document.getElementById('kpi-modal-title-text');
+  var count = document.getElementById('kpi-modal-count');
+  var body = document.getElementById('kpi-modal-body');
+
+  var titles = {
+    sites:     {icon:'🏥', title:'SITES PAR ÉTABLISSEMENT'},
+    pending:   {icon:'⏳', title:'EN ATTENTE D\'ENRÔLEMENT'},
+    incidents: {icon:'⚠️', title:'INCIDENTS ACTIFS — GROUPÉS PAR ÉTABLISSEMENT'},
+    critiques: {icon:'🔴', title:'INCIDENTS CRITIQUES (U≥3)'},
+  };
+  var t = titles[type] || {icon:'📋', title:'DÉTAIL'};
+  icon.textContent = t.icon;
+  titleText.textContent = t.title;
+  count.textContent = '...';
+  body.innerHTML = '<div class="kpi-modal-empty">Chargement…</div>';
+  backdrop.classList.add('show');
+
+  // Charger les données depuis /api/summary (déjà récupéré dans allData)
+  // si dispo, sinon faire un fetch
+  if (typeof allData !== 'undefined' && Array.isArray(allData) && allData.length > 0) {
+    renderKpiModal(type, allData);
+  } else {
+    fetch('/api/summary', {
+      headers: {Authorization: 'Bearer ' + (localStorage.getItem('coll_session') || '')}
+    }).then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(data){ renderKpiModal(type, data); })
+      .catch(function(){ body.innerHTML = '<div class="kpi-modal-empty">Erreur de chargement</div>'; });
+  }
+}
+
+function closeKpiModal() {
+  document.getElementById('kpi-modal-backdrop').classList.remove('show');
+}
+
+// Fermer la modale avec Esc
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeKpiModal();
+});
+
+function renderKpiModal(type, data) {
+  var body = document.getElementById('kpi-modal-body');
+  var count = document.getElementById('kpi-modal-count');
+
+  if (type === 'sites') {
+    renderKpiSites(data, body, count);
+  } else if (type === 'pending') {
+    renderKpiPending(body, count);
+  } else if (type === 'incidents') {
+    renderKpiIncidents(data, body, count, false);
+  } else if (type === 'critiques') {
+    renderKpiIncidents(data, body, count, true);
+  }
+}
+
+function renderKpiSites(data, body, count) {
+  var total = 0;
+  var html = data.map(function(e) {
+    var sites = e.sites || [];
+    total += sites.length;
+    if (!sites.length) return '';
+    var lvlColor = ({CRITIQUE:'#e1000f', CRISE:'#f97316', ALERTE:'#f5c518', NOMINAL:'#22c55e'})[e.niveau_global] || '#94a3b8';
+    var sitesHtml = sites.map(function(s) {
+      var nivBadge = s.niveau && s.niveau !== 'NOMINAL'
+        ? '<span class="kpi-item-urg ' + (s.niveau==='CRITIQUE'?'u4':s.niveau==='CRISE'?'u3':'u2') + '">' + s.niveau + '</span>'
+        : '<span class="kpi-item-urg u1">OK</span>';
+      var incBadge = s.incidents_ouverts > 0
+        ? '<span class="kpi-item-type">' + s.incidents_ouverts + ' inc.</span>'
+        : '';
+      return '<div class="kpi-item">' + nivBadge +
+        '<div class="kpi-item-text">' + escapeHtmlKpi(s.nom || '?') +
+        (s.adresse ? '<div class="kpi-item-site">' + escapeHtmlKpi(s.adresse) + '</div>' : '') +
+        '</div>' + incBadge + '</div>';
+    }).join('');
+    return '<div class="kpi-group">' +
+      '<div class="kpi-group-hdr">' +
+        '<div class="kpi-group-name">' +
+          '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + lvlColor + '"></span>' +
+          escapeHtmlKpi(e.sigle) + ' — ' + escapeHtmlKpi(e.nom || '') +
+        '</div>' +
+        '<div class="kpi-group-count">' + sites.length + ' site(s)</div>' +
+      '</div>' +
+      '<div class="kpi-group-items">' + sitesHtml + '</div>' +
+    '</div>';
+  }).join('');
+  count.textContent = total;
+  body.innerHTML = html || '<div class="kpi-modal-empty">Aucun site enregistré</div>';
+}
+
+function renderKpiPending(body, count) {
+  // Lire pending depuis l'API admin
+  fetch('/api/admin/pending', {
+    headers: {Authorization: 'Bearer PLACEHOLDER_ADMIN_TOKEN'}
+  }).then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(data){
+      var list = data && data.pending ? Object.entries(data.pending) : [];
+      count.textContent = list.length;
+      if (!list.length) {
+        body.innerHTML = '<div class="kpi-modal-empty">✓ Aucun établissement en attente d\'enrôlement.</div>';
+        return;
+      }
+      body.innerHTML = list.map(function(entry) {
+        var token = entry[0];
+        var info = entry[1];
+        return '<div class="kpi-group">' +
+          '<div class="kpi-group-hdr">' +
+            '<div class="kpi-group-name">' +
+              '<span style="color:#f5c518">⏳</span> ' + escapeHtmlKpi(info.sigle_propose || '?') +
+              ' — ' + escapeHtmlKpi(info.nom_propose || '?') +
+            '</div>' +
+            '<div class="kpi-group-count">' + escapeHtmlKpi(info.first_seen_at || '') + '</div>' +
+          '</div>' +
+          '<div class="kpi-item">' +
+            '<span class="kpi-item-type">TOKEN</span>' +
+            '<div class="kpi-item-text" style="font-family:var(--mono);font-size:10px;word-break:break-all">' +
+              escapeHtmlKpi(token.substring(0,16)) + '…' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    })
+    .catch(function(){
+      body.innerHTML = '<div class="kpi-modal-empty">Erreur — impossible de récupérer la liste des établissements en attente</div>';
+    });
+}
+
+function renderKpiIncidents(data, body, count, critiquesOnly) {
+  var totalCount = 0;
+  var html = data.map(function(e) {
+    var incidents = e.incidents || [];
+    // Filtrer par status non-résolu
+    incidents = incidents.filter(function(i) {
+      var s = (i.status || '').toUpperCase();
+      return ['RÉSOLU','RESOLU','ARCHIVÉ','ARCHIVE','FERMÉ','CLOS'].indexOf(s) < 0;
+    });
+    if (critiquesOnly) {
+      incidents = incidents.filter(function(i) {
+        return (i.urgency || i.urgence || 1) >= 3;
+      });
+    }
+    if (!incidents.length) return '';
+    totalCount += incidents.length;
+    // Trier par urgency décroissante
+    incidents.sort(function(a,b) {
+      return (b.urgency||1) - (a.urgency||1);
+    });
+    var lvlColor = ({CRITIQUE:'#e1000f', CRISE:'#f97316', ALERTE:'#f5c518', NOMINAL:'#22c55e'})[e.niveau_global] || '#94a3b8';
+    var incHtml = incidents.map(function(i) {
+      var u = i.urgency || i.urgence || 1;
+      var uClass = u >= 4 ? 'u4' : u >= 3 ? 'u3' : u >= 2 ? 'u2' : 'u1';
+      var uLabel = 'U' + u;
+      return '<div class="kpi-item">' +
+        '<span class="kpi-item-urg ' + uClass + '">' + uLabel + '</span>' +
+        '<span class="kpi-item-type">' + escapeHtmlKpi(i.type_crise || '?') + '</span>' +
+        '<div class="kpi-item-text">' + escapeHtmlKpi(i.fait_resume || '(sans description)') +
+        (i.site ? '<div class="kpi-item-site">📍 ' + escapeHtmlKpi(i.site) + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+    return '<div class="kpi-group">' +
+      '<div class="kpi-group-hdr">' +
+        '<div class="kpi-group-name">' +
+          '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + lvlColor + '"></span>' +
+          escapeHtmlKpi(e.sigle) + ' — ' + escapeHtmlKpi(e.nom || '') +
+          '<span class="kpi-group-level" style="background:' + lvlColor + '20;color:' + lvlColor + '">' +
+            escapeHtmlKpi(e.niveau_global || '?') + '</span>' +
+        '</div>' +
+        '<div class="kpi-group-count">' + incidents.length + ' incident(s)</div>' +
+      '</div>' +
+      '<div class="kpi-group-items">' + incHtml + '</div>' +
+    '</div>';
+  }).join('');
+  count.textContent = totalCount;
+  body.innerHTML = html || '<div class="kpi-modal-empty">' +
+    (critiquesOnly ? '✓ Aucun incident critique (U≥3) actif.' : '✓ Aucun incident actif.') +
+    '</div>';
 }
 
 </script>
@@ -2618,6 +3049,73 @@ def health():
             "tokens": len(tokens), "pending": len(pending)}
 
 
+# v3000h29 — Debug endpoint pour Assistant territorial
+@app.get("/api/territorial-debug")
+async def get_territorial_debug():
+    """Retourne la structure exacte de l'état utilisé par l'Assistant territorial.
+    Utile pour diagnostiquer pourquoi des règles ne se déclenchent pas."""
+    debug = {
+        "etablissements_count": len(etablissements),
+        "etablissements": {},
+        "transferts_inter_count": len(transferts_inter),
+        "transferts_inter_sample": transferts_inter[:3] if transferts_inter else [],
+    }
+    for sigle, data in etablissements.items():
+        debug["etablissements"][sigle] = {
+            "niveau_global":    data.get("niveau_global"),
+            "fresh":            data.get("fresh"),
+            "age_minutes":      data.get("age_minutes"),
+            "timestamp":        data.get("timestamp"),
+            "received_at":      data.get("received_at"),
+            "kpis":             data.get("kpis", {}),
+            "incidents_count":  len(data.get("incidents", [])),
+            "incidents_sample": (data.get("incidents") or [])[:3],
+            "declarations_count": len(data.get("declarations", [])),
+            "declarations_sample": (data.get("declarations") or [])[:2],
+            "all_keys":         sorted(data.keys()) if isinstance(data, dict) else [],
+        }
+    return debug
+
+
+# v3000h25 — Assistant territorial (vue agrégée Arc Alpin)
+@app.get("/api/territorial-assistant")
+async def get_territorial_assistant():
+    """v3000h25 — Assistant de supervision territoriale.
+
+    Évalue les 5 règles territoriales (RT1-RT5) sur la vue agrégée des
+    établissements Arc Alpin et retourne les alertes + un résumé d'état.
+
+    Sans auth pour faciliter la supervision (la vue agrégée n'expose
+    pas de données patients nominatives). Si on veut auth plus tard,
+    ajouter Depends(security) + _check_any_auth(credentials).
+    """
+    try:
+        # Tentative import : module local au collecteur/ (copié depuis exercice)
+        from territorial_assistant import evaluate_territorial_rules
+    except ImportError:
+        try:
+            from collecteur.territorial_assistant import evaluate_territorial_rules
+        except ImportError as e:
+            return {
+                "summary": {},
+                "alertes": [],
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "error": f"module territorial_assistant introuvable : {e}",
+            }
+    try:
+        result = evaluate_territorial_rules(etablissements, transferts_inter)
+        return result
+    except Exception as e:
+        import logging
+        logging.getLogger("scribe.collecteur").error(f"territorial_assistant: {e}")
+        return {
+            "summary": {},
+            "alertes": [],
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "error": str(e),
+        }
+
+
 @app.get("/debug")
 def debug():
     """Diagnostic — tokens, données, état complet."""
@@ -2648,8 +3146,8 @@ def load_ui_auth() -> dict:
     import hashlib
     return {
         "login": "supervision",
-        "password_hash": hashlib.sha256("changeme".encode()).hexdigest(),
-        "users": [{"login": "supervision", "role": "admin", "password_hash": "057ba03d6c44104863dc7361fe4578965d1887360f90a0895882e58a6248fc86", "must_change_password": True}]
+        "password_hash": hashlib.sha256("Scribe2026!".encode()).hexdigest(),
+        "users": [{"login": "supervision", "role": "admin", "password_hash": "0a0da7eef0453b6cbd142fcf25f7ac63081c9cb920cba999c1a3a80d1f25dfda"}]
     }
 
 def check_ui_credentials(login: str, password: str) -> bool:
@@ -2784,7 +3282,7 @@ def first_launch():
     # Master/onboarding pas fait
     onboarding_flag = Path("master/.onboarding_done")
     onboarding_done = onboarding_flag.exists()
-    # Pas de compte UI custom (juste le compte par défaut supervision/changeme)
+    # Pas de compte UI custom (juste le compte par défaut supervision/Scribe2026!)
     has_custom_users = Path(UI_AUTH_FILE).exists()
     # Premier lancement = onboarding pas fait ET pas de compte custom
     return {"first_launch": (not onboarding_done) and (not has_custom_users)}
@@ -2803,7 +3301,10 @@ def verify_session(credentials=Depends(security)):
 
 # ── Démarrage ──────────────────────────────────────────────────────────────
 
-# ── Tokens démo démo — enregistrés automatiquement si tokens vides ─────
+# Tokens pré-enregistrés (vide en version publique).
+# Pour les déploiements avec plusieurs instances, l'enrôlement passe par l'UI :
+# ouvrir http://localhost:9000, section TOKENS, cliquer ✓ ACCEPTER quand
+# une instance pousse pour la première fois. Le token est alors mémorisé.
 DEMO_TOKENS = {}
 
 if __name__ == "__main__":
@@ -2814,13 +3315,11 @@ if __name__ == "__main__":
     load_relay()
 
     # Tokens: enrôlement MANUEL via l'UI (⏳ EN ATTENTE → ✓ ACCEPTER)
-    # Le bouton "⚡ Enregistrer" dans l'UI force l'enregistrement si besoin
     if tokens:
         print(f"  ✓ Tokens enregistrés : {list(tokens.values())}")
     else:
-        print(f"  ℹ Aucun token — les GHTs apparaîtront en ⏳ EN ATTENTE")
+        print(f"  ℹ Aucun token — les instances apparaîtront en ⏳ EN ATTENTE")
         print(f"  → Ouvrir http://localhost:9000 et cliquer ✓ ACCEPTER")
-        print(f"  → Tokens démo configurables via DEMO_TOKENS dans collecteur.py")
 
     nb_etab = len(tokens)
     nb_data  = len(etablissements)
@@ -2834,7 +3333,7 @@ if __name__ == "__main__":
     print(f"  (persistant dans {ADMIN_FILE} — identique à chaque redémarrage)\n")
     if nb_etab == 0:
         print("  ► Aucun établissement enregistré.")
-        print("  → Les établissements qui poussent arrivent en section ⏳ EN ATTENTE")
+        print("  → Les instances qui poussent arrivent en section ⏳ EN ATTENTE")
         print("  → Ouvrir http://localhost:9000 et cliquer ✓ ACCEPTER\n")
     else:
         etabs = list(set(tokens.values()))

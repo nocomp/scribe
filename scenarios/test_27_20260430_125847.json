@@ -2,7 +2,7 @@
   "meta": {
     "id": "test_27_20260430_125847",
     "titre": "test 27",
-    "description": "Incendie à la garnison du régiment local à Demo avec 40 blessés par brûlures (dont 2 critiques) et sabotage informatique au sein du Groupement de Démonstration. Coordination multi-sites (DEMO1, Hôpital de Démonstration 3, Demo), cyber-response et transferts sous contrainte réseau.",
+    "description": "Incendie à la garnison du 27e BCA à Annecy avec 40 blessés par brûlures (dont 2 critiques) et sabotage informatique au sein du GHT Léman Mont-Blanc. Coordination multi-sites (CHANGE, CH Rumilly, Thonon), cyber-response et transferts sous contrainte réseau.",
     "duree_min": 60,
     "duree_reel_min": 240,
     "ratio_compression": 4.0,
@@ -18,17 +18,17 @@
   },
   "acteurs": [
     {
-      "sigle": "DEMO1",
-      "nom_etablissement": "Centre Hospitalier ANnecy-GEnevois (DEMO1)",
-      "role": "cellule crise DEMO2",
+      "sigle": "CHAG",
+      "nom_etablissement": "Centre Hospitalier ANnecy-GEnevois (CHANGE)",
+      "role": "cellule crise GHTLMB",
       "port": 8660,
       "joueurs": [
         {
-          "username": "dir_crise_DEMO1",
+          "username": "dir_crise_CHAG",
           "display_name": "Paul DURAND — Directeur de la Cellule de Crise",
           "role_exercice": "Coordonnateur crise principale (cyber + sanitaire)",
           "responsabilites": [
-            "Commande des transferts entre DEMO1/Hôpital de Démonstration 3/Demo",
+            "Commande des transferts entre CHAG/CH Rumilly/Thonon",
             "Gestion de crise cyber (coordination DSI + police)",
             "Relais avec ARS/Préfecture pour mobilisation des ressources"
           ]
@@ -36,8 +36,8 @@
       ]
     },
     {
-      "sigle": "DEMO3",
-      "nom_etablissement": "Hôpital de Démonstration 3",
+      "sigle": "CHRUMILLY",
+      "nom_etablissement": "CH Rumilly",
       "role": "support médical",
       "port": 8662,
       "joueurs": [
@@ -54,14 +54,14 @@
       ]
     },
     {
-      "sigle": "DEMO2",
-      "nom_etablissement": "Hôpital de Démonstration 4",
+      "sigle": "GHTLMB",
+      "nom_etablissement": "Hôpitaux du Léman (Thonon)",
       "role": "support informatique",
       "port": 8661,
       "joueurs": [
         {
           "username": "dsi_thonon",
-          "display_name": "Jean-Marc LACROIX — DSI du DEMO2",
+          "display_name": "Jean-Marc LACROIX — DSI du GHTLMB",
           "role_exercice": "Responsable cyber-response et restauration des accès",
           "responsabilites": [
             "Évaluation de la cyber-attaque et priorisation des services critiques (ex. : dossier patient, régulation)",
@@ -76,17 +76,17 @@
     {
       "id": "S01",
       "t_min": 0,
-      "cible": "DEMO2",
+      "cible": "GHTLMB",
       "type": "incident",
-      "titre": "Sabotage informatique DEMO2",
-      "description_animateur": "Les participants doivent identifier immédiatement la cyber-attaque comme priorité absolue et mobiliser la DSI. Paul DURAND (DEMO1) doit lancer l’alerte GHT et solliciter la police. Jean-Marc LACROIX (Demo) simule une restauration partielle limitée.",
+      "titre": "Sabotage informatique GHTLMB",
+      "description_animateur": "Les participants doivent identifier immédiatement la cyber-attaque comme priorité absolue et mobiliser la DSI. Paul DURAND (CHAG) doit lancer l’alerte GHT et solliciter la police. Jean-Marc LACROIX (Thonon) simule une restauration partielle limitée.",
       "payload": {
-        "fait": "À 08:00:00, toutes les connexions réseau du Groupement de Démonstration (incluant DEMO1, Demo, Hôpital de Démonstration 3) sont coupées. Les accès aux dossiers patients, à la régulation et aux systèmes de liaison inter-établissements sont indisponibles. Les équipes locales confirment une intrusion en cours via un protocole malveillant (ransomware).",
+        "fait": "À 08:00:00, toutes les connexions réseau du GHT Léman Mont-Blanc (incluant CHANGE, Thonon, CH Rumilly) sont coupées. Les accès aux dossiers patients, à la régulation et aux systèmes de liaison inter-établissements sont indisponibles. Les équipes locales confirment une intrusion en cours via un protocole malveillant (ransomware).",
         "urgency": 5,
         "type_crise": "CYBER",
-        "site_id": "DEMO2",
+        "site_id": "GHTLMB",
         "unite_fonctionnelle": "DSI",
-        "declarant_nom": "Chef de service informatique (Demo)",
+        "declarant_nom": "Chef de service informatique (Thonon)",
         "analyse": "Scénarios tempêtes : \n1. Cyber-attaque ciblée (ransomware) avec demande de rançon dans 24h. \n2. Erreur technique (à exclure après vérification). \n3. Cyber-attaque secondaire (à surveiller).",
         "jalons_labels": [
           "✅ Lancez l’alerte GHT",
@@ -94,43 +94,43 @@
           "✅ Priorisez les services critiques (bloc, réa)"
         ]
       },
-      "action_attendue": "Paul (DEMO1) : Alerter le GHT et déclencher le protocole cyber. Jean-Marc (Demo) : évaluer l’étendue et contacter ANSSI (simulé). Tous : Noter les services critiques à rétablir en priorité."
+      "action_attendue": "Paul (CHAG) : Alerter le GHT et déclencher le protocole cyber. Jean-Marc (Thonon) : évaluer l’étendue et contacter ANSSI (simulé). Tous : Noter les services critiques à rétablir en priorité."
     },
     {
       "id": "S02",
       "t_min": 5,
-      "cible": "DEMO1",
+      "cible": "CHAG",
       "type": "message",
       "titre": "Rapport SAMU 15 : premiers blessés arrivants",
-      "description_animateur": "Marie (Hôpital de Démonstration 3) doit préparer les arrivées en bloc et communiquer aux familles. Paul (DEMO1) doit coordonner les transferts futurs. Les joueurs doivent ignorer que le réseau est toujours inaccessible (test de réactivité).",
+      "description_animateur": "Marie (CH Rumilly) doit préparer les arrivées en bloc et communiquer aux familles. Paul (CHAG) doit coordonner les transferts futurs. Les joueurs doivent ignorer que le réseau est toujours inaccessible (test de réactivité).",
       "payload": {
-        "fait": "À 08:04:32, le SAMU 15 signale l’arrivée de 12 blessés à la gare d’Demo (dont 2 en détresse vitale) en 20 minutes. Les victimes sont des soldats du régiment local victimes d’un incendie à leur caserne. Types de brûlures : \n- 2 graves (3e degré, >30% TCA) \n- 4 modérées (2e degré, 10-20% TCA) \n- 6 légères (1er degré) \nLes SMUR mobilisés ne peuvent pas accéder aux dossiers patients (réseau indisponible). Les familles appellent déjà DEMO1.",
+        "fait": "À 08:04:32, le SAMU 15 signale l’arrivée de 12 blessés à la gare d’Annecy (dont 2 en détresse vitale) en 20 minutes. Les victimes sont des soldats du 27e BCA victimes d’un incendie à leur caserne. Types de brûlures : \n- 2 graves (3e degré, >30% TCA) \n- 4 modérées (2e degré, 10-20% TCA) \n- 6 légères (1er degré) \nLes SMUR mobilisés ne peuvent pas accéder aux dossiers patients (réseau indisponible). Les familles appellent déjà CHANGE.",
         "urgency": 4,
         "type_crise": "SANITAIRE/PSY",
-        "site_id": "DEMO1",
+        "site_id": "CHAG",
         "unite_fonctionnelle": "Urgences",
         "declarant_nom": "Dr. LEROY, SAMU 15",
-        "analyse": "Test : Les joueurs doivent gérer l’information sans réseau. Marie (Hôpital de Démonstration 3) doit préparer les ressources en bloc. Paul (DEMO1) doit coordonner les arrivées.",
+        "analyse": "Test : Les joueurs doivent gérer l’information sans réseau. Marie (CH Rumilly) doit préparer les ressources en bloc. Paul (CHAG) doit coordonner les arrivées.",
         "jalons_labels": [
           "👉 Prévoir l’accueil en bloc (lits, matériel)",
           "👉 Préparer le message aux familles (retard infos)",
-          "👉 Anticiper les transferts vers DEMO1"
+          "👉 Anticiper les transferts vers CHAG"
         ]
       },
-      "action_attendue": "Marie (Hôpital de Démonstration 3) : Envoyer un message vocal aux équipes de bloc pour alerte et préparation. Paul (DEMO1) : Contacter la Préfecture pour blocage des axes et mobilisation des services de secours locaux."
+      "action_attendue": "Marie (CH Rumilly) : Envoyer un message vocal aux équipes de bloc pour alerte et préparation. Paul (CHAG) : Contacter la Préfecture pour blocage des axes et mobilisation des services de secours locaux."
     },
     {
       "id": "S03",
       "t_min": 10,
-      "cible": "DEMO2",
+      "cible": "GHTLMB",
       "type": "message",
       "titre": "Évaluation cyber : accès rétabli partiellement",
-      "description_animateur": "Les joueurs doivent comprendre que la cyber-response nécessite des choix prioritaires. Jean-Marc (Demo) doit expliquer à Paul (DEMO1) pourquoi le système de transferts est inaccessible. Paul doit décider de la suite.",
+      "description_animateur": "Les joueurs doivent comprendre que la cyber-response nécessite des choix prioritaires. Jean-Marc (Thonon) doit expliquer à Paul (CHAG) pourquoi le système de transferts est inaccessible. Paul doit décider de la suite.",
       "payload": {
-        "fait": "À 08:10:10, Jean-Marc LACROIX (DSI Demo) informe que les systèmes de communication interne sont partiellement rétablis (priorité : réseaux locaux d’urgence et bloc opératoire). Cependant, l’interconnexion inter-établissements (ex. : système de transferts GHT) reste coupée. La police a identifié une source d’intrusion (IP française : 80.211.67.123).",
+        "fait": "À 08:10:10, Jean-Marc LACROIX (DSI Thonon) informe que les systèmes de communication interne sont partiellement rétablis (priorité : réseaux locaux d’urgence et bloc opératoire). Cependant, l’interconnexion inter-établissements (ex. : système de transferts GHT) reste coupée. La police a identifié une source d’intrusion (IP française : 80.211.67.123).",
         "urgency": 3,
         "type_crise": "CYBER/OPÉRATIONNEL",
-        "site_id": "DEMO2",
+        "site_id": "GHTLMB",
         "unite_fonctionnelle": "DSI",
         "declarant_nom": "Jean-Marc LACROIX (DSI)",
         "analyse": "⚠️ Dilemme : Doit-on prioriser la cyber-response (restaurer tous les accès) ou la prise en charge médicale (réseau local urgent) ? \n💡 Jalons : \n1. La police peut bloquer l’IP malveillante en 1h (réel). \n2. Les transferts inter-établissements resteront indisponibles jusqu’à restauration complète.",
@@ -140,22 +140,22 @@
           "🚨 Préparer le scénario de transferts manuels"
         ]
       },
-      "action_attendue": "Paul (DEMO1) : Décider de l’orientation générale (ex. : « Restaurer d’abord les réseaux locaux d’urgence, puis coordonner les transferts manuels »). Jean-Marc (Demo) : Valider les priorités de restauration."
+      "action_attendue": "Paul (CHAG) : Décider de l’orientation générale (ex. : « Restaurer d’abord les réseaux locaux d’urgence, puis coordonner les transferts manuels »). Jean-Marc (Thonon) : Valider les priorités de restauration."
     },
     {
       "id": "S04",
       "t_min": 15,
-      "cible": "DEMO1",
+      "cible": "CHAG",
       "type": "chat",
       "titre": "Appel paniqué famille d’un brûlé critique",
       "description_animateur": "Test de la gestion des informations sensibles en contexte de crise cyber. Le joueur doit donner une réponse claire tout en protégeant les données médicales.",
       "payload": {
-        "fait": "[08:15:00] Un appel téléphonique (non identifié) arrive à l’accueil du DEMO1. Une femme (identifiée comme Mme DUPONT, mère d’un soldat blessé) demande : « Mon fils est hospitalisé ? Il a besoin d’opération. Où est-il ? Quand ? » Elle fournit le numéro de dossier hospitalier du soldat (disponible dans le réseau local). \n🔴 **Contrainte** : Les données du dossier ne sont pas accessibles via le réseau habituel (cyber).",
+        "fait": "[08:15:00] Un appel téléphonique (non identifié) arrive à l’accueil du CHAG. Une femme (identifiée comme Mme DUPONT, mère d’un soldat blessé) demande : « Mon fils est hospitalisé ? Il a besoin d’opération. Où est-il ? Quand ? » Elle fournit le numéro de dossier hospitalier du soldat (disponible dans le réseau local). \n🔴 **Contrainte** : Les données du dossier ne sont pas accessibles via le réseau habituel (cyber).",
         "urgency": 2,
         "type_crise": "COMMUNICATION",
-        "site_id": "DEMO1",
+        "site_id": "CHAG",
         "unite_fonctionnelle": "Accueil",
-        "declarant_nom": "Agent accueil (DEMO1)",
+        "declarant_nom": "Agent accueil (CHAG)",
         "analyse": "📌 Test : \n- Peut-on donner des informations sur l’état du patient sans violer le secret médical ? \n- Peut-on vérifier son identité ? \n- Faut-il orienter vers un responsable ?",
         "jalons_labels": [
           "📞 Vérifier l’identité du patient (si possible)",
@@ -163,100 +163,100 @@
           "🚨 Alerter la police si suspicion de fuite de données"
         ]
       },
-      "action_attendue": "Paul (DEMO1) : Donner une réponse rassurante mais non informative (ex. : « Votre fils est en cours de prise en charge, nous vous tiendrons informés »). Vérifier la légitimité de l’appel (demander des détails vérifiables)."
+      "action_attendue": "Paul (CHAG) : Donner une réponse rassurante mais non informative (ex. : « Votre fils est en cours de prise en charge, nous vous tiendrons informés »). Vérifier la légitimité de l’appel (demander des détails vérifiables)."
     },
     {
       "id": "S05",
       "t_min": 20,
-      "cible": "DEMO3",
+      "cible": "CHRUMILLY",
       "type": "transfert",
-      "titre": "Arrivée de 2 brûlés critiques en bloc (DEMO1)",
-      "description_animateur": "Test de la réactivité d’une équipe sous contrainte (réseau partiellement rétabli mais bloc isolé). Marie (Hôpital de Démonstration 3) doit coordonner sans accès complet au système.",
+      "titre": "Arrivée de 2 brûlés critiques en bloc (CHAG)",
+      "description_animateur": "Test de la réactivité d’une équipe sous contrainte (réseau partiellement rétabli mais bloc isolé). Marie (CH Rumilly) doit coordonner sans accès complet au système.",
       "payload": {
-        "fait": "À 08:20:45, 2 soldats brûlés (critiques, 30% TCA) arrivent au Hôpital de Démonstration 3 en ambulance privée (les SMUR ne peuvent pas utiliser le réseau). Ils ont été évacués depuis la caserne et transférés directement vers Hôpital de Démonstration 3. \n📌 **Contrainte** : Marie (Hôpital de Démonstration 3) doit prendre en charge ces patients en priorité, mais le bloc n’a pas accès au système de réservation des lits (indisponible cyber).",
+        "fait": "À 08:20:45, 2 soldats brûlés (critiques, 30% TCA) arrivent au CH Rumilly en ambulance privée (les SMUR ne peuvent pas utiliser le réseau). Ils ont été évacués depuis la caserne et transférés directement vers CH Rumilly. \n📌 **Contrainte** : Marie (CH Rumilly) doit prendre en charge ces patients en priorité, mais le bloc n’a pas accès au système de réservation des lits (indisponible cyber).",
         "urgency": 5,
         "type_crise": "SANITAIRE/LOGISTIQUE",
-        "site_id": "DEMO3",
+        "site_id": "CHRUMILLY",
         "unite_fonctionnelle": "Urgences",
         "declarant_nom": "Dr. MARTIN, SMUR local",
-        "analyse": "🚨 Décision : \n1. **Rejeter les transferts** vers DEMO1 (qui a plus de lits). \n2. **Prendre en charge à Hôpital de Démonstration 3** (mais saturation possible). \n3. **Envoyer à Demo** (le seul autre site du GHT avec des lits brûlés).",
+        "analyse": "🚨 Décision : \n1. **Rejeter les transferts** vers CHAG (qui a plus de lits). \n2. **Prendre en charge à CH Rumilly** (mais saturation possible). \n3. **Envoyer à Thonon** (le seul autre site du GHT avec des lits brûlés).",
         "jalons_labels": [
-          "🛏️ Vérifier la disponibilité des lits à DEMO1 (via appel vocal)",
-          "📞 Alerter DEMO1 pour un transfert inversé si saturation",
+          "🛏️ Vérifier la disponibilité des lits à CHAG (via appel vocal)",
+          "📞 Alerter CHAG pour un transfert inversé si saturation",
           "⚠️ Prévoir un plan B (ex. : blocage de lits non urgents)"
         ]
       },
-      "action_attendue": "Marie (Hôpital de Démonstration 3) : Contacter DEMO1 pour évaluer la capacité à recevoir les patients (via téléphone). Paul (DEMO1) : Valider la décision."
+      "action_attendue": "Marie (CH Rumilly) : Contacter CHAG pour évaluer la capacité à recevoir les patients (via téléphone). Paul (CHAG) : Valider la décision."
     },
     {
       "id": "S06",
       "t_min": 30,
-      "cible": "DEMO2",
+      "cible": "GHTLMB",
       "type": "message",
-      "titre": "Demande d’entraide : Hôpital de Démonstration 6",
+      "titre": "Demande d’entraide : CH Bonneville",
       "description_animateur": "Test de la solidarité inter-réseaux en crise. Le joueur doit gérer une demande externe tout en priorisant la réponse au GHT.",
       "payload": {
-        "fait": "À 08:30:00, le Hôpital de Démonstration 6 (DEMO6) contacte le DEMO2 via une ligne dédiée (accessible, car priorité critique). Ils demandent : \n- Une aide pour la prise en charge de brûlés (ils n’ont pas de service spécialisé). \n- Des informations sur les patients évacués (pour les familles). \n🔴 **Contexte** : Le GHT est en crise interne (pas de ressources à partager).",
+        "fait": "À 08:30:00, le CH Bonneville (CHB) contacte le GHTLMB via une ligne dédiée (accessible, car priorité critique). Ils demandent : \n- Une aide pour la prise en charge de brûlés (ils n’ont pas de service spécialisé). \n- Des informations sur les patients évacués (pour les familles). \n🔴 **Contexte** : Le GHT est en crise interne (pas de ressources à partager).",
         "urgency": 2,
         "type_crise": "ENTRAIDE/COMMUNICATION",
-        "site_id": "DEMO2",
+        "site_id": "GHTLMB",
         "unite_fonctionnelle": "Coordination GHT",
-        "declarant_nom": "Dr. LEGRAND (Hôpital de Démonstration 6)",
-        "analyse": "📌 Test : \n- Peut-on refuser une demande d’entraide ? \n- Comment communiquer sans partager des données sensibles ? \n- Faut-il désigner un référent pour DEMO6 ?",
+        "declarant_nom": "Dr. LEGRAND (CH Bonneville)",
+        "analyse": "📌 Test : \n- Peut-on refuser une demande d’entraide ? \n- Comment communiquer sans partager des données sensibles ? \n- Faut-il désigner un référent pour CHB ?",
         "jalons_labels": [
           "💬 Répondre par une réponse standardisée (ex. : « Nous sommes en crise interne, mais voici les infos générales »)",
-          "📋 Désigner un responsable DEMO6 (pour limiter les appels)",
+          "📋 Désigner un responsable CHB (pour limiter les appels)",
           "⚠️ Prévoir un canal de communication dédié (ex. : ligne dédiée)"
         ]
       },
-      "action_attendue": "Paul (DEMO1) : Répondre avec une communication non spécifiante (« Nous sommes en pleine gestion de crise et ne pouvons pas vous recevoir en ce moment. Voici les contacts des familles. »). Désigner un référent pour DEMO6."
+      "action_attendue": "Paul (CHAG) : Répondre avec une communication non spécifiante (« Nous sommes en pleine gestion de crise et ne pouvons pas vous recevoir en ce moment. Voici les contacts des familles. »). Désigner un référent pour CHB."
     },
     {
       "id": "S07",
       "t_min": 40,
-      "cible": "DEMO1",
+      "cible": "CHAG",
       "type": "incident",
-      "titre": "Sabotage des réseaux locaux DEMO1",
+      "titre": "Sabotage des réseaux locaux CHAG",
       "description_animateur": "Test de la résilience face à une nouvelle dégradation. Les joueurs doivent improviser pour maintenir la prise en charge.",
       "payload": {
-        "fait": "À 08:40:10, les réseaux locaux du DEMO1 sont à nouveau perturbés (seuls les systèmes critiques sont accessibles : blocs, réa, sécurité). Les dossiers patients et le système de transferts resteront indisponibles. \n🔴 **Nouveau défi** : Les services de secours locaux (SAMU, pompiers) ne peuvent plus transmettre les infos aux équipes. \n📌 **Contrainte** : Marie (Hôpital de Démonstration 3) doit confirmer les arrivées sans accès au réseau.",
+        "fait": "À 08:40:10, les réseaux locaux du CHAG sont à nouveau perturbés (seuls les systèmes critiques sont accessibles : blocs, réa, sécurité). Les dossiers patients et le système de transferts resteront indisponibles. \n🔴 **Nouveau défi** : Les services de secours locaux (SAMU, pompiers) ne peuvent plus transmettre les infos aux équipes. \n📌 **Contrainte** : Marie (CH Rumilly) doit confirmer les arrivées sans accès au réseau.",
         "urgency": 4,
         "type_crise": "CYBER/OPÉRATIONNEL",
-        "site_id": "DEMO1",
+        "site_id": "CHAG",
         "unite_fonctionnelle": "Sécurité",
-        "declarant_nom": "Chef du service informatique (DEMO1)",
+        "declarant_nom": "Chef du service informatique (CHAG)",
         "analyse": "🚨 Jalons : \n1. Basculer sur des procédures manuelles (fiches, appels vocaux). \n2. Prioriser la communication : \n   - Urgences (bloc, réa) > Étages > Administratif. \n3. Prévoir une chaîne de secours externe (ex. : police pour relai).",
         "jalons_labels": [
-          "📞 Établir une chaîne vocale entre DEMO1/Hôpital de Démonstration 3/Demo",
+          "📞 Établir une chaîne vocale entre CHAG/CH Rumilly/Thonon",
           "🛡️ Désigner des référents pour les transferts manuels",
           "⚠️ Prévoir un enregistrement papier des arrivées/départs"
         ]
       },
-      "action_attendue": "Paul (DEMO1) : Organiser une réunion de crise pour ajuster les procédures. Marie (Hôpital de Démonstration 3) : Préparer une fiche de suivi manuel des patients arrivants."
+      "action_attendue": "Paul (CHAG) : Organiser une réunion de crise pour ajuster les procédures. Marie (CH Rumilly) : Préparer une fiche de suivi manuel des patients arrivants."
     },
     {
       "id": "S08",
       "t_min": 50,
-      "cible": "THONON+DEMO1",
+      "cible": "THONON+CHAG",
       "type": "message",
       "titre": "Instruction ARS : point situation GHT",
       "description_animateur": "Test de la communication institutionnelle en crise. Les joueurs doivent fournir une synthèse cohérente malgré les lacunes d’information.",
       "payload": {
-        "fait": "À 08:50:00, la Préfecture de Haute-Savoie (via l’ARS) contacte le DEMO2 pour un point situation. Ils demandent : \n1. Bilan des victimes et des établissements concernés. \n2. Prévisions d’afflux (nécessité de mobiliser d’autres structures régionales). \n3. Impact de la cyber-attaque (quels services restent opérationnels ?). \n🔴 **Contrainte** : Jean-Marc (Demo) doit synthétiser l’état du réseau. Paul (DEMO1) doit donner un bilan médical global (sans détails sensibles).",
+        "fait": "À 08:50:00, la Préfecture de Haute-Savoie (via l’ARS) contacte le GHTLMB pour un point situation. Ils demandent : \n1. Bilan des victimes et des établissements concernés. \n2. Prévisions d’afflux (nécessité de mobiliser d’autres structures régionales). \n3. Impact de la cyber-attaque (quels services restent opérationnels ?). \n🔴 **Contrainte** : Jean-Marc (Thonon) doit synthétiser l’état du réseau. Paul (CHAG) doit donner un bilan médical global (sans détails sensibles).",
         "urgency": 3,
         "type_crise": "INSTITUTIONNEL",
-        "site_id": "DEMO2",
+        "site_id": "GHTLMB",
         "unite_fonctionnelle": "Coordination GHT",
         "declarant_nom": "Dr. MARTINET (ARS)",
         "analyse": "📌 Test : \n- Peut-on donner des chiffres globaux sans violer le secret ? \n- Comment communiquer l’état du réseau sans partager les détails techniques ? \n- Faut-il demander une aide externe ?",
         "jalons_labels": [
           "📊 Synthétiser : \n   - Nombre de victimes (global, sans détails)",
-          "🔄 Établissements concernés (DEMO1, Hôpital de Démonstration 3, Demo)",
+          "🔄 Établissements concernés (CHAG, CH Rumilly, Thonon)",
           "💻 État des services critiques (réseau local opérationnel, GHT indisponible)",
-          "🚨 Demander une aide régionale (ex. : Hôpital de Démonstration 7 pour étendre les capacités)"
+          "🚨 Demander une aide régionale (ex. : CH Pays de Gex pour étendre les capacités)"
         ]
       },
-      "action_attendue": "Paul (DEMO1) + Jean-Marc (Demo) : Répondre avec une synthèse sécurisée (ex. : « 25 victimes prises en charge, 3 établissements du GHT concernés. Réseau local en partie opérationnel, transferts inter-établissements indisponibles. »). Demander une mobilisation régionale si nécessaire."
+      "action_attendue": "Paul (CHAG) + Jean-Marc (Thonon) : Répondre avec une synthèse sécurisée (ex. : « 25 victimes prises en charge, 3 établissements du GHT concernés. Réseau local en partie opérationnel, transferts inter-établissements indisponibles. »). Demander une mobilisation régionale si nécessaire."
     }
   ],
   "decisions_attendues": [
@@ -268,13 +268,13 @@
     },
     {
       "t_min": 15,
-      "contenu": "Prioriser la restauration du réseau local d’urgence (DEMO1, Hôpital de Démonstration 3, Demo) avant de s’attaquer aux transferts inter-établissements.",
+      "contenu": "Prioriser la restauration du réseau local d’urgence (CHAG, CH Rumilly, Thonon) avant de s’attaquer aux transferts inter-établissements.",
       "responsable": "DSI (Jean-Marc LACROIX)",
       "obligatoire": true
     },
     {
       "t_min": 25,
-      "contenu": "Décider de rejeter les 2 brûlés critiques vers DEMO1 (ou Demo) pour éviter la saturation de Hôpital de Démonstration 3, en prévenant les familles par un message standard.",
+      "contenu": "Décider de rejeter les 2 brûlés critiques vers CHAG (ou Thonon) pour éviter la saturation de CH Rumilly, en prévenant les familles par un message standard.",
       "responsable": "Cheffe bloc (Marie LEMAIRE)",
       "obligatoire": false
     },
@@ -301,7 +301,7 @@
     "pieges_frequents": [
       "🚨 **Fuite d’informations sensibles** : Donner des détails médicaux à des tiers (ex. : famille) sans vérifier leur légitimité.",
       "🚨 **Déséquilibre cyber/sanitaire** : Négliger la cyber-attaque au profit exclusif de la prise en charge médicale (risque de saturation du réseau plus tard).",
-      "🚨 **Refus systématique de l’entraide** : Rejeter toute demande extérieure sans évaluer les besoins réels (ex. : Hôpital de Démonstration 6).",
+      "🚨 **Refus systématique de l’entraide** : Rejeter toute demande extérieure sans évaluer les besoins réels (ex. : CH Bonneville).",
       "🚨 **Absence de procédures manuelles** : Ne pas préparer de solutions de secours (fiches, appels) en cas de panne des systèmes.",
       "🚨 **Communication floue avec la Préfecture/ARS** : Ne pas fournir de synthèse claire des actions engagées (risque de duplication ou d’inaction régionale)."
     ]

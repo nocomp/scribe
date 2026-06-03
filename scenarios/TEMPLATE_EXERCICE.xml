@@ -31,10 +31,10 @@
   </meta>
 
   <!-- ── Acteurs / Joueurs ── -->
-  <!-- Ports exercice : DEMO1=8660 DEMO2=8661 DEMO3=8662 DEMO4=8663 DEMO5=8664 DEMO6=8665 DEMO7=8666 -->
+  <!-- Ports exercice : DEMO1=8660 DEMO2=8661 DEMO5=8662 DEMO6=8663 DEMO7=8664 DEMO5=8665 DEMO6=8666 -->
   <acteurs>
     <acteur sigle="DEMO1" port="8660" role="coordinateur">
-      <nom_etablissement>Hôpital de Démonstration</nom_etablissement>
+      <nom_etablissement>Centre Hospitalier Annecy-Genevois</nom_etablissement>
       <joueurs>
         <joueur>
           <username>dircrise</username>
@@ -58,7 +58,7 @@
       </joueurs>
     </acteur>
     <acteur sigle="DEMO2" port="8661" role="participant">
-      <nom_etablissement>Groupement de Démonstration</nom_etablissement>
+      <nom_etablissement>GHT Léman Mont-Blanc</nom_etablissement>
       <joueurs>
         <joueur>
           <username>dircrise</username>

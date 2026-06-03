@@ -1,0 +1,135 @@
+<scribe>
+  <etablissement>
+    <nom>GHT Savoie-Belley</nom>
+    <sigle>DEMO3</sigle>
+    <finess>730000001</finess>
+  </etablissement>
+  <admin>
+    <login>dircrise</login>
+    <password>Scribe2026!</password>
+    <nom_affiche>Directeur de Crise</nom_affiche>
+  </admin>
+  <sites>
+    <site>
+      <nom>CH Métropole Savoie — Chambéry</nom>
+      <adresse>Place Lucien Biset, 73000 Chambéry</adresse>
+      <latitude>45.5645</latitude>
+      <longitude>5.9142</longitude>
+    </site>
+    <site>
+      <nom>CH Métropole Savoie — Aix-les-Bains</nom>
+      <adresse>49 Avenue du Grand Port, 73100 Aix-les-Bains</adresse>
+      <latitude>45.6961</latitude>
+      <longitude>5.9085</longitude>
+    </site>
+    <site>
+      <nom>CH Bugey Sud — Belley</nom>
+      <adresse>700 Avenue de Narvik, 01300 Belley</adresse>
+      <latitude>45.7642</latitude>
+      <longitude>5.6964</longitude>
+    </site>
+    <site>
+      <nom>CH Vallée de la Maurienne — Saint-Jean-de-Maurienne</nom>
+      <adresse>25 Rue du Dr Grange, 73300 Saint-Jean-de-Maurienne</adresse>
+      <latitude>45.2755</latitude>
+      <longitude>6.3478</longitude>
+    </site>
+    <site>
+      <nom>CH de Modane</nom>
+      <adresse>9 Rue du Docteur Grange, 73500 Modane</adresse>
+      <latitude>45.1998</latitude>
+      <longitude>6.6715</longitude>
+    </site>
+    <site>
+      <nom>CH de Bourg-Saint-Maurice</nom>
+      <adresse>413 Avenue de l'Hôpital, 73700 Bourg-Saint-Maurice</adresse>
+      <latitude>45.619</latitude>
+      <longitude>6.7711</longitude>
+    </site>
+    <site>
+      <nom>CH de Saint-Pierre-d'Albigny</nom>
+      <adresse>Rue du Temple, 73250 Saint-Pierre-d'Albigny</adresse>
+      <latitude>45.5704</latitude>
+      <longitude>6.1518</longitude>
+    </site>
+    <site>
+      <nom>CH de Moûtiers</nom>
+      <adresse>Rue de l'Hôpital, 73600 Moûtiers</adresse>
+      <latitude>45.4851</latitude>
+      <longitude>6.5323</longitude>
+    </site>
+    <site>
+      <nom>CH Bassens — Psychiatrie</nom>
+      <adresse>28 Chemin de la Cassine, 73000 Bassens</adresse>
+      <latitude>45.5786</latitude>
+      <longitude>5.9427</longitude>
+    </site>
+  </sites>
+  <directeurs>
+    <directeur>
+      <nom>M. A. CHEVALIER</nom>
+      <fonction>Directeur Général — CHMS</fonction>
+      <abreviation>DG</abreviation>
+    </directeur>
+    <directeur>
+      <nom>Mme B. MOREAU</nom>
+      <fonction>Directrice Générale Adjointe</fonction>
+      <abreviation>DGA</abreviation>
+    </directeur>
+    <directeur>
+      <nom>M. C. PERRIN</nom>
+      <fonction>Directeur des Systèmes d'Information</fonction>
+      <abreviation>DSI</abreviation>
+    </directeur>
+    <directeur>
+      <nom>Mme D. ROUSSEAU</nom>
+      <fonction>Directrice des Soins</fonction>
+      <abreviation>DS</abreviation>
+    </directeur>
+    <directeur>
+      <nom>M. E. RENARD</nom>
+      <fonction>Directeur des Ressources Humaines</fonction>
+      <abreviation>DRH</abreviation>
+    </directeur>
+    <directeur>
+      <nom>Mme F. SIMON</nom>
+      <fonction>Directrice des Affaires Financières</fonction>
+      <abreviation>DAF</abreviation>
+    </directeur>
+  </directeurs>
+  <annuaire_normal>
+    <contact service="STANDARD" local="Accueil principal" tel="0" />
+    <contact service="URGENCES" local="Accueil urgences" tel="1001" />
+    <contact service="REANIMATION" local="Salle de soins" tel="2001" />
+    <contact service="BLOC OPERATOIRE" local="Regulation" tel="3001" />
+    <contact service="CADRE DE NUIT" local="Bureau" tel="9000" />
+    <contact service="PHARMACIE" local="Secretariat" tel="E005" />
+    <contact service="DSI INFORMATIQUE" local="Support" tel="E003" />
+    <contact service="DIRECTION" local="Secretariat DG" tel="E001" />
+  </annuaire_normal>
+  <annuaire_secours>
+    <contact service="URGENCES SECOURS" local="GSM de garde" tel="06 12 00 10 01" note="24h/24" />
+    <contact service="DIRECTION SECOURS" local="GSM DG" tel="06 12 00 10 04" note="Astreinte" />
+    <contact service="DSI SECOURS" local="GSM DSI" tel="06 12 00 10 05" note="Astreinte" />
+    <contact service="SAMU 15" local="Regulation medicale" tel="15" />
+    <contact service="CERT SANTE" local="Signalement cyber" tel="cert-sante@esante.gouv.fr" note="Cyber" />
+  </annuaire_secours>
+  <langue>fr</langue>
+  <federation>
+    <enabled>true</enabled>
+    <collecteur_url>http://localhost:9000/api/push</collecteur_url>
+    <token>token_ghtsav_demo_2026</token>
+    <intervalle_secondes>30</intervalle_secondes>
+    <sync_crise>true</sync_crise>
+    <share_details>true</share_details>
+    <share_min_urgency>1</share_min_urgency>
+    <sync_sanitaire>true</sync_sanitaire>
+    <share_capacite_details>true</share_capacite_details>
+  </federation>
+  <ia>
+    <fournisseur>albert</fournisseur>
+    <cle_api></cle_api>
+    <modele>mistralai/Ministral-3-8B-Instruct-2512</modele>
+    <url_base>https://albert.api.etalab.gouv.fr/v1/chat/completions</url_base>
+  </ia>
+</scribe>

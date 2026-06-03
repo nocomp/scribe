@@ -82,6 +82,13 @@ class SitrepEntry(Base):
     # urgence vitale…). Les premiers font basculer le panneau SOINS en mode
     # dégradé, les seconds restent visibles mais n'altèrent pas l'état du pôle.
     impact_fonctionnel  = Column(Boolean, default=False)
+    # v3.4 (h34) — Visibilité côté personnel soignant.
+    # Cochée par la cellule de crise lors de la création/modification de
+    # l'incident pour les cas qui impactent l'activité soignante : panne DPI,
+    # ascenseur HS, panne d'équipement médical, indisponibilité d'un service.
+    # Permet au rôle `soignant` de voir ces incidents (par défaut il ne voit
+    # que ceux qui sont liés à ses missions/tâches assignées).
+    visible_soignant    = Column(Boolean, default=False, nullable=False)
     attachments = relationship("Attachment", back_populates="entry", cascade="all, delete-orphan")
     tasks       = relationship("Task", back_populates="incident", cascade="all, delete-orphan")
 
@@ -125,7 +132,17 @@ class User(Base):
     id            = Column(Integer, primary_key=True, index=True)
     username      = Column(String, unique=True, index=True, nullable=False)
     display_name  = Column(String, nullable=False)
-    role          = Column(String, default="directeur")  # admin | directeur | observateur
+    # v3.4 (h34) — Système de rôles RGPD-compliant.
+    # Valeurs autorisées :
+    #   admin         : accès intégral + gestion des comptes/rôles
+    #   cellule_crise : directeur de crise, RSSI, qualité — voit tout sauf
+    #                   le flux nominatif soignant (brancardage/transferts internes)
+    #   soignant      : agent de brancardage, IDE coordo transferts —
+    #                   ne voit que brancardage/transferts patient + incidents
+    #                   marqués visible_soignant ou liés à ses missions
+    # Anciens rôles préservés en lecture (migration auto au démarrage) :
+    #   directeur, observateur → migrés en cellule_crise
+    role          = Column(String, default="cellule_crise")
     hashed_password = Column(String, nullable=False)
     perimetre             = Column(String, nullable=True)
     must_change_password  = Column(Boolean, default=False)
@@ -210,7 +227,7 @@ class CapaciteReferentiel(Base):
     service_nom     = Column(String, nullable=False, index=True)
     uf_code         = Column(String, nullable=True)
     pole            = Column(String, nullable=True)
-    site            = Column(String, nullable=True)       # Site principal / Site secondaire / USLD
+    site            = Column(String, nullable=True)       # Annecy / Saint-Julien / Rumilly / USLD
     capacite_totale = Column(Integer, default=0)          # capacité nominale totale
     tension_1       = Column(Integer, default=0)          # lits ouverts en tension niveau 1
     tension_2       = Column(Integer, default=0)          # lits ouverts en tension niveau 2

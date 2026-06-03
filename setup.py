@@ -83,7 +83,7 @@ def menu():
         print("  Choisissez un mode :\n")
         print(f"   {bold('1')}  {green('Démo ransomware LockBit 48h')} (CHV Valmont — recommandé pour découvrir SCRIBE)")
         print(f"   {bold('2')}  {green('Démo clinique Montrelay')}")
-        print(f"   {bold('3')}  {yellow('Supervision multi-établissements')} (démo 4 GHTs + collecteur démo)")
+        print(f"   {bold('3')}  {yellow('Supervision multi-établissements')} (démo 4 GHTs + collecteur Arc Alpin)")
         print(f"   {bold('4')}  {cyan('Mon établissement')} (depuis config.xml)")
         print(f"   {bold('5')}  {cyan('Mon établissement')} (depuis fichier Excel SCRIBE_config_etablissement.xlsx)")
         print(f"   {bold('6')}  Docker")
@@ -118,7 +118,7 @@ def demo2():
     demarrer()
 
 def supervision():
-    banner("[SUPERVISION] Démo 4 GHTs + collecteur territorial (démo)")
+    banner("[SUPERVISION] Démo 4 GHTs + collecteur territorial (Arc Alpin)")
     print()
     print("  Ce mode démarre 5 services :")
     print(f"  {dim('→')} Collecteur      : http://localhost:9000")
@@ -214,7 +214,7 @@ def docker_menu():
     print()
     if dsub == "1":
         if run("docker compose up -d") != 0: return
-        ok("SCRIBE → http://localhost:8000  |  login: dircrise / changeme")
+        ok("SCRIBE → http://localhost:8000  |  login: dircrise / Scribe2026!")
         print(f"  {dim('Logs : docker compose logs -f')}")
         input("\n  Appuyez sur Entrée...")
     elif dsub == "2":
@@ -237,7 +237,7 @@ def _print_demarrer(port, login, sigle):
     print(cyan("  ====================================================="))
     print(cyan(f"   SCRIBE [{sigle}] → http://localhost:{port}"))
     print(cyan(f"   Login    : {login}"))
-    print(cyan("   Password : changeme (ou celui défini dans config.xml)"))
+    print(cyan("   Password : Scribe2026! (ou celui défini dans config.xml)"))
     print(cyan("  ====================================================="))
     print()
     print(f"  {dim('Ctrl+C pour arrêter')}\n")

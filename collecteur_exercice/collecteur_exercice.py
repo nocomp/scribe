@@ -41,10 +41,32 @@ ADMIN_FILE = str(BASE_DIR / "collecteur_exo_admin.json")
 UI_AUTH_FILE = str(BASE_DIR / "collecteur_exo_ui_auth.json")
 SCENARIOS_DIR = ROOT_DIR / "scenarios"
 
-try:
-    EXO_INSTANCES = json.loads(os.environ.get("SCRIBE_EXO_PORTS_JSON", "{}"))
-except (json.JSONDecodeError, ValueError):
-    EXO_INSTANCES = {}
+# Instances exercice
+# v3.0.0 — Sigles génériques EXO1-EXO7 (au lieu des sigles G7 réels).
+# Les anciens sigles (DEMO1, DEMO2...) sont maintenus en ALIAS pour rétrocompat
+# avec les scénarios existants qui les utilisent comme cibles narratives.
+EXO_INSTANCES = {
+    "EXO1":8660,"EXO2":8661,"EXO3":8662,
+    "EXO4":8663,"EXO5":8664,"EXO6":8665,"EXO7":8666,
+}
+# Alias historiques → mêmes ports. Permet aux scénarios déjà écrits avec
+# cible="DEMO1" / "DEMO2" / etc. de continuer à fonctionner sans modification.
+_EXO_ALIASES = {
+    "DEMO1":"EXO1","DEMO2":"EXO2","DEMO5":"EXO3",
+    "DEMO6":"EXO4","DEMO7":"EXO5","DEMO5":"EXO6","DEMO6":"EXO7",
+}
+# Vue "complète" sigle→port incluant alias (utilisée pour la résolution).
+EXO_INSTANCES_FULL = dict(EXO_INSTANCES)
+for _alias, _canonical in _EXO_ALIASES.items():
+    if _canonical in EXO_INSTANCES:
+        EXO_INSTANCES_FULL[_alias] = EXO_INSTANCES[_canonical]
+
+def _canonical_sigle(sigle: str) -> str:
+    """Normalise un sigle (alias historique → sigle canonique EXOn)."""
+    if not sigle:
+        return sigle
+    return _EXO_ALIASES.get(sigle, sigle)
+
 EXO_HOST = os.environ.get("SCRIBE_EXO_HOST","http://localhost")
 
 app = FastAPI(title="SCRIBE Collecteur Exercice",version="2.3.101")
@@ -179,6 +201,11 @@ def load_tokens():
     global tokens
     for sigle in EXO_INSTANCES:
         tokens[f"token_exo_{sigle.lower()}_2026"] = sigle
+    # v3.0.0 — Tokens d'alias historiques (rétrocompat) : les configs exo
+    # existantes utilisent token_exo_demo1_2026 etc. On les accepte en mappant
+    # vers le sigle canonique (EXO1...EXO7).
+    for _alias, _canonical in _EXO_ALIASES.items():
+        tokens[f"token_exo_{_alias.lower()}_2026"] = _canonical
     if Path(TOKENS_FILE).exists():
         try: tokens.update(json.loads(Path(TOKENS_FILE).read_text()))
         except: pass
@@ -215,7 +242,7 @@ def check_creds(login:str, pwd:str) -> bool:
     import hashlib
     auth_data = {"users":[
         {"login":"animateur","password_hash":hashlib.sha256(b"Animateur2026!").hexdigest(),"role":"admin"},
-        {"login":"supervision","password_hash":hashlib.sha256(b"changeme").hexdigest(),"role":"admin"},
+        {"login":"supervision","password_hash":hashlib.sha256(b"Scribe2026!").hexdigest(),"role":"admin"},
     ]}
     if Path(UI_AUTH_FILE).exists():
         try: auth_data = json.loads(Path(UI_AUTH_FILE).read_text())
@@ -440,7 +467,7 @@ async def import_xml_scenario(request:Request, auth=Depends(require_auth)):
                     "responsabilites": [r.text.strip() for r in j.findall(".//resp") if r.text],
                 })
             scenario["acteurs"].append({
-                "sigle": a.get("sigle", "DEMO"),
+                "sigle": a.get("sigle", "EXO1"),
                 "nom_etablissement": t(a, "nom_etablissement"),
                 "role": a.get("role", "participant"),
                 "port": int(a.get("port", "8660")),
@@ -466,7 +493,7 @@ async def import_xml_scenario(request:Request, auth=Depends(require_auth)):
         scenario["stimuli"].append({
             "id": t(s, "id", f"S{len(scenario['stimuli'])+1:02d}"),
             "t_min": float(t(s, "t_min", "0")),
-            "cible": t(s, "cible", "DEMO"),
+            "cible": t(s, "cible", "EXO1"),
             "type": t(s, "type", "incident"),
             "titre": t(s, "titre", ""),
             "description_animateur": t(s, "description_animateur", ""),
@@ -521,7 +548,7 @@ async def save_scenario(request:Request, auth=Depends(require_auth)):
 
 # ── Génération IA ──────────────────────────────────────────────────────────────
 class GenRequest(BaseModel):
-    sujet:str; nb_sites:int=1; sites:list=["DEMO"]
+    sujet:str; nb_sites:int=1; sites:list=["DEMO1"]
     duree_exercice_min:int=60; duree_reel_min:int=240
     complexite:str="MOYEN"; type_crise:str="SANITAIRE"; langue:str="fr"
     nb_joueurs:int=4; nb_stimuli:int=8
@@ -539,14 +566,14 @@ class GenRequest(BaseModel):
 ALBERT_URL   = "https://albert.api.etalab.gouv.fr/v1/chat/completions"
 ALBERT_MODEL = "mistralai/Ministral-3-8B-Instruct-2512"
 ALBERT_KEY   = os.environ.get("SCRIBE_IA_KEY",
-    "")
+    os.getenv("ALBERT_API_KEY", ""))
 
 SYSTEM_EXO = """Tu es expert en gestion de crise hospitalière française. Tu génères des scénarios d'exercice réalistes pour équipes GHT. Tu réponds UNIQUEMENT en JSON valide, sans texte autour."""
 
 def _prompt_scenario(b:GenRequest) -> str:
     ratio = round(b.duree_reel_min/b.duree_exercice_min,1)
     sid = datetime.now().strftime("%Y%m%d_%H%M")
-    ports = {"DEMO1":8660,"DEMO2":8661,"DEMO3":8662,"DEMO4":8663,"DEMO5":8664,"DEMO6":8665,"DEMO7":8666}
+    ports = {"DEMO1":8660,"DEMO2":8661,"DEMO5":8662,"DEMO6":8663,"DEMO7":8664,"DEMO5":8665,"DEMO6":8666}
     
     # Construire les instructions spécifiques
     type_instructions = {
@@ -609,16 +636,16 @@ CONTRAINTE DE SITE — IMPORTANT :
 - NE JAMAIS cibler un site non listé. Les "cible" des stimuli doivent strictement appartenir à : {", ".join(b.sites)}.
 
 NOMS DES ÉTABLISSEMENTS — pour la rédaction des textes :
-- Les sigles à utiliser dans les champs "cible", "sigle" et les identifiants sont : DEMO1, DEMO2, DEMO3, DEMO4, DEMO5, DEMO6, DEMO7.
+- Les sigles à utiliser dans les champs "cible", "sigle" et les identifiants sont : DEMO1, DEMO2, DEMO5, DEMO6, DEMO7, DEMO5, DEMO6.
 - MAIS dans les textes en langage naturel (titres, descriptions, faits, contenus de messages), utilisez le VRAI nom :
-  * DEMO1 = "Hôpital de Démonstration 1"
-  * DEMO2 = "Hôpital de Démonstration 2"
-  * DEMO3 = "Hôpital de Démonstration 3"
-  * DEMO4 = "Hôpital de Démonstration 4"
-  * DEMO5 = "Hôpital de Démonstration 5"
-  * DEMO6 = "Hôpital de Démonstration 6"
-  * DEMO7 = "Hôpital de Démonstration 7"
-- Exemple CORRECT : titre "Afflux massif au site démo 1", cible "DEMO1".
+  * DEMO1 = "CHANGE" (Centre Hospitalier ANnecy-GEnevois)
+  * DEMO2 = "Hôpitaux du Léman" ou "Thonon"
+  * DEMO5 = "CH Rumilly"
+  * DEMO6 = "Hôpitaux du Pays du Mont-Blanc"
+  * DEMO7 = "Hôpital Privé Mont-Blanc"
+  * DEMO5 = "CH Bonneville"
+  * DEMO6 = "CH Pays de Gex"
+- Exemple CORRECT : titre "Afflux massif au CHANGE", cible "DEMO1".
 - Exemple INCORRECT : titre "Afflux massif au DEMO1" (on utilise le nom long dans les textes).
 
 Retourne UNIQUEMENT ce JSON valide (rien d'autre, pas de texte avant ou après):
@@ -627,7 +654,7 @@ Retourne UNIQUEMENT ce JSON valide (rien d'autre, pas de texte avant ou après):
 RÈGLES STRICTES:
 - EXACTEMENT {b.nb_stimuli} stimuli, espacés progressivement (T+0, T+5, T+10...)
 - Types stimuli disponibles: incident, message, transfert, chat, decision
-- Ports fixes: DEMO1=8660 DEMO2=8661 DEMO3=8662 DEMO4=8663 DEMO5=8664 DEMO6=8665 DEMO7=8666
+- Ports fixes: DEMO1=8660 DEMO2=8661 DEMO5=8662 DEMO6=8663 DEMO7=8664 DEMO5=8665 DEMO6=8666
 - EXACTEMENT {b.nb_joueurs} joueurs répartis sur les sites
 - JSON VALIDE UNIQUEMENT — pas de backtick, pas de commentaire, pas de texte hors JSON"""
 
@@ -822,12 +849,18 @@ async def _find_chat_salon_id(client, base: str, hdr: dict, preferred: str = "g�
 async def _do_inject(stimulus:dict, tok_instances:dict):
     sigle = stimulus.get("cible","")
 
+    # v3.0.0 — Normaliser le sigle pour gérer les alias historiques (DEMO1 → EXO1, etc.)
+    # Les scénarios existants utilisent encore DEMO1/DEMO2 dans leur narration.
+    # Sans cette normalisation, ces sigles étaient traités comme "acteurs externes"
+    # et les stimuli ne s'injectaient pas correctement.
+    _canon = _canonical_sigle(sigle)
+
     # v2.3.86 — Gestion des cibles "acteurs externes" (CERT_SANTE, ANSSI, ARS,
     # SAMU, préfecture, médias...). Ces acteurs narratifs n'ont pas d'instance
     # dédiée, mais leurs stimuli (messages "reçus de l'ARS") doivent quand même
     # arriver dans l'UI joueur. On les redirige vers la première instance active
     # en préservant l'identité de l'expéditeur dans le texte du message.
-    if sigle not in EXO_INSTANCES:
+    if _canon not in EXO_INSTANCES:
         # Sigle inconnu : acteur narratif externe. On redirige vers la 1re
         # instance active (pour que le stimulus arrive chez les joueurs).
         pilote_sigles = list(tok_instances.keys())
@@ -842,7 +875,7 @@ async def _do_inject(stimulus:dict, tok_instances:dict):
                 "status": "SIGLE_INCONNU",
                 "http": 0,
                 "titre": stimulus.get("titre","")[:100],
-                "response": f"Sigle '{sigle}' inconnu. Sigles valides : {sorted(EXO_INSTANCES.keys())}. "
+                "response": f"Sigle '{sigle}' inconnu. Sigles valides : {sorted(EXO_INSTANCES_FULL.keys())}. "
                             f"Aucune instance active pour rediriger ce message.",
                 "salon_id": None, "route": "",
             })
@@ -862,6 +895,11 @@ async def _do_inject(stimulus:dict, tok_instances:dict):
         stimulus["cible"] = nouveau_sigle
         stimulus["payload"] = pl_rewrite
         sigle = nouveau_sigle
+    else:
+        # v3.0.0 — Sigle valide ou alias : on utilise la forme canonique pour la
+        # suite (lookup port, token, etc.). Les stimuli ciblant "DEMO1" sont
+        # désormais correctement routés vers EXO1.
+        sigle = _canon
 
     port  = EXO_INSTANCES.get(sigle, 8660)
     base  = f"{EXO_HOST}:{port}"
@@ -999,10 +1037,12 @@ async def _do_inject(stimulus:dict, tok_instances:dict):
                 # sur le récepteur (transfert entrant). Auparavant seul le
                 # côté "cible" du stimulus voyait le transfert.
                 dest_sigle = pl.get("etablissement_destination")
-                if dest_sigle and dest_sigle != sigle and dest_sigle in tok_instances:
+                # v3.0.0 — Normaliser pour gérer les alias (DEMO1 → EXO1)
+                dest_sigle_canon = _canonical_sigle(dest_sigle) if dest_sigle else None
+                if dest_sigle_canon and dest_sigle_canon != sigle and dest_sigle_canon in tok_instances:
                     try:
-                        dest_port = EXO_INSTANCES.get(dest_sigle)
-                        dest_tok = tok_instances.get(dest_sigle, "")
+                        dest_port = EXO_INSTANCES.get(dest_sigle_canon)
+                        dest_tok = tok_instances.get(dest_sigle_canon, "")
                         if dest_port and dest_tok:
                             dest_base = f"{EXO_HOST}:{dest_port}"
                             dest_hdr = {"Authorization":f"Bearer {dest_tok}","Content-Type":"application/json"}
@@ -1340,14 +1380,18 @@ async def start_exercice(body:StartRequest, auth=Depends(require_auth)):
     _scenario_actif = scenario
     
     # Login sur toutes les instances actives
+    # v3.0.0 — Normaliser les sigles envoyés par l'UI (les chips HTML legacy
+    # envoient encore DEMO1/DEMO2...). Sans normalisation, EXO_INSTANCES.get("DEMO1")
+    # renvoyait None → aucun login → 0 stimulus injecté.
     _token_instances = {}
-    for sigle in body.sites:
+    for sigle_in in body.sites:
+        sigle = _canonical_sigle(sigle_in)
         port = EXO_INSTANCES.get(sigle)
         if port:
             tok = await _login_instance(sigle, port)
             if tok:
                 _token_instances[sigle] = tok
-                logger.info(f"Token {sigle}:{port} OK")
+                logger.info(f"Token {sigle}:{port} OK (depuis '{sigle_in}')")
             else:
                 # v2.3.85 — NE PAS ajouter la clé si login raté. Sinon _do_inject
                 # envoie "Bearer " (vide) → 401, stimulus vert côté UI mais
@@ -1356,6 +1400,9 @@ async def start_exercice(body:StartRequest, auth=Depends(require_auth)):
                              f"stimuli vers {sigle} échoueront. "
                              f"Vérifier que l'instance tourne et que "
                              f"dircrise/Exercice2026! existe.")
+        else:
+            logger.warning(f"Site '{sigle_in}' (canonique='{sigle}') non listé "
+                           f"dans EXO_INSTANCES → skipped")
     
     _inj.update({"running":True,"paused":False,"session_id":f"exo_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
         "scenario":scenario,"t_start":datetime.now(timezone.utc),
@@ -1517,23 +1564,27 @@ async def inject_adhoc(body: InjectAdhocRequest, auth=Depends(require_auth)):
     # login "à la volée" sur l'instance cible. Ça permet de tester en
     # mode G7 nominal ou mode démo sans avoir à démarrer un scénario.
     global _token_instances
-    if body.cible not in _token_instances:
+    # v3.0.0 — Normaliser le sigle (DEMO1 → EXO1, etc.) pour accepter les alias.
+    body_cible_canon = _canonical_sigle(body.cible)
+    if body_cible_canon not in _token_instances:
         # Tenter un login à la volée
-        port = EXO_INSTANCES.get(body.cible)
+        port = EXO_INSTANCES.get(body_cible_canon)
         if not port:
             raise HTTPException(
                 400,
-                f"Sigle '{body.cible}' inconnu. Sigles valides : {sorted(EXO_INSTANCES.keys())}"
+                f"Sigle '{body.cible}' inconnu. Sigles valides : {sorted(EXO_INSTANCES_FULL.keys())}"
             )
-        logger.info(f"inject-adhoc : login à la volée sur {body.cible}:{port}")
-        tok = await _login_instance(body.cible, port)
+        logger.info(f"inject-adhoc : login à la volée sur {body_cible_canon}:{port}")
+        tok = await _login_instance(body_cible_canon, port)
         if not tok:
             raise HTTPException(
                 503,
-                f"Instance '{body.cible}' (port {port}) injoignable ou login échoué. "
+                f"Instance '{body_cible_canon}' (port {port}) injoignable ou login échoué. "
                 f"Vérifier que l'instance tourne et que le compte 'dircrise' existe."
             )
-        _token_instances[body.cible] = tok
+        _token_instances[body_cible_canon] = tok
+    # Utiliser le sigle canonique pour la suite
+    body.cible = body_cible_canon
 
     allowed_types = {"incident", "message", "transfert", "chat", "decision", "capacite", "brancardage"}
     if body.type not in allowed_types:
@@ -1640,7 +1691,7 @@ async def get_sites_actifs_public():
     Réponse minimale pour limiter la surface d'exposition :
       {
         "running": bool,
-        "sites": ["DEMO1", "DEMO2", ...]
+        "sites": ["DEMO1", "DEMO6", ...]
       }
     Si aucun exercice actif : running=False, sites=[].
     """
@@ -1664,58 +1715,81 @@ async def get_sites_actifs_public():
 # l'extérieur, mise à jour de la chronologie, etc.).
 # Accessible uniquement au collecteur authentifié (require_auth).
 @app.get("/api/exercice/statuts-publics")
-async def get_statuts_publics_sites(auth=Depends(require_auth)):
+async def get_statuts_publics_sites():
     """Agrège le statut public de chaque site exercice pour vue pédagogique
     animateur. Appel direct /api/v1/status/public sur chaque instance
     (pas d'auth requise côté instance pour cet endpoint, statut public
     par nature).
-    """
-    import httpx as _httpx
-    scenario = _inj.get("scenario") or {}
-    acteurs = scenario.get("acteurs", [])
-    if not acteurs:
-        return {"running": False, "sites": []}
 
-    result = []
-    async with _httpx.AsyncClient(timeout=3.0) as client:
-        for a in acteurs:
-            sigle = (a.get("sigle") or "").upper()
-            port = int(a.get("port", 0))
-            if not sigle or not port:
-                continue
-            site = {
-                "sigle": sigle,
-                "nom": a.get("nom_etablissement") or sigle,
-                "port": port,
-                "published": False,
-                "etat": "—",
-                "message": "",
-                "derniere_maj": None,
-                "nb_chronologie": 0,
-                "reachable": False,
-                "error": None,
-            }
-            try:
-                r = await client.get(f"http://localhost:{port}/api/v1/status/public")
-                if r.status_code == 200:
-                    d = r.json()
-                    site["reachable"] = True
-                    site["published"] = bool(d.get("published"))
-                    site["etat"] = d.get("etat") or d.get("niveau") or "—"
-                    site["message"] = (d.get("message") or "")[:200]
-                    site["derniere_maj"] = d.get("updated_at") or d.get("derniere_maj")
-                    site["nb_chronologie"] = len(d.get("chronologie") or [])
-                elif r.status_code == 404:
-                    site["error"] = "Route /status non exposée (instance ancienne)"
-                else:
-                    site["error"] = f"HTTP {r.status_code}"
-            except Exception as e:
-                site["error"] = str(e)[:80]
-            result.append(site)
-    return {
-        "running": _inj.get("running", False),
-        "sites": result,
-    }
+    v3.0.0 — try/except global pour éviter les 500 silencieux côté UI animateur
+    quand une instance échoue ou que le scénario n'est pas chargé proprement.
+
+    v3000h33 — Route publique (suppression du require_auth) : les données sont
+    publiques par nature, et ui_sessions en mémoire se perdent au redémarrage
+    du collecteur exercice, ce qui causait des 401 systématiques après reset.
+    """
+    try:
+        import httpx as _httpx
+        scenario = _inj.get("scenario") or {}
+        acteurs = scenario.get("acteurs") if isinstance(scenario, dict) else None
+        acteurs = acteurs or []
+        if not acteurs:
+            return {"running": False, "sites": []}
+
+        result = []
+        async with _httpx.AsyncClient(timeout=3.0) as client:
+            for a in acteurs:
+                try:
+                    if not isinstance(a, dict):
+                        continue
+                    sigle = (a.get("sigle") or "").upper()
+                    port = int(a.get("port", 0) or 0)
+                    if not sigle or not port:
+                        continue
+                    site = {
+                        "sigle": sigle,
+                        "nom": a.get("nom_etablissement") or sigle,
+                        "port": port,
+                        "published": False,
+                        "etat": "—",
+                        "message": "",
+                        "derniere_maj": None,
+                        "nb_chronologie": 0,
+                        "reachable": False,
+                        "error": None,
+                    }
+                    try:
+                        r = await client.get(f"http://localhost:{port}/api/v1/status/public")
+                        if r.status_code == 200:
+                            d = r.json()
+                            site["reachable"] = True
+                            site["published"] = bool(d.get("published"))
+                            site["etat"] = d.get("etat") or d.get("niveau") or "—"
+                            site["message"] = (d.get("message") or "")[:200]
+                            site["derniere_maj"] = d.get("updated_at") or d.get("derniere_maj")
+                            site["nb_chronologie"] = len(d.get("chronologie") or [])
+                        elif r.status_code == 404:
+                            site["error"] = "Route /status non exposée (instance ancienne)"
+                        else:
+                            site["error"] = f"HTTP {r.status_code}"
+                    except Exception as e:
+                        site["error"] = str(e)[:80]
+                    result.append(site)
+                except Exception as e:
+                    # Un acteur mal formé ne casse pas les autres
+                    import logging as _lg
+                    _lg.warning(f"statuts-publics : acteur ignoré ({e})")
+                    continue
+        return {
+            "running": _inj.get("running", False),
+            "sites": result,
+        }
+    except Exception as e:
+        # v3.0.0 — Fail-safe : on retourne une réponse propre plutôt qu'un 500
+        # qui pollue la console et casse loadStatutsPublics côté animateur.
+        import logging as _lg
+        _lg.error(f"statuts-publics a échoué globalement : {e}", exc_info=False)
+        return {"running": False, "sites": [], "error": f"Erreur interne: {str(e)[:120]}"}
 
 
 # v2312 — Liste des instances actuellement joignables, indexée par sigle.
@@ -1818,21 +1892,21 @@ def _template_json_skeleton() -> dict:
             "type_crise": "CYBER",
             "complexite": "MOYEN",
             "duree_min": 60,
-            "sites": ["DEMO"],
+            "sites": ["DEMO1"],
             "nb_joueurs": 5,
             "auteur": "À compléter",
             "date_creation": "2026-04-21"
         },
         "joueurs": [
-            {"nom": "Martin DUPONT", "role": "Directeur général", "site": "DEMO"},
-            {"nom": "Claire MOREAU", "role": "RSSI", "site": "DEMO"}
+            {"nom": "Martin DUPONT", "role": "Directeur général", "site": "DEMO1"},
+            {"nom": "Claire MOREAU", "role": "RSSI", "site": "DEMO1"}
         ],
         "stimuli": [
             {
                 "id": "S01",
                 "type": "incident",
                 "t_min": 0,
-                "cible": "DEMO",
+                "cible": "DEMO1",
                 "titre": "Premier incident",
                 "description_animateur": "Ce que l'animateur doit savoir",
                 "action_attendue": "Ce que les joueurs doivent faire",
@@ -1848,7 +1922,7 @@ def _template_json_skeleton() -> dict:
                 "id": "S02",
                 "type": "message",
                 "t_min": 10,
-                "cible": "DEMO",
+                "cible": "DEMO1",
                 "titre": "Message chat",
                 "description_animateur": "Contexte du message",
                 "action_attendue": "Réaction des joueurs",
@@ -1860,14 +1934,14 @@ def _template_json_skeleton() -> dict:
                 "id": "S03",
                 "type": "transfert",
                 "t_min": 25,
-                "cible": "DEMO",
+                "cible": "DEMO1",
                 "titre": "Transfert patient urgent",
                 "description_animateur": "Contexte du transfert",
                 "action_attendue": "Coordination du transfert",
                 "payload": {
                     "unite_origine": "Urgences",
                     "etablissement_destination": "DEMO2",
-                    "site_destination": "Hôpital de Démonstration 2",
+                    "site_destination": "Hôpitaux du Léman",
                     "unite_destination": "Réanimation",
                     "motif": "Saturation locale",
                     "mode_transport": "SMUR",
@@ -1901,11 +1975,11 @@ async def get_template_csv(auth=Depends(require_auth)):
         # En-tête explicite des colonnes attendues
         "id,type,t_min,cible,titre,description_animateur,action_attendue,contenu_ou_fait,urgency,declarant_nom,unite_fonctionnelle,etablissement_destination,unite_destination,motif,mode_transport,urgence",
         # Exemple incident
-        'S01,incident,0,DEMO,"Panne SI","Le SI tombe","Activer PCA","DPI inaccessible depuis 5 min",3,"Technicien DSI","DSI","","","","",""',
+        'S01,incident,0,DEMO1,"Panne SI","Le SI tombe","Activer PCA","DPI inaccessible depuis 5 min",3,"Technicien DSI","DSI","","","","",""',
         # Exemple message
-        'S02,message,10,DEMO,"Message ARS","L\'ARS demande info","Répondre sous 30 min","Demande urgente d\'information ARS",2,"","","","","","",""',
+        'S02,message,10,DEMO1,"Message ARS","L\'ARS demande info","Répondre sous 30 min","Demande urgente d\'information ARS",2,"","","","","","",""',
         # Exemple transfert
-        'S03,transfert,25,DEMO,"Transfert SMUR","Saturation","Coordonner avec DEMO2","",3,"","",DEMO2,"Réanimation","Saturation locale",SMUR,URGENT',
+        'S03,transfert,25,DEMO1,"Transfert SMUR","Saturation","Coordonner avec DEMO2","",3,"","",DEMO2,"Réanimation","Saturation locale",SMUR,URGENT',
     ]
     content = "\n".join(rows) + "\n"
     return Response(
@@ -1935,7 +2009,7 @@ async def get_template_xlsx(auth=Depends(require_auth)):
         ("type_crise", "CYBER", "CYBER / SANITAIRE / MIXTE / RH / TERTIAIRE"),
         ("complexite", "MOYEN", "FACILE / MOYEN / DIFFICILE / EXPERT"),
         ("duree_min", 60, "Durée en minutes"),
-        ("sites", "DEMO,DEMO2", "Sites séparés par virgule"),
+        ("sites", "DEMO1,DEMO2", "Sites séparés par virgule"),
         ("nb_joueurs", 5, ""),
         ("auteur", "Prénom NOM", ""),
     ]
@@ -1950,15 +2024,15 @@ async def get_template_xlsx(auth=Depends(require_auth)):
                "unite_fonctionnelle", "etablissement_destination",
                "unite_destination", "motif", "mode_transport", "urgence"]
     ws_stim.append(headers)
-    ws_stim.append(["S01", "incident", 0, "DEMO", "Panne SI",
+    ws_stim.append(["S01", "incident", 0, "DEMO1", "Panne SI",
                     "Le SI tombe", "Activer PCA",
                     "DPI inaccessible depuis 5 min", 3,
                     "Technicien DSI", "DSI", "", "", "", "", ""])
-    ws_stim.append(["S02", "message", 10, "DEMO", "Message ARS",
+    ws_stim.append(["S02", "message", 10, "DEMO1", "Message ARS",
                     "L'ARS demande info", "Répondre sous 30 min",
                     "Demande urgente d'information ARS", 2,
                     "", "", "", "", "", "", ""])
-    ws_stim.append(["S03", "transfert", 25, "DEMO", "Transfert SMUR",
+    ws_stim.append(["S03", "transfert", 25, "DEMO1", "Transfert SMUR",
                     "Saturation", "Coordonner avec DEMO2",
                     "", 3, "", "", "DEMO2", "Réanimation",
                     "Saturation locale", "SMUR", "URGENT"])
@@ -1966,8 +2040,8 @@ async def get_template_xlsx(auth=Depends(require_auth)):
     # Feuille 3 : Joueurs
     ws_joueurs = wb.create_sheet("Joueurs")
     ws_joueurs.append(["nom", "role", "site"])
-    ws_joueurs.append(["Martin DUPONT", "Directeur général", "DEMO"])
-    ws_joueurs.append(["Claire MOREAU", "RSSI", "DEMO"])
+    ws_joueurs.append(["Martin DUPONT", "Directeur général", "DEMO1"])
+    ws_joueurs.append(["Claire MOREAU", "RSSI", "DEMO1"])
 
     # Écrire en mémoire
     import io
@@ -3078,6 +3152,36 @@ async def get_annuaire_interght():
 def health():
     return {"status":"ok","port":8565,"exercice":True,
             "etabs":len(etablissements),"running":_inj["running"]}
+
+
+# v3000h20 — Assistant territorial (vue agrégée GHT)
+@app.get("/api/territorial-assistant")
+async def get_territorial_assistant(credentials=Depends(security)):
+    """v3000h20 — Assistant de supervision territoriale.
+
+    Évalue les 5 règles territoriales sur la vue agrégée des établissements
+    et retourne les alertes + un résumé d'état GHT.
+
+    Accessible sans auth pour faciliter la démo / l'animateur (la vue
+    agrégée n'expose pas de données patient).
+    """
+    try:
+        from collecteur_exercice.territorial_assistant import evaluate_territorial_rules
+    except ImportError:
+        # Fallback : module importé depuis le même répertoire
+        from territorial_assistant import evaluate_territorial_rules
+    try:
+        result = evaluate_territorial_rules(etablissements, transferts_inter)
+        return result
+    except Exception as e:
+        logger.error(f"territorial_assistant: {e}")
+        return {
+            "summary": {},
+            "alertes": [],
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "error": str(e),
+        }
+
 
 @app.post("/api/admin/pending/accept-all")
 async def accept_all():
