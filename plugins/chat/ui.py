@@ -9,7 +9,7 @@ _HTML_PATH = os.path.join(os.path.dirname(__file__), "chat.html")
 
 # v3.0.0-alpha19 — marker pour vérifier la version servie
 # Incrémente à chaque build pour invalider les caches navigateur.
-_BUILD_VERSION = "v3000h35"
+_BUILD_VERSION = "v3.4.0-beta1"
 _VERSION_MARKER = f"<!-- SCRIBE chat {_BUILD_VERSION} -->\n"
 
 def _get_html() -> str:
@@ -55,7 +55,7 @@ def chat_ui_version():
         return JSONResponse({"error": str(e)}, headers=_NO_CACHE)
     return JSONResponse({
         "build": _BUILD_VERSION,
-        "expected": "v3000h35",
+        "expected": "v3.4.0-beta1",
         "ok": (not has_sync_call) and (not has_chat_coll_disabled_ref),
         "old_setinterval_present": has_sync_call,
         "old_check_present": has_chat_coll_disabled_ref,

@@ -250,16 +250,28 @@ let LANG = {};
 let LANG_CODE = 'fr';
 
 async function loadI18n() {
-  // v2307 — Priorité à la langue définie globalement dans l'instance via
-  // l'admin (endpoint /api/v1/i18n/current). Fallback sur SCRIBE_CONFIG.langue
-  // (fichier config.js statique généré au setup) puis 'fr'.
+  // v3.4 (h38k) — Priorité de résolution de la langue :
+  //   1. localStorage 'scribe_lang_pref' (choix utilisateur via sélecteur login)
+  //   2. /api/v1/i18n/current (override admin global de l'instance)
+  //   3. SCRIBE_CONFIG.langue (langue choisie au wizard à la création)
+  //   4. 'fr' (fallback historique)
+  // Le sélecteur du login screen écrit dans (1), donc l'override utilisateur
+  // gagne sur tout — comportement attendu d'un sélecteur explicite.
   let code = 'fr';
+  let userOverride = null;
   try {
-    const cur = await fetch('/api/v1/i18n/current').then(r => r.json()).catch(() => null);
-    if (cur && cur.code) code = cur.code;
-    else if (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.langue) code = SCRIBE_CONFIG.langue;
-  } catch(e) {
-    if (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.langue) code = SCRIBE_CONFIG.langue;
+    userOverride = localStorage.getItem('scribe_lang_pref');
+  } catch(e) {}
+  if (userOverride) {
+    code = userOverride;
+  } else {
+    try {
+      const cur = await fetch('/api/v1/i18n/current').then(r => r.json()).catch(() => null);
+      if (cur && cur.code) code = cur.code;
+      else if (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.langue) code = SCRIBE_CONFIG.langue;
+    } catch(e) {
+      if (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.langue) code = SCRIBE_CONFIG.langue;
+    }
   }
   LANG_CODE = code;
   try {
@@ -305,6 +317,12 @@ function applyI18nDOM() {
     const key = el.getAttribute('data-i18n-placeholder');
     const translated = t(key);
     if (translated && translated !== key) el.placeholder = translated;
+  });
+  // v3.4 (h38j) — Support data-i18n-title pour les tooltips
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const key = el.getAttribute('data-i18n-title');
+    const translated = t(key);
+    if (translated && translated !== key) el.title = translated;
   });
   // v2307-hotfix — data-i18n-label : remplace uniquement le premier text
   // node de l'élément, préserve les enfants (utile pour boutons avec
@@ -587,7 +605,7 @@ async function loadDBIncidents() {
     const el = document.getElementById('db-incidents');
     const sub = document.getElementById('db-incidents-sub');
     if (el) { el.textContent = actifs.length; el.style.color = actifs.length > 0 ? 'var(--red)' : 'var(--text)'; }
-    if (sub) sub.textContent = n3 > 0 ? n3 + ' critique(s)' : actifs.length ? 'Aucun critique' : 'Aucun incident';
+    if (sub) sub.textContent = n3 > 0 ? n3 + ' critique(s)' : actifs.length ? t('dashboard.kpi.aucun_critique') : t('dashboard.kpi.aucun_incident');
     // Main courante
     const mc = document.getElementById('db-mc');
     if (mc) {
@@ -663,7 +681,7 @@ async function loadDBTransferts() {
     if (el) { el.textContent = en_cours.length; el.style.color = en_cours.length ? '#c084fc' : 'var(--text)'; }
     if (sub) {
       const dests = [...new Set(en_cours.map(t => t.etablissement_destination).filter(Boolean))];
-      sub.textContent = dests.length ? '→ ' + dests.slice(0,3).join(', ') : 'Aucun transfert en cours';
+      sub.textContent = dests.length ? '→ ' + dests.slice(0,3).join(', ') : t('dashboard.kpi.aucun_transfert');
     }
   } catch(e) {}
 }
@@ -676,7 +694,7 @@ async function loadDBMessages() {
     const el  = document.getElementById('db-messages');
     const sub = document.getElementById('db-messages-sub');
     if (el) { el.textContent = data.count || 0; el.style.color = (data.count||0) > 0 ? '#22c55e' : 'var(--text)'; }
-    if (sub) sub.textContent = (data.count||0) > 0 ? 'À lire' : 'Aucun message';
+    if (sub) sub.textContent = (data.count||0) > 0 ? 'À lire' : t('dashboard.kpi.aucun_message');
   } catch(e) {}
 }
 
@@ -1454,7 +1472,7 @@ function renderSoinsTrList() {
                   ...trIncoming];
   if (count) count.textContent = actifs.length ? `${actifs.length} transfert${actifs.length>1?'s':''}` : '';
   if (!actifs.length) {
-    list.innerHTML = '<div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:8px;text-align:center">Aucun transfert actif</div>';
+    list.innerHTML = '<div style="font-family:var(--mono);font-size:9px;color:var(--muted);padding:8px;text-align:center">' + t('soins.aucun_transfert') + '</div>';
     return;
   }
   list.innerHTML = actifs.map(t => {
@@ -2370,31 +2388,35 @@ function renderTransverses() {
     const isDeg  = s.statut === 'DEGRADE';
     const isCrit = s.statut === 'CRITIQUE';
     const ts     = s.updated_at ? parseUTC(s.updated_at).toLocaleTimeString('fr-FR') : '';
+    // Libellé du service : traduire si on a la clé, sinon prendre le libellé du backend
+    let libelle = s.libelle;
+    if (s.service_id === 'securite_physique') libelle = t('transverses.securite_physique');
+    else if (s.service_id === 'logistique')   libelle = t('transverses.logistique');
     return `<div class="service-card">
       <div class="service-card-header">
-        <span class="service-name">${icon} ${s.libelle}</span>
+        <span class="service-name">${icon} ${libelle}</span>
         <div class="service-badge-btns">
           <button class="${isOk   ? 'active-ok'       : 'inactive'}"
                   onclick="setServiceStatus('${s.service_id}','OK',this)"
-                  title="Opérationnel">✓ OK</button>
+                  title="${t('soins.legend_critical', 'Opérationnel')}">✓ ${t('status.ok')}</button>
           <button class="${isDeg  ? 'active-degrade'  : 'inactive'}"
                   onclick="setServiceStatus('${s.service_id}','DEGRADE',this)"
-                  title="Mode dégradé">⚡ DÉGRADÉ</button>
+                  title="${t('status.degrade', 'Mode dégradé')}">⚡ ${t('status.degrade_badge')}</button>
           <button class="${isCrit ? 'active-critique'  : 'inactive'}"
                   onclick="setServiceStatus('${s.service_id}','CRITIQUE',this)"
-                  title="Impact critique">⚠ CRITIQUE</button>
+                  title="${t('soins.legend_critical')}">⚠ ${t('status.critique_badge')}</button>
         </div>
       </div>
       <textarea class="service-comment" rows="1"
-        placeholder="Commentaire..."
+        placeholder="${t('transverses.commentaire_ph')}"
         onblur="saveServiceComment('${s.service_id}', this.value)"
         >${s.commentaire || ''}</textarea>
-      <span class="service-updated" id="svc-ts-${s.service_id}">${ts ? 'Mis à jour : ' + ts : ''}</span>
+      <span class="service-updated" id="svc-ts-${s.service_id}">${ts ? t('soins.last_update') + ' : ' + ts : ''}</span>
     </div>`;
   }).join('');
 
   section.innerHTML = `
-    <div class="transverses-title">🔧 Services transverses</div>
+    <div class="transverses-title">🔧 ${t('soins.services_transverses')}</div>
     <div class="transverses-grid">${cardsHtml}</div>`;
 }
 
@@ -2555,10 +2577,10 @@ function renderSoins() {
     );
     const maxUrg = opsInc.length ? Math.max(...opsInc.map(i => i.urgency)) : 0;
     let statusClass, statusLabel;
-    if (maxUrg >= 3)      { statusClass='soins-critique'; statusLabel='⚠ CRITIQUE'; }
-    else if (maxUrg >= 2) { statusClass='soins-degrade';  statusLabel='⚡ MODE DÉGRADÉ'; }
-    else if (maxUrg >= 1) { statusClass='soins-degrade';  statusLabel='⚡ INCIDENT'; }
-    else                  { statusClass='soins-ok';        statusLabel='✓ OPÉRATIONNEL'; }
+    if (maxUrg >= 3)      { statusClass='soins-critique'; statusLabel='⚠ ' + t('status.critique_badge'); }
+    else if (maxUrg >= 2) { statusClass='soins-degrade';  statusLabel='⚡ ' + t('status.degrade_badge'); }
+    else if (maxUrg >= 1) { statusClass='soins-degrade';  statusLabel='⚡ ' + t('soins.aucun_incident', 'INCIDENT'); }
+    else                  { statusClass='soins-ok';        statusLabel='✓ ' + t('status.operationnel_badge'); }
 
     // Jauge verticale de charge sanitaire (v2182) : compte les incidents
     // SANITAIRE/cliniques actifs liés au pôle pour donner une idée du
@@ -2601,7 +2623,7 @@ function renderSoins() {
         <div style="display:flex;gap:10px;align-items:stretch">
           ${chargeGaugeHTML}
           <div style="flex:1;min-width:0">
-            ${linked.length ? incItems : '<span class="soins-empty">Aucun incident lié</span>'}
+            ${linked.length ? incItems : '<span class="soins-empty">' + t('soins.aucun_incident') + '</span>'}
             ${linked.length > 3 ? `<div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px">+${linked.length-3} autres</div>` : ''}
           </div>
         </div>
@@ -2792,7 +2814,7 @@ function renderSoinsTimeline(incidents) {
     etaEl.textContent = `Retour normal estimé : ${_fmtAbsolute(maxEta)} (dans ${_fmtDelta(maxEta)})${hasAll?'':' ⚠'}`;
     etaEl.className = 'tl-eta-global ' + (hasAll ? 'tl-eta-ok' : 'tl-eta-pending');
   } else {
-    etaEl.textContent = '— Aucun incident ouvert';
+    etaEl.textContent = '— ' + t('soins.aucun_incident_ouvert');
     etaEl.className   = 'tl-eta-global tl-eta-unknown';
   }
 
@@ -2836,12 +2858,12 @@ function _updateCardsForProjection(offsetMs) {
     if (!st.anyPending) {
       // Projection : retour à la normale
       badge.className = 'soins-status-badge soins-ok';
-      badge.textContent = '✓ OPÉRATIONNEL';
+      badge.textContent = '✓ ' + t('status.operationnel_badge');
       card.style.opacity = offsetMs > 0 ? '0.7' : '1';
     } else {
       // Toujours impacté à cet instant
-      if (st.maxUrg >= 3) { badge.className='soins-status-badge soins-critique'; badge.textContent='⚠ CRITIQUE'; }
-      else                 { badge.className='soins-status-badge soins-degrade'; badge.textContent='⚡ MODE DÉGRADÉ'; }
+      if (st.maxUrg >= 3) { badge.className='soins-status-badge soins-critique'; badge.textContent='⚠ ' + t('status.critique_badge'); }
+      else                 { badge.className='soins-status-badge soins-degrade'; badge.textContent='⚡ ' + t('status.degrade_badge'); }
       card.style.opacity = '1';
     }
   });
@@ -2850,10 +2872,10 @@ function _updateCardsForProjection(offsetMs) {
   const lbl = document.getElementById('soins-last-update');
   if (lbl) {
     if (offsetMs > 0) {
-      lbl.textContent = `⏩ Projection : +${_fmtDelta(offsetMs)} — ${_fmtAbsolute(offsetMs)}`;
+      lbl.textContent = `⏩ ${t('soins.projection_normale')} : +${_fmtDelta(offsetMs)} — ${_fmtAbsolute(offsetMs)}`;
       lbl.style.color = '#fbbf24';
     } else {
-      lbl.textContent = `Mis à jour: ${new Date().toLocaleTimeString('fr-FR')}`;
+      lbl.textContent = t('soins.last_update') + `: ${new Date().toLocaleTimeString(LANG_CODE || 'fr-FR')}`;
       lbl.style.color = '';
     }
   }
@@ -3558,7 +3580,7 @@ async function msgOpenComposeDirect(userId, displayName) {
 function renderAnnuaire(filter='') {
   const rawData = annuaireMode==='secours' ? ANNUAIRE_SECOURS : ANNUAIRE_NORMAL;
   // v2.4.8 : normaliser le mapping backend (service/interne/direct/mobile/site/note)
-  // → frontend (service/tel/local/note). Bug Polynésie : "undefined" partout.
+  // → frontend (service/tel/local/note). Bug Example Territory : "undefined" partout.
   const data = (rawData || []).map(e => {
     if (!e) return null;
     // Si l'entrée a déjà tel/local (ancien format), on garde tel quel
@@ -4932,11 +4954,18 @@ async function loadAdminLang() {
     const sel = document.getElementById('lang-select');
     if (!sel) return;
     sel.innerHTML = '';
+    // v3.4 (h38n) — Si pas d'override admin (d.current === null), fallback
+    // sur SCRIBE_CONFIG.langue (langue choisie au wizard). Sinon le dropdown
+    // affichait toujours "Français" par défaut alors que l'instance était
+    // configurée en EN au wizard.
+    const effectiveCurrent = d.current
+      || (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.langue)
+      || 'fr';
     (d.available || []).forEach(l => {
       const opt = document.createElement('option');
       opt.value = l.code;
       opt.textContent = `${l.flag || ''} ${l.name} (${l.code})`.trim();
-      if (l.code === d.current) opt.selected = true;
+      if (l.code === effectiveCurrent) opt.selected = true;
       sel.appendChild(opt);
     });
   } catch(e) {
@@ -6557,7 +6586,7 @@ async function trOpenEdit(id) {
     'tr-ipp':t.ipp,'tr-ddn':t.date_naissance,
     'tr-redacteur':currentUser?(currentUser.display_name||currentUser.username):(t.redacteur||''),
     // v2.4.8 : ETA — convertir UTC → heure locale pour l'input datetime-local
-    // (bug Polynésie : avant on injectait l'UTC brut, l'input l'affichait
+    // (bug Example Territory : avant on injectait l'UTC brut, l'input l'affichait
     //  comme local, et à la sauvegarde new Date(local).toISOString() re-décalait
     //  de +4h → +8h après 2 éditions)
     'tr-comment':t.commentaire,'tr-eta': t.eta ? _utcToLocalInput(t.eta) : ''
@@ -6619,7 +6648,7 @@ async function trSave() {
   const redc=document.getElementById('tr-redacteur').value.trim();
   // v2.4.6 : l'input datetime-local renvoie "YYYY-MM-DDTHH:MM" en heure LOCALE
   // du navigateur. On le convertit en ISO UTC pour que le backend stocke en UTC
-  // cohérent (Polynésie : 13:30 local → 23:30Z, Paris : 13:30 local → 11:30Z).
+  // cohérent (Example Territory : 13:30 local → 23:30Z, Paris : 13:30 local → 11:30Z).
   // v2.4.8 : l'input datetime-local renvoie "YYYY-MM-DDTHH:MM" en heure
   // locale (du navigateur OU de la TZ configurée). On utilise _localInputToUtc
   // qui inverse correctement la conversion appliquée par _utcToLocalInput,
@@ -7436,7 +7465,21 @@ const NIVEAUX_LABELS = {
   MAINTENANCE:    '↻ Maintenance en cours',
 };
 const SVC_STATES = ['OK','PERTURBE','HS','MAINTENANCE'];
-const SVC_STATE_LABELS = {OK:'OK',PERTURBE:'Perturbé',HS:'Hors service',MAINTENANCE:'Maintenance'};
+// v3.4 (h38n) — Labels SVC traduits dynamiquement. Avant : objet statique
+// {PERTURBE:'Perturbé'}. Maintenant : fonction qui appelle t() à chaque
+// rendu pour suivre la langue active.
+function svcLabel(state) {
+  const map = {
+    OK:          t('status.ok', 'OK'),
+    PERTURBE:    t('bulletin.perturbe'),
+    HS:          t('bulletin.incident_majeur', 'Hors service'),
+    MAINTENANCE: t('bulletin.maintenance'),
+  };
+  return map[state] || state;
+}
+const SVC_STATE_LABELS = new Proxy({}, {
+  get: (_, k) => svcLabel(String(k)),
+});
 const NIVEAU_COLORS = {
   OPERATIONNEL:   {bg:'#052e16',color:'#4ade80',border:'#16a34a',dot:'#4ade80'},
   PERTURBE:       {bg:'#422006',color:'#fbbf24',border:'#b45309',dot:'#fbbf24'},
@@ -7603,8 +7646,8 @@ function renderCommPreview() {
 
   c.innerHTML = `
     <div class="preview-hdr">
-      <div class="preview-title">${etab.nom||'Établissement de santé'}</div>
-      <div class="preview-sub">État du système d'information — Point de situation</div>
+      <div class="preview-title">${etab.nom||t('common.etablissement_upper','Établissement de santé')}</div>
+      <div class="preview-sub">${t('communique.message_officiel','État du système d’information — Point de situation')}</div>
     </div>
     <div class="preview-banner" style="background:${col.bg}22;border-color:${col.border}44">
       <div class="preview-banner-dot" style="background:${col.dot}"></div>
@@ -7615,25 +7658,25 @@ function renderCommPreview() {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
       <div class="preview-card">
-        <div class="preview-card-hdr">Système d'information</div>
+        <div class="preview-card-hdr">${t('bulletin.urgences','Système d’information')}</div>
         ${svcRows(svcs)}
       </div>
       <div class="preview-card">
-        <div class="preview-card-hdr">Prise en charge patients</div>
+        <div class="preview-card-hdr">${t('bulletin.laboratoire','Prise en charge patients')}</div>
         ${svcRows(pec)}
       </div>
     </div>
     ${faq.length?`<div class="preview-card">
-      <div class="preview-card-hdr">Questions fréquentes</div>
+      <div class="preview-card-hdr">${t('communique.questions_freq','Questions fréquentes')}</div>
       ${faq.map(f=>`<div style="padding:8px 12px;border-bottom:1px solid var(--border)">
         <div style="font-size:11px;font-weight:600;margin-bottom:3px">${f.question}</div>
         <div style="font-size:11px;color:var(--muted)">${f.reponse}</div>
       </div>`).join('')}
     </div>`:''}
     ${chrons.length?`<div class="preview-card">
-      <div class="preview-card-hdr">Chronologie</div>
+      <div class="preview-card-hdr">${t('cellule.aucune_decision','Chronologie')}</div>
       ${chrons.map(ch=>`<div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:11px">
-        <span style="color:var(--muted);font-family:var(--mono);font-size:10px;margin-right:8px">${ch.ts?parseUTC(ch.ts).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):''}</span>
+        <span style="color:var(--muted);font-family:var(--mono);font-size:10px;margin-right:8px">${ch.ts?parseUTC(ch.ts).toLocaleTimeString(LANG_CODE||'fr-FR',{hour:'2-digit',minute:'2-digit'}):''}</span>
         ${ch.texte}
       </div>`).join('')}
     </div>`:''}
@@ -8279,7 +8322,7 @@ function capToggleSynthese() {
 }
 
 // v2.4.7 : toggle "Lits > 0 uniquement" (persisté en localStorage)
-// v2.4.8 : "Lits > 0" coché par défaut (demande Polynésie).
+// v2.4.8 : "Lits > 0" coché par défaut (demande Example Territory).
 // Sauf si l'utilisateur l'a explicitement désactivé (-> localStorage = "0")
 let capFilterLitsOnly = (localStorage.getItem('cap_filter_lits') !== '0');
 function capToggleFilterLits() {
@@ -9618,6 +9661,24 @@ function openForcedPasswordChange() {
   if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
   const m = document.getElementById('modal-forced-pw');
   if (m) m.style.display = 'flex';
+  // v3.4 (h38n) — Réappliquer les traductions car le modal peut être ouvert
+  // avant ou après le boot complet i18n. applyI18nDOM est idempotent.
+  if (typeof applyI18nDOM === 'function') applyI18nDOM();
+}
+
+// v3.4 (h38) — Toggle d'affichage des mots de passe dans la modale de
+// changement obligatoire. Bascule entre type=password et type=text avec
+// changement de l'icône (👁 = caché, 👁‍🗨 = visible).
+function _togglePw(inputId, btn) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  if (el.type === 'password') {
+    el.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    el.type = 'password';
+    btn.textContent = '👁';
+  }
 }
 
 async function submitForcedPw() {
@@ -9641,20 +9702,43 @@ async function submitForcedPw() {
   }
 
   try {
+    // v3.4 (h38) — Endpoint /auth/change-password attend current_password
+    // et new_password. apiFetch ajoute déjà le header Authorization.
     const r = await apiFetch('/api/v1/auth/change-password', {
-      method: 'POST', headers: authHeaders(),
-      body: JSON.stringify({ ancien_mdp: ancien, nouveau_mdp: nouveau })
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_password: ancien, new_password: nouveau })
     });
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
       errEl.textContent = d.detail || 'Mot de passe actuel incorrect.';
       errEl.style.display = 'block'; return;
     }
-    // Succès
+    // Succès : on déconnecte et on renvoie sur la page de login pour que
+    // l'utilisateur se reconnecte avec son nouveau mot de passe (parité
+    // avec la consigne UX "déloguer après changement et reproposer login").
     const m = document.getElementById('modal-forced-pw');
     if (m) m.style.display = 'none';
-    if (currentUser) currentUser.must_change_password = false;
-    toast('Mot de passe mis à jour ✓ Bienvenue !', 'ok');
+    toast('Mot de passe mis à jour ✓ Reconnectez-vous', 'ok');
+    setTimeout(() => {
+      try {
+        // Logout local : on vide la session et on réaffiche l'overlay login
+        localStorage.removeItem('scribe_token');
+        localStorage.removeItem('scribe_user');
+        authToken = null;
+        currentUser = null;
+        if (typeof stopHeartbeat === 'function') { try { stopHeartbeat(); } catch(_){} }
+        const login = document.getElementById('login-overlay');
+        if (login) login.classList.remove('hidden');
+        const userInput = document.getElementById('login-user');
+        const passInput = document.getElementById('login-pass');
+        if (passInput) passInput.value = '';
+        if (userInput) userInput.focus();
+      } catch(e) {
+        // Fallback : reload complet
+        window.location.reload();
+      }
+    }, 900);
   } catch(e) {
     errEl.textContent = 'Erreur réseau. Réessayez.';
     errEl.style.display = 'block';
@@ -9662,7 +9746,7 @@ async function submitForcedPw() {
 }
 
 async function importComptes() {
-  // v2.4.8.2 : le bon ID était "import-users-file" pas "import-file" (bug Polynésie)
+  // v2.4.8.2 : le bon ID était "import-users-file" pas "import-file" (bug Example Territory)
   const fileInput = document.getElementById('import-users-file');
   const resultEl  = document.getElementById('import-result');
   if (!fileInput || !fileInput.files || !fileInput.files[0]) {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SCRIBE v3.4.0-alpha2 | Crisis OS</title>
+<title>SCRIBE v3.4.0-beta1 | Crisis OS</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="/api/config.js"></script>
@@ -50,11 +50,11 @@
     <span id="etab-sigle" style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.8);margin-left:4px;letter-spacing:1px;padding:1px 6px;background:rgba(255,255,255,.15);border-radius:3px"></span>
   </div>
   <div class="header-right">
-    <div id="incident-level" class="green">SITUATION NORMALE</div>
+    <div id="incident-level" class="green" data-i18n="topbar.situation_normale">SITUATION NORMALE</div>
     <div class="clock" id="clock">--:--:--</div>
     <a href="https://resana.numerique.gouv.fr/" target="_blank" class="visio-btn" style="background:rgba(99,102,241,.12);color:#a5b4fc;border-color:#6366f1">🔒 RESANA</a>
     <a href="https://lasuite.numerique.gouv.fr/" target="_blank" class="visio-btn" style="background:rgba(34,211,238,.1);color:#67e8f9;border-color:#0891b2">🇫🇷 LA SUITE</a>
-    <button class="notif-btn" id="notif-toggle" onclick="event.stopPropagation();toggleNotifPanel()" type="button">🔔 <span id="notif-count-txt">Inbox</span><span class="notif-badge" id="notif-badge">0</span></button>
+    <button class="notif-btn" id="notif-toggle" onclick="event.stopPropagation();toggleNotifPanel()" type="button">🔔 <span id="notif-count-txt" data-i18n="topbar.inbox">Inbox</span><span class="notif-badge" id="notif-badge">0</span></button>
     <button class="user-chip" id="user-chip" onclick="toggleUserMenu()"><span class="role-dot" id="role-dot"></span><span id="current-user-name">...</span> ▾</button>
     <div id="user-menu" style="display:none;position:absolute;top:100%;right:0;min-width:200px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:1000;padding:4px 0;font-family:var(--mono);font-size:10px">
       <div style="padding:8px 14px;border-bottom:1px solid var(--border);color:var(--muted);font-size:9px" id="user-menu-info">—</div>
@@ -65,17 +65,17 @@
     </div>
     <span id="ia-badge" style="display:none;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;background:var(--surface2);color:var(--muted2);border:1px solid var(--border2);cursor:default;letter-spacing:.5px"></span>
     <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" title="Basculer clair/sombre">🌙</button>
-    <button id="header-admin-btn" onclick="showAdminPanel()" title="Panneau d'administration"
+    <button id="header-admin-btn" onclick="showAdminPanel()" title="Panneau d'administration" data-i18n-title="title.admin_panel"
       style="display:none;font-family:var(--mono);font-size:10px;padding:3px 9px;background:rgba(0,49,137,.15);color:#7ba4f8;border:1px solid #3d5fa0;border-radius:4px;cursor:pointer;font-weight:700">
       ⚙ ADMIN
     </button>
-    <button style="font-family:var(--mono);font-size:10px;padding:3px 9px;background:rgba(0,49,137,.2);color:#7ba4f8;border:1px solid #3d5fa0;border-radius:4px;cursor:pointer;font-weight:700" onclick="archiverCrise()" title="Archiver la crise dans un ZIP">📦 ARCHIVER</button>
-    <button style="font-family:var(--mono);font-size:10px;padding:3px 9px;background:rgba(239,68,68,.15);color:#f87171;border:1px solid #ef4444;border-radius:4px;cursor:pointer;font-weight:700" onclick="resetTableauDeBord()" title="Remettre le tableau de bord à zéro">🔄 NOUVEAU</button>
+    <button style="font-family:var(--mono);font-size:10px;padding:3px 9px;background:rgba(0,49,137,.2);color:#7ba4f8;border:1px solid #3d5fa0;border-radius:4px;cursor:pointer;font-weight:700" onclick="archiverCrise()" title="Archiver la crise dans un ZIP" data-i18n-title="title.archiver_zip">📦 ARCHIVER</button>
+    <button style="font-family:var(--mono);font-size:10px;padding:3px 9px;background:rgba(239,68,68,.15);color:#f87171;border:1px solid #ef4444;border-radius:4px;cursor:pointer;font-weight:700" onclick="resetTableauDeBord()" title="Remettre le tableau de bord à zéro" data-i18n-title="title.reset_dashboard">🔄 NOUVEAU</button>
     <button id="hdr-admin-btn" onclick="showAdminPanel()" title="Administration SCRIBE" aria-label="Administration"
       style="display:none;padding:4px 10px;background:rgba(0,49,137,.15);border:1px solid #3d5fa0;border-radius:4px;cursor:pointer;color:#7ba4f8;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.5px;transition:background .15s"
       onmouseover="this.style.background='rgba(0,49,137,.35)'"
       onmouseout="this.style.background='rgba(0,49,137,.15)'">⚙ ADMIN</button>
-    <button onclick="doLogout()" title="Se déconnecter" aria-label="Se déconnecter"
+    <button onclick="doLogout()" title="Se déconnecter" data-i18n-title="title.logout" aria-label="Se déconnecter"
       style="padding:4px 8px;background:transparent;border:1px solid var(--border2);border-radius:4px;cursor:pointer;color:var(--muted);display:flex;align-items:center;gap:5px;transition:color .15s,border-color .15s"
       onmouseover="this.style.color='#f87171';this.style.borderColor='#ef4444'"
       onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border2)'">
@@ -84,7 +84,7 @@
         <polyline points="16 17 21 12 16 7"/>
         <line x1="21" y1="12" x2="9" y2="12"/>
       </svg>
-      <span style="font-family:var(--mono);font-size:9px">Quitter</span>
+      <span style="font-family:var(--mono);font-size:9px" data-i18n="topbar.quitter">Quitter</span>
     </button>
   </div>
   </div><!-- /.header-top -->
@@ -115,22 +115,97 @@
 <!-- ══════════════════ LOGIN OVERLAY ══════════════════ -->
 <div id="login-overlay" style="display:flex">
   <div class="login-box">
+    <!-- v3.4 (h38k) — Sélecteur de langue accessible AVANT login pour que
+         l'utilisateur puisse choisir sa langue dès la mire de connexion.
+         Le choix est persisté en localStorage ('scribe_lang_pref') et lu par
+         loadI18n() AVANT toute autre source (override toutes les autres). -->
+    <div id="login-lang-bar" style="display:flex;justify-content:flex-end;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px">
+      <span>🌐</span>
+      <select id="login-lang-select" onchange="window.changeLanguagePreference(this.value)"
+              style="font-family:var(--mono);font-size:10px;padding:3px 6px;background:#fff;border:1px solid #cbd5e1;border-radius:3px;color:#0f172a;cursor:pointer">
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+        <option value="it">Italiano</option>
+        <option value="de">Deutsch</option>
+        <option value="es">Español</option>
+        <option value="pt">Português</option>
+        <option value="nl">Nederlands</option>
+        <option value="pl">Polski</option>
+        <option value="ro">Română</option>
+        <option value="el">Ελληνικά</option>
+        <option value="cs">Čeština</option>
+        <option value="sk">Slovenčina</option>
+        <option value="sv">Svenska</option>
+        <option value="da">Dansk</option>
+        <option value="fi">Suomi</option>
+        <option value="hu">Magyar</option>
+        <option value="bg">Български</option>
+        <option value="hr">Hrvatski</option>
+        <option value="sl">Slovenščina</option>
+        <option value="et">Eesti</option>
+        <option value="lt">Lietuvių</option>
+        <option value="lv">Latviešu</option>
+        <option value="mt">Malti</option>
+        <option value="ga">Gaeilge</option>
+      </select>
+    </div>
     <div class="login-logo" style="padding:8px 0"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:60px;object-fit:contain;display:block;margin:0 auto"></div>
-    <div class="login-sub" id="login-subtitle">VOTRE ÉTABLISSEMENT — CRISIS OS</div>
+    <div class="login-sub" id="login-subtitle" data-i18n="login.subtitle">VOTRE ÉTABLISSEMENT — CRISIS OS</div>
     <div id="login-demo-banner" style="display:none;background:#fff7ed;border:1px solid #fb923c;border-left:4px solid #ea580c;border-radius:4px;padding:10px 12px;margin:8px 0 10px;font-family:var(--mono);font-size:10px;color:#9a3412;line-height:1.6">
       <div style="font-weight:700;margin-bottom:4px;font-size:11px">🎓 MODE DÉMO</div>
       <div>Identifiant : <strong style="color:#7c2d12">dircrise</strong></div>
       <div>Mot de passe : <strong style="color:#7c2d12">Demo2026!</strong></div>
     </div>
-    <div class="login-field"><label>Identifiant</label><input type="text" id="login-user" placeholder="dircrise" autocomplete="username"></div>
-    <div class="login-field"><label>Mot de passe</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
-    <button class="btn-login" onclick="doLogin()">CONNEXION</button>
-    <div class="login-err" id="login-err">Identifiants incorrects</div>
-    <div id="login-footer" style="font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center;margin-top:4px">Réseau parallèle — Accès restreint</div>
-    <div style="text-align:center;font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.25);margin-top:8px;letter-spacing:1px">Designed by Hervé PELLARIN</div>
-    <div id="login-credit" style="font-family:var(--mono);font-size:8px;color:var(--muted);text-align:center;margin-top:6px;opacity:.6">Designed by Hervé PELLARIN</div>
+    <div class="login-field"><label data-i18n="login.identifiant">Identifiant</label><input type="text" id="login-user" placeholder="dircrise" autocomplete="username"></div>
+    <div class="login-field"><label data-i18n="login.password_label">Mot de passe</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn-login" onclick="doLogin()" data-i18n="login.connexion_btn">CONNEXION</button>
+    <div class="login-err" id="login-err" data-i18n="login.err_creds">Identifiants incorrects</div>
+    <div id="login-footer" style="font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center;margin-top:4px" data-i18n="login.footer">Réseau parallèle — Accès restreint</div>
+    <div style="text-align:center;font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.25);margin-top:8px;letter-spacing:1px" data-i18n="login.credit">Designed by Hervé PELLARIN</div>
+    <div id="login-credit" style="font-family:var(--mono);font-size:8px;color:var(--muted);text-align:center;margin-top:6px;opacity:.6" data-i18n="login.credit">Designed by Hervé PELLARIN</div>
   </div>
 </div>
+<script>
+// v3.4 (h38k) — Sélecteur de langue dans la mire de login.
+// L'utilisateur peut changer la langue AVANT de se connecter. Le choix
+// est persisté en localStorage et lu en priorité par loadI18n() au boot.
+window.changeLanguagePreference = function(code) {
+  try {
+    localStorage.setItem('scribe_lang_pref', code);
+    // Reload pour appliquer immédiatement à toute la mire
+    // (sinon il faudrait re-render dynamiquement chaque texte)
+    window.location.reload();
+  } catch(e) {
+    console.error('changeLanguagePreference failed', e);
+  }
+};
+
+// Pré-sélectionner la valeur courante dans le dropdown
+(function() {
+  function syncLangSelect() {
+    var sel = document.getElementById('login-lang-select');
+    if (!sel) return;
+    var current = 'fr';
+    try {
+      var stored = localStorage.getItem('scribe_lang_pref');
+      if (stored) current = stored;
+      else if (typeof SCRIBE_CONFIG !== 'undefined' && SCRIBE_CONFIG.langue) current = SCRIBE_CONFIG.langue;
+    } catch(e) {}
+    // Trouver l'option correspondante
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === current) {
+        sel.selectedIndex = i;
+        break;
+      }
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', syncLangSelect);
+  } else {
+    syncLangSelect();
+  }
+})();
+</script>
 <script>
 // Détection mode démo : si sigle = DEMO, afficher le bandeau credentials
 (function() {
@@ -162,22 +237,22 @@
         <!-- Ligne 1 : 4 compteurs -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;border-left:3px solid #003189;cursor:pointer" onclick="openTab('tab-veille',document.getElementById('tab-btn-incidents')||document.querySelectorAll('.tab-btn')[1])">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;text-transform:uppercase">Incidents actifs</div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;text-transform:uppercase" data-i18n="dashboard.kpi.incidents_actifs">Incidents actifs</div>
             <div style="font-family:var(--mono);font-size:32px;font-weight:700;color:var(--text)" id="db-incidents">—</div>
             <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px" id="db-incidents-sub"></div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;border-left:3px solid #d97706;cursor:pointer" onclick="openTab('tab-capacite',document.getElementById('tab-btn-capacite'))">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;text-transform:uppercase">Capacité globale</div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;text-transform:uppercase" data-i18n="dashboard.kpi.capacite_globale">Capacité globale</div>
             <div style="font-family:var(--mono);font-size:32px;font-weight:700;color:var(--text)" id="db-capacite">—</div>
             <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px" id="db-capacite-sub"></div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;border-left:3px solid #7c3aed;cursor:pointer" onclick="openTab('tab-soins',document.getElementById('tab-btn-soins'))">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;text-transform:uppercase">Transferts en cours</div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;text-transform:uppercase" data-i18n="dashboard.kpi.transferts_en_cours">Transferts en cours</div>
             <div style="font-family:var(--mono);font-size:32px;font-weight:700;color:var(--text)" id="db-transferts">—</div>
             <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px" id="db-transferts-sub"></div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;border-left:3px solid #16a34a;cursor:pointer" onclick="openTab('tab-messagerie',document.getElementById('tab-btn-messagerie'))">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;text-transform:uppercase">Messages non lus</div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;text-transform:uppercase" data-i18n="dashboard.kpi.messages_non_lus">Messages non lus</div>
             <div style="font-family:var(--mono);font-size:32px;font-weight:700;color:var(--text)" id="db-messages">—</div>
             <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px" id="db-messages-sub"></div>
           </div>
@@ -186,11 +261,11 @@
         <!-- Ligne 2 : capacité par pôle + état G7 -->
         <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">Capacité par pôle</div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase" data-i18n="dashboard.section.capacite_pole">Capacité par pôle</div>
             <div id="db-poles" style="display:flex;flex-direction:column;gap:7px"></div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">Arc Alpin G7</div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">Example Network G7</div>
             <div id="db-g7" style="display:flex;flex-direction:column;gap:6px"></div>
           </div>
         </div>
@@ -198,15 +273,15 @@
         <!-- Ligne 3 : main courante + tâches + messages -->
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:10px;text-transform:uppercase">Main courante récente</div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:10px;text-transform:uppercase" data-i18n="dashboard.section.main_courante">Main courante récente</div>
             <div id="db-mc" style="display:flex;flex-direction:column;gap:7px"></div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:10px;text-transform:uppercase">Tâches critiques</div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:10px;text-transform:uppercase" data-i18n="dashboard.section.taches_critiques">Tâches critiques</div>
             <div id="db-tasks" style="display:flex;flex-direction:column;gap:7px"></div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:10px;text-transform:uppercase">Messages récents</div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:10px;text-transform:uppercase" data-i18n="dashboard.section.messages_recents">Messages récents</div>
             <div id="db-msgs" style="display:flex;flex-direction:column;gap:7px"></div>
           </div>
         </div>
@@ -234,14 +309,14 @@
 
       <div class="field">
         <label>Directeur de crise</label>
-        <select id="directeur_crise"><option value="">-- Sélectionner --</option></select>
+        <select id="directeur_crise"><option value="" data-i18n="incidents.selectionner">-- Sélectionner --</option></select>
       </div>
 
       <div class="form-row">
-        <div class="field" style="flex:1"><label>Établissement</label>
+        <div class="field" style="flex:1"><labeldata-i18n="incidents.etablissement">Établissement</label>
           <select id="site_id" onchange="loadUF()"><option value="">-- Établissement --</option></select>
         </div>
-        <div class="field" style="flex:1;position:relative"><label>Unité Fonct.</label>
+        <div class="field" style="flex:1;position:relative"><labeldata-i18n="incidents.unite_fonct">Unité Fonct.</label>
           <div style="display:flex;gap:4px;align-items:center">
             <div style="position:relative;flex:1">
               <input type="text" id="uf_search" placeholder="Code ou nom UF..." autocomplete="off"
@@ -250,7 +325,7 @@
               <span onclick="clearUF()" style="position:absolute;right:7px;top:50%;transform:translateY(-50%);color:var(--muted);cursor:pointer;font-size:12px">✕</span>
               <div id="uf-dropdown" style="display:none;position:absolute;z-index:500;top:100%;left:0;right:0;max-height:180px;overflow-y:auto;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.4)"></div>
             </div>
-            <button type="button" onclick="ufAddCurrent()" title="Ajouter cette UF"
+            <button type="button" onclick="ufAddCurrent()" title="Ajouter cette UF" data-i18n-title="title.ajouter_uf"
               style="flex-shrink:0;width:26px;height:26px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;line-height:1">＋</button>
           </div>
           <!-- Tags UF sélectionnées -->
@@ -259,17 +334,17 @@
         </div>
       </div>
 
-      <div class="field"><label>Déclarant</label>
-        <input type="text" id="declarant_nom" placeholder="Nom du déclarant" list="acteurs-generiques" autocomplete="off">
+      <div class="field"><labeldata-i18n="incidents.declarant">Déclarant</label>
+        <input type="text" id="declarant_nom" placeholder="Nom du déclarant" data-i18n-placeholder="ph.nom_declarant" list="acteurs-generiques" autocomplete="off">
       </div>
 
       <div class="field">
-        <label>Niveau d'urgence</label>
+        <labeldata-i18n="incidents.niveau_urgence">Niveau d'urgence</label>
         <div class="selector-row" id="urgency-selector">
-          <button class="sel-btn sel-active" data-val="1" onclick="selectUrgency(this)">1 VEILLE</button>
-          <button class="sel-btn"            data-val="2" onclick="selectUrgency(this)">2 ALERTE</button>
-          <button class="sel-btn"            data-val="3" onclick="selectUrgency(this)">3 CRISE</button>
-          <button class="sel-btn"            data-val="4" onclick="selectUrgency(this)">4 CRITIQUE</button>
+          <button class="sel-btn sel-active" data-val="1" onclick="selectUrgency(this)" data-i18n="incidents.urgence.veille">1 VEILLE</button>
+          <button class="sel-btn"            data-val="2" onclick="selectUrgency(this)" data-i18n="incidents.urgence.alerte">2 ALERTE</button>
+          <button class="sel-btn"            data-val="3" onclick="selectUrgency(this)" data-i18n="incidents.urgence.crise">3 CRISE</button>
+          <button class="sel-btn"            data-val="4" onclick="selectUrgency(this)" data-i18n="incidents.urgence.critique">4 CRITIQUE</button>
         </div>
       </div>
 
@@ -308,10 +383,10 @@
         <textarea id="fait" placeholder="Description factuelle..." rows="3"></textarea>
       </div>
       <div class="field"><label>Analyse — Impact ?</label>
-        <textarea id="analyse" placeholder="Systèmes/services affectés..." rows="2"></textarea>
+        <textarea id="analyse" placeholder="Systèmes/services affectés..." data-i18n-placeholder="ph.systemes_affectes" rows="2"></textarea>
       </div>
-      <div class="field"><label>Moyens engagés</label>
-        <textarea id="moyens_engages" placeholder="Ressources déployées..." rows="2"></textarea>
+      <div class="field"><labeldata-i18n="incidents.moyens_engages">Moyens engagés</label>
+        <textarea id="moyens_engages" placeholder="Ressources déployées..." data-i18n-placeholder="ph.ressources_deployees" rows="2"></textarea>
       </div>
 
       <div class="form-row">
@@ -319,19 +394,19 @@
           <input type="text" id="intervenant_nom" placeholder="Nom" list="acteurs-generiques" autocomplete="off">
         </div>
         <div class="field" style="flex:1"><label>Contact</label>
-          <input type="text" id="intervenant_contact" placeholder="Tél">
+          <input type="text" id="intervenant_contact" placeholder="Tél" data-i18n-placeholder="ph.tel">
         </div>
       </div>
 
       <div class="jalons-form">
         <div class="jalons-form-title">⏱ Jalons de résolution</div>
         <div class="jalon-presets">
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Passé d'ordinateur">Passé d'ordi</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="DSI contacté">DSI contacté</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="RSSI alerté">RSSI alerté</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Cellule activée">Cellule activée</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="CERT Santé notifié">CERT Santé</button>
-          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Isolation réseau">Isolation réseau</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Passé d'ordinateur" data-i18n="incidents.passe_ordi">Passé d'ordi</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="DSI contacté" data-i18n="incidents.dsi_contacte">DSI contacté</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="RSSI alerté" data-i18n="incidents.rssi_alerte">RSSI alerté</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Cellule activée" data-i18n="incidents.cellule_activee">Cellule activée</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="CERT Santé notifié" data-i18n="incidents.cert_sante">CERT Santé</button>
+          <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Isolation réseau" data-i18n="incidents.isolation_reseau">Isolation réseau</button>
           <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Sauvegarde vérifiée">Sauvegarde OK</button>
           <button class="jalon-preset-btn" onclick="togglePreset(this)" data-label="Retour à la normale">Retour normal</button>
         </div>
@@ -341,7 +416,7 @@
         </div>
         <div class="jalon-tags" id="jalon-tags"></div>
         <div class="field" style="margin-top:7px">
-          <label>Résolution estimée dans</label>
+          <labeldata-i18n="incidents.resolution_dans">Résolution estimée dans</label>
           <select id="resolution-hours">
             <option value="">-- Durée --</option>
             <option value="0.5">30 min</option><option value="1">1 heure</option>
@@ -408,7 +483,7 @@
         <div class="gap-header">
           <span class="gap-title">🧠 Analyse Globale — Assistant IA</span>
           <span class="gap-level" id="gap-level"></span>
-          <button onclick="closeGlobalPanel()" style="margin-left:auto;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px" title="Fermer">✕</button>
+          <button onclick="closeGlobalPanel()" style="margin-left:auto;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px" title="Fermer" data-i18n-title="common.fermer">✕</button>
         </div>
         <div class="gap-body" id="gap-body"></div>
         <div style="display:flex;gap:6px;padding:8px 12px;border-top:1px solid rgba(159,122,234,.2);flex-shrink:0">
@@ -418,17 +493,17 @@
       </div>
     </div>
     <div class="filter-bar">
-      <select id="f-site" onchange="applyFilters()"><option value="">Tous sites</option></select>
-      <select id="f-directeur" onchange="applyFilters()"><option value="">Tous directeurs</option></select>
+      <select id="f-site" onchange="applyFilters()"><option value="" data-i18n="transferts.tous_sites">Tous sites</option></select>
+      <select id="f-directeur" onchange="applyFilters()"><option value="" data-i18n="filters.tous_directeurs">Tous directeurs</option></select>
       <select id="f-urgency" onchange="applyFilters()">
-        <option value="">Toutes urgences</option>
+        <option value="" data-i18n="filters.toutes_urgences">Toutes urgences</option>
         <option value="1">1 Veille</option><option value="2">2 Alerte</option>
         <option value="3">3 Crise</option><option value="4">4 Critique</option>
       </select>
       <!-- f-status géré par les tabs ci-dessus -->
       <input type="hidden" id="f-status" value="">
       <select id="f-type" onchange="applyFilters()">
-        <option value="">Tous types</option>
+        <option value="" data-i18n="filters.tous_types">Tous types</option>
         <option value="CYBER">Cyber</option><option value="SANITAIRE">Sanitaire</option><option value="MIXTE">Mixte</option>
       </select>
       <button class="btn-filter" onclick="resetFilters()">✕</button>
@@ -445,10 +520,10 @@
     <span style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:8px" id="soins-last-update"></span>
   </div>
   <div class="soins-legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted2)">Opérationnel</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted2)">Mode dégradé</span></div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted2)">Impact critique</span></div>
-    <button id="btn-ambulance-layer" onclick="toggleAmbulanceLayer()" style="margin-left:auto;font-family:var(--mono);font-size:9px;padding:3px 10px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer" title="Afficher/masquer les transferts EN COURS sur la carte">🚑 Transferts</button>
+    <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted2)" data-i18n="bulletin.operationnel">Opérationnel</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted2)" data-i18n="status.degrade">Mode dégradé</span></div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted2)" data-i18n="soins.legend_critical">Impact critique</span></div>
+    <button id="btn-ambulance-layer" onclick="toggleAmbulanceLayer()" style="margin-left:auto;font-family:var(--mono);font-size:9px;padding:3px 10px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer" title="Afficher/masquer les transferts EN COURS sur la carte" data-i18n-title="title.transferts_carte">🚑 Transferts</button>
   </div>
   <!-- Layout principal : carte + panneaux latéraux -->
   <div style="flex:1;display:flex;overflow:hidden;min-height:0">
@@ -503,10 +578,10 @@
     </div>
     <div class="tl-ticks" id="tl-ticks"></div>
     <div class="tl-legend-row">
-      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#f87171;border-color:#f87171"></div>Critique (U4)</div>
-      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#fb923c;border-color:#fb923c"></div>Grave (U3)</div>
-      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#fbbf24;border-color:#fbbf24"></div>Modéré (U2)</div>
-      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#60a5fa;border-color:#60a5fa"></div>Info (U1)</div>
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#f87171;border-color:#f87171"></div><span data-i18n="urgency.critique_label">Critique</span> (U4)</div>
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#fb923c;border-color:#fb923c"></div><span data-i18n="urgency.grave_label">Grave</span> (U3)</div>
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#fbbf24;border-color:#fbbf24"></div><span data-i18n="urgency.modere_label">Modéré</span> (U2)</div>
+      <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#60a5fa;border-color:#60a5fa"></div><span data-i18n="urgency.info_label">Info</span> (U1)</div>
       <div class="tl-legend-item" style="margin-left:auto;color:var(--muted);font-size:9px">◀ Glisser pour projeter dans le temps ▶</div>
     </div>
   </div>
@@ -517,11 +592,11 @@
 <div id="tab-cellule" class="tab-content">
   <div class="cellule-col">
     <div class="col-header"><h2>👥 Registre des présences</h2></div>
-    <div class="col-body" id="presence-list"><div class="empty-state">Aucune présence</div></div>
+    <div class="col-body" id="presence-list"><div class="empty-state" data-i18n="cellule.aucune_presence">Aucune présence</div></div>
     <div class="col-footer">
       <div class="form-row" style="margin-bottom:5px">
-        <input type="text" id="p-nom"  placeholder="Nom de l'acteur" list="acteurs-generiques" autocomplete="off" style="flex:1">
-        <input type="text" id="p-role" placeholder="Rôle/Fonction"   list="acteurs-roles" autocomplete="off" style="flex:1">
+        <input type="text" id="p-nom"  placeholder="Nom de l'acteur" data-i18n-placeholder="ph.nom_acteur" list="acteurs-generiques" autocomplete="off" style="flex:1">
+        <input type="text" id="p-role" placeholder="Rôle/Fonction" data-i18n-placeholder="ph.role_fonction"   list="acteurs-roles" autocomplete="off" style="flex:1">
       </div>
       <div class="form-row" style="margin-bottom:0">
         <button class="btn-success" style="flex:1" onclick="logPresence('ENTRÉE')">▶ ENTRÉE</button>
@@ -531,18 +606,18 @@
   </div>
   <div class="cellule-col">
     <div class="col-header"><h2>⚖️ Chronologie décisionnelle</h2></div>
-    <div class="col-body" id="decision-list"><div class="empty-state">Aucune décision</div></div>
+    <div class="col-body" id="decision-list"><div class="empty-state" data-i18n="cellule.aucune_decision">Aucune décision</div></div>
     <div class="col-footer">
       <div class="field" style="margin-bottom:4px"><input type="text" id="d-responsable" placeholder="Responsable" list="acteurs-generiques" autocomplete="off"></div>
       <div class="field" style="margin-bottom:4px">
         <select id="d-base">
           <option value="Plan Blanc">Plan Blanc</option><option value="ORSAN">ORSAN</option>
           <option value="PCA">PCA</option>
-          <option value="Décision direction">Décision direction</option>
+          <option value="Décision direction" data-i18n="cellule.decision_direction">Décision direction</option>
         </select>
       </div>
       <div class="field" style="margin-bottom:5px">
-        <textarea id="d-texte" placeholder="Décision prise..." rows="3"></textarea>
+        <textarea id="d-texte" placeholder="Décision prise..." data-i18n-placeholder="ph.decision_prise" rows="3"></textarea>
       </div>
       <button class="btn-primary" style="width:100%" onclick="saveDecision()">⚖️ ACTER</button>
     </div>
@@ -554,21 +629,21 @@
   <!-- Bandeau RGPD -->
   <div style="background:rgba(239,68,68,.1);border-bottom:1px solid rgba(239,68,68,.3);padding:6px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0">
     <span style="font-family:var(--mono);font-size:9px;color:#ef4444;font-weight:700">🔒 DONNÉES DE SANTÉ — ACCÈS RESTREINT</span>
-    <span style="font-family:var(--mono);font-size:8px;color:var(--muted)">Les données nominatives (nom, prénom, IPP, DDN) ne remontent jamais vers le collecteur territorial.</span>
+    <span style="font-family:var(--mono);font-size:8px;color:var(--muted)" data-i18n="transferts.donnees_warn">Les données nominatives (nom, prénom, IPP, DDN) ne remontent jamais vers le collecteur territorial.</span>
   </div>
   <!-- Toolbar -->
   <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0">
     <span style="font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--muted2)">🚑 TRANSFERTS PATIENTS</span>
     <button onclick="trOpenForm()" style="font-family:var(--mono);font-size:9px;padding:4px 12px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">+ Nouveau transfert</button>
     <select id="tr-filter-statut" onchange="trRender()" style="font-family:var(--mono);font-size:9px;padding:3px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
-      <option value="">Tous statuts</option>
-      <option value="EN_PREPARATION">En préparation</option>
+      <option value="" data-i18n="transferts.tous_statuts">Tous statuts</option>
+      <option value="EN_PREPARATION" data-i18n="transferts.en_preparation">En préparation</option>
       <option value="EN_COURS">En cours</option>
-      <option value="ARRIVE">Arrivé</option>
-      <option value="ANNULE">Annulé</option>
+      <option value="ARRIVE" data-i18n="transferts.arrive">Arrivé</option>
+      <option value="ANNULE" data-i18n="transferts.annule">Annulé</option>
     </select>
     <select id="tr-filter-site" onchange="trRender()" style="font-family:var(--mono);font-size:9px;padding:3px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
-      <option value="">Tous sites</option>
+      <option value="" data-i18n="transferts.tous_sites">Tous sites</option>
     </select>
     <span id="tr-count" style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:auto"></span>
   </div>
@@ -603,7 +678,7 @@
     <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1">
       <div style="font-family:var(--mono);font-size:9px;color:var(--muted)" id="notify-context"></div>
       <div>
-        <label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:4px">SITE / SERVICE</label>
+        <label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:4px" data-i18n="transferts.site_service">SITE / SERVICE</label>
         <select id="notify-site" onchange="notifyFilterUsers()" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
           <option value="">— Tous les sites —</option>
         </select>
@@ -615,12 +690,12 @@
         </select>
       </div>
       <div>
-        <label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:4px">MESSAGE</label>
+        <label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:4px" data-i18n="common.message_upper">MESSAGE</label>
         <textarea id="notify-msg" rows="3" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
       </div>
     </div>
     <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
-      <button onclick="closeNotifyModal()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Annuler</button>
+      <button onclick="closeNotifyModal()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer" data-i18n="transferts.annuler">Annuler</button>
       <button onclick="notifySend()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:#2563eb;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:700">Envoyer ✉️</button>
     </div>
   </div>
@@ -646,15 +721,15 @@
           <input id="tr-nom" type="text" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)"></div>
         <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">PRÉNOM *</label>
           <input id="tr-prenom" type="text" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)"></div>
-        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">NOM DE JEUNE FILLE</label>
+        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px" data-i18n="transferts.nom_jf">NOM DE JEUNE FILLE</label>
           <input id="tr-njf" type="text" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)"></div>
-        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">DATE DE NAISSANCE</label>
+        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px" data-i18n="transferts.ddn">DATE DE NAISSANCE</label>
           <input id="tr-ddn" type="date" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)"></div>
-        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">IPP</label>
-          <input id="tr-ipp" type="text" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)" placeholder="Identifiant patient permanent"></div>
+        <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px" data-i18n="transferts.ipp">IPP</label>
+          <input id="tr-ipp" type="text" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)" placeholder="Identifiant patient permanent" data-i18n-placeholder="ph.ipp"></div>
       </div>
       <hr style="border:none;border-top:1px solid var(--border);margin:2px 0">
-      <div style="font-family:var(--mono);font-size:9px;color:var(--muted2);font-weight:700;letter-spacing:1px">ORIGINE</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted2);font-weight:700;letter-spacing:1px" data-i18n="transferts.origine">ORIGINE</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">SITE ORIGINE *</label>
           <select id="tr-etab-orig" onchange="trLoadUfOrig()" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
@@ -665,7 +740,7 @@
             <option value="">— Sélectionner le site d'abord —</option>
           </select></div>
       </div>
-      <div style="font-family:var(--mono);font-size:9px;color:var(--muted2);font-weight:700;letter-spacing:1px">DESTINATION</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted2);font-weight:700;letter-spacing:1px" data-i18n="transferts.destination">DESTINATION</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">SITE DESTINATION *</label>
           <select id="tr-etab-dest" onchange="trLoadUfDest()" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
@@ -680,15 +755,15 @@
           </div></div>
       </div>
       <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">REDACTEUR *</label>
-        <input id="tr-redacteur" type="text" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:4px;color:var(--muted2)" placeholder="Compte connecté" readonly></div>
+        <input id="tr-redacteur" type="text" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface3);border:1px solid var(--border);border-radius:4px;color:var(--muted2)" placeholder="Compte connecté" data-i18n-placeholder="ph.compte_connecte" readonly></div>
       <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">🕐 HEURE D'ARRIVÉE ESTIMÉE (ETA)</label>
         <input id="tr-eta" type="datetime-local" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
-        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:2px">Optionnel — décompte activé quand le transfert passe EN COURS</div></div>
-      <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px">COMMENTAIRE</label>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:2px" data-i18n="transferts.eta_hint">Optionnel — décompte activé quand le transfert passe EN COURS</div></div>
+      <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px" data-i18n="transferts.commentaire">COMMENTAIRE</label>
         <textarea id="tr-comment" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);min-height:50px;resize:vertical"></textarea></div>
     </div>
     <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0">
-      <button onclick="document.getElementById('tr-modal').style.display='none'" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Annuler</button>
+      <button onclick="document.getElementById('tr-modal').style.display='none'" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer" data-i18n="transferts.annuler">Annuler</button>
       <button onclick="trSave()" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">✓ Enregistrer</button>
     </div>
   </div>
@@ -699,7 +774,7 @@
   <div class="cellule-col" style="max-width:340px">
     <div class="col-header"><h2>🔄 Nouvelle consigne</h2></div>
     <div class="col-footer" style="border-top:none;border-bottom:1px solid var(--border)">
-      <div class="field" style="margin-bottom:4px"><label>Pour qui ?</label>
+      <div class="field" style="margin-bottom:4px"><labeldata-i18n="communique.pour_qui">Pour qui ?</label>
         <input type="text" id="r-pour" placeholder="Reprenant">
       </div>
       <div class="field" style="margin-bottom:7px"><label>Consigne</label>
@@ -710,7 +785,7 @@
   </div>
   <div class="cellule-col">
     <div class="col-header"><h2>📋 Journal de relève</h2></div>
-    <div class="col-body" id="consigne-list"><div class="empty-state">Aucune consigne</div></div>
+    <div class="col-body" id="consigne-list"><div class="empty-state" data-i18n="communique.aucune_consigne">Aucune consigne</div></div>
   </div>
 </div>
 
@@ -736,7 +811,7 @@
         <div style="padding:7px 12px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap">
           <input type="text" id="ann-msg-search" placeholder="🔍 Rechercher..." oninput="annMsgFilter()" style="flex:1;min-width:100px;font-family:var(--mono);font-size:11px;padding:5px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
           <select id="ann-msg-site-filter" onchange="annMsgFilter()" style="font-family:var(--mono);font-size:10px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
-            <option value="">Tous les sites</option>
+            <option value="" data-i18n="communique.tous_les_sites">Tous les sites</option>
           </select>
           <div style="font-family:var(--mono);font-size:8px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#4ade80;margin-right:3px"></span>En ligne</span>
@@ -761,10 +836,10 @@
 <div id="notif-panel">
   <div class="np-header">
     <span class="np-title">🔔 Inbox</span>
-    <button style="font-family:var(--mono);font-size:9px;padding:2px 7px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);border-radius:3px;cursor:pointer" onclick="markAllRead()">Tout lire</button>
+    <button style="font-family:var(--mono);font-size:9px;padding:2px 7px;background:var(--surface2);color:var(--muted);border:1px solid var(--border2);border-radius:3px;cursor:pointer" onclick="markAllRead()" data-i18n="notif.tout_lire">Tout lire</button>
     <span class="np-close" onclick="toggleNotifPanel()">✕</span>
   </div>
-  <div class="np-list" id="notif-list"><div class="empty-state">Aucune notification</div></div>
+  <div class="np-list" id="notif-list"><div class="empty-state" data-i18n="notif.aucune">Aucune notification</div></div>
   <div class="np-actions">
     <span style="font-family:var(--mono);font-size:9px;color:var(--muted)" id="np-count-info"></span>
   </div>
@@ -787,7 +862,7 @@
         ← Retour au tableau de bord
       </button>
       <button onclick="closeAdminPanel()"
-              title="Fermer (Échap)"
+              title="Fermer (Échap)" data-i18n-title="title.fermer_echap"
               style="font-family:var(--mono);font-size:11px;padding:5px 10px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">
         ✕
       </button>
@@ -819,25 +894,25 @@
         <div id="admin-section-users">
           <h2 style="font-family:var(--mono);font-size:13px;font-weight:700;margin:0 0 20px;color:var(--text)">👥 Gestion des utilisateurs</h2>
           <div class="admin-section">
-            <h3>Comptes actifs</h3>
+            <h3data-i18n="admin.comptes_actifs">Comptes actifs</h3>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-            <button onclick="adminSelectAllUsers()" style="font-family:var(--mono);font-size:9px;padding:3px 10px;background:transparent;border:1px solid var(--border2);border-radius:3px;color:var(--muted);cursor:pointer">Tout sélectionner</button>
+            <button onclick="adminSelectAllUsers()" style="font-family:var(--mono);font-size:9px;padding:3px 10px;background:transparent;border:1px solid var(--border2);border-radius:3px;color:var(--muted);cursor:pointer" data-i18n="admin.tout_selectionner">Tout sélectionner</button>
             <button onclick="adminDeleteSelected()" style="font-family:var(--mono);font-size:9px;padding:3px 10px;background:rgba(239,68,68,.1);border:1px solid #ef4444;border-radius:3px;color:#f87171;cursor:pointer">🗑 Supprimer la sélection</button>
             <span id="admin-select-count" style="font-family:var(--mono);font-size:9px;color:var(--muted)"></span>
           </div>
           <div id="admin-user-list"><div style="color:var(--muted);font-size:11px">Chargement...</div></div>
           </div>
           <div class="admin-section" id="create-user-section">
-            <h3>Créer un compte</h3>
+            <h3data-i18n="admin.creer_compte">Créer un compte</h3>
             <div class="admin-form-grid">
-              <div class="admin-field"><label>Identifiant</label><input type="text" id="nu-username" placeholder="ex: jdupont"></div>
-              <div class="admin-field"><label>Nom affiché</label><input type="text" id="nu-display" placeholder="ex: M. Dupont"></div>
+              <div class="admin-field"><labeldata-i18n="login.identifiant">Identifiant</label><input type="text" id="nu-username" placeholder="ex: jdupont"></div>
+              <div class="admin-field"><labeldata-i18n="admin.nom_affiche">Nom affiché</label><input type="text" id="nu-display" placeholder="ex: M. Dupont"></div>
               <div class="admin-field"><label>Mot de passe</label><input type="password" id="nu-pass" placeholder="••••••••"></div>
-              <div class="admin-field"><label>Rôle</label>
+              <div class="admin-field"><labeldata-i18n="admin.role">Rôle</label>
                 <select id="nu-role">
-                  <option value="cellule_crise">Cellule de crise (directeur, RSSI, cadre supérieur)</option>
+                  <option value="cellule_crise" data-i18n="admin.role_cellule">Cellule de crise (directeur, RSSI, cadre supérieur)</option>
                   <option value="soignant">Soignant (brancardage, transferts patient)</option>
-                  <option value="admin">Admin (accès total)</option>
+                  <option value="admin" data-i18n="admin.role_admin">Admin (accès total)</option>
                 </select>
                 <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px;line-height:1.4">
                   <strong>Cellule de crise</strong> : pilotage de crise, incidents, capacité, communiqués<br>
@@ -845,7 +920,7 @@
                   <strong>Admin</strong> : tout + gestion des comptes
                 </div>
               </div>
-              <div class="admin-field" style="grid-column:1/-1"><label>Périmètre (optionnel)</label><input type="text" id="nu-perimetre" placeholder="ex: CANCEROLOGIE, DNA, ANNECY..."></div>
+              <div class="admin-field" style="grid-column:1/-1"><labeldata-i18n="admin.perimetre_opt">Périmètre (optionnel)</label><input type="text" id="nu-perimetre" placeholder="ex: CANCEROLOGIE, DNA, ANNECY..."></div>
             </div>
             <button class="btn-primary" style="margin-top:12px;font-size:11px" onclick="createUser()">+ Créer le compte</button>
           </div>
@@ -857,10 +932,10 @@
               <input type="hidden" id="setpw-user-id">
             </div>
             <div class="admin-form-grid">
-              <div class="admin-field"><label>Nouveau mot de passe</label>
+              <div class="admin-field"><labeldata-i18n="admin.nouveau_mdp">Nouveau mot de passe</label>
                 <input type="password" id="setpw-new" placeholder="••••••••" oninput="adminCheckPw()">
               </div>
-              <div class="admin-field"><label>Confirmer le mot de passe</label>
+              <div class="admin-field"><labeldata-i18n="admin.confirmer_mdp">Confirmer le mot de passe</label>
                 <input type="password" id="setpw-confirm" placeholder="••••••••" oninput="adminCheckPw()">
               </div>
             </div>
@@ -869,10 +944,10 @@
             <span id="setpw-result" style="font-family:var(--mono);font-size:10px;margin-left:12px"></span>
           </div>
           <div class="admin-section" id="import-users-section">
-            <h3>Import de comptes (Excel)</h3>
+            <h3data-i18n="admin.import_excel">Import de comptes (Excel)</h3>
             <input type="file" id="import-users-file" accept=".xlsx,.xls">
             <button class="btn-sm blue" style="margin-top:8px" onclick="importComptes()">Importer</button>
-            <button class="btn-sm" style="margin-left:8px" onclick="downloadComptesModele()">Télécharger modèle</button>
+            <button class="btn-sm" style="margin-left:8px" onclick="downloadComptesModele()" data-i18n="admin.telecharger_modele">Télécharger modèle</button>
             <div id="import-result" style="margin-top:8px;font-family:var(--mono);font-size:10px;padding:6px 10px;border:1px solid var(--border);border-radius:4px;display:none"></div>
           </div>
         </div>
@@ -925,14 +1000,14 @@
             <h3>🎬 Générer un scénario depuis une crise passée</h3>
             <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 0 14px;line-height:1.6">
               Transforme le déroulé réel d'une crise (incidents, messages, transferts)
-              en un scénario rejouable. Utile pour <strong>valider les mesures de remédiation</strong>
+              en un scénario rejouable. Utile pour <strongdata-i18n="common.valider_mesures">valider les mesures de remédiation</strong>
               mises en place depuis la crise initiale, former les nouveaux entrants,
               ou alimenter une bibliothèque de cas.
             </p>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
               <div>
-                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">TITRE DU SCÉNARIO</label>
+                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px" data-i18n="scenario.titre">TITRE DU SCÉNARIO</label>
                 <input type="text" id="scen-titre"
                        placeholder="ex: REX Ransomware 2026-04 — rejouage annuel"
                        style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
@@ -958,7 +1033,7 @@
                        style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
               </div>
               <div>
-                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">JUSQU'À (optionnel)</label>
+                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px" data-i18n="scenario.jusqua_opt">JUSQU'À (optionnel)</label>
                 <input type="datetime-local" id="scen-until"
                        style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
               </div>
@@ -966,7 +1041,7 @@
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
               <div>
-                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">TYPE DE CRISE</label>
+                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px" data-i18n="incidents.type_crise">TYPE DE CRISE</label>
                 <select id="scen-type"
                         style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
                   <option value="CYBER">Cyber</option>
@@ -976,7 +1051,7 @@
                 </select>
               </div>
               <div>
-                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">COMPLEXITÉ</label>
+                <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px" data-i18n="scenario.complexite">COMPLEXITÉ</label>
                 <select id="scen-complexite"
                         style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
                   <option value="FACILE">Facile</option>
@@ -987,7 +1062,7 @@
             </div>
 
             <div style="margin-bottom:12px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:4px">
-              <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">ÉVÉNEMENTS À INCLURE</div>
+              <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:8px" data-i18n="scenario.evenements">ÉVÉNEMENTS À INCLURE</div>
               <label style="font-family:var(--mono);font-size:10px;color:var(--text);display:inline-block;margin-right:16px">
                 <input type="checkbox" id="scen-inc-incidents" checked> Incidents
               </label>
@@ -1068,7 +1143,7 @@
         <div id="admin-section-lang" style="display:none">
           <h2 style="font-family:var(--mono);font-size:13px;font-weight:700;margin:0 0 20px;color:var(--text)">🌍 Langue & localisation</h2>
           <div class="admin-section">
-            <h3>Langue par défaut de l'instance</h3>
+            <h3data-i18n="wizard.langue_defaut">Langue par défaut de l'instance</h3>
             <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 0 14px;line-height:1.6">
               Cette langue sera appliquée à tous les utilisateurs de l'instance
               au prochain chargement de page. Toutes les langues disponibles ont
@@ -1149,7 +1224,7 @@
               chiffré côté serveur et jamais exposé après l'activation. Les codes
               de backup sont utilisables une seule fois chacun et permettent la
               récupération si le téléphone est indisponible. Le MFA est
-              <strong>recommandé</strong> pour tous les comptes admin/collaborateur,
+              <strongdata-i18n="wizard.recommande">recommandé</strong> pour tous les comptes admin/collaborateur,
               particulièrement ceux exposés à Internet.
             </p>
           </div>
@@ -1184,7 +1259,7 @@
             <h3>Supervisions sortantes</h3>
             <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px">
               Chaque entrée est un collecteur vers lequel cette instance pousse ses données.
-              Modifications appliquées <strong>immédiatement</strong> sans redémarrage.
+              Modifications appliquées <strongdata-i18n="wizard.immediatement">immédiatement</strong> sans redémarrage.
             </p>
             <!-- v2307-hotfix — Le backend ne supporte aujourd'hui qu'UN SEUL
                  collecteur à la fois. Les entrées supplémentaires sont
@@ -1217,7 +1292,7 @@
   <div class="kanban-header">
     <h2>📋 Tableau de bord opérationnel — Kanban</h2>
     <button class="btn-new-task" onclick="openTaskModal()">+ Nouvelle tâche</button>
-    <span style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:8px">Glisser-déposer pour déplacer</span>
+    <span style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:8px" data-i18n="kanban.drag_to_move">Glisser-déposer pour déplacer</span>
   </div>
   <div class="kanban-board" id="kanban-board">
     <div class="kanban-col" data-col="BACKLOG">
@@ -1271,18 +1346,18 @@
     </div>
     <div class="rex-chart-row">
       <div class="rex-chart-box" style="flex:1.5">
-        <div class="rex-chart-title">Incidents par type</div>
+        <div class="rex-chart-title" data-i18n="rex.incidents_par_type">Incidents par type</div>
         <div class="rex-bar-wrap" id="rex-by-type"></div>
       </div>
       <div class="rex-chart-box" style="flex:1">
-        <div class="rex-chart-title">Dernières fiches REX</div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--muted)" id="rex-recent-list">Aucune fiche</div>
+        <div class="rex-chart-title" data-i18n="rex.dernieres_fiches">Dernières fiches REX</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted)" id="rex-recent-list" data-i18n="rex.aucune_fiche">Aucune fiche</div>
       </div>
     </div>
     <div class="rex-chart-box" id="rex-incident-import-section">
-      <div class="rex-chart-title">Générer REX depuis un incident</div>
+      <div class="rex-chart-title" data-i18n="rex.generer_depuis">Générer REX depuis un incident</div>
       <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-        <div class="admin-field" style="flex:1"><label>Incident à analyser</label>
+        <div class="admin-field" style="flex:1"><labeldata-i18n="rex.incident_analyser">Incident à analyser</label>
           <select id="rex-inc-id">
             <option value="">— Sélectionner un incident —</option>
           </select>
@@ -1291,7 +1366,7 @@
         <a id="dl-rapport-btn" style="display:none" class="btn-export" href="#">📄 Télécharger rapport DOCX</a>
       </div>
     </div>
-    <div class="rex-list" id="rex-list"><div class="empty-state">Aucune fiche REX — créez-en une via le bouton ci-dessus</div></div>
+    <div class="rex-list" id="rex-list"><div class="empty-state" data-i18n="rex.aucune_fiche_creez">Aucune fiche REX — créez-en une via le bouton ci-dessus</div></div>
   </div>
 </div>
 
@@ -1299,14 +1374,14 @@
 <div id="task-modal">
   <div class="task-modal-box">
     <div class="task-modal-header">
-      <span style="font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);flex:1" id="task-modal-title">Nouvelle tâche</span>
+      <span style="font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);flex:1" id="task-modal-title" data-i18n="kanban.new_task">Nouvelle tâche</span>
       <button class="btn-sm" onclick="closeTaskModal()">✕</button>
     </div>
     <div class="task-modal-body">
-      <div class="admin-field"><label>Titre</label><input type="text" id="tm-titre" placeholder="Description courte de la tâche"></div>
+      <div class="admin-field"><label>Titre</label><input type="text" id="tm-titre" placeholder="Description courte de la tâche" data-i18n-placeholder="ph.desc_tache"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="admin-field"><label>Assigné à</label><input type="text" id="tm-assignee" placeholder="ex: jdupont"></div>
-        <div class="admin-field"><label>Priorité</label>
+        <div class="admin-field"><labeldata-i18n="kanban.assigne_a">Assigné à</label><input type="text" id="tm-assignee" placeholder="ex: jdupont"></div>
+        <div class="admin-field"><labeldata-i18n="kanban.priorite">Priorité</label>
           <select id="tm-priorite">
             <option value="4">🔴 4 — Critique</option>
             <option value="3">🟠 3 — Haute</option>
@@ -1318,22 +1393,22 @@
           <select id="tm-colonne">
             <option value="BACKLOG">Backlog</option>
             <option value="EN_COURS">En cours</option>
-            <option value="EN_ATTENTE">En attente</option>
-            <option value="TERMINÉ">Terminé</option>
+            <option value="EN_ATTENTE" data-i18n="kanban.en_attente">En attente</option>
+            <option value="TERMINÉ" data-i18n="kanban.termine">Terminé</option>
           </select>
         </div>
-        <div class="admin-field"><label>Lié à l'incident</label>
+        <div class="admin-field"><labeldata-i18n="kanban.lie_incident">Lié à l'incident</label>
           <select id="tm-incident">
             <option value="">— Aucun —</option>
           </select>
         </div>
       </div>
-      <div class="admin-field"><label>Description</label><textarea id="tm-desc" rows="3" placeholder="Détails, contexte..."></textarea></div>
-      <div class="admin-field"><label>Échéance</label><input type="datetime-local" id="tm-due"></div>
+      <div class="admin-field"><label>Description</label><textarea id="tm-desc" rows="3" placeholder="Détails, contexte..." data-i18n-placeholder="ph.detail_contexte"></textarea></div>
+      <div class="admin-field"><labeldata-i18n="kanban.echeance">Échéance</label><input type="datetime-local" id="tm-due"></div>
     </div>
     <div class="task-modal-footer">
       <button style="font-family:var(--mono);font-size:9px;padding:4px 10px;background:rgba(0,207,255,.1);border:1px solid rgba(0,207,255,.3);border-radius:4px;color:var(--cyan);cursor:pointer;margin-right:auto" onclick="openNotifyModal('Kanban — '+(document.getElementById('tm-titre')?.value||''), 'Une tâche vous concerne : '+(document.getElementById('tm-titre')?.value||'')+'. Vérifiez KANBAN.')">✉️ Notifier</button>
-      <button class="btn-sm" onclick="closeTaskModal()">Annuler</button>
+      <button class="btn-sm" onclick="closeTaskModal()" data-i18n="transferts.annuler">Annuler</button>
       <button class="btn-primary" style="padding:6px 18px;flex:unset" onclick="saveTask()">💾 Enregistrer</button>
     </div>
   </div>
@@ -1351,9 +1426,9 @@
       <div class="rex-wizard-step">
         <div class="rex-wizard-step-title"><span class="rex-wizard-step-num">1</span>Informations générales</div>
         <div class="rex-natural-field">
-          <label>Quel incident analysez-vous ?</label>
-          <input type="text" id="rex-titre" placeholder="ex: Panne serveur imagerie médicale — nuit du 10 mars">
-          <span class="hint">Nommez l'événement de façon simple et mémorable</span>
+          <labeldata-i18n="rex.quel_incident">Quel incident analysez-vous ?</label>
+          <input type="text" id="rex-titre" placeholder="ex: Panne serveur imagerie médicale — nuit du 10 mars" data-i18n-placeholder="ph.ex_panne">
+          <span class="hint" data-i18n="rex.nommez_evenement">Nommez l'événement de façon simple et mémorable</span>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <div class="rex-natural-field" style="flex:1;min-width:120px">
@@ -1365,7 +1440,7 @@
             </select>
           </div>
           <div class="rex-natural-field" style="flex:1;min-width:140px">
-            <label>Rédigé par</label>
+            <labeldata-i18n="rex.redige_par">Rédigé par</label>
             <input type="text" id="rex-redacteur" placeholder="Votre nom / fonction">
           </div>
         </div>
@@ -1380,7 +1455,7 @@
             <span style="color:var(--muted);font-family:var(--mono);font-size:11px">h</span>
             <input type="number" id="rex-mttd-m" placeholder="0" min="0" max="59" style="width:60px">
             <span style="color:var(--muted);font-family:var(--mono);font-size:11px">min</span>
-            <span class="hint" style="margin:0">après le début de l'incident</span>
+            <span class="hint" style="margin:0" data-i18n="rex.apres_debut">après le début de l'incident</span>
           </div>
         </div>
         <div class="rex-natural-field">
@@ -1390,7 +1465,7 @@
             <span style="color:var(--muted);font-family:var(--mono);font-size:11px">h</span>
             <input type="number" id="rex-mttr-m" placeholder="0" min="0" max="59" style="width:60px">
             <span style="color:var(--muted);font-family:var(--mono);font-size:11px">min</span>
-            <span class="hint" style="margin:0">du début à la résolution</span>
+            <span class="hint" style="margin:0" data-i18n="rex.debut_a_resolution">du début à la résolution</span>
           </div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1406,7 +1481,7 @@
             <label>✅ Étapes réalisées / prévues</label>
             <div style="display:flex;gap:4px;align-items:center">
               <input type="number" id="rex-jd" value="0" min="0" style="width:55px">
-              <span style="color:var(--muted);font-size:11px">sur</span>
+              <span style="color:var(--muted);font-size:11px" data-i18n="rex.sur">sur</span>
               <input type="number" id="rex-jt" value="0" min="0" style="width:55px">
             </div>
           </div>
@@ -1439,7 +1514,7 @@
 
     </div>
     <div class="task-modal-footer">
-      <button class="btn-sm" onclick="closeRexModal()">Annuler</button>
+      <button class="btn-sm" onclick="closeRexModal()" data-i18n="transferts.annuler">Annuler</button>
       <button class="btn-primary" style="padding:6px 18px;flex:unset" onclick="saveRex()">💾 Enregistrer REX</button>
     </div>
   </div>
@@ -1478,7 +1553,7 @@
       </div>
 
       <div class="communique-section">
-        <h3>Message officiel</h3>
+        <h3data-i18n="communique.message_officiel">Message officiel</h3>
         <textarea id="comm-message" rows="3" placeholder="2-3 phrases décrivant la situation pour le public (prestataires, journalistes, partenaires)..."
           style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:10px;padding:7px 9px;border-radius:4px;resize:none;line-height:1.6"
           onchange="saveStatus()"></textarea>
@@ -1495,7 +1570,7 @@
       </div>
 
       <div class="communique-section">
-        <h3>Questions fréquentes</h3>
+        <h3data-i18n="communique.questions_freq">Questions fréquentes</h3>
         <div id="comm-faq-list"></div>
       </div>
 
@@ -1511,7 +1586,7 @@
       <div class="publish-bar">
         <div class="publish-status" id="comm-publish-status">
           <span class="published-dot off" id="comm-pub-dot"></span>
-          <span id="comm-pub-label">Non publié — accès /status non disponible</span>
+          <span id="comm-pub-label" data-i18n="communique.non_publie">Non publié — accès /status non disponible</span>
         </div>
         <button class="btn-publish off" id="comm-pub-btn" onclick="publishOrUpdate()">Publier</button>
         <button class="btn-secondary" id="comm-unpub-btn" onclick="unpublishStatus()" style="display:none;font-family:var(--mono);font-size:10px;padding:5px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;border-radius:4px" title="Retirer le point de situation du /status public">Retirer</button>
@@ -1550,7 +1625,7 @@
               <path d="M38 34a6 6 0 0 0-3-11.22A10 10 0 1 0 14 30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </div>
-          <div class="az-drop-title" id="drop-a-title">Déposez votre archive ici</div>
+          <div class="az-drop-title" id="drop-a-title" data-i18n="rex.depose_archive">Déposez votre archive ici</div>
           <div class="az-drop-sub">Fichier ZIP exporté depuis SCRIBE<br><em>Export Main Courante</em> ou <em>Archiver</em></div>
           <button class="az-btn-browse" onclick="event.stopPropagation();document.getElementById('file-a').click()">
             <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
@@ -1582,7 +1657,7 @@
               <path d="M38 34a6 6 0 0 0-3-11.22A10 10 0 1 0 14 30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </div>
-          <div class="az-drop-title">Même scénario rejoué</div>
+          <div class="az-drop-title" data-i18n="rex.meme_scenario">Même scénario rejoué</div>
           <div class="az-drop-sub">Comparer deux gestions d'une crise<br>pour mesurer la progression</div>
           <button class="az-btn-browse az-btn-b" onclick="event.stopPropagation();document.getElementById('file-b').click()">
             <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
@@ -1604,7 +1679,7 @@
           <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clip-rule="evenodd"/></svg>
           Rapport DOCX
         </button>
-        <button class="az-btn-ghost" onclick="resetAnalyse()">Effacer tout</button>
+        <button class="az-btn-ghost" onclick="resetAnalyse()" data-i18n="rex.effacer_tout">Effacer tout</button>
         <button onclick="toggleDebugLog()" style="font-family:var(--mono);font-size:9px;padding:4px 8px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer" title="Afficher les logs">📋 Logs</button>
       </div>
     </div>
@@ -1636,13 +1711,13 @@
 
     <!-- ═══ MÉTRIQUES CALCULÉES ═══ -->
     <div class="analyse-metrics" id="analyse-metrics" style="display:none">
-      <div class="amet"><div class="amet-val" id="mv-duree">—</div><div class="amet-lbl">Durée crise</div><div class="amet-delta" id="md-duree"></div></div>
+      <div class="amet"><div class="amet-val" id="mv-duree">—</div><div class="amet-lbl" data-i18n="rex.duree_crise">Durée crise</div><div class="amet-delta" id="md-duree"></div></div>
       <div class="amet"><div class="amet-val" id="mv-incidents">—</div><div class="amet-lbl">Incidents</div><div class="amet-delta" id="md-incidents"></div></div>
-      <div class="amet"><div class="amet-val" id="mv-mtta">—</div><div class="amet-lbl">Délai activation cellule</div><div class="amet-delta" id="md-mtta"></div></div>
-      <div class="amet"><div class="amet-val" id="mv-mttc">—</div><div class="amet-lbl">Délai 1er communiqué</div><div class="amet-delta" id="md-mttc"></div></div>
-      <div class="amet"><div class="amet-val" id="mv-decisions">—</div><div class="amet-lbl">Décisions</div><div class="amet-delta" id="md-decisions"></div></div>
+      <div class="amet"><div class="amet-val" id="mv-mtta">—</div><div class="amet-lbl" data-i18n="rex.delai_activation">Délai activation cellule</div><div class="amet-delta" id="md-mtta"></div></div>
+      <div class="amet"><div class="amet-val" id="mv-mttc">—</div><div class="amet-lbl" data-i18n="rex.delai_communique">Délai 1er communiqué</div><div class="amet-delta" id="md-mttc"></div></div>
+      <div class="amet"><div class="amet-val" id="mv-decisions">—</div><div class="amet-lbl" data-i18n="rex.decisions">Décisions</div><div class="amet-delta" id="md-decisions"></div></div>
       <div class="amet"><div class="amet-val" id="mv-kanban">—</div><div class="amet-lbl">Taux kanban</div><div class="amet-delta" id="md-kanban"></div></div>
-      <div class="amet"><div class="amet-val" id="mv-jalons">—</div><div class="amet-lbl">Jalons validés</div><div class="amet-delta" id="md-jalons"></div></div>
+      <div class="amet"><div class="amet-val" id="mv-jalons">—</div><div class="amet-lbl" data-i18n="rex.jalons_valides">Jalons validés</div><div class="amet-delta" id="md-jalons"></div></div>
       <div class="amet"><div class="amet-val" id="mv-participants">—</div><div class="amet-lbl">Participants max</div><div class="amet-delta" id="md-participants"></div></div>
     </div>
 
@@ -1695,7 +1770,7 @@
         <div class="albert-analyse">
           <div class="albert-analyse-header">
             🤖 ASSISTANT IA — ANALYSE DE CRISE
-            <button class="aquick" onclick="albertAnalyseSynth()" style="margin-left:auto">Synthèse séance</button>
+            <button class="aquick" onclick="albertAnalyseSynth()" style="margin-left:auto" data-i18n="rex.synthese_seance">Synthèse séance</button>
           </div>
           <div class="aquick-list">
             <button class="aquick" onclick="askAlbertQuick('Quel a été le délai entre le premier incident et la première décision cellule ?')">⏱ Délai réaction</button>
@@ -1723,7 +1798,7 @@
 
     <!-- Filtres par site -->
     <div class="cap-filters">
-      <button class="cap-site-btn active" data-site="all" id="cap-btn-all" onclick="capFilterSite(this)">Tous les sites</button>
+      <button class="cap-site-btn active" data-site="all" id="cap-btn-all" onclick="capFilterSite(this)" data-i18n="communique.tous_les_sites">Tous les sites</button>
       <span id="cap-site-btns-dyn"></span>
       <label style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-left:12px;cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:4px">
         <input type="checkbox" id="cap-filter-lits" onchange="capToggleFilterLits()" checked style="cursor:pointer"> Lits &gt; 0 uniquement
@@ -1752,11 +1827,11 @@
         <button class="cap-synthese-btn" style="background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3);font-size:11px" onclick="capAlbertQuestion('Quels services sont en tension ou en situation critique ? Que préconises-tu ?')">Tensions critiques</button>
         <button class="cap-synthese-btn" style="background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3);font-size:11px" onclick="capAlbertQuestion('Y a-t-il des lits disponibles pour accueillir des patients supplémentaires ? Où ?')">Lits disponibles</button>
         <button class="cap-synthese-btn" style="background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3);font-size:11px" onclick="capAlbertQuestion('Quelles actions RH urgentes recommandes-tu au vu des tensions de personnel ?')">RH urgentes</button>
-        <button class="cap-synthese-btn" style="background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3);font-size:11px" onclick="capAlbertQuestion('Fais une synthèse globale de la situation capacitaire et donne les recommandations prioritaires pour la cellule de crise.')">Synthèse globale</button>
+        <button class="cap-synthese-btn" style="background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.3);font-size:11px" onclick="capAlbertQuestion('Fais une synthèse globale de la situation capacitaire et donne les recommandations prioritaires pour la cellule de crise.')" data-i18n="rex.synthese_globale">Synthèse globale</button>
       </div>
       <div style="display:flex;gap:8px;margin-top:8px">
         <input id="cap-albert-input" type="text" class="cap-textarea" style="min-height:unset;padding:6px 10px;flex:1"
-          placeholder="Question libre sur la capacité..." 
+          placeholder="Question libre sur la capacité..." data-i18n-placeholder="ph.question_capacite" 
           onkeydown="if(event.key==='Enter')capAlbertQuestion(this.value)">
         <button class="cap-btn-valider" style="padding:6px 14px;white-space:nowrap" onclick="capAlbertQuestion(document.getElementById('cap-albert-input').value)">▶</button>
       </div>
@@ -1767,12 +1842,12 @@
       <table class="cap-synth-table" id="cap-synth-table">
         <thead>
           <tr>
-            <th>Service</th><th>Pôle</th><th>Site</th>
-            <th>Capacité</th>
+            <th>Service</th><thdata-i18n="capacite.pole">Pôle</th><thdata-i18n="capacite.site">Site</th>
+            <thdata-i18n="capacite.capacite">Capacité</th>
             <th style="color:#60a5fa">♂ H</th>
             <th style="color:#f472b6">♀ F</th>
             <th style="color:#c084fc">⬡ I</th>
-            <th>Statut</th><th>Alerte</th><th>Déclaré</th>
+            <th>Statut</th><th>Alerte</th><thdata-i18n="capacite.declare">Déclaré</th>
           </tr>
         </thead>
         <tbody id="cap-synth-body"></tbody>
@@ -1787,7 +1862,7 @@
   <div class="cap-popup" onclick="event.stopPropagation()">
     <div class="cap-popup-header">
       <div>
-        <div class="cap-popup-title" id="cap-popup-title">Déclaration</div>
+        <div class="cap-popup-title" id="cap-popup-title" data-i18n="capacite.declaration">Déclaration</div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px" id="cap-popup-sub"></div>
       </div>
       <button class="cap-popup-close" onclick="capPopupClose()">✕</button>
@@ -1799,7 +1874,7 @@
 
       <!-- Point de déclaration -->
       <div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px">POINT DE DÉCLARATION</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px" data-i18n="capacite.point_decl">POINT DE DÉCLARATION</div>
         <div class="cap-point-select">
           <button class="cap-point-btn active" data-point="matin" onclick="capSelectPoint(this)">🌅 Matin</button>
           <button class="cap-point-btn" data-point="aprem" onclick="capSelectPoint(this)">☀ Après-midi</button>
@@ -1809,9 +1884,9 @@
 
       <!-- Déclarant -->
       <div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px">CADRE DÉCLARANT</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px;letter-spacing:.5px" data-i18n="capacite.cadre_declarant">CADRE DÉCLARANT</div>
         <input id="cap-redacteur" type="text" class="cap-num-input" style="font-size:14px;text-align:left;padding:8px 12px"
-          placeholder="Prénom Nom du cadre" list="acteurs-cadres" autocomplete="off">
+          placeholder="Prénom Nom du cadre" data-i18n-placeholder="ph.prenom_nom_cadre" list="acteurs-cadres" autocomplete="off">
       </div>
 
       <!-- SECTION LITS -->
@@ -1821,11 +1896,11 @@
           <!-- Généré dynamiquement selon accept_H/F/I -->
         </div>
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted)">Tension activée :</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted)" data-i18n="capacite.tension_activee">Tension activée :</div>
           <select id="cap-tension" class="cap-select" style="max-width:200px">
-            <option value="0">Aucune tension</option>
-            <option value="1">Tension niveau 1</option>
-            <option value="2">Tension niveau 2</option>
+            <option value="0" data-i18n="capacite.aucune_tension">Aucune tension</option>
+            <option value="1" data-i18n="capacite.tension_niveau1">Tension niveau 1</option>
+            <option value="2" data-i18n="capacite.tension_niveau2">Tension niveau 2</option>
           </select>
         </div>
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
@@ -1839,7 +1914,7 @@
         </div>
         <label class="cap-alerte-check" id="cap-alerte-lits-lbl">
           <input type="checkbox" id="cap-alerte-lits" onchange="capToggleAlerte('lits')">
-          <span class="cap-alerte-text">☐ <strong>Seuil d'alerte atteint</strong> — je le déclare à la cellule</span>
+          <span class="cap-alerte-text">☐ <strongdata-i18n="capacite.seuil_atteint">Seuil d'alerte atteint</strong> — je le déclare à la cellule</span>
         </label>
         <textarea id="cap-comment-lits" class="cap-textarea" placeholder="Commentaire lits (optionnel)..."></textarea>
       </div>
@@ -1858,7 +1933,7 @@
         </div>
         <label class="cap-alerte-check" id="cap-alerte-rh-lbl">
           <input type="checkbox" id="cap-alerte-rh" onchange="capToggleAlerte('rh')">
-          <span class="cap-alerte-text">☐ <strong>Seuil d'alerte atteint</strong> — je le déclare à la cellule</span>
+          <span class="cap-alerte-text">☐ <strongdata-i18n="capacite.seuil_atteint">Seuil d'alerte atteint</strong> — je le déclare à la cellule</span>
         </label>
         <textarea id="cap-comment-rh" class="cap-textarea" placeholder="Commentaire RH (optionnel)..."></textarea>
       </div>
@@ -1867,7 +1942,7 @@
       <div class="cap-section">
         <div class="cap-section-title">🔧 MATÉRIEL / ÉQUIPEMENTS</div>
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);white-space:nowrap">Statut matériel :</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);white-space:nowrap" data-i18n="capacite.statut_materiel">Statut matériel :</div>
           <select id="cap-statut-mat" class="cap-select">
             <option value="ok">✓ Opérationnel</option>
             <option value="degrade">⚠ Dégradé (équipement en panne)</option>
@@ -1877,7 +1952,7 @@
         </div>
         <label class="cap-alerte-check" id="cap-alerte-mat-lbl">
           <input type="checkbox" id="cap-alerte-mat" onchange="capToggleAlerte('mat')">
-          <span class="cap-alerte-text">☐ <strong>Seuil d'alerte atteint</strong> — je le déclare à la cellule</span>
+          <span class="cap-alerte-text">☐ <strongdata-i18n="capacite.seuil_atteint">Seuil d'alerte atteint</strong> — je le déclare à la cellule</span>
         </label>
         <textarea id="cap-comment-mat" class="cap-textarea" placeholder="Commentaire matériel (optionnel)..."></textarea>
       </div>
@@ -1894,7 +1969,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div>
             <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:#f97316;letter-spacing:.5px">⚙️ MODE DÉGRADÉ</div>
-            <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:2px">Procédures dégradées activées sur ce service</div>
+            <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:2px" data-i18n="capacite.proc_degradees">Procédures dégradées activées sur ce service</div>
           </div>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
             <span id="cap-degrade-label" style="font-family:var(--mono);font-size:9px;color:var(--muted)">OFF</span>
@@ -1918,13 +1993,13 @@
           <input type="number" id="cap-peut-preter" min="0" max="99" value="0"
             style="width:80px;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--green);background:var(--surface2);border:1px solid rgba(74,222,128,.3);border-radius:4px;padding:4px 8px;text-align:center"
             placeholder="0">
-          <span style="font-family:var(--mono);font-size:8px;color:var(--muted);line-height:1.5">Nombre de personnes disponibles à mettre à disposition d'un autre service maintenant.<br><em>Évaluation subjective du cadre — pas une gestion RH.</em></span>
+          <span style="font-family:var(--mono);font-size:8px;color:var(--muted);line-height:1.5">Nombre de personnes disponibles à mettre à disposition d'un autre service maintenant.<br><emdata-i18n="capacite.eval_subjective">Évaluation subjective du cadre — pas une gestion RH.</em></span>
         </div>
       </div>
 
     </div>
     <div class="cap-popup-footer">
-      <button class="cap-btn-cancel" onclick="capPopupClose()">Annuler</button>
+      <button class="cap-btn-cancel" onclick="capPopupClose()" data-i18n="transferts.annuler">Annuler</button>
       <button class="cap-btn-valider" onclick="capSubmitDeclaration()">✓ Valider et transmettre à la cellule</button>
     </div>
   </div>
@@ -1937,8 +2012,8 @@
   <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0">
     <span style="font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--muted2)">✉️ MESSAGERIE INTERNE</span>
     <div style="display:flex;gap:4px;margin-left:8px">
-      <button class="msg-tab-btn active" id="msg-tab-reception" onclick="switchMsgBoite('reception',this)" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer">Réception</button>
-      <button class="msg-tab-btn" id="msg-tab-envoi" onclick="switchMsgBoite('envoi',this)" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer">Envoyés</button>
+      <button class="msg-tab-btn active" id="msg-tab-reception" onclick="switchMsgBoite('reception',this)" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer" data-i18n="messagerie.reception">Réception</button>
+      <button class="msg-tab-btn" id="msg-tab-envoi" onclick="switchMsgBoite('envoi',this)" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer" data-i18n="messagerie.envoyes">Envoyés</button>
     </div>
     <div style="flex:1"></div>
     <button onclick="msgOpenCompose()" style="font-family:var(--mono);font-size:9px;padding:4px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">✏️ Nouveau message</button>
@@ -1956,7 +2031,7 @@
     <div id="msg-detail" style="flex:1;overflow-y:auto;padding:28px 36px;background:var(--bg)">
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--muted)">
         <span style="font-size:36px;opacity:.3">✉️</span>
-        <span style="font-family:var(--mono);font-size:10px;letter-spacing:1px">Sélectionnez un message</span>
+        <span style="font-family:var(--mono);font-size:10px;letter-spacing:1px" data-i18n="messagerie.selectionner">Sélectionnez un message</span>
       </div>
     </div>
   </div>
@@ -1976,7 +2051,7 @@
         <div id="msg-compose-externe-hint"
              style="display:none;padding:10px 12px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:5px;font-family:var(--mono);font-size:10px;line-height:1.5;color:#fbbf24"></div>
         <div>
-          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:5px">SITE / SERVICE</label>
+          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:5px" data-i18n="transferts.site_service">SITE / SERVICE</label>
           <select id="msg-compose-site" onchange="msgFilterUsers()" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text)">
             <option value="">— Tous les sites —</option>
           </select>
@@ -1989,14 +2064,14 @@
         </div>
         <div>
           <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:5px">OBJET</label>
-          <input id="msg-compose-sujet" type="text" placeholder="Objet du message" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);box-sizing:border-box">
+          <input id="msg-compose-sujet" type="text" placeholder="Objet du message" data-i18n-placeholder="ph.objet_message" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);box-sizing:border-box">
         </div>
         <div>
-          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:5px">MESSAGE</label>
-          <textarea id="msg-compose-body" rows="6" placeholder="Rédigez votre message…" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:5px" data-i18n="common.message_upper">MESSAGE</label>
+          <textarea id="msg-compose-body" rows="6" placeholder="Rédigez votre message…" data-i18n-placeholder="ph.redigez_message" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px">
-          <button onclick="msgCloseCompose()" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Annuler</button>
+          <button onclick="msgCloseCompose()" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer" data-i18n="transferts.annuler">Annuler</button>
           <button onclick="msgSend()" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:#2563eb;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:700">Envoyer ✉️</button>
         </div>
       </div>
@@ -2030,7 +2105,7 @@
         <div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:40px;text-align:center">Chargement…</div>
       </div>
       <div id="ight-msgs-pane" style="display:none;flex-direction:column;gap:8px">
-        <div id="ight-msgs-list"><div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:40px;text-align:center">Cliquez sur l'onglet pour charger les messages inter-GHT du collecteur</div></div>
+        <div id="ight-msgs-list"><div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:40px;text-align:center" data-i18n="messagerie.click_ght">Cliquez sur l'onglet pour charger les messages inter-GHT du collecteur</div></div>
       </div>
     </div>
 
@@ -2038,9 +2113,9 @@
     <div style="width:260px;flex-shrink:0;border-left:1px solid var(--border);padding:18px 16px;background:var(--surface);overflow-y:auto">
       <div style="font-family:var(--mono);font-size:9px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:12px">ℹ️ AIDE</div>
       <div style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.7">
-        <p style="margin:0 0 10px"><strong style="color:var(--muted2)">Déclarations de situation</strong><br>Signalez une tension ou crise à votre GHT partenaire. Visible dans le collecteur territorial.</p>
+        <p style="margin:0 0 10px"><strong style="color:var(--muted2)" data-i18n="ght.declarations">Déclarations de situation</strong><br>Signalez une tension ou crise à votre GHT partenaire. Visible dans le collecteur territorial.</p>
         <p style="margin:0 0 10px"><strong style="color:var(--muted2)">Demandes inter-GHT</strong><br>Sollicitez un autre établissement : transfert de patient, renfort RH, matériel, ressources.</p>
-        <p style="margin:0"><strong style="color:var(--muted2)">Niveaux de tension</strong><br>⚠️ Vigilance — 🔶 Tension — 🔴 Crise</p>
+        <p style="margin:0"><strong style="color:var(--muted2)" data-i18n="capacite.niveaux_tension">Niveaux de tension</strong><br>⚠️ Vigilance — 🔶 Tension — 🔴 Crise</p>
       </div>
     </div>
   </div>
@@ -2056,25 +2131,25 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div>
             <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">SITE CONCERNÉ *</label>
-            <input id="decl-site" type="text" placeholder="ex: Site Principal" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box">
+            <input id="decl-site" type="text" placeholder="ex: Site Principal" data-i18n-placeholder="ph.ex_site_principal" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box">
           </div>
           <div>
-            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">UNITÉ / SERVICE</label>
-            <input id="decl-uf" type="text" placeholder="ex: Réanimation" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box">
+            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px" data-i18n="ght.unite_service">UNITÉ / SERVICE</label>
+            <input id="decl-uf" type="text" placeholder="ex: Réanimation" data-i18n-placeholder="ph.ex_reanimation" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box">
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div>
-            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">TYPE DE CRISE</label>
+            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px" data-i18n="incidents.type_crise">TYPE DE CRISE</label>
             <select id="decl-type" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
               <option value="sanitaire">Sanitaire</option>
               <option value="cyber">Cyber</option>
-              <option value="tension_capacitaire">Tension capacitaire</option>
+              <option value="tension_capacitaire" data-i18n="capacite.tension_label">Tension capacitaire</option>
               <option value="plan_blanc">Plan Blanc</option>
             </select>
           </div>
           <div>
-            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">NIVEAU DE TENSION</label>
+            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px" data-i18n="capacite.niveau_tension_upper">NIVEAU DE TENSION</label>
             <select id="decl-niveau" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
               <option value="1">⚠️ 1 — Vigilance</option>
               <option value="2">🔶 2 — Tension</option>
@@ -2084,11 +2159,11 @@
         </div>
         <div>
           <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">DESCRIPTION</label>
-          <textarea id="decl-desc" rows="3" placeholder="Décrivez la situation…" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+          <textarea id="decl-desc" rows="3" placeholder="Décrivez la situation…" data-i18n-placeholder="ph.decrivez_situation" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
-          <button onclick="ightCloseModal('ight-modal-decl')" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Annuler</button>
-          <button onclick="ightSubmitDecl()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:#0891b2;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:700">Enregistrer</button>
+          <button onclick="ightCloseModal('ight-modal-decl')" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer" data-i18n="transferts.annuler">Annuler</button>
+          <button onclick="ightSubmitDecl()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:#0891b2;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:700" data-i18n="transferts.enregistrer">Enregistrer</button>
         </div>
       </div>
     </div>
@@ -2104,7 +2179,7 @@
       <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div>
-            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">GHT ÉMETTEUR</label>
+            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px" data-i18n="ght.emetteur">GHT ÉMETTEUR</label>
             <input id="dem-emetteur" type="text" readonly style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface3);border:1px solid var(--border);border-radius:4px;color:var(--muted2);box-sizing:border-box;cursor:default">
           </div>
           <div>
@@ -2120,22 +2195,22 @@
             <select id="dem-type" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
               <option value="sanitaire">Sanitaire</option>
               <option value="cyber">Cyber</option>
-              <option value="transfert">Transfert patient</option>
-              <option value="ressources">Ressources / Matériel</option>
+              <option value="transfert" data-i18n="ght.transfert_patient">Transfert patient</option>
+              <option value="ressources" data-i18n="ght.ressources_materiel">Ressources / Matériel</option>
             </select>
           </div>
           <div>
-            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">UNITÉ CONCERNÉE</label>
-            <input id="dem-uf" type="text" placeholder="ex: Réanimation" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box">
+            <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px" data-i18n="ght.unite_concernee">UNITÉ CONCERNÉE</label>
+            <input id="dem-uf" type="text" placeholder="ex: Réanimation" data-i18n-placeholder="ph.ex_reanimation" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box">
           </div>
         </div>
         <div>
           <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">DESCRIPTION *</label>
-          <textarea id="dem-desc" rows="3" placeholder="Décrivez votre demande…" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+          <textarea id="dem-desc" rows="3" placeholder="Décrivez votre demande…" data-i18n-placeholder="ph.decrivez_demande" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
-          <button onclick="ightCloseModal('ight-modal-dem')" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Annuler</button>
-          <button onclick="ightSubmitDem()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:#0891b2;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:700">Envoyer</button>
+          <button onclick="ightCloseModal('ight-modal-dem')" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer" data-i18n="transferts.annuler">Annuler</button>
+          <button onclick="ightSubmitDem()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:#0891b2;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:700" data-i18n="ght.envoyer">Envoyer</button>
         </div>
       </div>
     </div>
@@ -2150,26 +2225,38 @@
     <div style="padding:16px 20px;background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);display:flex;align-items:center;gap:10px">
       <span style="font-size:20px">🔐</span>
       <div>
-        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:#f59e0b">CHANGEMENT DE MOT DE PASSE REQUIS</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px">Votre compte utilise un mot de passe temporaire. Veuillez le modifier avant de continuer.</div>
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:#f59e0b" data-i18n="fpw.title">CHANGEMENT DE MOT DE PASSE REQUIS</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px" data-i18n="fpw.intro">Votre compte utilise un mot de passe temporaire. Veuillez le modifier avant de continuer.</div>
       </div>
     </div>
     <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
       <div>
-        <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">MOT DE PASSE ACTUEL (temporaire)</label>
-        <input id="fpw-old" type="password" placeholder="Mot de passe temporaire" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);box-sizing:border-box">
+        <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px" data-i18n="fpw.current_pwd">MOT DE PASSE ACTUEL (temporaire)</label>
+        <div style="position:relative">
+          <input id="fpw-old" type="password" placeholder="Mot de passe temporaire" data-i18n-placeholder="fpw.current_pwd_ph" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 36px 8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);box-sizing:border-box">
+          <button type="button" onclick="_togglePw('fpw-old', this)" tabindex="-1" aria-label="Afficher/masquer le mot de passe"
+                  style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:var(--muted);padding:4px;font-size:14px;line-height:1">👁</button>
+        </div>
       </div>
       <div>
-        <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">NOUVEAU MOT DE PASSE (min. 8 caractères)</label>
-        <input id="fpw-new" type="password" placeholder="Nouveau mot de passe" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);box-sizing:border-box">
+        <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px" data-i18n="fpw.new_pwd">NOUVEAU MOT DE PASSE (min. 8 caractères)</label>
+        <div style="position:relative">
+          <input id="fpw-new" type="password" placeholder="Nouveau mot de passe" data-i18n-placeholder="admin.nouveau_mdp" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 36px 8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);box-sizing:border-box">
+          <button type="button" onclick="_togglePw('fpw-new', this)" tabindex="-1" aria-label="Afficher/masquer le mot de passe"
+                  style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:var(--muted);padding:4px;font-size:14px;line-height:1">👁</button>
+        </div>
       </div>
       <div>
-        <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px">CONFIRMER LE NOUVEAU MOT DE PASSE</label>
-        <input id="fpw-confirm" type="password" placeholder="Confirmer" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);box-sizing:border-box" onkeydown="if(event.key==='Enter')submitForcedPw()">
+        <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:4px" data-i18n="fpw.confirm">CONFIRMER LE NOUVEAU MOT DE PASSE</label>
+        <div style="position:relative">
+          <input id="fpw-confirm" type="password" placeholder="Confirmer" data-i18n-placeholder="ph.confirmer" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 36px 8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);box-sizing:border-box" onkeydown="if(event.key==='Enter')submitForcedPw()">
+          <button type="button" onclick="_togglePw('fpw-confirm', this)" tabindex="-1" aria-label="Afficher/masquer le mot de passe"
+                  style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:var(--muted);padding:4px;font-size:14px;line-height:1">👁</button>
+        </div>
       </div>
       <div id="fpw-err" style="display:none;font-family:var(--mono);font-size:10px;color:#f87171;padding:6px 8px;background:rgba(248,113,113,.1);border-radius:4px;border:1px solid rgba(248,113,113,.3)"></div>
-      <button onclick="submitForcedPw()" style="font-family:var(--mono);font-size:11px;padding:10px;background:#d97706;border:none;border-radius:5px;color:#fff;cursor:pointer;font-weight:700;margin-top:4px">
-        🔒 Définir mon nouveau mot de passe
+      <button onclick="submitForcedPw()" data-i18n-label="fpw.submit_btn" style="font-family:var(--mono);font-size:11px;padding:10px;background:#d97706;border:none;border-radius:5px;color:#fff;cursor:pointer;font-weight:700;margin-top:4px">
+        🔒 <span data-i18n="fpw.submit_btn_label">Définir mon nouveau mot de passe</span>
       </button>
     </div>
   </div>
@@ -2191,7 +2278,7 @@
     </div>
     <div id="iam-body" style="flex:1;overflow-y:auto;padding:14px 18px;font-size:12px;line-height:1.55;white-space:pre-wrap;color:var(--text)"></div>
     <div style="padding:12px 18px;background:var(--surface2);border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;border-radius:0 0 10px 10px">
-      <button onclick="closeIncidentAlbertModal()" style="font-family:var(--mono);font-size:10px;padding:7px 14px;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer">Fermer</button>
+      <button onclick="closeIncidentAlbertModal()" style="font-family:var(--mono);font-size:10px;padding:7px 14px;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer" data-i18n="common.fermer">Fermer</button>
       <button onclick="incAlbertConvertToActions()" style="font-family:var(--mono);font-size:10px;padding:7px 16px;background:#16a34a;border:1px solid #16a34a;border-radius:5px;color:#fff;cursor:pointer;font-weight:700">✨ Convertir en actions pour cet incident</button>
     </div>
   </div>
@@ -2205,7 +2292,7 @@
       <span style="font-size:20px">✨</span>
       <div style="flex:1">
         <div style="font-size:14px;font-weight:700">Convertir le rapport en actions SCRIBE</div>
-        <div style="font-family:var(--mono);font-size:9px;opacity:.85">Cocher / décocher les éléments à créer dans la cellule et le kanban</div>
+        <div style="font-family:var(--mono);font-size:9px;opacity:.85" data-i18n="uf.cocher">Cocher / décocher les éléments à créer dans la cellule et le kanban</div>
       </div>
       <button onclick="acvClose()" style="background:rgba(255,255,255,.18);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px">✕</button>
     </div>
@@ -2213,7 +2300,7 @@
     <div style="padding:12px 18px;background:var(--surface2);border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;border-radius:0 0 10px 10px">
       <div id="acv-summary" style="font-family:var(--mono);font-size:10px;color:var(--muted)">—</div>
       <div style="display:flex;gap:8px">
-        <button onclick="acvClose()" style="font-family:var(--mono);font-size:10px;padding:7px 14px;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer">Annuler</button>
+        <button onclick="acvClose()" style="font-family:var(--mono);font-size:10px;padding:7px 14px;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer" data-i18n="transferts.annuler">Annuler</button>
         <button onclick="acvCreateAll()" id="acv-btn-create" style="font-family:var(--mono);font-size:10px;padding:7px 16px;background:#16a34a;border:1px solid #16a34a;border-radius:5px;color:#fff;cursor:pointer;font-weight:700">✓ Créer les actions</button>
       </div>
     </div>
@@ -2244,13 +2331,13 @@
 
     <!-- Formulaire de création (caché par défaut) -->
     <div id="auf-create-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:12px">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px">Nouvelle UF</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px" data-i18n="uf.nouvelle">Nouvelle UF</div>
       <div style="display:grid;grid-template-columns:1fr 2fr 1fr auto auto;gap:8px;align-items:center">
         <input type="text" id="auf-new-code" placeholder="Code UF*" style="font-family:var(--mono);font-size:11px;padding:6px 9px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text)">
-        <input type="text" id="auf-new-libelle" placeholder="Libellé*" style="font-family:var(--mono);font-size:11px;padding:6px 9px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text)">
-        <input type="text" id="auf-new-pole" placeholder="Pôle (optionnel)" style="font-family:var(--mono);font-size:11px;padding:6px 9px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text)">
-        <button onclick="aufCreate()" style="font-family:var(--mono);font-size:10px;padding:6px 12px;background:#16a34a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">Créer</button>
-        <button onclick="aufHideCreate()" style="font-family:var(--mono);font-size:10px;padding:6px 12px;background:var(--surface3);color:var(--muted);border:1px solid var(--border);border-radius:4px;cursor:pointer">Annuler</button>
+        <input type="text" id="auf-new-libelle" placeholder="Libellé*" data-i18n-placeholder="ph.libelle_required" style="font-family:var(--mono);font-size:11px;padding:6px 9px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+        <input type="text" id="auf-new-pole" placeholder="Pôle (optionnel)" data-i18n-placeholder="ph.pole_opt" style="font-family:var(--mono);font-size:11px;padding:6px 9px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+        <button onclick="aufCreate()" style="font-family:var(--mono);font-size:10px;padding:6px 12px;background:#16a34a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700" data-i18n="common.creer">Créer</button>
+        <button onclick="aufHideCreate()" style="font-family:var(--mono);font-size:10px;padding:6px 12px;background:var(--surface3);color:var(--muted);border:1px solid var(--border);border-radius:4px;cursor:pointer" data-i18n="transferts.annuler">Annuler</button>
       </div>
     </div>
 
@@ -2262,9 +2349,9 @@
             <tr style="border-bottom:1px solid var(--border)">
               <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600">ACTIF</th>
               <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600">CODE</th>
-              <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600">LIBELLÉ</th>
-              <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600">PÔLE</th>
-              <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600">ÉTABLISSEMENT</th>
+              <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600" data-i18n="common.libelle">LIBELLÉ</th>
+              <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600" data-i18n="common.pole">PÔLE</th>
+              <th style="text-align:left;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600" data-i18n="incidents.etablissement">ÉTABLISSEMENT</th>
               <th style="text-align:right;padding:8px 10px;font-size:9px;color:var(--muted);font-weight:600">ACTIONS</th>
             </tr>
           </thead>

@@ -146,7 +146,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app = FastAPI(title="SCRIBE v2.5.0 Crisis OS", version="2.5.0")
 
 # CORS — restreint aux origines configurées (jamais wildcard en prod)
-_VPS = "http://localhost"
+_VPS = "http://your-server.example.com"
 _ALL_PORTS = list(range(8000, 8010)) + list(range(6560, 6568)) + [9000, 7474, 7373]
 _allowed_origins = os.getenv(
     "SCRIBE_ALLOWED_ORIGINS",
@@ -510,7 +510,7 @@ async def public_status():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "3.4.0-alpha2", "build": "v3000h35"}
+    return {"status": "ok", "version": "3.4.0-beta1", "build": "v3.4.0-beta1"}
 
 
 @app.get("/api/push-test")

@@ -55,6 +55,12 @@ class InstanceConfig:
     nom: str = ""
     admin_login: str = "dircrise"
     admin_password: str = ""
+    # v3.4 (h38g) — Nom affiché de l'admin (display_name dans la DB).
+    # Si vide, on garde un fallback pertinent au lieu du legacy
+    # "Directeur de Crise" hardcodé qui rendait illisibles les
+    # messages de chat quand le login n'était pas "dircrise" (ex: "rssi"
+    # qui apparaissait comme "Directeur de Crise" dans les fils de chat).
+    admin_display_name: str = ""
     adresse: str = ""
     latitude: float | None = None
     longitude: float | None = None
@@ -64,14 +70,47 @@ class InstanceConfig:
     # convention GHT non encore signée, etc.
     # L'instance reste pleinement fonctionnelle pour son propre usage interne.
     synchroniser: bool = True
+    # v3.4 (h38h) — Plugins désactivés à la création (étape 5 du wizard).
+    # Liste des plugin_id à mettre à False dans la table plugin_states
+    # lors du premier bootstrap. Les autres restent activés par défaut.
+    # Ce champ n'est consulté qu'au _bootstrap_db ; modifier ensuite via
+    # /admin/plugins dans l'instance.
+    plugins_disabled: list = field(default_factory=list)
+    # v3.4 (h38k) — Langue par défaut de l'instance, choisie au wizard.
+    # Stocké en config.js (consommé par scribe.js loadI18n() au boot).
+    # Valeurs : fr, en, it, de, es, ou code ISO 2-letters d'une des 24 langues UE.
+    langue: str = "fr"
 
     def __post_init__(self):
+        # v3.4 (h38) — Strip systématique des champs textes pour éviter les
+        # espaces traînants qui cassent les headers HTTP de la fédération
+        # ("Illegal header value b'ch2 '"). Cf. bug supervision : un sigle
+        # avec un espace en fin empêchait le push vers le collecteur, donc
+        # l'instance n'apparaissait pas sur la carte territoriale.
+        if isinstance(self.sigle, str):
+            self.sigle = self.sigle.strip()
+        if isinstance(self.nom, str):
+            self.nom = self.nom.strip()
+        if isinstance(self.admin_login, str):
+            self.admin_login = self.admin_login.strip()
+        if isinstance(self.admin_display_name, str):
+            self.admin_display_name = self.admin_display_name.strip()
+        if isinstance(self.adresse, str):
+            self.adresse = self.adresse.strip()
+        if isinstance(self.timezone, str):
+            self.timezone = self.timezone.strip()
         if not self.sigle:
             self.sigle = f"Site_{self.port}"
         if not self.nom:
             self.nom = self.sigle
         if not self.admin_password:
             self.admin_password = generate_password()
+        # v3.4 (h38g) — Fallback intelligent du display_name :
+        # 1. Si le wizard a fourni un nom affiché, on l'utilise tel quel
+        # 2. Sinon, on capitalize le login (rssi → "Rssi")
+        # On ne met PLUS jamais "Directeur de Crise" en dur.
+        if not self.admin_display_name:
+            self.admin_display_name = self.admin_login.upper() if self.admin_login else "Admin"
 
 
 @dataclass
@@ -187,6 +226,10 @@ class InstanceManager:
                     state.pid = None
                 self.instances[state.config.port] = state
             logger.info(f"État rechargé : {len(self.instances)} instances")
+            # v3.4 (h38) — Re-sauver l'état après chargement : __post_init__ a
+            # appliqué un strip défensif sur sigle/nom/adresse, on persiste
+            # cette correction pour qu'elle survive aux redémarrages.
+            self._save_state()
         except Exception as e:
             logger.warning(f"Impossible de charger l'état : {e}")
 
@@ -256,6 +299,9 @@ class InstanceManager:
 
         allowed = {
             "sigle", "nom", "admin_login", "admin_password",
+            "admin_display_name",  # v3.4 (h38g)
+            "plugins_disabled",    # v3.4 (h38h) — pré-désactivation plugins par wizard
+            "langue",              # v3.4 (h38k) — langue par défaut posée par le wizard
             "adresse", "latitude", "longitude", "synchroniser",
             "timezone",
         }
@@ -607,12 +653,21 @@ class InstanceManager:
             }]
 
         # ── 1. config.js ────────────────────────────────────────────────────
+        # v3.4 (h38k) — Détecter la langue préférée pour cette instance.
+        # Le wizard envoie payload.langue dans WizardInstanceCreate ;
+        # on stocke cette préférence dans InstanceConfig.langue (mais le
+        # champ n'existe pas encore — on le lit via getattr pour fallback "fr").
+        instance_langue = getattr(cfg, "langue", "") or "fr"
         scribe_config = {
             "etablissement": {
                 "nom":      cfg.nom,
                 "sigle":    cfg.sigle,
                 "timezone": cfg.timezone or "",  # v2.4.6 : IANA ou "" (auto)
             },
+            # v3.4 (h38k) — Langue de l'instance posée par le wizard.
+            # Le frontend scribe.js charge cette langue par défaut au boot
+            # (cf. loadI18n() : SCRIBE_CONFIG.langue est lu si pas d'override admin).
+            "langue":           instance_langue,
             "login_tagline": "",
             "admin": {
                 "login":    cfg.admin_login,
@@ -753,7 +808,7 @@ class InstanceManager:
             else:
                 hospital_principal = Hospital(
                     nom=hospital_nom,
-                    latitude=state.config.latitude or 45.8992,    # Annecy par défaut
+                    latitude=state.config.latitude or 45.8992,    # Example City par défaut
                     longitude=state.config.longitude or 6.1294,
                 )
                 sess.add(hospital_principal)
@@ -1083,16 +1138,79 @@ class InstanceManager:
             existing.hashed_password = _hash(state.config.admin_password)
             existing.role = "admin"
             existing.active = True
-            logger.info(f"  Compte admin mis à jour : {state.config.admin_login}")
+            # v3.4 (h38g) — Aussi mettre à jour le display_name si défini
+            # par le wizard. Évite que le legacy "Directeur de Crise"
+            # créé par bootstrap_admin reste figé alors que l'utilisateur
+            # avait renseigné un autre nom (ex: "RSSI").
+            if state.config.admin_display_name:
+                existing.display_name = state.config.admin_display_name
+            # v3.4 (h38c) — Forcer le changement de mot de passe à la
+            # première connexion (sauf si déjà déclaré non-nécessaire).
+            # Le mdp initial étant généré par le wizard et potentiellement
+            # transmis par email/chat, l'utilisateur doit le changer.
+            try:
+                existing.must_change_password = True
+            except Exception:
+                pass
+            logger.info(f"  Compte admin mis à jour : {state.config.admin_login} (display='{existing.display_name}')")
         else:
-            sess.add(User(
+            new_admin = User(
                 username=state.config.admin_login,
-                display_name="Directeur de Crise",
+                display_name=state.config.admin_display_name or state.config.admin_login.upper(),
                 role="admin",
                 hashed_password=_hash(state.config.admin_password),
                 active=True,
-            ))
-            logger.info(f"  Compte admin créé : {state.config.admin_login}")
+            )
+            # v3.4 (h38c) — Forcer le changement de mot de passe à la
+            # première connexion
+            try:
+                new_admin.must_change_password = True
+            except Exception:
+                pass
+            sess.add(new_admin)
+            logger.info(f"  Compte admin créé : {state.config.admin_login} (display='{new_admin.display_name}', mdp à changer à la 1ère connexion)")
+        # v3.4 (h38g) — Commit explicite ici pour être absolument certain
+        # que must_change_password=True est persisté avant que l'instance
+        # ne réponde à un éventuel login en attente. Sans ce commit, un
+        # bootstrap concurrent ou un cache pouvait remettre le flag à False.
+        try:
+            sess.commit()
+        except Exception as e:
+            logger.warning(f"  Commit admin échoué (non bloquant) : {e}")
+
+        # v3.4 (h38h) — Écriture des plugin_states selon les préférences
+        # du wizard. Chaque plugin listé dans state.config.plugins_disabled
+        # se voit attribuer enabled=False. Les autres restent activés par
+        # défaut (config.PLUGINS = True). L'utilisateur peut ensuite modifier
+        # ces choix via /admin/plugins après création.
+        disabled = list(getattr(state.config, "plugins_disabled", []) or [])
+        if disabled:
+            try:
+                from core.plugin_state_model import PluginState
+                # S'assurer que la table existe (idempotent)
+                from app.database import Base, engine
+                Base.metadata.create_all(bind=engine, tables=[PluginState.__table__])
+
+                n_disabled = 0
+                for plugin_id in disabled:
+                    if not isinstance(plugin_id, str) or not plugin_id.strip():
+                        continue
+                    pid = plugin_id.strip()
+                    existing_ps = sess.query(PluginState).filter_by(plugin_id=pid).first()
+                    if existing_ps:
+                        if existing_ps.enabled:
+                            existing_ps.enabled = False
+                            n_disabled += 1
+                    else:
+                        sess.add(PluginState(plugin_id=pid, enabled=False))
+                        n_disabled += 1
+                sess.commit()
+                logger.info(f"  Plugins désactivés via wizard : {n_disabled} ({disabled})")
+            except Exception as e:
+                # Non bloquant : si le modèle PluginState n'existe pas ou autre,
+                # on log et on continue. L'instance fonctionnera juste avec
+                # les plugins par défaut.
+                logger.warning(f"  Écriture plugin_states KO (non bloquant) : {e}")
 
     def _auto_enrol(self, state: InstanceState, collecteur_url: str) -> None:
         """Pré-enregistre le token de l'instance auprès du collecteur.

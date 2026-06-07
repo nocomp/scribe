@@ -240,6 +240,12 @@ def ensure_admin(db: Session):
     """Crée ou synchronise le compte admin. Hash bcrypt toujours à jour."""
     existing = db.query(User).filter(User.username == ADMIN_USER).first()
     if not existing:
+        # v3.4 (h38c) — En mode prod, l'admin est créé avec un mdp par
+        # défaut connu publiquement (Scribe2026!). On force le changement
+        # à la première connexion pour sécurité minimale.
+        # En MODE EXERCICE, on ne force PAS : le mdp est fixe et le
+        # collecteur animateur doit pouvoir se logger.
+        is_exercice = os.getenv("SCRIBE_EXERCICE_MODE", "0") == "1"
         admin = User(
             username=ADMIN_USER,
             display_name="Directeur de Crise",
@@ -247,6 +253,10 @@ def ensure_admin(db: Session):
             hashed_password=_hash(ADMIN_PASS),
             active=True
         )
+        try:
+            admin.must_change_password = not is_exercice
+        except Exception:
+            pass
         db.add(admin)
         db.commit()
     else:
@@ -254,6 +264,20 @@ def ensure_admin(db: Session):
         if not existing.hashed_password.startswith("$2"):
             existing.hashed_password = _hash(ADMIN_PASS)
             db.commit()
+        # v3.4 (h38d) — Rétrofit : si un admin existant utilise encore le
+        # mdp par défaut (Scribe2026!), forcer `must_change_password=True`
+        # au prochain login. Hors mode exercice.
+        # Ce code s'applique UNE FOIS : dès que l'admin a changé son mdp,
+        # `verify_password(ADMIN_PASS, hash)` est False → on ne touche
+        # plus à `must_change_password` (l'utilisateur reste libre).
+        is_exercice = os.getenv("SCRIBE_EXERCICE_MODE", "0") == "1"
+        if not is_exercice and ADMIN_PASS and verify_password(ADMIN_PASS, existing.hashed_password):
+            try:
+                if not getattr(existing, "must_change_password", False):
+                    existing.must_change_password = True
+                    db.commit()
+            except Exception:
+                pass
         # v3.0.0 — En MODE EXERCICE uniquement : forcer la resynchronisation du
         # mot de passe admin sur ADMIN_PASS. Raison : le mdp exercice est fixe et
         # non secret ("Exercice2026!"), et le collecteur animateur DOIT pouvoir se
@@ -347,6 +371,37 @@ def me(user: Optional[User] = Depends(get_current_user)):
     return {"id": user.id, "username": user.username, "display_name": user.display_name,
             "role": user.role, "perimetre": user.perimetre,
             "must_change_password": bool(getattr(user, "must_change_password", False))}
+
+
+# v3.4 (h38) — Changement de mot de passe par l'utilisateur lui-même.
+# Utilisé notamment pour le flow "première connexion" : si l'utilisateur a
+# must_change_password=True, l'UI lui présente une modale de changement
+# obligatoire AVANT d'entrer dans l'application.
+class _ChangePwdBody(BaseModel):
+    current_password: str
+    new_password: str
+
+@router.post("/change-password")
+def change_password(
+    body: _ChangePwdBody,
+    user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not user:
+        raise HTTPException(status_code=401, detail="Non authentifié")
+    if not _verify(body.current_password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Mot de passe actuel incorrect")
+    # Politique minimale : 8 caractères, ne doit pas être l'identique de l'ancien
+    if len(body.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit faire au moins 8 caractères")
+    if body.new_password == body.current_password:
+        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit être différent de l'ancien")
+    user.hashed_password = _hash(body.new_password)
+    user.must_change_password = False
+    db.commit()
+    _logger_sec.info(f"password_change: user={user.username} id={user.id}")
+    return {"ok": True, "must_change_password": False}
+
 
 @router.get("/users", response_model=List[UserOut])
 def list_users(user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):

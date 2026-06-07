@@ -1,4 +1,3 @@
-import os
 #!/usr/bin/env python3
 """
 tests/debug_albert.py — Diagnostic de la génération IA
@@ -18,7 +17,7 @@ from datetime import datetime
 
 ALBERT_URL   = "https://albert.api.etalab.gouv.fr/v1/chat/completions"
 ALBERT_MODEL = "mistralai/Ministral-3-8B-Instruct-2512"
-ALBERT_KEY   = os.getenv("ALBERT_API_KEY", "")  # Set via env var
+ALBERT_KEY   = ""
 
 SYSTEM_EXO = """Tu es expert en gestion de crise hospitalière française. Tu génères des scénarios d'exercice réalistes pour équipes GHT. Tu réponds UNIQUEMENT en JSON valide, sans texte autour."""
 
@@ -33,7 +32,7 @@ def build_prompt_full(nb_stimuli=8, complexite="MOYEN", type_crise="SANITAIRE",
     if valeurs is None: valeurs = []
     if services is None: services = []
     sid = datetime.now().strftime('%Y%m%d_%H%M')
-    ports = {"DEMO1":8660,"DEMO2":8661,"DEMO5":8662,"DEMO6":8663,"DEMO7":8664,"DEMO5":8665,"DEMO6":8666}
+    ports = {"DEMO1":8660,"DEMO2":8661,"DEMO3":8662,"DEMO4":8663,"DEMO5":8664,"DEMO6":8665,"DEMO7":8666}
     type_ctx = {
         "SANITAIRE":"Crise sanitaire hospitalière (hémorragie, accident, pandémie...)",
         "CYBER":"Crise cyber hospitalière. SIH, DPI, PACS potentiellement touchés. Inclure stimuli CERT Santé, isolation réseaux, continuité sans outils numériques.",
@@ -63,7 +62,7 @@ Retourne UNIQUEMENT ce JSON valide (rien d'autre, pas de texte avant ou après):
 RÈGLES STRICTES:
 - EXACTEMENT {nb_stimuli} stimuli, espacés progressivement (T+0, T+5, T+10...)
 - Types stimuli disponibles: incident, message, transfert, chat, decision
-- Ports fixes: DEMO1=8660 DEMO2=8661 DEMO5=8662 DEMO6=8663 DEMO7=8664 DEMO5=8665 DEMO6=8666
+- Ports fixes: DEMO1=8660 DEMO2=8661 DEMO3=8662 DEMO4=8663 DEMO5=8664 DEMO6=8665 DEMO7=8666
 - EXACTEMENT {nb_joueurs} joueurs répartis sur les sites
 - JSON VALIDE UNIQUEMENT — pas de backtick, pas de commentaire, pas de texte hors JSON"""
 
@@ -179,7 +178,7 @@ async def main():
     p = build_prompt_full(nb_stimuli=15, complexite="EXPERT",
                           type_crise="MIXTE",
                           sujet="Ransomware + afflux blessés + panne ascenseurs + grève infirmières",
-                          sites=["DEMO1","DEMO2","DEMO5"], nb_joueurs=8,
+                          sites=["DEMO1","DEMO2","DEMO3"], nb_joueurs=8,
                           stimuli_externes="samu,prefecture,medias,famille,cert_sante,ght_voisin",
                           valeurs=["coordination","communication","decision","transfert","capacite","continuite","cyber_response","rh","ethique"],
                           services=["imagerie","labo","pharmacie","bloc","sterilisation","dsi","biomed","securite","restauration","transport","lingerie","dechets"],

@@ -56,7 +56,7 @@ ROUTING: dict = {
 IA: dict = {
     # "albert" | "openai" | "anthropic" | "gemini" | "mistral" | "ollama" | "openai_compat" | "none"
     "provider": os.getenv("SCRIBE_IA_PROVIDER", "albert"),
-    "api_key":  os.getenv("SCRIBE_IA_KEY", ""),  # Set via env var. Get a key at https://albert.api.etalab.gouv.fr/
+    "api_key":  os.getenv("SCRIBE_IA_KEY",      ""),
     "model":    os.getenv("SCRIBE_IA_MODEL",     ""),
     "base_url": os.getenv("SCRIBE_IA_URL",       ""),
 
@@ -136,7 +136,7 @@ PLUGINS: dict[str, bool] = {
     "messagerie": True,
     # v2307 → v2320 : Plugin inter_ght normalement désactivé en public car
     # le chat temps réel couvre les besoins d'échanges inter-établissements.
-    # Activé ici pour build privé Arc Alpin / G7 où l'onglet est attendu.
+    # Activé ici pour build privé Example Network / G7 où l'onglet est attendu.
     "inter_ght":  True,
     "federation": True,
     "albert":     True,
@@ -177,11 +177,11 @@ FEDERATION: dict = {
     "instances": [
         {"sigle": "DEMO1",      "port": 8000},
         {"sigle": "DEMO2",    "port": 8001},
-        {"sigle": "DEMO5", "port": 8002},
-        {"sigle": "DEMO6",   "port": 8003},
-        {"sigle": "DEMO7",      "port": 8004},
-        {"sigle": "DEMO5",       "port": 8005},
-        {"sigle": "DEMO6",      "port": 8006},
+        {"sigle": "DEMO3", "port": 8002},
+        {"sigle": "DEMO4",   "port": 8003},
+        {"sigle": "DEMO5",      "port": 8004},
+        {"sigle": "DEMO6",       "port": 8005},
+        {"sigle": "DEMO7",      "port": 8006},
     ],
 }
 

@@ -1,0 +1,71 @@
+# ── Python ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# ── SCRIBE runtime ──────────────────────────────────────────────────
+# Databases (per-instance SQLite)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Runtime directories
+uploads/
+logs/
+instances/
+data/instances/
+data/exercice/
+
+# Local configs (operator-specific)
+config.js
+*.local.xml
+*.local.json
+.env
+.env.*
+
+# ── Secrets (NEVER commit) ──────────────────────────────────────────
+collecteur/collecteur_tokens.json
+collecteur/collecteur_ui_auth.json
+collecteur/master_instances.json
+master/hostname.conf
+secrets/
+*.pem
+*.key
+*.crt
+api_keys.txt
+albert_api_key.txt
+
+# ── OS ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# ── Builds ──────────────────────────────────────────────────────────
+build/
+dist/
+*.zip
+*.tar.gz
+
+# ── User-specific data ──────────────────────────────────────────────
+uf.xlsx
+uf_*.xlsx
+chag_*
+config_*real*.xml
+config_chag*.xml
+config_g7_*.xml
+
+# ── Documentation drafts ────────────────────────────────────────────
+*.draft.md
+NOTES_PRIVE.md

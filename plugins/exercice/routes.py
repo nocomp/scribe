@@ -32,8 +32,8 @@ router = APIRouter()
 def _get_base_urls(session: ExoSession) -> dict:
     """Construit le dict {sigle: url} depuis les sites actifs de la session."""
     EXO_PORTS = {
-        "DEMO1": 8660, "DEMO2": 8661, "DEMO5": 8662,
-        "DEMO6": 8663, "DEMO7": 8664, "DEMO5": 8665, "DEMO6": 8666,
+        "DEMO1": 8660, "DEMO2": 8661, "DEMO3": 8662,
+        "DEMO4": 8663, "DEMO5": 8664, "DEMO6": 8665, "DEMO7": 8666,
     }
     host = os.getenv("SCRIBE_EXO_HOST", "http://localhost")
     sites = json.loads(session.sites_actifs or "[]")

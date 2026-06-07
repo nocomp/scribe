@@ -1,6 +1,6 @@
 <scribe>
   <etablissement>
-    <nom>GHT Léman Mont-Blanc</nom>
+    <nom>GHT Léman Example Peak</nom>
     <sigle>DEMO2</sigle>
     <finess>740000002</finess>
   </etablissement>
@@ -17,19 +17,19 @@
       <longitude>6.3198</longitude>
     </site>
     <site>
-      <nom>Hôpitaux du Léman — Thonon-les-Bains</nom>
-      <adresse>3 Avenue de la Dame, 74200 Thonon-les-Bains</adresse>
+      <nom>Hôpitaux du Léman — Example Lake-les-Bains</nom>
+      <adresse>3 Avenue de la Dame, 74200 Example Lake-les-Bains</adresse>
       <latitude>46.3635</latitude>
       <longitude>6.4745</longitude>
     </site>
     <site>
-      <nom>Hôpitaux du Pays du Mont-Blanc — Sallanches</nom>
-      <adresse>380 Rue de l'Hôpital, 74700 Sallanches</adresse>
+      <nom>Hôpitaux du Pays du Example Peak — Example Mountain</nom>
+      <adresse>380 Rue de l'Hôpital, 74700 Example Mountain</adresse>
       <latitude>45.9412</latitude>
       <longitude>6.6291</longitude>
     </site>
     <site>
-      <nom>EPSM Haute-Savoie — La Roche-sur-Foron</nom>
+      <nom>EPSM Example Region — La Roche-sur-Foron</nom>
       <adresse>145 Avenue de la Plaine, 74800 La Roche-sur-Foron</adresse>
       <latitude>46.0628</latitude>
       <longitude>6.3094</longitude>
@@ -99,8 +99,8 @@
   <langue>fr</langue>
   <federation>
     <enabled>true</enabled>
-    <collecteur_url>http://localhost:9000/api/push</collecteur_url>
-    <token>token_ghtlmb_demo_2026</token>
+    <collecteur_url>http://your-server.example.com:9000/api/push</collecteur_url>
+    <token>demo_token_demo2_replace_in_production</token>
     <intervalle_secondes>30</intervalle_secondes>
     <sync_crise>true</sync_crise>
     <share_details>true</share_details>

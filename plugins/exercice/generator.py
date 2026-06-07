@@ -109,7 +109,7 @@ CONTRAINTES IMPORTANTES :
 - Les types de stimuli disponibles : incident, message, transfert, chat, capacite, decision
 - Pour les exercices multi-sites : alterner les stimuli entre les sites pour forcer la coordination
 - Les usernames doivent être en minuscules sans accents ni espaces
-- Les ports : DEMO1=8660, DEMO2=8661, DEMO5=8662, DEMO6=8663, DEMO7=8664, DEMO5=8665, DEMO6=8666
+- Les ports : DEMO1=8660, DEMO2=8661, DEMO3=8662, DEMO4=8663, DEMO5=8664, DEMO6=8665, DEMO7=8666
 - Adapter la complexité : FACILE=alertes simples, MOYEN=coordination inter-services, DIFFICILE=multi-sites, EXPERT=gestion de crise complète avec complications
 
 Génère maintenant le scénario complet en JSON valide."""

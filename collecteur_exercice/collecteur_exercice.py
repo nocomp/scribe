@@ -52,8 +52,8 @@ EXO_INSTANCES = {
 # Alias historiques → mêmes ports. Permet aux scénarios déjà écrits avec
 # cible="DEMO1" / "DEMO2" / etc. de continuer à fonctionner sans modification.
 _EXO_ALIASES = {
-    "DEMO1":"EXO1","DEMO2":"EXO2","DEMO5":"EXO3",
-    "DEMO6":"EXO4","DEMO7":"EXO5","DEMO5":"EXO6","DEMO6":"EXO7",
+    "DEMO1":"EXO1","DEMO2":"EXO2","DEMO3":"EXO3",
+    "DEMO4":"EXO4","DEMO5":"EXO5","DEMO6":"EXO6","DEMO7":"EXO7",
 }
 # Vue "complète" sigle→port incluant alias (utilisée pour la résolution).
 EXO_INSTANCES_FULL = dict(EXO_INSTANCES)
@@ -202,7 +202,7 @@ def load_tokens():
     for sigle in EXO_INSTANCES:
         tokens[f"token_exo_{sigle.lower()}_2026"] = sigle
     # v3.0.0 — Tokens d'alias historiques (rétrocompat) : les configs exo
-    # existantes utilisent token_exo_demo1_2026 etc. On les accepte en mappant
+    # existantes utilisent token_exo_chag_2026 etc. On les accepte en mappant
     # vers le sigle canonique (EXO1...EXO7).
     for _alias, _canonical in _EXO_ALIASES.items():
         tokens[f"token_exo_{_alias.lower()}_2026"] = _canonical
@@ -566,14 +566,14 @@ class GenRequest(BaseModel):
 ALBERT_URL   = "https://albert.api.etalab.gouv.fr/v1/chat/completions"
 ALBERT_MODEL = "mistralai/Ministral-3-8B-Instruct-2512"
 ALBERT_KEY   = os.environ.get("SCRIBE_IA_KEY",
-    os.getenv("ALBERT_API_KEY", ""))
+    "")
 
 SYSTEM_EXO = """Tu es expert en gestion de crise hospitalière française. Tu génères des scénarios d'exercice réalistes pour équipes GHT. Tu réponds UNIQUEMENT en JSON valide, sans texte autour."""
 
 def _prompt_scenario(b:GenRequest) -> str:
     ratio = round(b.duree_reel_min/b.duree_exercice_min,1)
     sid = datetime.now().strftime("%Y%m%d_%H%M")
-    ports = {"DEMO1":8660,"DEMO2":8661,"DEMO5":8662,"DEMO6":8663,"DEMO7":8664,"DEMO5":8665,"DEMO6":8666}
+    ports = {"DEMO1":8660,"DEMO2":8661,"DEMO3":8662,"DEMO4":8663,"DEMO5":8664,"DEMO6":8665,"DEMO7":8666}
     
     # Construire les instructions spécifiques
     type_instructions = {
@@ -636,15 +636,15 @@ CONTRAINTE DE SITE — IMPORTANT :
 - NE JAMAIS cibler un site non listé. Les "cible" des stimuli doivent strictement appartenir à : {", ".join(b.sites)}.
 
 NOMS DES ÉTABLISSEMENTS — pour la rédaction des textes :
-- Les sigles à utiliser dans les champs "cible", "sigle" et les identifiants sont : DEMO1, DEMO2, DEMO5, DEMO6, DEMO7, DEMO5, DEMO6.
+- Les sigles à utiliser dans les champs "cible", "sigle" et les identifiants sont : DEMO1, DEMO2, DEMO3, DEMO4, DEMO5, DEMO6, DEMO7.
 - MAIS dans les textes en langage naturel (titres, descriptions, faits, contenus de messages), utilisez le VRAI nom :
   * DEMO1 = "CHANGE" (Centre Hospitalier ANnecy-GEnevois)
-  * DEMO2 = "Hôpitaux du Léman" ou "Thonon"
-  * DEMO5 = "CH Rumilly"
-  * DEMO6 = "Hôpitaux du Pays du Mont-Blanc"
-  * DEMO7 = "Hôpital Privé Mont-Blanc"
-  * DEMO5 = "CH Bonneville"
-  * DEMO6 = "CH Pays de Gex"
+  * DEMO2 = "Hôpitaux du Léman" ou "Example Lake"
+  * DEMO3 = "CH Rumilly"
+  * DEMO4 = "Hôpitaux du Pays du Example Peak"
+  * DEMO5 = "Hôpital Privé Example Peak"
+  * DEMO6 = "CH Bonneville"
+  * DEMO7 = "CH Pays de Gex"
 - Exemple CORRECT : titre "Afflux massif au CHANGE", cible "DEMO1".
 - Exemple INCORRECT : titre "Afflux massif au DEMO1" (on utilise le nom long dans les textes).
 
@@ -654,7 +654,7 @@ Retourne UNIQUEMENT ce JSON valide (rien d'autre, pas de texte avant ou après):
 RÈGLES STRICTES:
 - EXACTEMENT {b.nb_stimuli} stimuli, espacés progressivement (T+0, T+5, T+10...)
 - Types stimuli disponibles: incident, message, transfert, chat, decision
-- Ports fixes: DEMO1=8660 DEMO2=8661 DEMO5=8662 DEMO6=8663 DEMO7=8664 DEMO5=8665 DEMO6=8666
+- Ports fixes: DEMO1=8660 DEMO2=8661 DEMO3=8662 DEMO4=8663 DEMO5=8664 DEMO6=8665 DEMO7=8666
 - EXACTEMENT {b.nb_joueurs} joueurs répartis sur les sites
 - JSON VALIDE UNIQUEMENT — pas de backtick, pas de commentaire, pas de texte hors JSON"""
 
@@ -1691,7 +1691,7 @@ async def get_sites_actifs_public():
     Réponse minimale pour limiter la surface d'exposition :
       {
         "running": bool,
-        "sites": ["DEMO1", "DEMO6", ...]
+        "sites": ["DEMO1", "DEMO4", ...]
       }
     Si aucun exercice actif : running=False, sites=[].
     """

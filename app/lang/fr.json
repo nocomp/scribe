@@ -5,7 +5,9 @@
     "flag": "🇫🇷",
     "direction": "ltr",
     "author": "SCRIBE Project",
-    "version": "1.1.0"
+    "version": "1.1.0",
+    "i18n_version": "h38n",
+    "i18n_keys_count": 277
   },
   "app": {
     "name": "SCRIBE",
@@ -13,7 +15,7 @@
     "version_label": "v"
   },
   "nav": {
-    "veille": "VEILLE",
+    "veille": "INCIDENTS",
     "soins": "SOINS",
     "cellule": "CELLULE",
     "kanban": "KANBAN",
@@ -92,7 +94,7 @@
     "status_resolu": "RÉSOLU"
   },
   "soins": {
-    "title": "CARTOGRAPHIE DE SITUATION — SOINS",
+    "title": "Cartographie de Situation — Soins",
     "btn_albert": "Analyse capacitaire Albert",
     "maj": "Mis à jour",
     "operationnel": "OPÉRATIONNEL",
@@ -102,7 +104,16 @@
     "projection_title": "PROJECTION DE RETOUR À LA NORMALE",
     "maintenant": "Maintenant",
     "retour_normal": "Retour normal estimé",
-    "dans": "dans"
+    "dans": "dans",
+    "albert_btn": "Analyse capacitaire SCRIBE",
+    "legend_critical": "Impact critique",
+    "btn_transferts": "Transferts",
+    "transferts_en_cours": "TRANSFERTS EN COURS",
+    "aucun_transfert": "Aucun transfert actif",
+    "services_transverses": "SERVICES TRANSVERSES",
+    "projection_normale": "PROJECTION DE RETOUR À LA NORMALE",
+    "aucun_incident_ouvert": "Aucun incident ouvert",
+    "last_update": "Mis à jour"
   },
   "cellule": {
     "presences_title": "REGISTRE DES PRÉSENCES",
@@ -115,7 +126,10 @@
     "role_placeholder": "Rôle/Fonction",
     "responsable": "Responsable",
     "decision_placeholder": "Décision prise...",
-    "btn_acter": "ACTER"
+    "btn_acter": "ACTER",
+    "aucune_presence": "Aucune présence",
+    "aucune_decision": "Aucune décision",
+    "decision_direction": "Décision direction"
   },
   "kanban": {
     "title": "TABLEAU DE BORD OPÉRATIONNEL — KANBAN",
@@ -128,15 +142,23 @@
     "btn_add": "+ Ajouter une tâche",
     "priority_haute": "HAUTE",
     "priority_normale": "NORMALE",
-    "priority_basse": "BASSE"
+    "priority_basse": "BASSE",
+    "new_task": "Nouvelle tâche",
+    "drag_to_move": "Glisser-déposer pour déplacer",
+    "assigne_a": "Assigné à",
+    "priorite": "Priorité",
+    "en_attente": "En attente",
+    "termine": "Terminé",
+    "lie_incident": "Lié à l'incident",
+    "echeance": "Échéance"
   },
   "rex": {
     "title": "RETOUR D'EXPÉRIENCE (REX)",
     "btn_new": "+ Nouveau REX",
     "btn_export": "Export CSV incidents",
     "rex_total": "REX TOTAL",
-    "incidents_par_type": "INCIDENTS PAR TYPE",
-    "generer_depuis": "GÉNÉRER REX DEPUIS UN INCIDENT ?",
+    "incidents_par_type": "Incidents par type",
+    "generer_depuis": "Générer REX depuis un incident",
     "select_incident": "-- Un incident --",
     "btn_pre_remplir": "Pré-remplir REX",
     "btn_telecharger": "Télécharger rapport DOCX",
@@ -160,7 +182,30 @@
     "ameliorer": "Qu'est-ce qui peut être amélioré ?",
     "ne_pas_repeter": "Quelles actions concrètes pour ne pas répéter ?",
     "btn_enregistrer": "Enregistrer REX",
-    "min_label": "min"
+    "min_label": "min",
+    "dernieres_fiches": "Dernières fiches REX",
+    "aucune_fiche": "Aucune fiche",
+    "incident_analyser": "Incident à analyser",
+    "aucune_fiche_creez": "Aucune fiche REX — créez-en une via le bouton ci-dessus",
+    "nouvelle_tache": "Nouvelle tâche",
+    "infos_generales": "Informations générales",
+    "nommez_evenement": "Nommez l'événement de façon simple et mémorable",
+    "apres_debut": "après le début de l'incident",
+    "debut_a_resolution": "du début à la résolution",
+    "sur": "sur",
+    "bilan": "Bilan — Ce qu'on retient",
+    "depose_archive": "Déposez votre archive ici",
+    "meme_scenario": "Même scénario rejoué",
+    "mesurer_progression": "pour mesurer la progression",
+    "effacer_tout": "Effacer tout",
+    "duree_crise": "Durée crise",
+    "delai_activation": "Délai activation cellule",
+    "delai_communique": "Délai 1er communiqué",
+    "decisions": "Décisions",
+    "jalons_valides": "Jalons validés",
+    "analyser_decisions": "analyser les décisions et identifier les axes d'amélioration.",
+    "synthese_seance": "Synthèse séance",
+    "synthese_globale": "Synthèse globale"
   },
   "releve": {
     "title": "NOUVELLE CONSIGNE",
@@ -204,7 +249,13 @@
     "statut_hs": "H.S.",
     "statut_maintenance": "MAINTENANCE",
     "publie_le": "Publié le",
-    "accessible_sans_auth": "Accessible sur /status (sans authentification)"
+    "accessible_sans_auth": "Accessible sur /status (sans authentification)",
+    "pour_qui": "Pour qui ?",
+    "aucune_consigne": "Aucune consigne",
+    "tous_les_sites": "Tous les sites",
+    "message_officiel": "Message officiel",
+    "questions_freq": "Questions fréquentes",
+    "non_publie": "Non publié — accès /status non disponible"
   },
   "albert": {
     "btn_label": "ALBERT",
@@ -241,7 +292,15 @@
     "time_format": "HH:mm",
     "all_sites": "Tous les sites",
     "all": "Tous",
-    "none": "Aucun"
+    "none": "Aucun",
+    "valider_mesures": "valider les mesures de remédiation",
+    "fermer": "Fermer",
+    "annuler": "Annuler",
+    "creer": "Créer",
+    "libelle": "LIBELLÉ",
+    "pole": "PÔLE",
+    "etablissement_upper": "ÉTABLISSEMENT",
+    "message_upper": "MESSAGE"
   },
   "notifications": {
     "incident_cree": "Nouvel incident déclaré",
@@ -259,11 +318,17 @@
   },
   "login": {
     "title": "SCRIBE",
-    "subtitle": "Gestion de crise hospitalière",
+    "subtitle": "VOTRE ÉTABLISSEMENT — CRISIS OS",
     "username": "Identifiant",
     "password": "Mot de passe",
     "btn_connect": "CONNEXION",
-    "error": "Identifiants incorrects"
+    "error": "Identifiants incorrects",
+    "identifiant": "Identifiant",
+    "connexion_btn": "CONNEXION",
+    "footer": "Réseau parallèle — Accès restreint",
+    "credit": "Designed by Hervé PELLARIN",
+    "password_label": "Mot de passe",
+    "err_creds": "Identifiants incorrects"
   },
   "analyse": {
     "title": "ANALYSE DE CRISE — DEBRIEFING",
@@ -392,7 +457,25 @@
     "declarant_requis": "Veuillez indiquer le cadre déclarant",
     "sexe_h": "Lits hommes",
     "sexe_f": "Lits femmes",
-    "sexe_i": "Lits indiff."
+    "sexe_i": "Lits indiff.",
+    "pole": "Pôle",
+    "site": "Site",
+    "capacite": "Capacité",
+    "declare": "Déclaré",
+    "declaration": "Déclaration",
+    "point_decl": "POINT DE DÉCLARATION",
+    "cadre_declarant": "CADRE DÉCLARANT",
+    "tension_activee": "Tension activée :",
+    "aucune_tension": "Aucune tension",
+    "seuil_atteint": "Seuil d'alerte atteint",
+    "statut_materiel": "Statut matériel :",
+    "proc_degradees": "Procédures dégradées activées sur ce service",
+    "eval_subjective": "Évaluation subjective du cadre — pas une gestion RH.",
+    "tension_label": "Tension capacitaire",
+    "tension_niveau1": "Tension niveau 1",
+    "tension_niveau2": "Tension niveau 2",
+    "niveaux_tension": "Niveaux de tension",
+    "niveau_tension_upper": "NIVEAU DE TENSION"
   },
   "master": {
     "title": "📦 SCRIBE — Pilotage des instances",
@@ -407,5 +490,282 @@
     "field_password": "Mot de passe",
     "btn_add": "+ Ajouter",
     "field_sync": "🔗 Synchroniser avec la supervision"
+  },
+  "topbar": {
+    "situation_normale": "SITUATION NORMALE",
+    "archiver": "ARCHIVER",
+    "archiver_title": "Archiver la crise dans un ZIP",
+    "nouveau": "NOUVEAU",
+    "admin": "ADMIN",
+    "quitter": "Quitter",
+    "inbox": "Inbox",
+    "alerte": "ALERTE"
+  },
+  "dashboard": {
+    "kpi": {
+      "incidents_actifs": "Incidents actifs",
+      "aucun_incident": "Aucun incident",
+      "aucun_critique": "Aucun critique",
+      "capacite_globale": "Capacité globale",
+      "lits_occupes": "lits occupés",
+      "transferts_en_cours": "Transferts en cours",
+      "aucun_transfert": "Aucun transfert en cours",
+      "messages_non_lus": "Messages non lus",
+      "aucun_message": "Aucun message"
+    },
+    "section": {
+      "capacite_pole": "Capacité par pôle",
+      "main_courante": "Main courante récente",
+      "aucun_declare": "Aucun incident déclaré",
+      "taches_critiques": "Tâches critiques",
+      "aucune_tache": "Aucune tâche en attente",
+      "messages_recents": "Messages récents",
+      "aucun_non_lu": "Aucun message non lu"
+    },
+    "maj": "Mise à jour",
+    "refresh_auto": "Rafraîchissement auto 30s",
+    "status": {
+      "nominal": "NOMINAL",
+      "veille": "VEILLE"
+    }
+  },
+  "incidents": {
+    "declaration_title": "DÉCLARATION D'INCIDENT",
+    "type_crise": "TYPE DE CRISE",
+    "type": {
+      "cyber": "CYBER",
+      "sanitaire": "SANITAIRE",
+      "mixte": "MIXTE"
+    },
+    "directeur_crise": "DIRECTEUR DE CRISE",
+    "selectionner": "-- Sélectionner --",
+    "etablissement": "Établissement",
+    "unite_fonct": "Unité Fonct.",
+    "code_ou_nom": "Code ou nom",
+    "declarant": "Déclarant",
+    "nom_declarant": "Nom du déclarant",
+    "niveau_urgence": "Niveau d'urgence",
+    "urgence": {
+      "veille": "1 VEILLE",
+      "alerte": "2 ALERTE",
+      "crise": "3 CRISE",
+      "critique": "4 CRITIQUE"
+    },
+    "impact_fonctionnel": "IMPACT FONCTIONNEL / OPÉRATIONNEL",
+    "visible_soignant": "VISIBLE POUR LE PERSONNEL SOIGNANT",
+    "fait_quoi": "FAIT — QUOI ?",
+    "description_factuelle": "Description factuelle...",
+    "analyse_impact": "ANALYSE — IMPACT ?",
+    "systemes_affectes": "Systèmes/services affectés...",
+    "diffuser": "DIFFUSER",
+    "assistant_ia": "ASSISTANT IA",
+    "notifier": "NOTIFIER",
+    "moyens_engages": "Moyens engagés",
+    "passe_ordi": "Passé d'ordi",
+    "dsi_contacte": "DSI contacté",
+    "rssi_alerte": "RSSI alerté",
+    "cellule_activee": "Cellule activée",
+    "cert_sante": "CERT Santé",
+    "isolation_reseau": "Isolation réseau",
+    "resolution_dans": "Résolution estimée dans"
+  },
+  "bulletin": {
+    "communique_pour": "Communiqué pour",
+    "tous_les_sites": "(tous les sites)",
+    "couvre_tous": "Couvre tous les sites",
+    "niveau_global": "NIVEAU GLOBAL",
+    "operationnel": "Opérationnel",
+    "perturbe": "Perturbé",
+    "incident_majeur": "Incident majeur",
+    "maintenance": "Maintenance",
+    "message_officiel": "MESSAGE OFFICIEL",
+    "placeholder_msg": "2-3 phrases décrivant la situation pour le public (prestataires, journalistes, partenaires)...",
+    "services_si": "SERVICES SI",
+    "messagerie_int": "Messagerie interne",
+    "logiciels_dpi": "Logiciels métier / DPI",
+    "imagerie_pacs": "Imagerie (PACS / RIS)",
+    "telephonie": "Téléphonie",
+    "acces_internet": "Accès Internet",
+    "vpn": "VPN / accès distants",
+    "applications": "Applications métier",
+    "prise_charge": "PRISE EN CHARGE PATIENTS",
+    "urgences": "Urgences",
+    "blocs_op": "Blocs opératoires",
+    "consultations": "Consultations",
+    "hospitalisations": "Hospitalisations programmées",
+    "imagerie_pat": "Imagerie patients",
+    "laboratoire": "Laboratoire",
+    "btn_ok": "OK",
+    "btn_hors_service": "Hors service",
+    "questions_freq": "QUESTIONS FRÉQUENTES",
+    "systeme_info": "Système d'information",
+    "etat_si": "État du système d'information — Point de situation",
+    "systeme_op": "Système opérationnel"
+  },
+  "transferts": {
+    "donnees_sante": "DONNÉES DE SANTÉ — ACCÈS RESTREINT",
+    "donnees_warn": "Les données nominatives (nom, prénom, IPP, DDN) ne remontent jamais vers le collecteur territorial.",
+    "donnees_warn_modal": "DONNÉES DE SANTÉ — Ces informations ne quittent pas cet établissement.",
+    "title": "TRANSFERTS PATIENTS",
+    "nouveau": "Nouveau transfert",
+    "tous_statuts": "Tous statuts",
+    "tous_sites": "Tous sites",
+    "col_preparation": "EN PRÉPARATION",
+    "col_en_cours": "EN COURS",
+    "col_arrive": "ARRIVÉ",
+    "col_annule": "ANNULÉ",
+    "aucun": "Aucun transfert",
+    "nom": "NOM",
+    "prenom": "PRÉNOM",
+    "nom_jf": "NOM DE JEUNE FILLE",
+    "ddn": "DATE DE NAISSANCE",
+    "ipp": "IPP",
+    "ipp_placeholder": "Identifiant patient permanent",
+    "origine": "ORIGINE",
+    "site_origine": "SITE ORIGINE",
+    "service_origine": "SERVICE ORIGINE",
+    "destination": "DESTINATION",
+    "site_destination": "SITE DESTINATION",
+    "service_destination": "SERVICE DESTINATION",
+    "select_site_first": "-- Sélectionner le site d'abord --",
+    "redacteur": "REDACTEUR",
+    "eta": "HEURE D'ARRIVÉE ESTIMÉE (ETA)",
+    "eta_hint": "Optionnel — décompte activé quand le transfert passe EN COURS",
+    "commentaire": "COMMENTAIRE",
+    "annuler": "Annuler",
+    "enregistrer": "Enregistrer",
+    "warn_intra": "Les données nominatives (nom, prénom, IPP, DDN) ne remontent jamais vers le collecteur territorial.",
+    "en_preparation": "En préparation",
+    "arrive": "Arrivé",
+    "annule": "Annulé",
+    "site_service": "SITE / SERVICE"
+  },
+  "filters": {
+    "tous_sites": "Tous sites",
+    "tous_directeurs": "Tous directeurs",
+    "toutes_urgences": "Toutes urgences",
+    "tous_types": "Tous types"
+  },
+  "status": {
+    "operationnel": "Opérationnel",
+    "degrade": "Mode dégradé",
+    "modere_u2": "Modéré (U2)",
+    "operationnel_badge": "OPÉRATIONNEL",
+    "degrade_badge": "DÉGRADÉ",
+    "critique_badge": "CRITIQUE",
+    "ok": "OK"
+  },
+  "notif": {
+    "connecte_aujourdhui": "Connecté aujourd'hui",
+    "tout_lire": "Tout lire",
+    "aucune": "Aucune notification"
+  },
+  "admin": {
+    "comptes_actifs": "Comptes actifs",
+    "tout_selectionner": "Tout sélectionner",
+    "creer_compte": "Créer un compte",
+    "nom_affiche": "Nom affiché",
+    "role": "Rôle",
+    "role_cellule": "Cellule de crise (directeur, RSSI, cadre supérieur)",
+    "role_admin": "Admin (accès total)",
+    "perimetre_opt": "Périmètre (optionnel)",
+    "click_account_hint": "Cliquer sur un compte dans la liste ci-dessus pour le sélectionner, puis saisir le nouveau mot de passe.",
+    "nouveau_mdp": "Nouveau mot de passe",
+    "confirmer_mdp": "Confirmer le mot de passe",
+    "import_excel": "Import de comptes (Excel)",
+    "telecharger_modele": "Télécharger modèle"
+  },
+  "scenario": {
+    "titre": "TITRE DU SCÉNARIO",
+    "jusqua_opt": "JUSQU'À (optionnel)",
+    "complexite": "COMPLEXITÉ",
+    "evenements": "ÉVÉNEMENTS À INCLURE"
+  },
+  "wizard": {
+    "langue_defaut": "Langue par défaut de l'instance",
+    "recommande": "recommandé",
+    "immediatement": "immédiatement"
+  },
+  "messagerie": {
+    "reception": "Réception",
+    "envoyes": "Envoyés",
+    "selectionner": "Sélectionnez un message",
+    "click_ght": "Cliquez sur l'onglet pour charger les messages inter-GHT du collecteur"
+  },
+  "ght": {
+    "declarations": "Déclarations de situation",
+    "signalez_tension": "Signalez une tension ou crise à votre GHT partenaire. Visible dans le collecteur territorial.",
+    "sollicitez": "Sollicitez un autre établissement : transfert de patient, renfort RH, matériel, ressources.",
+    "unite_service": "UNITÉ / SERVICE",
+    "enregistrer": "Enregistrer",
+    "emetteur": "GHT ÉMETTEUR",
+    "transfert_patient": "Transfert patient",
+    "ressources_materiel": "Ressources / Matériel",
+    "unite_concernee": "UNITÉ CONCERNÉE",
+    "envoyer": "Envoyer"
+  },
+  "fpw": {
+    "title": "CHANGEMENT DE MOT DE PASSE REQUIS",
+    "intro": "Votre compte utilise un mot de passe temporaire. Veuillez le modifier avant de continuer.",
+    "new_pwd": "NOUVEAU MOT DE PASSE (min. 8 caractères)",
+    "confirm": "CONFIRMER LE NOUVEAU MOT DE PASSE",
+    "current_pwd": "MOT DE PASSE ACTUEL (temporaire)",
+    "current_pwd_ph": "Mot de passe temporaire",
+    "submit_btn_label": "Définir mon nouveau mot de passe"
+  },
+  "uf": {
+    "cocher": "Cocher / décocher les éléments à créer dans la cellule et le kanban",
+    "nouvelle": "Nouvelle UF"
+  },
+  "ph": {
+    "nom_declarant": "Nom du déclarant",
+    "tel": "Tél",
+    "nom_acteur": "Nom de l'acteur",
+    "role_fonction": "Rôle/Fonction",
+    "ipp": "Identifiant patient permanent",
+    "compte_connecte": "Compte connecté",
+    "desc_tache": "Description courte de la tâche",
+    "ex_panne": "ex: Panne serveur imagerie médicale — nuit du 10 mars",
+    "prenom_nom_cadre": "Prénom Nom du cadre",
+    "objet_message": "Objet du message",
+    "ex_site_principal": "ex: Site Principal",
+    "ex_reanimation": "ex: Réanimation",
+    "confirmer": "Confirmer",
+    "pole_opt": "Pôle (optionnel)",
+    "systemes_affectes": "Systèmes/services affectés...",
+    "ressources_deployees": "Ressources déployées...",
+    "detail_contexte": "Détails, contexte...",
+    "decision_prise": "Décision prise...",
+    "redigez_message": "Rédigez votre message…",
+    "decrivez_situation": "Décrivez la situation…",
+    "decrivez_demande": "Décrivez votre demande…",
+    "libelle_required": "Libellé*",
+    "question_capacite": "Question libre sur la capacité..."
+  },
+  "title": {
+    "admin_panel": "Panneau d'administration",
+    "archiver_zip": "Archiver la crise dans un ZIP",
+    "reset_dashboard": "Remettre le tableau de bord à zéro",
+    "logout": "Se déconnecter",
+    "ajouter_uf": "Ajouter cette UF",
+    "transferts_carte": "Afficher/masquer les transferts EN COURS sur la carte",
+    "fermer_echap": "Fermer (Échap)"
+  },
+  "transverses": {
+    "securite_physique": "SÉCURITÉ PHYSIQUE",
+    "logistique": "LOGISTIQUE",
+    "commentaire_ph": "Commentaire..."
+  },
+  "urgency": {
+    "critique_label": "Critique",
+    "grave_label": "Grave",
+    "modere_label": "Modéré",
+    "info_label": "Info"
+  },
+  "brancardage": {
+    "title": "BRANCARDAGE",
+    "tag_intra": "Transport intra-hospitalier",
+    "nouveau_bon": "Nouveau bon",
+    "no_bons": "Aucun bon"
   }
 }

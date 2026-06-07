@@ -22,8 +22,8 @@
   },
   "acteurs": [
     {
-      "sigle": "CHAG",
-      "nom_etablissement": "Centre Hospitalier Annecy Genevois (CHAG)",
+      "sigle": "DEMO1",
+      "nom_etablissement": "Centre Hospitalier example hospital (DEMO1)",
       "role": "coordinateur",
       "port": 8660,
       "joueurs": [
@@ -34,11 +34,11 @@
     },
     {"sigle": "SAMU74", "nom_etablissement": "SAMU 74", "port": null, "joueurs": []},
     {"sigle": "ARS", "nom_etablissement": "ARS Auvergne-Rhône-Alpes", "port": null, "joueurs": []},
-    {"sigle": "PREFECTURE", "nom_etablissement": "Préfecture de Haute-Savoie", "port": null, "joueurs": []}
+    {"sigle": "PREFECTURE", "nom_etablissement": "Préfecture de Example Region", "port": null, "joueurs": []}
   ],
   "stimuli": [
     {
-      "id": "S01", "t_min": 0, "type": "message", "cible": "CHAG",
+      "id": "S01", "t_min": 0, "type": "message", "cible": "DEMO1",
       "titre": "SAMU 74 : accident majeur A41",
       "description_animateur": "Alerte initiale du SAMU. Pas encore de chiffres fermes.",
       "action_attendue": "Accuser réception, préparer le SAU à l'afflux.",
@@ -49,30 +49,30 @@
       }
     },
     {
-      "id": "S02", "t_min": 5, "type": "incident", "cible": "CHAG",
+      "id": "S02", "t_min": 5, "type": "incident", "cible": "DEMO1",
       "titre": "🚨 Afflux confirmé : 42 blessés annoncés",
       "description_animateur": "Bilan confirmé. Moment crucial : déclencher le Plan Blanc ?",
       "action_attendue": "Décision Plan Blanc. Mobilisation massive des équipes.",
       "payload": {
         "fait": "Bilan confirmé par SAMU 74 : 42 blessés dont 8 UA (urgences absolues), 15 UR (urgences relatives), 19 impliqués. Prise en charge sur site, début du transport H+10min.",
-        "analyse": "Le CHAG est le plus proche. Doit absorber la moitié des victimes au minimum.",
+        "analyse": "Le DEMO1 est le plus proche. Doit absorber la moitié des victimes au minimum.",
         "urgency": 4, "type_crise": "SANITAIRE", "impact_fonctionnel": true,
         "unite_fonctionnelle": "URGENCES"
       }
     },
     {
-      "id": "S03", "t_min": 10, "type": "decision", "cible": "CHAG",
+      "id": "S03", "t_min": 10, "type": "decision", "cible": "DEMO1",
       "titre": "DÉCISION : Déclenchement Plan Blanc",
       "description_animateur": "Formaliser la décision dans SCRIBE.",
       "action_attendue": "Tracer la décision avec responsable et base réglementaire.",
       "payload": {
         "contenu": "Déclenchement du Plan Blanc niveau 2 — mobilisation de toutes les équipes de rappel, ouverture de la salle de crise, bloc opératoire en alerte maximale.",
         "responsable": "Directeur de garde",
-        "base_reglementaire": "Plan Blanc CHAG / CSP L.3131-7"
+        "base_reglementaire": "Plan Blanc DEMO1 / CSP L.3131-7"
       }
     },
     {
-      "id": "S04", "t_min": 15, "type": "incident", "cible": "CHAG",
+      "id": "S04", "t_min": 15, "type": "incident", "cible": "DEMO1",
       "titre": "Arrivée 1ère vague : 8 victimes dont 3 UA",
       "description_animateur": "Premières ambulances arrivent. Le tri commence au SAU.",
       "action_attendue": "Organiser le tri, mobiliser les réas.",
@@ -83,12 +83,12 @@
       }
     },
     {
-      "id": "S05", "t_min": 22, "type": "transfert", "cible": "CHAG",
+      "id": "S05", "t_min": 22, "type": "transfert", "cible": "DEMO1",
       "titre": "Transfert UA vers CHU Grenoble (neurochir)",
-      "description_animateur": "Un des UA nécessite de la neurochirurgie que le CHAG ne peut pas faire. Transfert urgent.",
+      "description_animateur": "Un des UA nécessite de la neurochirurgie que le DEMO1 ne peut pas faire. Transfert urgent.",
       "action_attendue": "Valider le transfert, coordonner avec Grenoble.",
       "payload": {
-        "etablissement_origine": "CHAG",
+        "etablissement_origine": "DEMO1",
         "etablissement_destination": "CHU Grenoble",
         "unite_origine": "Réanimation",
         "unite_destination": "Neurochirurgie",
@@ -100,19 +100,19 @@
       }
     },
     {
-      "id": "S06", "t_min": 28, "type": "incident", "cible": "CHAG",
+      "id": "S06", "t_min": 28, "type": "incident", "cible": "DEMO1",
       "titre": "Saturation réanimation",
       "description_animateur": "La réa est pleine. Décision : transférer des patients stables vers ailleurs ?",
       "action_attendue": "Libérer des places (transfert inter-hospitalier des patients stables).",
       "payload": {
-        "fait": "Réanimation CHAG saturée : 12/12 lits occupés. 2 nouveaux patients UA en attente d'admission.",
-        "analyse": "Options : (1) transfert des patients stables vers GHTLMB/CHANNECY, (2) activation surge capacity avec des lits de soins continus",
+        "fait": "Réanimation DEMO1 saturée : 12/12 lits occupés. 2 nouveaux patients UA en attente d'admission.",
+        "analyse": "Options : (1) transfert des patients stables vers DEMO2/CHANNECY, (2) activation surge capacity avec des lits de soins continus",
         "urgency": 4, "type_crise": "SANITAIRE", "impact_fonctionnel": true,
         "unite_fonctionnelle": "REA"
       }
     },
     {
-      "id": "S07", "t_min": 35, "type": "message", "cible": "CHAG",
+      "id": "S07", "t_min": 35, "type": "message", "cible": "DEMO1",
       "titre": "ARS : demande point situation",
       "description_animateur": "L'ARS entre dans la boucle. Elle doit être informée régulièrement.",
       "action_attendue": "Envoyer point situation consolidé.",
@@ -123,7 +123,7 @@
       }
     },
     {
-      "id": "S08", "t_min": 42, "type": "message", "cible": "CHAG",
+      "id": "S08", "t_min": 42, "type": "message", "cible": "DEMO1",
       "titre": "Préfecture : coordination cellule interministérielle",
       "description_animateur": "La préfecture mobilise pour une coordination État.",
       "action_attendue": "Désigner un interlocuteur préfecture, partager les informations clés.",
@@ -134,7 +134,7 @@
       }
     },
     {
-      "id": "S09", "t_min": 48, "type": "incident", "cible": "CHAG",
+      "id": "S09", "t_min": 48, "type": "incident", "cible": "DEMO1",
       "titre": "Familles présentes au SAU — cellule familles nécessaire",
       "description_animateur": "Les familles arrivent. Il faut les accueillir séparément du flux médical.",
       "action_attendue": "Ouvrir une cellule accueil familles dans l'auditorium.",
@@ -146,7 +146,7 @@
       }
     },
     {
-      "id": "S10", "t_min": 55, "type": "decision", "cible": "CHAG",
+      "id": "S10", "t_min": 55, "type": "decision", "cible": "DEMO1",
       "titre": "DÉCISION : communiqué de presse consolidé",
       "description_animateur": "Les médias appellent. Communiqué coordonné avec ARS et Préfecture.",
       "action_attendue": "Rédaction + validation + diffusion.",

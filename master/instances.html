@@ -373,7 +373,7 @@
         </div>
         <div class="field">
           <label data-i18n-label="master.field_address">Adresse</label>
-          <input type="text" id="custom-adresse" placeholder="Rue de l'hôpital, Annecy">
+          <input type="text" id="custom-adresse" placeholder="Rue de l'hôpital, Example City">
           <div class="meta">(géolocalisation après création)</div>
         </div>
         <div class="field">
@@ -870,7 +870,7 @@ async function geocode(port) {
   } catch (e) {
     let msg = e.message;
     if (msg.includes("Aucun résultat")) {
-      msg += "\n\nSuggestions :\n• Format : 'numéro rue, ville' (avec virgule)\n• Exemple : '1 avenue de l'hôpital, Metz-Tessy'\n• Ou simplement : 'Annecy, France'";
+      msg += "\n\nSuggestions :\n• Format : 'numéro rue, ville' (avec virgule)\n• Exemple : '1 avenue de l'hôpital, Metz-Tessy'\n• Ou simplement : 'Example City, France'";
     } else if (msg.includes("502") || msg.includes("indisponible")) {
       msg = "Service de géocodage indisponible. Vous pouvez saisir lat/lon manuellement.";
     }

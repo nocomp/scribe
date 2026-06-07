@@ -1,5 +1,5 @@
 """
-seed_uf_demo.py — Unités Fonctionnelles démo pour tous les sites Arc Alpin
+seed_uf_demo.py — Unités Fonctionnelles démo pour tous les sites Example Network
 Crée des UF réalistes par pôle pour chaque site enregistré en DB.
 Pour DEMO1 : synchronise aussi depuis CapaciteReferentiel (données BedManager réelles).
 Usage: python3 seed_uf_demo.py
@@ -134,8 +134,8 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 instances = [
     (os.path.join(BASE, "scribe_chag.db"),  "DEMO1"),
     (os.path.join(BASE, "scribe_ght2.db"),  "DEMO2"),
-    (os.path.join(BASE, "scribe_ght3.db"),  "DEMO3"),
-    (os.path.join(BASE, "scribe_ght4.db"),  "DEMO4"),
+    (os.path.join(BASE, "scribe_ght3.db"),  "GHTSAV"),
+    (os.path.join(BASE, "scribe_ght4.db"),  "GHTAD38"),
 ]
 
 # Si DATABASE_URL est défini (lancement depuis subshell instance), n'opérer que sur cette DB
@@ -151,7 +151,7 @@ if db_url_env and db_url_env.startswith("sqlite:///"):
         print(f"  {label}: ERREUR {e}")
     print("=" * 50)
 else:
-    print("Seed UF démo — Arc Alpin")
+    print("Seed UF démo — Example Network")
     print("=" * 50)
     for db_path, label in instances:
         try:

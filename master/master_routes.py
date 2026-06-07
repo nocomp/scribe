@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 import logging
 import pathlib
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -804,6 +805,47 @@ def onboarding_template_xlsx():
     )
 
 
+@router.post("/onboarding/export-config")
+async def onboarding_export_config(request: Request):
+    """v3.4 (h38) — Export d'une config partielle saisie dans le wizard,
+    AVANT que l'instance soit créée. L'utilisateur peut continuer son
+    wizard, ou interrompre et reprendre plus tard avec son xlsx.
+    """
+    _check_admin(request)
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(400, "JSON invalide")
+
+    # Strip défensif sur les champs textes
+    cfg = {}
+    for k, v in payload.items():
+        if isinstance(v, str):
+            cfg[k] = v.strip()
+        else:
+            cfg[k] = v
+
+    if not cfg.get("sigle") or cfg["sigle"].upper().startswith("SITE_"):
+        raise HTTPException(400, "Sigle requis (3-5 lettres)")
+
+    try:
+        from master.excel_export import export_instance_to_xlsx
+        # On exporte SANS secrets (mdp hashé, clés API vidées) car c'est
+        # un fichier intermédiaire qui peut transiter par email/clé USB
+        xlsx_bytes = export_instance_to_xlsx(cfg, db_data=None, include_secrets=False)
+    except Exception as e:
+        logger.exception("Erreur export config wizard")
+        raise HTTPException(500, f"Erreur génération xlsx: {e}")
+
+    from fastapi.responses import Response
+    safe_sigle = re.sub(r"[^a-zA-Z0-9_-]", "", cfg["sigle"]) or "instance"
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="SCRIBE_config_{safe_sigle}.xlsx"'},
+    )
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Modèle de création d'instance depuis le wizard
 # ─────────────────────────────────────────────────────────────────────────────
@@ -825,6 +867,10 @@ class WizardInstanceCreate(BaseModel):
     modele_ia:         str | None = None
     url_base_ia:       str | None = None
     port:              int | None = None  # si None, premier port libre
+    # v3.4 (h38h) — Plugins désactivés par le wizard (étape 5). Liste vide
+    # par défaut → tous les plugins activés. Le wizard expose une checkbox
+    # par plugin et envoie ici ceux que l'utilisateur a décochés.
+    plugins_disabled:  list[str] | None = None
 
 
 @router.post("/onboarding/create-instance", status_code=201)
@@ -866,10 +912,22 @@ def onboarding_create_instance(payload: WizardInstanceCreate, request: Request):
             nom=nom_clean,
             admin_login=(payload.admin_login or "dircrise").strip(),
             admin_password=payload.admin_password,
+            # v3.4 (h38g) — propager le nom affiché choisi par l'utilisateur
+            # dans le wizard. Sera utilisé comme User.display_name lors de
+            # la création/update de l'admin dans la DB de l'instance.
+            admin_display_name=(payload.nom_affiche_admin or "").strip(),
             adresse=(payload.adresse or "").strip(),
             latitude=payload.latitude,
             longitude=payload.longitude,
             timezone=(payload.timezone or "").strip(),
+            # v3.4 (h38h) — Liste des plugins à désactiver à la création.
+            # Le _bootstrap_db de l'instance écrira ces préférences dans
+            # la table plugin_states avant le premier démarrage des plugins.
+            plugins_disabled=list(payload.plugins_disabled or []),
+            # v3.4 (h38k) — Langue par défaut de l'instance. Sera écrite dans
+            # config.js, et scribe.js loadI18n() la chargera au boot.
+            # Le wizard envoie un code ISO 2-letters parmi les 24 langues UE.
+            langue=(payload.langue or "fr").strip()[:5] or "fr",
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -886,7 +944,7 @@ def onboarding_create_instance(payload: WizardInstanceCreate, request: Request):
     # v2.4.8 : marquer l'onboarding comme terminé automatiquement dès qu'une
     # instance non-démo a été configurée. Évite que le wizard se relance en
     # navigation privée quand l'utilisateur a déjà importé/configuré un
-    # établissement (bug Polynésie : le client appelait /onboarding/finish
+    # établissement (bug Example Territory : le client appelait /onboarding/finish
     # dans certains cas mais pas tous → flag manquant au redémarrage).
     # v2.4.8.4 : helper nettoie aussi wizard_force éventuel
     _mark_onboarding_done()

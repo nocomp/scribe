@@ -1229,11 +1229,23 @@ function chat_loadPresence() {
 function chat_renderPresence() {
   var list = document.getElementById("presence-list");
   var html = "";
+  var mySigleNorm = (_mysigle || "").toUpperCase().trim();
   Object.entries(_presence).sort().forEach(function(entry) {
     var sigle = entry[0], users = entry[1];
+    var isMyEtab = sigle.toUpperCase().trim() === mySigleNorm || !mySigleNorm;
     html += "<div class='presence-etab'>" + _esc(sigle) + " (" + users.length + ")</div>";
+    // v3.4 (h38g) — Double-cliquer sur un user local démarre un DM
     users.forEach(function(u) {
-      html += "<div class='presence-user'><div class='presence-dot'></div><div class='presence-name'>" + _esc(u.display_name) + "</div></div>";
+      var canDM = isMyEtab && u && u.id && u.id !== _myUserId;
+      var cursor = canDM ? "pointer" : "default";
+      var ondblclick = canDM
+        ? " ondblclick=\"chat_startDM(" + u.id + "," + JSON.stringify(u.display_name || u.username || "?") + ")\""
+        : "";
+      var title = canDM ? "Double-cliquer pour démarrer une conversation privée" : "";
+      html += "<div class='presence-user' style='cursor:" + cursor + ";user-select:none'" + ondblclick + " title='" + _esc(title) + "'>"
+            + "<div class='presence-dot'></div>"
+            + "<div class='presence-name'>" + _esc(u.display_name) + "</div>"
+            + "</div>";
     });
   });
   list.innerHTML = html || "<div style='font-family:monospace;font-size:10px;color:var(--mu);padding:16px;text-align:center'>Aucun utilisateur connecté</div>";
@@ -1434,9 +1446,16 @@ function chat_syncCollecteur() {
       return r.ok ? r.json() : null;
     }).then(function(msgs) {
       if (!Array.isArray(msgs) || !msgs.length) return;
-      // Filtrer ceux qui viennent de NOUS (on les a déjà localement)
+      // v3.4 (h38g) — Filtre case-insensitive sur le sigle.
+      // Le collecteur normalise les sigles entrants en UPPER+strip
+      // (cf. h38 fix sigle traînant). Si _mysigle local est en
+      // minuscule mais le serveur retourne le sigle en majuscule,
+      // la comparaison stricte échouait → message ré-injecté en
+      // local → doublon visuel. On normalise les deux côtés.
+      var mySigleNorm = (_mysigle || "").toUpperCase().trim();
       var foreign = msgs.filter(function(m) {
-        return m && m.auteur_sigle !== _mysigle;
+        var s = ((m && m.auteur_sigle) || "").toUpperCase().trim();
+        return s !== mySigleNorm;
       });
       // Mettre à jour le since_id avec le max reçu (même nos propres messages)
       var maxId = msgs.reduce(function(acc, m) {
@@ -1564,13 +1583,28 @@ function chat_renderPresenceMerged() {
   if (!list) return;
   var total = 0;
   var html = "";
+  var mySigleNorm = (_mysigle || "").toUpperCase().trim();
   Object.keys(merged).sort().forEach(function(sigle) {
     var users = merged[sigle];
     if (!users.length) return;
     total += users.length;
     html += "<div class='presence-etab'>" + sigle + " (" + users.length + ")</div>";
+    // v3.4 (h38g) — Démarrer un DM en DOUBLE-CLIQUANT sur un utilisateur LOCAL.
+    // (Single-click ne fait rien pour éviter ouvertures accidentelles.)
+    // Les utilisateurs GHT n'ont pas d'id en DB locale donc on ne peut pas
+    // démarrer un DM avec eux ; on les laisse affichés sans interaction active.
+    var isMyEtab = sigle.toUpperCase().trim() === mySigleNorm;
     users.forEach(function(u) {
-      html += "<div class='presence-user'><div class='presence-dot'></div><div class='presence-name'>" + _esc(u.display_name) + "</div></div>";
+      var canDM = isMyEtab && u && u.id && u.id !== _myUserId;
+      var cursor = canDM ? "pointer" : "default";
+      var title = canDM ? "Double-cliquer pour démarrer une conversation privée" : "";
+      var ondblclick = canDM
+        ? " ondblclick=\"chat_startDM(" + u.id + "," + JSON.stringify(u.display_name || u.username || "?") + ")\""
+        : "";
+      html += "<div class='presence-user' style='cursor:" + cursor + ";user-select:none'" + ondblclick + " title='" + _esc(title) + "'>"
+            + "<div class='presence-dot'></div>"
+            + "<div class='presence-name'>" + _esc(u.display_name) + "</div>"
+            + "</div>";
     });
   });
   list.innerHTML = html || "<div style='font-family:monospace;font-size:10px;color:var(--mu);padding:16px;text-align:center'>Aucun utilisateur connecté</div>";
@@ -1582,6 +1616,7 @@ window.chat_init            = chat_init;
 window.chat_openSalonById   = chat_openSalonById;
 window.chat_openSalon       = chat_openSalon;
 window.chat_send            = chat_send;
+window.chat_startDM         = chat_startDM;
 window.chat_onInput         = chat_onInput;
 window.chat_onKeydown       = chat_onKeydown;
 window.chat_pickMention     = chat_pickMention;

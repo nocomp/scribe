@@ -774,7 +774,7 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
           </div>
           <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Établissement destination</label>
             <select id="adhoc-tr-dest" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
-              <option value="DEMO1">CHANGE</option><option value="DEMO2">DEMO2</option><option value="DEMO5">DEMO5</option><option value="DEMO6">DEMO6</option><option value="DEMO7">DEMO7</option><option value="DEMO5">DEMO5</option><option value="DEMO6">DEMO6</option>
+              <option value="DEMO1">CHANGE</option><option value="DEMO2">DEMO2</option><option value="DEMO3">DEMO3</option><option value="DEMO4">DEMO4</option><option value="DEMO5">DEMO5</option><option value="DEMO6">DEMO6</option><option value="DEMO7">DEMO7</option>
             </select>
           </div>
         </div>
@@ -2236,7 +2236,7 @@ function openAdhocModal(){
   } catch(e){}
   if(!sites.length){
     // Fallback : lister toutes les instances G7 (le backend rejettera si non connectée)
-    sites=['DEMO1','DEMO2','DEMO5','DEMO6','DEMO7','DEMO5','DEMO6'];
+    sites=['DEMO1','DEMO2','DEMO3','DEMO4','DEMO5','DEMO6','DEMO7'];
   }
   sites.forEach(function(s){
     var opt=document.createElement('option');

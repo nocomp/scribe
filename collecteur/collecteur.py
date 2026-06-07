@@ -140,13 +140,26 @@ ADMIN_TOKEN = _load_or_create_admin_token()
 
 def load_tokens():
     global tokens
-    tokens = dict(DEMO_TOKENS)
+    tokens = dict(ARC_ALPIN_TOKENS)
     if Path(TOKENS_FILE).exists():
         try:
             saved = json.loads(Path(TOKENS_FILE).read_text())
             tokens.update(saved)
         except Exception:
             pass
+    # v3.4 (h38) — Strip défensif des sigles au chargement.
+    # Évite les doublons "ch2" / "ch2 " sur la carte de supervision et
+    # les "Illegal header value" du côté push qui empêchent l'instance
+    # d'apparaître. Auto-correction silencieuse à chaque démarrage.
+    cleaned = {}
+    for tok, sigle in tokens.items():
+        if isinstance(sigle, str):
+            cleaned[tok] = sigle.strip()
+        else:
+            cleaned[tok] = sigle
+    if cleaned != tokens:
+        tokens = cleaned
+        print(f"[h38] Tokens normalisés (strip)")
     save_tokens()
 
 def save_tokens():
@@ -159,6 +172,30 @@ def load_data():
             etablissements = json.loads(Path(DATA_FILE).read_text())
         except Exception:
             etablissements = {}
+            return
+    # v3.4 (h38) — Strip + dédup des clés au chargement.
+    # Si on a "ch2 " et "CH2" en doublon, on garde l'entrée la plus
+    # récente (selon _received_at) et on dégage l'autre.
+    if etablissements:
+        normalized = {}
+        for sigle, data in etablissements.items():
+            sigle_clean = (sigle or "").strip()
+            if not sigle_clean:
+                continue
+            if sigle_clean in normalized:
+                # Doublon : garder le plus récent
+                existing = normalized[sigle_clean]
+                new_ts = data.get("_received_at", "")
+                old_ts = existing.get("_received_at", "")
+                if new_ts > old_ts:
+                    normalized[sigle_clean] = data
+                    print(f"[h38] Doublon résolu : {sigle!r} (vs {sigle_clean!r}) → conservé le plus récent")
+            else:
+                normalized[sigle_clean] = data
+        if normalized != etablissements:
+            etablissements = normalized
+            print(f"[h38] {len(etablissements)} entrée(s) après normalisation")
+            save_data()
 
 def save_data():
     Path(DATA_FILE).write_text(json.dumps(etablissements, ensure_ascii=False, indent=2))
@@ -300,8 +337,8 @@ async def receive_push(
         if cred_token and cred_token not in pending:
             try:
                 payload = await request.json()
-                nom_propose = payload.get("etablissement", {}).get("nom", "Inconnu")
-                sigle_propose = payload.get("etablissement", {}).get("sigle", "?")
+                nom_propose = (payload.get("etablissement", {}).get("nom", "Inconnu") or "").strip()
+                sigle_propose = (payload.get("etablissement", {}).get("sigle", "?") or "").strip()
             except Exception:
                 nom_propose = "Inconnu"
                 sigle_propose = "?"
@@ -316,6 +353,12 @@ async def receive_push(
             logger.warning(f"⏳ Token inconnu → EN ATTENTE : {sigle_propose} ({nom_propose}) depuis {request.client.host} | token_preview: {cred_token[:12] if cred_token else '?'}...")
         raise HTTPException(status_code=401, detail="Token en attente d'acceptation par l'administrateur du collecteur")
 
+    # v3.4 (h38) — Strip défensif sur le sigle (peut contenir un espace
+    # traînant venant d'une instance non corrigée). On normalise ici pour
+    # éviter qu'une même instance crée deux entrées (avec et sans espace)
+    # sur la carte de supervision.
+    sigle = sigle.strip()
+
     try:
         payload = await request.json()
     except Exception:
@@ -323,6 +366,13 @@ async def receive_push(
 
     payload["_received_at"] = datetime.now(timezone.utc).isoformat()
     payload["_source_ip"]   = request.client.host
+
+    # v3.4 (h38) — Strip aussi le sigle dans le payload pour cohérence
+    if "etablissement" in payload and isinstance(payload["etablissement"], dict):
+        if "sigle" in payload["etablissement"]:
+            payload["etablissement"]["sigle"] = (payload["etablissement"]["sigle"] or "").strip()
+        if "nom" in payload["etablissement"]:
+            payload["etablissement"]["nom"] = (payload["etablissement"]["nom"] or "").strip()
 
     etablissements[sigle] = payload
     save_data()
@@ -369,16 +419,16 @@ async def accept_pending(token_prefix: str, body: dict = {}):
     return {"ok": True, "sigle": sigle, "message": f"{sigle} enrôlé avec succès"}
 
 @app.post("/api/admin/tokens/arc-alpin", dependencies=[Depends(require_admin)])
-async def register_demo_tokens():
-    """Enregistre les 4 tokens Arc Alpin démo — utile si l'auto-register a échoué."""
+async def register_arc_alpin_tokens():
+    """Enregistre les 4 tokens Example Network démo — utile si l'auto-register a échoué."""
     added = []
-    for tok, sigle in DEMO_TOKENS.items():
+    for tok, sigle in ARC_ALPIN_TOKENS.items():
         if tok not in tokens:
             tokens[tok] = sigle
             added.append(sigle)
     if added:
         save_tokens()
-        logger.info(f"Tokens Arc Alpin enregistrés manuellement : {added}")
+        logger.info(f"Tokens Example Network enregistrés manuellement : {added}")
     return {"ok": True, "added": added, "total": len(tokens),
             "message": f"{len(added)} token(s) ajouté(s), {len(tokens)} token(s) total"}
 
@@ -510,18 +560,53 @@ async def create_token(body: dict):
 
 @app.delete("/api/admin/tokens/{sigle_or_prefix}", dependencies=[Depends(require_admin)])
 async def disconnect_etablissement(sigle_or_prefix: str):
-    """Déconnecte (révoque) un établissement enrôlé."""
-    sigle_upper = sigle_or_prefix.upper()
-    # Chercher par sigle
-    to_delete = [k for k, v in tokens.items() if v == sigle_upper or k.startswith(sigle_or_prefix)]
-    if not to_delete:
-        # Idempotent : déjà déconnecté ou jamais enrôlé → OK silencieux
+    """Déconnecte (révoque) un établissement enrôlé.
+    
+    v3.4 (h38) — Purge aussi les données associées dans `etablissements`
+    et `pending` pour éviter les entrées fantômes sur la carte de
+    supervision (cas : ancien sigle avec espace traînant qui restait
+    visible même après correction de la source côté instance).
+    """
+    sigle_upper = sigle_or_prefix.strip().upper()
+    # Chercher par sigle (avec normalisation : on accepte avec ou sans espace)
+    to_delete = [
+        k for k, v in tokens.items()
+        if (v or "").strip().upper() == sigle_upper or k.startswith(sigle_or_prefix.strip())
+    ]
+    # Purger aussi etablissements (vue affichée sur la carte de supervision)
+    etabs_to_purge = [
+        s for s in list(etablissements.keys())
+        if (s or "").strip().upper() == sigle_upper
+    ]
+    # Purger les pending
+    pending_to_purge = [
+        k for k, v in list(pending.items())
+        if (v.get("sigle") or "").strip().upper() == sigle_upper
+    ]
+
+    if not to_delete and not etabs_to_purge and not pending_to_purge:
         return {"ok": True, "disconnected": sigle_upper, "note": "already_absent"}
+
     for k in to_delete:
         sigle = tokens.pop(k)
-        logger.info(f"Établissement déconnecté : {sigle}")
+        logger.info(f"Token révoqué : {sigle}")
+    for s in etabs_to_purge:
+        etablissements.pop(s, None)
+        logger.info(f"Données carte purgées : {s}")
+    for k in pending_to_purge:
+        pending.pop(k, None)
+        logger.info(f"Pending purgé : {k[:8]}...")
+
     save_tokens()
-    return {"ok": True, "disconnected": sigle_upper}
+    save_data()
+    save_pending()
+    return {
+        "ok": True,
+        "disconnected": sigle_upper,
+        "tokens_removed": len(to_delete),
+        "carte_purgees": len(etabs_to_purge),
+        "pending_purges": len(pending_to_purge),
+    }
 
 
 # ── Relais hiérarchique (admin) ───────────────────────────────────────────
@@ -955,8 +1040,8 @@ async def chat_get_presence(credentials=Depends(security)):
 async def get_annuaire_interght():
     import httpx
     result = []
-    PORT_MAP = {"DEMO1":"8000","DEMO2":"8001","DEMO3":"8002","DEMO4":"8003",
-                "DEMO5":"8002","DEMO6":"8003","DEMO7":"8004","DEMO5":"8005","DEMO6":"8006"}
+    PORT_MAP = {"DEMO1":"8000","DEMO2":"8001","GHTSAV":"8002","GHTAD38":"8003",
+                "DEMO3":"8002","DEMO4":"8003","DEMO5":"8004","DEMO6":"8005","DEMO7":"8006"}
     for token, sigle in tokens.items():
         etab_data = etablissements.get(sigle)
         if not etab_data:
@@ -1300,7 +1385,41 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--b
 })();
 </script>
 <div id="login-screen" style="display:none;position:fixed;inset:0;background:#f8fafc;z-index:9999;align-items:center;justify-content:center">
-<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:32px 36px;width:360px;box-shadow:0 4px 24px rgba(0,0,0,.08);display:flex;flex-direction:column;gap:12px">
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:24px 36px 32px;width:360px;box-shadow:0 4px 24px rgba(0,0,0,.08);display:flex;flex-direction:column;gap:12px">
+  <!-- v3.4 (h38m) — Sélecteur de langue accessible AVANT login, comme dans les
+       instances. Cohérence visuelle entre master et instances. Le choix est
+       persisté en localStorage ('scribe_lang_pref') et sera utilisé par le
+       futur i18n du master (Bug C h38l backlog). -->
+  <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;font-family:monospace;font-size:10px;color:#64748b;margin-bottom:-4px">
+    <span>🌐</span>
+    <select id="master-lang-select" onchange="window.changeMasterLanguage(this.value)"
+            style="font-family:monospace;font-size:10px;padding:3px 6px;background:#fff;border:1px solid #cbd5e1;border-radius:3px;color:#0f172a;cursor:pointer">
+      <option value="fr">Français</option>
+      <option value="en">English</option>
+      <option value="it">Italiano</option>
+      <option value="de">Deutsch</option>
+      <option value="es">Español</option>
+      <option value="pt">Português</option>
+      <option value="nl">Nederlands</option>
+      <option value="pl">Polski</option>
+      <option value="ro">Română</option>
+      <option value="el">Ελληνικά</option>
+      <option value="cs">Čeština</option>
+      <option value="sk">Slovenčina</option>
+      <option value="sv">Svenska</option>
+      <option value="da">Dansk</option>
+      <option value="fi">Suomi</option>
+      <option value="hu">Magyar</option>
+      <option value="bg">Български</option>
+      <option value="hr">Hrvatski</option>
+      <option value="sl">Slovenščina</option>
+      <option value="et">Eesti</option>
+      <option value="lt">Lietuvių</option>
+      <option value="lv">Latviešu</option>
+      <option value="mt">Malti</option>
+      <option value="ga">Gaeilge</option>
+    </select>
+  </div>
   <div style="text-align:center"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:56px;object-fit:contain"></div>
   <div style="font-family:monospace;font-size:10px;letter-spacing:2px;text-align:center;color:#64748b;text-transform:uppercase">Supervision Territoriale</div>
   <div style="display:flex;flex-direction:column;gap:4px"><label style="font-family:monospace;font-size:9px;color:#64748b;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:3px">Identifiant</label><input id="coll-login" type="text" placeholder="supervision" autocomplete="username" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:5px;font-family:monospace;font-size:11px;color:#0f172a;background:#f8fafc;outline:none;box-sizing:border-box;width:100%"></div>
@@ -1313,9 +1432,48 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--b
     Mot de passe : <code style="background:rgba(0,0,145,.1);padding:1px 4px;border-radius:2px">Scribe2026!</code><br>
     <span style="font-size:9px;opacity:.7">À changer après le premier login (onglet Comptes).</span>
   </div>
-  <div style="font-family:monospace;font-size:9px;color:#94a3b8;text-align:center;margin-top:8px">© Centre Hospitalier Annecy-Genevois — SCRIBE Crisis OS<br>Accès réservé aux personnels autorisés</div>
+  <!-- v3.4 (h38m) — Footer crédite Hervé PELLARIN (projet personnel, pas DEMO1).
+       Liens hypertextes : nom → profil LinkedIn, "SCRIBE Crisis OS" → GitHub repo. -->
+  <div style="font-family:monospace;font-size:9px;color:#94a3b8;text-align:center;margin-top:8px;line-height:1.6">
+    Designed by <a href="https://www.linkedin.com/in/%D0%BD%D0%BE-%D0%BA%D0%BE%D0%BC%D0%BF/" target="_blank" rel="noopener noreferrer" style="color:#003189;text-decoration:none;border-bottom:1px dotted #003189">Hervé PELLARIN</a><br>
+    <a href="https://github.com/nocomp/scribe" target="_blank" rel="noopener noreferrer" style="color:#003189;text-decoration:none;border-bottom:1px dotted #003189">SCRIBE Crisis OS</a> · open source · AGPL-3.0
+  </div>
 </div>
 </div>
+<script>
+// v3.4 (h38m) — Sélecteur de langue de la mire master.
+// Sauve le choix en localStorage avec la même clé que les instances
+// ('scribe_lang_pref'), pour cohérence cross-master/instance.
+// Le master n'a pas encore d'i18n complet (Bug C en backlog), mais le
+// sélecteur est déjà fonctionnel pour préparer cette traduction.
+window.changeMasterLanguage = function(code) {
+  try {
+    localStorage.setItem('scribe_lang_pref', code);
+    window.location.reload();
+  } catch(e) {
+    console.error('changeMasterLanguage failed', e);
+  }
+};
+(function() {
+  function syncMasterLang() {
+    var sel = document.getElementById('master-lang-select');
+    if (!sel) return;
+    var current = 'fr';
+    try {
+      var stored = localStorage.getItem('scribe_lang_pref');
+      if (stored) current = stored;
+    } catch(e) {}
+    for (var i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === current) { sel.selectedIndex = i; break; }
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', syncMasterLang);
+  } else {
+    syncMasterLang();
+  }
+})();
+</script>
 <script>
 (async function() {
   // 1. Si un token existe en localStorage, vérifier sa validité
@@ -1370,8 +1528,133 @@ async function collLogin() {
   const d = await r.json();
   if (d.ok) {
     localStorage.setItem('coll_session', d.token);
+    // v3.4 (h38e) — Si l'utilisateur utilise encore le mdp par défaut
+    // (Scribe2026!), on force le changement AVANT d'entrer dans l'app.
+    if (d.must_change_password) {
+      // On garde la mire de login affichée jusqu'au changement réussi
+      _ui_mcp_username = login;
+      openMasterForcedPasswordChange();
+      return;
+    }
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
+  }
+}
+
+// v3.4 (h38e) — Modale de changement de mot de passe obligatoire master.
+// Stratégie identique aux instances SCRIBE : 3 champs (ancien, nouveau,
+// confirmation), icône œil pour révéler, déconnexion auto après succès
+// pour forcer une reconnexion propre avec le nouveau mdp.
+let _ui_mcp_username = '';
+
+function _ui_togglePw(inputId, btn) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  if (el.type === 'password') { el.type = 'text'; btn.textContent = '🙈'; }
+  else { el.type = 'password'; btn.textContent = '👁'; }
+}
+
+function openMasterForcedPasswordChange() {
+  let m = document.getElementById('master-mcp-modal');
+  if (m) { m.style.display = 'flex'; return; }
+  m = document.createElement('div');
+  m.id = 'master-mcp-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;font-family:monospace';
+  m.innerHTML = `
+    <div style="background:#fff;border:2px solid #f59e0b;border-radius:12px;width:440px;max-width:95vw;overflow:hidden">
+      <div style="padding:16px 20px;background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">🔐</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#92400e;letter-spacing:1px">CHANGEMENT DE MOT DE PASSE REQUIS</div>
+          <div style="font-size:10px;color:#78716c;margin-top:4px;line-height:1.5">Vous utilisez encore le mot de passe par défaut. Veuillez le modifier avant d'accéder à la supervision.</div>
+        </div>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label style="font-size:9px;color:#64748b;letter-spacing:1px;display:block;margin-bottom:5px">MOT DE PASSE ACTUEL</label>
+          <div style="position:relative">
+            <input id="mcp-old" type="password" placeholder="Mot de passe actuel" autocomplete="current-password"
+                   style="width:100%;font-size:12px;padding:9px 36px 9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:5px;color:#0f172a;box-sizing:border-box">
+            <button type="button" onclick="_ui_togglePw('mcp-old', this)" tabindex="-1"
+                    style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:#94a3b8;padding:4px;font-size:14px;line-height:1">👁</button>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:9px;color:#64748b;letter-spacing:1px;display:block;margin-bottom:5px">NOUVEAU MOT DE PASSE (min. 8 caractères)</label>
+          <div style="position:relative">
+            <input id="mcp-new" type="password" placeholder="Nouveau mot de passe" autocomplete="new-password"
+                   style="width:100%;font-size:12px;padding:9px 36px 9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:5px;color:#0f172a;box-sizing:border-box">
+            <button type="button" onclick="_ui_togglePw('mcp-new', this)" tabindex="-1"
+                    style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:#94a3b8;padding:4px;font-size:14px;line-height:1">👁</button>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:9px;color:#64748b;letter-spacing:1px;display:block;margin-bottom:5px">CONFIRMER LE NOUVEAU MOT DE PASSE</label>
+          <div style="position:relative">
+            <input id="mcp-conf" type="password" placeholder="Confirmer" autocomplete="new-password"
+                   onkeydown="if(event.key==='Enter')submitMasterForcedPw()"
+                   style="width:100%;font-size:12px;padding:9px 36px 9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:5px;color:#0f172a;box-sizing:border-box">
+            <button type="button" onclick="_ui_togglePw('mcp-conf', this)" tabindex="-1"
+                    style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:#94a3b8;padding:4px;font-size:14px;line-height:1">👁</button>
+          </div>
+        </div>
+        <div id="mcp-err" style="display:none;font-size:10px;color:#e1000f;padding:6px 10px;background:rgba(225,0,15,.08);border-radius:4px;border:1px solid rgba(225,0,15,.2)"></div>
+        <button onclick="submitMasterForcedPw()" style="font-size:12px;padding:11px;background:#d97706;border:none;border-radius:5px;color:#fff;cursor:pointer;font-weight:700;margin-top:4px">
+          🔒 Définir mon nouveau mot de passe
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(m);
+  setTimeout(() => { try { document.getElementById('mcp-old').focus(); } catch(_){} }, 50);
+}
+
+async function submitMasterForcedPw() {
+  const cur  = document.getElementById('mcp-old')?.value || '';
+  const nw   = document.getElementById('mcp-new')?.value || '';
+  const conf = document.getElementById('mcp-conf')?.value || '';
+  const errEl = document.getElementById('mcp-err');
+  errEl.style.display = 'none';
+  if (nw.length < 8) {
+    errEl.textContent = 'Le mot de passe doit contenir au moins 8 caractères.';
+    errEl.style.display = 'block'; return;
+  }
+  if (nw !== conf) {
+    errEl.textContent = 'Les mots de passe ne correspondent pas.';
+    errEl.style.display = 'block'; return;
+  }
+  if (cur === nw) {
+    errEl.textContent = 'Le nouveau mot de passe doit être différent de l\'ancien.';
+    errEl.style.display = 'block'; return;
+  }
+  try {
+    const tok = localStorage.getItem('coll_session') || '';
+    const r = await fetch('api/ui/change-password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok},
+      body: JSON.stringify({current_password: cur, new_password: nw})
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      errEl.textContent = d.detail || 'Mot de passe actuel incorrect.';
+      errEl.style.display = 'block'; return;
+    }
+    // Succès : on déconnecte et on remet la mire de login
+    const m = document.getElementById('master-mcp-modal');
+    if (m) m.remove();
+    localStorage.removeItem('coll_session');
+    document.getElementById('coll-err').textContent = '';
+    document.getElementById('coll-err').style.color = '#10b981';
+    document.getElementById('coll-err').textContent = '✓ Mot de passe modifié — Reconnectez-vous';
+    document.getElementById('coll-pass').value = '';
+    document.getElementById('coll-pass').focus();
+    setTimeout(() => {
+      document.getElementById('coll-err').style.color = '#e1000f';
+      document.getElementById('coll-err').textContent = '';
+    }, 5000);
+  } catch(e) {
+    errEl.textContent = 'Erreur réseau. Réessayez.';
+    errEl.style.display = 'block';
   }
 }
 </script>
@@ -1379,7 +1662,7 @@ async function collLogin() {
 
   <!-- KPI BAR -->
   <div id="kpi-bar">
-    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.4.0-alpha2</div>
+    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.4.0-beta1</div>
     <div class="kpi-cell"><span class="kpi-label">GHT</span><span class="kpi-val" id="k-ght">—</span></div>
     <div class="kpi-cell" style="cursor:pointer" title="Délai avant masquage incidents résolus (clic pour modifier)">
       <span class="kpi-label">RÉSOLU → masqué</span>
@@ -1433,12 +1716,12 @@ async function collLogin() {
         <!-- Fix tokens section -->
         <div style="border-bottom:1px solid var(--border);padding:6px 12px;background:rgba(249,115,22,.04)">
           <div style="font-family:var(--mono);font-size:8px;color:var(--muted2);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
-            <span>🔧 TOKENS ARC ALPIN</span>
+            <span>🔧 INSTANCES SYNCHRONISÉES</span>
             <button onclick="registerArcAlpinTokens()" style="font-family:var(--mono);font-size:7px;padding:2px 8px;background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.4);border-radius:3px;color:#f97316;cursor:pointer">
               ⚡ Enregistrer
             </button>
           </div>
-          <div style="font-family:var(--mono);font-size:7px;color:var(--muted)">Si supervision vide → cliquer pour forcer l'enregistrement des tokens démo</div>
+          <div style="font-family:var(--mono);font-size:7px;color:var(--muted)">Si la supervision est vide → cliquer pour forcer l'enregistrement des tokens des instances connues</div>
         </div>
         <div id="relay-section" style="border-bottom:1px solid var(--border);padding:8px 12px">
           <div style="font-family:var(--mono);font-size:8px;letter-spacing:1px;color:var(--muted2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
@@ -2529,7 +2812,10 @@ async function deleteCompte(login) {
 async function changePass(login) {
   const np = prompt('Nouveau mot de passe pour ' + login + ' :');
   if (!np) return;
-  const r = await fetch('api/ui/change-password', {
+  // v3.4 (h38f) — Renommé : cet endpoint sert à un admin pour changer
+  // le mdp d'un AUTRE compte (différent de /api/ui/change-password qui
+  // est le self-service pour son propre mdp).
+  const r = await fetch('api/ui/users/change-password', {
     method: 'POST', headers: {Authorization:'Bearer '+localStorage.getItem('coll_session') || '','Content-Type':'application/json'},
     body: JSON.stringify({login, new_password: np})
   }).catch(()=>null);
@@ -3077,13 +3363,13 @@ async def get_territorial_debug():
     return debug
 
 
-# v3000h25 — Assistant territorial (vue agrégée Arc Alpin)
+# v3000h25 — Assistant territorial (vue agrégée Example Network)
 @app.get("/api/territorial-assistant")
 async def get_territorial_assistant():
     """v3000h25 — Assistant de supervision territoriale.
 
     Évalue les 5 règles territoriales (RT1-RT5) sur la vue agrégée des
-    établissements Arc Alpin et retourne les alertes + un résumé d'état.
+    établissements Example Network et retourne les alertes + un résumé d'état.
 
     Sans auth pour faciliter la supervision (la vue agrégée n'expose
     pas de données patients nominatives). Si on veut auth plus tard,
@@ -3217,9 +3503,13 @@ async def delete_ui_user(login: str, credentials=Depends(security)):
     save_ui_auth(auth)
     return {"ok": True}
 
-@app.post("/api/ui/change-password")
-async def change_ui_password(request: Request, credentials=Depends(security)):
-    """Change le mot de passe d'un compte supervision."""
+@app.post("/api/ui/users/change-password")
+async def admin_change_ui_password(request: Request, credentials=Depends(security)):
+    """v3.4 (h38f) — Endpoint admin : permet à un admin de changer le mdp
+    d'un AUTRE compte supervision. Renommé depuis /api/ui/change-password
+    pour ne plus entrer en collision avec l'endpoint utilisateur self-service
+    qui permet à un user de changer SON PROPRE mdp (cf. plus bas).
+    """
     if not require_ui_admin(credentials):
         raise HTTPException(401)
     body = await request.json()
@@ -3256,7 +3546,7 @@ async def ui_login(request: Request):
     password = body.get("password","")
     auth = load_ui_auth()
     if not auth:
-        return {"ok": True, "token": "no-auth"}  # Pas de protection
+        return {"ok": True, "token": "no-auth", "must_change_password": False}  # Pas de protection
     if check_ui_credentials(login, password):
         session_token = secrets.token_hex(16)
         # Stocker la session en mémoire
@@ -3264,8 +3554,73 @@ async def ui_login(request: Request):
         users = auth_info.get("users", [])
         role = next((u.get("role","viewer") for u in users if u.get("login")==login), "viewer")
         ui_sessions[session_token] = {"login": login, "role": role}
-        return {"ok": True, "token": session_token}
+        # v3.4 (h38e) — Détection du mdp par défaut "Scribe2026!".
+        # Si l'utilisateur se logge encore avec le mdp d'installation, on
+        # force le changement à la première connexion. Le hash SHA-256 du
+        # mdp par défaut est constant : on compare directement.
+        import hashlib
+        default_hash = hashlib.sha256("Scribe2026!".encode()).hexdigest()
+        must_change = False
+        user_record = next((u for u in users if u.get("login")==login), None)
+        if user_record:
+            current_hash = user_record.get("password_hash", "")
+            # Si l'utilisateur a un flag explicite must_change_password=False,
+            # on le respecte (cas : il a déjà changé puis remis le default
+            # volontairement, ou il a explicitement opt-out).
+            explicit_flag = user_record.get("must_change_password")
+            if explicit_flag is True:
+                must_change = True
+            elif explicit_flag is False:
+                must_change = False
+            else:
+                # Pas de flag explicite : on force si mdp = défaut
+                must_change = (current_hash == default_hash)
+        return {"ok": True, "token": session_token, "must_change_password": must_change}
     raise HTTPException(status_code=401, detail="Identifiants invalides")
+
+
+@app.post("/api/ui/change-password")
+async def ui_change_password(request: Request, credentials=Depends(security)):
+    """v3.4 (h38e) — Changement de mot de passe par l'utilisateur lui-même.
+    Utilisé pour le flow "première connexion master" : si l'utilisateur a
+    le mdp par défaut (Scribe2026!), l'UI lui présente une modale de
+    changement obligatoire AVANT d'entrer dans l'application.
+    """
+    if not credentials:
+        raise HTTPException(401)
+    tok = credentials.credentials
+    sess = ui_sessions.get(tok)
+    if not sess and tok != ADMIN_TOKEN:
+        raise HTTPException(401, "Session invalide")
+    login = sess["login"] if sess else "admin"
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, "JSON invalide")
+    current = body.get("current_password", "")
+    new = body.get("new_password", "")
+    if len(new) < 8:
+        raise HTTPException(400, "Le nouveau mot de passe doit faire au moins 8 caractères")
+    if new == current:
+        raise HTTPException(400, "Le nouveau mot de passe doit être différent de l'ancien")
+    # Vérifier le mdp actuel
+    if not check_ui_credentials(login, current):
+        raise HTTPException(400, "Mot de passe actuel incorrect")
+    # Mettre à jour
+    import hashlib
+    auth = load_ui_auth()
+    users = auth.get("users", [])
+    for u in users:
+        if u.get("login") == login:
+            u["password_hash"] = hashlib.sha256(new.encode()).hexdigest()
+            u["must_change_password"] = False
+            break
+    else:
+        raise HTTPException(404, "Utilisateur introuvable")
+    auth["users"] = users
+    save_ui_auth(auth)
+    logger.info(f"ui_password_change: login={login}")
+    return {"ok": True, "must_change_password": False}
 
 
 @app.get("/api/ui/auth-required")
@@ -3301,11 +3656,18 @@ def verify_session(credentials=Depends(security)):
 
 # ── Démarrage ──────────────────────────────────────────────────────────────
 
-# Tokens pré-enregistrés (vide en version publique).
-# Pour les déploiements avec plusieurs instances, l'enrôlement passe par l'UI :
-# ouvrir http://localhost:9000, section TOKENS, cliquer ✓ ACCEPTER quand
-# une instance pousse pour la première fois. Le token est alors mémorisé.
-DEMO_TOKENS = {}
+# ── Tokens Example Network démo — enregistrés automatiquement si tokens vides ─────
+ARC_ALPIN_TOKENS = {
+    "demo_token_demo1_replace_in_production":        "DEMO1",
+    "demo_token_demo2_replace_in_production":          "DEMO2",
+    "token_ghtsav_demo_2026":          "GHTSAV",
+    "token_ghtad38_demo_2026":         "GHTAD38",
+    "demo_token_demo3_replace_in_production":         "DEMO3",
+    "demo_token_demo4_replace_in_production":           "DEMO4",
+    "demo_token_demo5_replace_in_production":              "DEMO5",
+    "demo_token_demo6_replace_in_production":  "DEMO6",
+    "demo_token_demo7_replace_in_production": "DEMO7",
+}
 
 if __name__ == "__main__":
     load_tokens()
@@ -3315,11 +3677,13 @@ if __name__ == "__main__":
     load_relay()
 
     # Tokens: enrôlement MANUEL via l'UI (⏳ EN ATTENTE → ✓ ACCEPTER)
+    # Le bouton "⚡ Enregistrer" dans l'UI force l'enregistrement si besoin
     if tokens:
         print(f"  ✓ Tokens enregistrés : {list(tokens.values())}")
     else:
-        print(f"  ℹ Aucun token — les instances apparaîtront en ⏳ EN ATTENTE")
+        print(f"  ℹ Aucun token — les GHTs apparaîtront en ⏳ EN ATTENTE")
         print(f"  → Ouvrir http://localhost:9000 et cliquer ✓ ACCEPTER")
+        print(f"  → OU cliquer ⚡ Enregistrer (section TOKENS ARC ALPIN)")
 
     nb_etab = len(tokens)
     nb_data  = len(etablissements)
@@ -3333,8 +3697,13 @@ if __name__ == "__main__":
     print(f"  (persistant dans {ADMIN_FILE} — identique à chaque redémarrage)\n")
     if nb_etab == 0:
         print("  ► Aucun établissement enregistré.")
-        print("  → Les instances qui poussent arrivent en section ⏳ EN ATTENTE")
+        print("  → Les GHT qui poussent arrivent en section ⏳ EN ATTENTE")
         print("  → Ouvrir http://localhost:9000 et cliquer ✓ ACCEPTER\n")
+        print("  Tokens Example Network démo :")
+        print("    DEMO1    : demo_token_demo1_replace_in_production")
+        print("    DEMO2  : demo_token_demo2_replace_in_production")
+        print("    GHTSAV  : token_ghtsav_demo_2026")
+        print("    GHTAD38 : token_ghtad38_demo_2026\n")
     else:
         etabs = list(set(tokens.values()))
         print(f"  ► Etablissements actifs : {', '.join(etabs)}")

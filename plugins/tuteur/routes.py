@@ -645,7 +645,7 @@ def coach_check(
              .order_by(TuteurSession.started_at.desc())
              .first())
         if not s:
-            # v3000h32 — Création automatique de session AUSSI EN PROD (Arc Alpin).
+            # v3000h32 — Création automatique de session AUSSI EN PROD (Example Network).
             # L'Assistant est une fonctionnalité à part entière qui doit fonctionner
             # dans tous les modes. Avant h32, seul le mode exercice créait des
             # sessions automatiquement → le badge de la bulle 🎓 ne s'affichait
