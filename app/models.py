@@ -2,7 +2,8 @@
 models.py — Tous les modèles SQLAlchemy — SCRIBE v5
 Ajouts v5 : User, Notification, Task, RexEntry
 """
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float, Boolean
+from datetime import datetime, timezone
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Float, Boolean, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -145,6 +146,15 @@ class User(Base):
     role          = Column(String, default="cellule_crise")
     hashed_password = Column(String, nullable=False)
     perimetre             = Column(String, nullable=True)
+    # v3000h41 — Coordonnées de contact pour les notifications sortantes.
+    # email     : utilisé par le backend mail (SMTP) du plugin notifications
+    # telephone : numéro E.164 (+33...) utilisé par le backend SMS
+    # Ces champs sont OPTIONNELS. Quand ils sont renseignés depuis l'admin,
+    # une souscription notifications (mail/sms) est créée/mise à jour
+    # automatiquement pour l'utilisateur (voir auth._sync_contact_subscriptions).
+    # RGPD : données de contact professionnel, jamais nominatif patient.
+    email                 = Column(String, nullable=True)
+    telephone             = Column(String, nullable=True)
     must_change_password  = Column(Boolean, default=False)
     created_at            = Column(DateTime(timezone=True), server_default=func.now())
     active                = Column(Boolean, default=True)
@@ -227,7 +237,7 @@ class CapaciteReferentiel(Base):
     service_nom     = Column(String, nullable=False, index=True)
     uf_code         = Column(String, nullable=True)
     pole            = Column(String, nullable=True)
-    site            = Column(String, nullable=True)       # Example City / Saint-Julien / Rumilly / USLD
+    site            = Column(String, nullable=True)       # ex. Site A / Site B / Site C
     capacite_totale = Column(Integer, default=0)          # capacité nominale totale
     tension_1       = Column(Integer, default=0)          # lits ouverts en tension niveau 1
     tension_2       = Column(Integer, default=0)          # lits ouverts en tension niveau 2
@@ -396,3 +406,72 @@ class DemandeInterGHT(Base):
 
 # ── Plugin system (v2.0.4) ───────────────────────────────────────────────────
 from core.plugin_state_model import PluginState  # noqa — crée la table plugin_states
+
+
+class IncidentMailSub(Base):
+    """h76 — Abonnement d'un utilisateur aux notifications mail d'un incident
+    (changements d'état / évolution). L'email est résolu depuis User.email à
+    l'envoi, donc on ne stocke pas l'adresse ici."""
+    __tablename__ = "incident_mail_subs"
+    id          = Column(Integer, primary_key=True)
+    incident_id = Column(Integer, nullable=False, index=True)
+    user_id     = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    created_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    __table_args__ = (UniqueConstraint("incident_id", "user_id", name="uq_inc_mail_sub"),)
+
+
+# ── h79 — Chaîne d'alerte / annuaire de mobilisation (Phase A) ───────────────
+# Données personnelles → strictement locales à l'instance (HDS/RGPD),
+# jamais remontées au collecteur.
+
+class ContactMobilisation(Base):
+    """Personne mobilisable (importée depuis l'Excel établissement)."""
+    __tablename__ = "contacts_mobilisation"
+    id         = Column(Integer, primary_key=True)
+    cle        = Column(String, index=True)
+    nom        = Column(String)
+    prenom     = Column(String)
+    tel1       = Column(String)
+    tel2       = Column(String)
+    email      = Column(String)
+    fonction   = Column(String)
+    service    = Column(String)
+    uf         = Column(String, index=True)
+    grade      = Column(String)
+    pole       = Column(String, index=True)
+    site       = Column(String, index=True)
+    actif      = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class AlerteMobilisation(Base):
+    """Un déclenchement de chaîne d'alerte (campagne de mobilisation)."""
+    __tablename__ = "alertes_mobilisation"
+    id          = Column(Integer, primary_key=True)
+    titre       = Column(String)
+    message     = Column(Text)
+    criteres    = Column(Text, default="{}")   # JSON: {uf:[],pole:[],site:[],fonction:[]}
+    incident_id = Column(Integer, nullable=True)
+    cree_par    = Column(String)
+    archived    = Column(Integer, default=0)   # h82 — campagne archivée (terminée)
+    created_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class AlerteCible(Base):
+    """Destinataire d'une alerte + sa réponse ETA (via formulaire tokenisé)."""
+    __tablename__ = "alerte_cibles"
+    id           = Column(Integer, primary_key=True)
+    alerte_id    = Column(Integer, ForeignKey("alertes_mobilisation.id"), index=True)
+    contact_id   = Column(Integer, nullable=True)
+    nom          = Column(String)
+    fonction     = Column(String)
+    site         = Column(String)
+    tel          = Column(String)
+    email        = Column(String)
+    token        = Column(String, unique=True, index=True)
+    canaux       = Column(String)                 # "sms,mail"
+    statut       = Column(String, default="envoye")     # envoye / repondu
+    eta_choice   = Column(String, nullable=True)        # 15 / 30 / 60 / indispo
+    commentaire  = Column(Text, nullable=True)          # h82 — note libre du répondant
+    responded_at = Column(DateTime, nullable=True)
+    created_at   = Column(DateTime, default=lambda: datetime.now(timezone.utc))

@@ -17,7 +17,7 @@ import app.models  # noqa
 import app.api.status_page  # noqa — enregistre les tables StatusPage
 from app.api import status_page  # v2.4.8.3 — explicitement pour include_router
 
-from app.api import sitrep, cartographie, attachments, i18n
+from app.api import sitrep, cartographie, attachments, i18n, mobilisation
 from app.api import auth, tasks
 from app.api import v140
 from app.api import scenario_export  # v2.4.8.3 — Générateur scénario depuis crise
@@ -146,7 +146,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app = FastAPI(title="SCRIBE v2.5.0 Crisis OS", version="2.5.0")
 
 # CORS — restreint aux origines configurées (jamais wildcard en prod)
-_VPS = "http://your-server.example.com"
+_VPS = "http://localhost:8000"
 _ALL_PORTS = list(range(8000, 8010)) + list(range(6560, 6568)) + [9000, 7474, 7373]
 _allowed_origins = os.getenv(
     "SCRIBE_ALLOWED_ORIGINS",
@@ -178,6 +178,7 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # ── Core (toujours actif) ──────────────────────────────────────────────────
 app.include_router(sitrep.router,       prefix="/api/v1/sitrep",       tags=["Incidents"])
+app.include_router(mobilisation.router,  prefix="/api/v1/mobilisation", tags=["Mobilisation"])
 app.include_router(cartographie.router, prefix="/api/v1/cartographie", tags=["Cartographie"])
 app.include_router(attachments.router,  prefix="/api/v1/attachments",  tags=["PJ"])
 app.include_router(auth.router,         prefix="/api/v1/auth",         tags=["Auth"])
@@ -315,6 +316,18 @@ def get_all_plugins_public():
     ]
 
 
+@app.get("/api/v1/_debug/plugins")
+def debug_plugins_status():
+    """v3.6.0-alpha3 — Diagnostic plugins : retourne les chargés et les erreurs.
+    Pas d'auth ici (info non sensible : juste savoir si un plugin a planté au boot)."""
+    from core.plugin_loader import _loaded_plugins, get_plugin_errors
+    return {
+        "loaded": list(_loaded_plugins.keys()),
+        "loaded_count": len(_loaded_plugins),
+        "errors": get_plugin_errors(),
+    }
+
+
 @app.on_event("startup")
 async def startup():
     _run_migrations()
@@ -373,6 +386,9 @@ def _run_migrations():
         user_cols = [r[1] for r in cx.execute("PRAGMA table_info(users)")]
         if "must_change_password" not in user_cols:
             cx.execute("ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0")
+        # v3000h41 — Coordonnées de contact (email / téléphone) pour notifications
+        if "email"     not in user_cols: cx.execute("ALTER TABLE users ADD COLUMN email TEXT")
+        if "telephone" not in user_cols: cx.execute("ALTER TABLE users ADD COLUMN telephone TEXT")
         # Migration expediteur_nom / destinataire_nom sur messages_internes
         if "expediteur_nom" not in cols: cx.execute("ALTER TABLE messages_internes ADD COLUMN expediteur_nom TEXT")
         if "destinataire_nom" not in cols: cx.execute("ALTER TABLE messages_internes ADD COLUMN destinataire_nom TEXT")
@@ -401,6 +417,13 @@ def _run_migrations():
         # médical, indisponibilité service).
         if "visible_soignant" not in sitrep_cols:
             cx.execute("ALTER TABLE sitrep_entries ADD COLUMN visible_soignant INTEGER DEFAULT 0")
+        # h82 — Archivage des campagnes d'alerte + commentaire libre sur la réponse ETA.
+        alerte_cols = [r[1] for r in cx.execute("PRAGMA table_info(alertes_mobilisation)")]
+        if alerte_cols and "archived" not in alerte_cols:
+            cx.execute("ALTER TABLE alertes_mobilisation ADD COLUMN archived INTEGER DEFAULT 0")
+        cible_cols = [r[1] for r in cx.execute("PRAGMA table_info(alerte_cibles)")]
+        if cible_cols and "commentaire" not in cible_cols:
+            cx.execute("ALTER TABLE alerte_cibles ADD COLUMN commentaire TEXT")
         # v3.4 (h34) — Visibilité salons chat (DM 1-à-1 + salons restreints).
         salon_cols = [r[1] for r in cx.execute("PRAGMA table_info(chat_salons)")]
         if salon_cols and "visibility" not in salon_cols:
@@ -510,7 +533,7 @@ async def public_status():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "3.4.0-beta1", "build": "v3.4.0-beta1"}
+    return {"status": "ok", "version": "3.6.0-beta1", "build": "v3000h88"}
 
 
 @app.get("/api/push-test")

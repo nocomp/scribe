@@ -59,16 +59,29 @@ class SmsBackend(NotificationBackend):
         return False
 
     def _build_message(self, payload: NotifPayload) -> str:
-        """SMS court : 160 chars max pour rester en 1 SMS (économie)."""
+        """Construit le texte SMS : « [SCRIBE 🔴] TITRE — corps » + lien cliquable.
+
+        h74 — Si le contexte fournit un lien (base_url + url relatif, ex. la notif
+        d'incident porte url='/#incidents/42'), on l'ajoute en clair à la fin et on
+        garantit qu'il n'est jamais tronqué. Sans lien : 1 SMS (160). Avec lien :
+        on autorise jusqu'à ~2 segments concaténés (306) pour préserver l'URL."""
         emoji = payload.severity_emoji()
-        # Format compact : [SCRIBE 🔴] TITRE - body tronqué
         prefix = f"[SCRIBE {emoji}] "
-        max_body = 160 - len(prefix) - len(payload.title) - 3
-        body_short = payload.body[:max_body] if payload.body else ""
+        ctx = payload.context or {}
+        base = (ctx.get("base_url") or "").rstrip("/")
+        rel = ctx.get("url") or ""
+        link = ""
+        if base and rel:
+            link = base + rel if rel.startswith("/") else f"{base}/{rel}"
+        tail = ("\n" + link) if link else ""
+        hard_max = 306 if link else 160   # 2 segments si lien, sinon 1 SMS
         text = f"{prefix}{payload.title}"
-        if body_short and len(text) + len(body_short) + 3 < 155:
-            text += f" — {body_short}"
-        return text[:160]
+        if payload.body:
+            avail = hard_max - len(tail) - len(text) - 3
+            if avail > 10:
+                text += " — " + payload.body[:avail]
+        text += tail
+        return text[:hard_max]
 
     async def send(self, payload: NotifPayload, target: str) -> NotifResult:
         if not self.is_configured():

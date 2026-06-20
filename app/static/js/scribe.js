@@ -476,6 +476,11 @@ function applyRoleVisibility() {
     const dashboardBtn = document.getElementById('tab-btn-dashboard');
     if (dashboardBtn) openTab('tab-dashboard', dashboardBtn);
   }
+  // h73 — Le bouton « 📱 SMS » de l'incident déclenche un envoi SMS de masse
+  // (réservé admin côté backend). On le masque aux non-admins pour éviter une
+  // action qui renverrait 403.
+  const smsIncBtn = document.getElementById('btn-sms-incident');
+  if (smsIncBtn) smsIncBtn.style.display = (role === 'admin') ? '' : 'none';
 }
 
 function openTab(id, btn) {
@@ -579,7 +584,9 @@ const PLUGIN_TAB_MAP = {
   'communique': 'tab-btn-communique',
   'transferts': 'tab-btn-soins',
   'messagerie': 'tab-btn-messagerie',
-  'inter_ght':  'tab-btn-declarations',
+  // v3000h47 — inter_ght retiré du map de nav : l'onglet INTER-GHT ne s'affiche
+  // plus sur les instances, même si le plugin reste activé en base. La messagerie
+  // (avec le correspondant « Supervision ») est le canal unique.
   'albert':     'tab-btn-analyse',
 };
 
@@ -769,6 +776,40 @@ async function loadDBMsgs() {
 }
 
 
+// h65 — Détection du MODE EXERCICE par le PORT. Les instances d'exercice
+// tournent sur la plage 8660-8669 (l'animateur sur 8565). On s'en sert pour
+// retirer les éléments d'UI sans objet en exercice (ex. INTER-GHT : pas de
+// fédération GHT réelle pendant un exercice).
+function isExerciceMode() {
+  const p = parseInt(window.location.port || '0', 10);
+  return p >= 8660 && p <= 8669;
+}
+function hideInterGhtIfExercice() {
+  // h72 — L'onglet INTER-GHT est retiré de TOUTES les instances (le chat natif
+  // couvre le besoin). Masquage inconditionnel, quel que soit le mode ou l'état
+  // des plugins, pour qu'il ne réapparaisse jamais (data-roles admin, build
+  // résiduel, réactivation plugin, etc.).
+  const btn = document.getElementById('tab-btn-declarations');
+  if (btn) btn.remove();   // h81 — retrait effectif (insurance contre HTML résiduel)
+  // h81 — Filet de sécurité : retirer tout bouton d'onglet libellé « INTER-GHT »,
+  // quelle que soit son origine (plugin, build mis en cache, etc.).
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const txt = (b.textContent || '').toUpperCase();
+    if (txt.indexOf('INTER-GHT') >= 0) b.remove();
+  });
+  const tab = document.getElementById('tab-declarations');
+  if (tab) {
+    const wasActive = tab.classList.contains('active');
+    tab.style.display = 'none';
+    tab.classList.remove('active');
+    // Si l'onglet INTER-GHT était l'onglet actif (état préservé), basculer sur le dashboard.
+    if (wasActive) {
+      const dash = document.getElementById('tab-btn-dashboard');
+      if (dash) openTab('tab-dashboard', dash);
+    }
+  }
+}
+
 async function applyPluginNav() {
   try {
     const r = await apiFetch('/api/v1/plugins/active');
@@ -862,6 +903,10 @@ async function applyPluginNav() {
     // Silencieux
   }
 
+  // h65 — En mode exercice (port 8660-8669), retirer l'onglet INTER-GHT :
+  // pas de fédération GHT réelle en exercice, le menu n'a pas d'objet.
+  hideInterGhtIfExercice();
+
   // Écouter les messages de l'iframe chat (badge notification)
   if (!window._chatMsgListenerSet) {
     window._chatMsgListenerSet = true;
@@ -938,6 +983,10 @@ async function initAfterLogin() {
   renderAnnuaire();
   loadIaBadge();
   await applyPluginNav();
+  // v3.5 (alpha1) — Charge l'état du plugin Bluefiles (mode dev/live)
+  // pour décider d'afficher/masquer les boutons "Joindre dossier sécurisé"
+  // dans les modules (Transferts en v1, autres modules en v1.1+).
+  try { await bfLoadStatus(); } catch(e) { console.warn('[bluefiles status]', e); }
   // v3.4 (h35) — Masquer les onglets non autorisés selon le rôle du user connecté.
   // Doit être appelé APRÈS applyPluginNav (qui peut afficher/cacher des onglets
   // selon les plugins actifs).
@@ -977,6 +1026,21 @@ async function initAfterLogin() {
       } catch(e) { console.warn('Auto-open admin IA failed:', e); }
     }, 400);
   }
+
+  // h74 — Deep-link incident : si l'URL contient #incidents/{id} (lien envoyé
+  // par SMS/notification), ouvrir l'onglet INCIDENTS et faire défiler jusqu'à
+  // l'incident concerné en le dépliant.
+  try { handleIncidentDeepLink(); } catch(e) { console.warn('[deeplink] incident failed:', e); }
+
+  // h74 — Dès que l'utilisateur saisit un nouvel incident, on oublie l'id
+  // mémorisé pour ne pas attacher un lien périmé à un SMS manuel.
+  try {
+    const _faitEl = document.getElementById('fait');
+    if (_faitEl && !_faitEl._smsHook) {
+      _faitEl._smsHook = true;
+      _faitEl.addEventListener('input', () => { window._currentIncidentId = null; });
+    }
+  } catch(e) {}
 
   // v2322 — Démarrer le système Tuteur (Hook 2A : rappel discret + observations)
   // Armé automatiquement en mode exercice ou si actif_en_prod=true côté config
@@ -2089,6 +2153,8 @@ function renderTimeline(list) {
       }
     });
   }
+  // h76 — Met à jour les indicateurs 🔔 (notifié) et ✉️ (abonné) des cartes.
+  try { refreshIncidentBadges(); } catch(e) {}
 }
 
 function buildCard(h) {
@@ -2198,6 +2264,14 @@ function buildCard(h) {
       onclick="askAlbertIncidentById(this.dataset.incId,event)"
       title="${scribeBtnTitle}">${scribeBtnLabel}</button>` : '';
 
+  // h78 — Icônes notification dans le HEADER (visibles carte repliée), à droite
+  // près de « Conseil SCRIBE » / « Résoudre ». Plus dans la barre dépliée.
+  const notifIconsHTML = `<span class="inc-notif-icons" onclick="event.stopPropagation()" style="display:inline-flex;gap:3px;margin-left:4px;flex-shrink:0">`
+    + `<button class="inc-quick-btn" style="padding:1px 6px" onclick="smsForIncident(${h.id},event)" title="${t('incidents.sms_action','Notifier par SMS')}">📱</button>`
+    + `<span class="inc-quick-btn inc-bell" data-inc-id="${h.id}" style="padding:1px 6px;opacity:.35;cursor:default" title="${t('incidents.notif_none','Aucune notification envoyée')}">🔔</span>`
+    + `<button class="inc-quick-btn inc-mailsub" data-inc-id="${h.id}" style="padding:1px 6px" onclick="toggleIncidentMailSub(${h.id},event)" title="${t('incidents.mail_subscribe',"S'abonner aux alertes mail de cet incident")}">✉️</button>`
+    + `</span>`;
+
   return `<div class="incident-item urgency-${h.urgency}" id="inc-${h.id}">
     <div class="inc-header">
       <button class="inc-toggle-btn" onclick="toggleExpand(document.getElementById('inc-${h.id}'))" title="Ouvrir/Fermer">▶</button>
@@ -2209,6 +2283,7 @@ function buildCard(h) {
       <span style="font-family:var(--mono);font-size:9px;color:var(--muted);background:var(--surface3);padding:1px 5px;border-radius:3px;flex-shrink:0">#${h.id}</span>
       ${quickBarHTML}
       ${scribeHeaderBtn}
+      ${notifIconsHTML}
     </div>
     <div class="inc-fait">${h.fait}</div>
     ${pjHTML}
@@ -2220,7 +2295,7 @@ function buildCard(h) {
         <span class="inc-declarant">→ ${h.declarant_nom||'?'}</span>
         <div class="btn-row-small">
           <button class="btn-sm green" onclick="uploadFor(${h.id},event)" title="Ajouter pièce jointe">📎</button>
-          <button class="btn-sm red" onclick="deleteInc(${h.id},event)">🗑</button>
+          <button class="btn-sm red" onclick="deleteInc(${h.id},event)" title="${t('incidents.delete_tooltip','Supprimer')}">🗑</button>
           <button class="btn-sm" style="color:#a78bfa;border-color:#7c3aed" data-inc-id="${h.id}" onclick="quickCreateTaskById(this.dataset.incId,event)" title="Créer tâche Kanban">📋</button>
           <button class="btn-sm" style="color:#4ade80;border-color:#16a34a" onclick="quickRex(${h.id},event)" title="Générer rapport / REX">📄</button>
           ${h.status !== 'RÉSOLU' && h.status !== 'ARCHIVÉ' ? '<button class="btn-sm" style="color:#fff;background:#059669;border-color:#059669;font-weight:700" onclick="resoudreEtArchiver(' + h.id + ',event)" title="Résoudre et archiver cet incident">✓ Résoudre</button>' : ''}
@@ -3018,6 +3093,10 @@ async function submitIncident() {
     const res=await apiFetch('/api/v1/sitrep/post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     if(!res.ok) throw new Error(await res.text());
     const newInc=await res.json();
+    // h74 — Mémorise l'incident qui vient d'être enregistré pour que la notif
+    // SMS manuelle puisse inclure un lien direct vers lui. Réinitialisé dès que
+    // l'utilisateur recommence à saisir un nouvel incident (écouteur sur #fait).
+    window._currentIncidentId = newInc.id;
 
     const files=document.getElementById('attachments-input').files;
     for(const f of files){
@@ -3560,27 +3639,14 @@ async function msgOpenComposeDirect(userId, displayName) {
   if (msgBtn) {
     openTab('tab-messagerie', msgBtn);
   }
-  await msgOpenCompose();
-  // Pré-sélectionner le destinataire
-  const sel = document.getElementById('msg-compose-dest');
-  if (sel) {
-    sel.value = String(userId);
-    // Si pas trouvé (filtre site actif), charger tous
-    if (!sel.value || sel.value !== String(userId)) {
-      await loadAnnuaireMessagerie();
-      await msgOpenCompose();
-      const sel2 = document.getElementById('msg-compose-dest');
-      if (sel2) sel2.value = String(userId);
-    }
-  }
-  // Fermer l'annuaire et afficher la fenêtre compose
-  document.getElementById('msg-modal-compose').style.display = 'flex';
+  // v3.6 — appel au nouveau composer avec pré-remplissage destinataire
+  await msgOpenCompose(parseInt(userId, 10));
 }
 
 function renderAnnuaire(filter='') {
   const rawData = annuaireMode==='secours' ? ANNUAIRE_SECOURS : ANNUAIRE_NORMAL;
   // v2.4.8 : normaliser le mapping backend (service/interne/direct/mobile/site/note)
-  // → frontend (service/tel/local/note). Bug Example Territory : "undefined" partout.
+  // → frontend (service/tel/local/note). Bug terrain : "undefined" partout.
   const data = (rawData || []).map(e => {
     if (!e) return null;
     // Si l'entrée a déjà tel/local (ancien format), on garde tel quel
@@ -3652,7 +3718,42 @@ let toastTimer;
 function toast(msg,type='ok') {
   const el=document.getElementById('toast');
   el.textContent=msg;el.className=`show ${type}`;
+  el.style.zIndex='100000';  // h78 — au-dessus de l'icône assistant et de tout overlay
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.className='',3500);
+}
+
+// v3000h42 — Toast de notification CLIQUABLE (arrivée de message, etc.).
+// Distinct du toast() simple : empilable en bas à droite, persistant ~9s,
+// avec une action « lien direct » et un bouton de fermeture. i18n via t().
+function notifyToast(message, onClick, opts) {
+  opts = opts || {};
+  let stack = document.getElementById('notif-toast-stack');
+  if (!stack) {
+    stack = document.createElement('div');
+    stack.id = 'notif-toast-stack';
+    stack.style.cssText = 'position:fixed;bottom:56px;right:14px;z-index:9998;display:flex;flex-direction:column;gap:8px;align-items:flex-end;max-width:320px';
+    document.body.appendChild(stack);
+  }
+  const card = document.createElement('div');
+  card.style.cssText = 'background:var(--surface,#fff);border:1px solid var(--border2,#e2e8f0);border-left:3px solid #003189;border-radius:8px;padding:10px 12px;box-shadow:0 6px 24px rgba(0,0,0,.18);font-size:12px;color:var(--text);min-width:220px;cursor:pointer;animation:none;opacity:0;transition:opacity .25s';
+  const icon = opts.icon || '✉';
+  const actionLabel = opts.actionLabel || t('messagerie.toast_open', 'Ouvrir');
+  const safeMsg = String(message).replace(/</g, '&lt;');
+  card.innerHTML =
+    '<div style="display:flex;align-items:flex-start;gap:8px">' +
+      '<span style="font-size:15px;line-height:1.1">' + icon + '</span>' +
+      '<div style="flex:1">' +
+        '<div style="line-height:1.4">' + safeMsg + '</div>' +
+        '<div style="margin-top:4px;font-family:var(--mono);font-size:10px;color:#003189;font-weight:700">' + String(actionLabel).replace(/</g,'&lt;') + ' →</div>' +
+      '</div>' +
+      '<span class="notif-toast-close" style="font-size:14px;color:var(--muted);cursor:pointer;line-height:1">×</span>' +
+    '</div>';
+  const dismiss = () => { card.style.opacity = '0'; setTimeout(() => card.remove(), 250); };
+  card.querySelector('.notif-toast-close').addEventListener('click', e => { e.stopPropagation(); dismiss(); });
+  card.addEventListener('click', () => { try { if (typeof onClick === 'function') onClick(); } catch(e){} dismiss(); });
+  stack.appendChild(card);
+  requestAnimationFrame(() => { card.style.opacity = '1'; });
+  setTimeout(dismiss, opts.duration || 9000);
 }
 
 /* ═══════════════════ SCRIBE v5 — NEW JS ══════════════════ */
@@ -4040,6 +4141,18 @@ async function apiFetch(url, opts = {}) {
     const overlay = document.getElementById('login-overlay');
     if (overlay) { overlay.classList.remove('hidden'); overlay.style.display = 'flex'; }
     if (wasConnected) toast('⚠ Session expirée — reconnexion requise', 'warn');
+  }
+  // h64 — Verrou serveur du changement de mot de passe : tant que le mdp n'est
+  // pas changé, le backend renvoie 403 PASSWORD_CHANGE_REQUIRED sur toute donnée.
+  // On ré-ouvre le popup forcé → impossible de contourner via un simple reload.
+  if (r.status === 403) {
+    try {
+      const data = await r.clone().json();
+      if (data && data.detail === 'PASSWORD_CHANGE_REQUIRED') {
+        if (currentUser) currentUser.must_change_password = true;
+        if (typeof openForcedPasswordChange === 'function') openForcedPasswordChange();
+      }
+    } catch(e) { /* pas du JSON, on ignore */ }
   }
   // v2320 — Intercepteur "IA non configurée" : pop-up DSFR uniforme
   // déclenché par toute route IA qui appelle require_ia_configured()
@@ -4645,7 +4758,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 function adminShowSection(section, btn) {
-  ['users','plugins','notifications','content','apis','network','lang','mfa','fed'].forEach(s => {
+  ['users','plugins','notifications','content','apis','network','lang','mfa','fed','mobilisation'].forEach(s => {
     const el = document.getElementById('admin-section-' + s);
     if (el) el.style.display = 'none';
   });
@@ -4661,6 +4774,7 @@ function adminShowSection(section, btn) {
   if (section === 'mfa')     { loadMfaSection(); }
   if (section === 'fed')     { loadFedStatusPanel(); loadFedConfig(); }
   if (section === 'content') { loadScenarioLibrary(); }
+  if (section === 'mobilisation') { mobInit(); }
   if (section === 'notifications') {
     // v2305 — Lazy-load de l'iframe notifications pour ne charger la page
     // qu'au premier affichage de la section (économie mémoire + éviter
@@ -5038,7 +5152,7 @@ function _scenBuildBody() {
   const body = {
     titre,
     description: (document.getElementById('scen-description').value || '').trim(),
-    cible_sigle: (document.getElementById('scen-cible').value || 'DEMO1').trim(),
+    cible_sigle: (document.getElementById('scen-cible').value || 'DEMO').trim(),
     anonymize: document.getElementById('scen-anonymize').checked,
     include_incidents: document.getElementById('scen-inc-incidents').checked,
     include_messages:  document.getElementById('scen-inc-messages').checked,
@@ -5375,6 +5489,7 @@ async function loadAdminUsers() {
   try {
     const r = await apiFetch('/api/v1/auth/users', {headers: authHeaders()});
     const users = await r.json();
+    window._adminUsersCache = users;  // v3000h41 — cache pour l'éditeur de contact
     const el = document.getElementById('admin-user-list');
     if (!users.length) { el.innerHTML = '<div class="empty-state">Aucun compte</div>'; return; }
     // v3.4 (h34) — Rôles canoniques avec labels parlants
@@ -5388,6 +5503,12 @@ async function loadAdminUsers() {
         `<option value="${r}"${r===u.role?' selected':''}>${roleLabels[r]||r}</option>`
       ).join('');
       const currentLabel = roleLabels[u.role] || u.role;
+      // v3000h41 — Indicateur de coordonnées de contact renseignées
+      const hasMail = !!(u.email && u.email.trim());
+      const hasTel  = !!(u.telephone && u.telephone.trim());
+      const contactDot = (hasMail || hasTel)
+        ? `<span title="${[hasMail?(u.email):'',hasTel?(u.telephone):''].filter(Boolean).join(' · ')}" style="font-size:10px">${hasMail?'✉':''}${hasTel?'📱':''}</span>`
+        : '';
       return `
       <div class="user-row" style="cursor:pointer"
            onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
@@ -5403,13 +5524,81 @@ async function loadAdminUsers() {
           ${roleOptions}
         </select>
         ${u.perimetre ? `<span style="font-family:var(--mono);font-size:9px;color:var(--muted)">${u.perimetre}</span>` : ''}
+        ${contactDot}
         <span style="font-family:var(--mono);font-size:9px;color:${u.active?'#4ade80':'#f87171'}">${u.active?'Actif':'Inactif'}</span>
+        <button class="kc-btn" title="Éditer l'utilisateur (nom, email, téléphone)" onclick="event.stopPropagation();openContactEditor(${u.id})">✏️</button>
         <button class="kc-btn" title="Modifier le mot de passe" onclick="event.stopPropagation();selectUserForPw(${u.id},'${(u.display_name||u.username).replace(/'/g,'')}')">🔑</button>
         ${u.role !== 'admin' ? `<button class="kc-btn" style="margin-left:2px" onclick="event.stopPropagation();toggleUserActive(${u.id},${u.active})">${u.active?'Désactiver':'Activer'}</button>
         <button class="kc-btn" style="color:#f87171" onclick="event.stopPropagation();deleteUser(${u.id})">✕</button>` : ''}
       </div>`;
     }).join('');
+    if (typeof applyI18nDOM === 'function') applyI18nDOM();
   } catch(e) { console.error(e); }
+}
+
+// v3000h41 — Éditeur de coordonnées de contact (email / téléphone).
+// Les valeurs ne sont JAMAIS injectées dans des chaînes onclick : on lit
+// l'utilisateur depuis le cache et on remplit les inputs via .value (évite
+// tout problème d'apostrophe / d'échappement).
+function openContactEditor(uid) {
+  const u = (window._adminUsersCache || []).find(x => x.id === uid);
+  if (!u) { toast('Compte introuvable', 'err'); return; }
+  let modal = document.getElementById('contact-editor-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'contact-editor-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:9000';
+    modal.innerHTML =
+      '<div style="background:var(--surface,#fff);border:1px solid var(--border2,#e2e8f0);border-radius:10px;padding:18px;width:min(420px,92vw);box-shadow:0 10px 40px rgba(0,0,0,.25)">' +
+        '<h3 style="margin:0 0 4px;font-size:13px;color:#003189">Fiche utilisateur</h3>' +
+        '<div id="ce-who" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px"></div>' +
+        '<div class="admin-field" style="margin-bottom:10px"><label>Nom affiché</label>' +
+          '<input type="text" id="ce-display_name" placeholder="Directeur de Crise" style="width:100%"></div>' +
+        '<div class="admin-field" style="margin-bottom:10px"><label data-i18n="admin.email_opt">Email (optionnel)</label>' +
+          '<input type="email" id="ce-email" placeholder="prenom.nom@hopital.fr" style="width:100%"></div>' +
+        '<div class="admin-field" style="margin-bottom:10px"><label data-i18n="admin.telephone_opt">Téléphone (optionnel)</label>' +
+          '<input type="tel" id="ce-telephone" placeholder="+33 6 12 34 56 78" style="width:100%"></div>' +
+        '<div style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.4;margin-bottom:12px" data-i18n="admin.contact_hint">Email et téléphone servent aux notifications (mail / SMS) si les passerelles correspondantes sont configurées.</div>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end">' +
+          '<button class="kc-btn" onclick="closeContactEditor()" data-i18n="bluefiles.cancel">Annuler</button>' +
+          '<button class="btn-primary" style="font-size:11px" onclick="saveContactEditor()" data-i18n="common.save">Enregistrer</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeContactEditor(); });
+  }
+  modal.dataset.uid = uid;
+  modal.style.display = 'flex';
+  document.getElementById('ce-who').textContent = (u.display_name || u.username) + ' · @' + u.username;
+  document.getElementById('ce-display_name').value = u.display_name || '';
+  document.getElementById('ce-email').value = u.email || '';
+  document.getElementById('ce-telephone').value = u.telephone || '';
+  if (typeof applyI18nDOM === 'function') applyI18nDOM();
+}
+
+function closeContactEditor() {
+  const m = document.getElementById('contact-editor-modal');
+  if (m) m.style.display = 'none';
+}
+
+async function saveContactEditor() {
+  const m = document.getElementById('contact-editor-modal');
+  if (!m) return;
+  const uid = parseInt(m.dataset.uid, 10);
+  const dn = document.getElementById('ce-display_name').value.trim();
+  const body = {
+    email:     document.getElementById('ce-email').value.trim(),
+    telephone: document.getElementById('ce-telephone').value.trim()
+  };
+  // On n'envoie le nom que s'il est non vide, pour ne jamais effacer un nom par accident.
+  if (dn) body.display_name = dn;
+  try {
+    const r = await apiFetch('/api/v1/auth/users/' + uid, { method:'PUT', headers: authHeaders(), body: JSON.stringify(body) });
+    if (!r.ok) { const d=await r.json().catch(()=>({})); toast(d.detail||'Erreur','err'); return; }
+    toast(t('common.saved','✓ Enregistré'), 'ok');
+    closeContactEditor();
+    loadAdminUsers();
+  } catch(e) { toast('Erreur réseau','err'); }
 }
 
 // v3.4 (h34) — Changement de rôle depuis le dropdown inline
@@ -5465,20 +5654,34 @@ async function adminDeleteSelected() {
   loadAdminUsers();
 }
 
+async function rappelPersonnel() {
+  if (!confirm("Envoyer un message de rappel (SMS/mail) à TOUS les comptes disposant d'un téléphone renseigné ?")) return;
+  try {
+    const r = await apiFetch('/api/v1/notifications/rappel-personnel', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({})
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok) toast('Rappel déclenché → ' + (d.destinataires ?? 0) + ' compte(s) notifié(s)', 'ok');
+    else toast('Erreur rappel : ' + (d.detail || r.status), 'err');
+  } catch(e) { toast('Erreur réseau lors du rappel', 'err'); }
+}
+
 async function createUser() {
   const body = {
     username:     document.getElementById('nu-username').value.trim(),
     display_name: document.getElementById('nu-display').value.trim(),
     password:     document.getElementById('nu-pass').value,
     role:         document.getElementById('nu-role').value,
-    perimetre:    document.getElementById('nu-perimetre').value.trim() || null
+    perimetre:    document.getElementById('nu-perimetre').value.trim() || null,
+    email:        (document.getElementById('nu-email')||{}).value?.trim() || null,
+    telephone:    (document.getElementById('nu-telephone')||{}).value?.trim() || null
   };
   if (!body.username || !body.display_name || !body.password) { toast('Tous les champs obligatoires','err'); return; }
   try {
     const r = await apiFetch('/api/v1/auth/users', { method:'POST', headers: authHeaders(), body: JSON.stringify(body) });
     if (!r.ok) { const d=await r.json(); toast(d.detail||'Erreur','err'); return; }
     toast('Compte créé : @'+body.username);
-    ['nu-username','nu-display','nu-pass','nu-perimetre'].forEach(id => document.getElementById(id).value='');
+    ['nu-username','nu-display','nu-pass','nu-perimetre','nu-email','nu-telephone'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
     loadAdminUsers();
   } catch(e) { toast('Erreur réseau','err'); }
 }
@@ -5531,23 +5734,9 @@ async function pollIGHTBadge() {
           total += remoteDems.filter(d => d.statut !== 'traite').length;
         }
       }
-      // Messages non lus
-      if (collActif && !_collecteurDisabled) {
-        const collBase = _fedStatus.collecteur_url.replace('/api/push','');
-        const rm = await fetch(collBase + '/api/messages', {
-          headers:{'Authorization':'Bearer '+(_fedStatus.token||'')}
-        });
-        if (rm.status === 401) {
-          _collecteurFailCount = (_collecteurFailCount || 0) + 1;
-          if (_collecteurFailCount >= 3) _collecteurDisabled = true;
-        } else if (rm.ok) {
-          const msgs = await rm.json();
-          const all = [...(msgs.received||[]), ...(msgs.sent||[])];
-          // Compter les messages reçus des 24 dernières heures non encore vus
-          const since = Date.now() - 24*3600*1000;
-          total += all.filter(m => (parseUTC(m.created_at)||new Date(0)) > since && !(m.sent_by_me)).length;
-        }
-      }
+      // v3000h44 — Les messages supervision ont migré dans la messagerie
+      // (entrée « Supervision »). Le badge inter-GHT ne compte donc plus
+      // que les demandes ; le badge supervision est géré par msgSuperPollBadge().
     }
   } catch(e) {}
   const badge = document.getElementById('ight-badge');
@@ -5591,6 +5780,21 @@ async function readNotif(id, incidentId) {
     setTimeout(() => { const el = document.getElementById(`inc-${incidentId}`); if(el) { el.scrollIntoView({behavior:'smooth'}); el.classList.add('expanded'); } }, 300);
   }
 }
+
+// h74 — Ouvre un incident depuis un lien externe (#incidents/{id}), p.ex. reçu
+// par SMS. Bascule sur l'onglet INCIDENTS puis défile/déplie l'incident visé.
+function handleIncidentDeepLink() {
+  const m = (window.location.hash || '').match(/#incidents\/(\d+)/);
+  if (!m) return;
+  const id = m[1];
+  const btn = document.getElementById('tab-btn-incidents') || document.querySelector('.tab-btn');
+  if (typeof openTab === 'function') openTab('tab-veille', btn);
+  setTimeout(() => {
+    const el = document.getElementById('inc-' + id);
+    if (el) { el.scrollIntoView({behavior:'smooth', block:'center'}); el.classList.add('expanded'); }
+  }, 900);
+}
+window.handleIncidentDeepLink = handleIncidentDeepLink;
 
 async function markAllRead() {
   if (!authToken) return;
@@ -5689,6 +5893,575 @@ function notifyFilterUsers() {
 function closeNotifyModal() {
   document.getElementById('notify-modal').style.display = 'none';
 }
+
+// ── SMS incident : sélecteur de destinataires (porteurs de téléphone) — h73 ──
+async function openSmsIncidentModal() {
+  const fait = (document.getElementById('fait') || {}).value || '';
+  const firstLine = fait.split('\n')[0].slice(0, 80);
+  const ti = document.getElementById('sms-inc-titre');
+  if (ti) ti.value = firstLine ? ('Incident : ' + firstLine) : 'Incident SCRIBE';
+  const ms = document.getElementById('sms-inc-msg');
+  if (ms) ms.value = fait ? fait.slice(0, 300) : '';
+  smsIncUpdateCount();
+  const res = document.getElementById('sms-inc-result');
+  if (res) {
+    if (window._currentIncidentId) {
+      res.style.display = 'block'; res.style.color = 'var(--muted)';
+      res.textContent = '🔗 Lien vers incident #' + window._currentIncidentId + ' ajouté au SMS.';
+    } else {
+      res.style.display = 'none'; res.textContent = '';
+    }
+  }
+  const tg = document.getElementById('sms-inc-toggle-all');
+  if (tg) tg.textContent = 'Tout cocher';
+  document.getElementById('sms-incident-modal').style.display = 'flex';
+
+  const box = document.getElementById('sms-inc-recipients');
+  box.innerHTML = "<div style='font-family:var(--mono);font-size:10px;color:var(--muted);padding:14px;text-align:center'>Chargement…</div>";
+  try {
+    const r = await apiFetch('/api/v1/notifications/sms-recipients');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const users = await r.json();
+    if (!users.length) {
+      box.innerHTML = "<div style='font-family:var(--mono);font-size:10px;color:var(--muted);padding:14px;text-align:center'>Aucun compte avec téléphone configuré. Renseignez un numéro dans la fiche utilisateur (Admin → Utilisateurs).</div>";
+      return;
+    }
+    box.innerHTML = users.map(function(u) {
+      return "<label style='display:flex;align-items:center;gap:8px;padding:5px 4px;font-family:var(--mono);font-size:11px;cursor:pointer'>" +
+        "<input type='checkbox' class='sms-inc-cb' value='" + u.id + "'>" +
+        "<span style='flex:1'>" + escapeHtmlSafe(u.display_name) + " <span style='color:var(--muted)'>(" + escapeHtmlSafe(u.role || '') + ")</span></span>" +
+        "<span style='color:var(--muted);font-size:9px'>" + escapeHtmlSafe(u.telephone_masque || '') + "</span>" +
+      "</label>";
+    }).join('');
+  } catch (e) {
+    box.innerHTML = "<div style='font-family:var(--mono);font-size:10px;color:#dc2626;padding:14px;text-align:center'>Erreur de chargement : " + escapeHtmlSafe(String(e)) + "</div>";
+  }
+}
+
+function closeSmsIncidentModal() {
+  document.getElementById('sms-incident-modal').style.display = 'none';
+}
+
+function smsIncUpdateCount() {
+  const m = (document.getElementById('sms-inc-msg') || {}).value || '';
+  const c = document.getElementById('sms-inc-count');
+  if (c) c.textContent = m.length + ' caractères';
+}
+
+function smsIncToggleAll() {
+  const cbs = document.querySelectorAll('.sms-inc-cb');
+  if (!cbs.length) return;
+  const allChecked = Array.prototype.every.call(cbs, function(c) { return c.checked; });
+  Array.prototype.forEach.call(cbs, function(c) { c.checked = !allChecked; });
+  const b = document.getElementById('sms-inc-toggle-all');
+  if (b) b.textContent = allChecked ? 'Tout cocher' : 'Tout décocher';
+}
+
+async function smsIncSend() {
+  const ids = Array.prototype.map.call(
+    document.querySelectorAll('.sms-inc-cb:checked'),
+    function(c) { return parseInt(c.value, 10); }
+  );
+  if (!ids.length) { toast('Sélectionnez au moins un destinataire', 'err'); return; }
+  const titre = (document.getElementById('sms-inc-titre') || {}).value || '';
+  const message = (document.getElementById('sms-inc-msg') || {}).value || '';
+  const btn = document.getElementById('sms-inc-send-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
+  const res = document.getElementById('sms-inc-result');
+  try {
+    const r = await apiFetch('/api/v1/notifications/incident-sms', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ titre: titre, message: message, user_ids: ids, incident_id: window._currentIncidentId || null })
+    });
+    let d = {};
+    try { d = await r.json(); } catch (e) {}
+    if (r.ok && d.ok) {
+      const partial = d.envoyes < d.total;
+      if (res) {
+        res.style.display = 'block';
+        res.style.color = partial ? '#f59e0b' : '#16a34a';
+        res.textContent = '✓ ' + d.envoyes + '/' + d.total + ' SMS envoyés' +
+          (partial ? ' — échecs visibles dans le journal des notifications' : '');
+      }
+      toast(d.envoyes + '/' + d.total + ' SMS envoyés', partial ? 'warn' : 'ok');
+    } else {
+      const msg = (d && d.detail) ? d.detail : ('HTTP ' + r.status);
+      if (res) { res.style.display = 'block'; res.style.color = '#dc2626'; res.textContent = '✗ ' + msg; }
+      toast('Échec SMS : ' + msg, 'err');
+    }
+  } catch (e) {
+    toast('Erreur réseau : ' + e, 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Envoyer SMS 📱'; }
+  }
+}
+
+window.openSmsIncidentModal = openSmsIncidentModal;
+window.closeSmsIncidentModal = closeSmsIncidentModal;
+window.smsIncUpdateCount = smsIncUpdateCount;
+window.smsIncToggleAll = smsIncToggleAll;
+window.smsIncSend = smsIncSend;
+
+// ── h76 — Actions et indicateurs des cartes d'incident ───────────────────────
+function smsForIncident(id, ev) {
+  if (ev) ev.stopPropagation();
+  window._currentIncidentId = id;   // le lien SMS pointera vers cet incident
+  openSmsIncidentModal();
+}
+
+async function toggleIncidentMailSub(id, ev) {
+  if (ev) ev.stopPropagation();
+  const btn = (ev && ev.currentTarget) ? ev.currentTarget
+            : document.querySelector('.inc-mailsub[data-inc-id="' + id + '"]');
+  const isSub = btn && btn.classList.contains('subscribed');
+  try {
+    const r = await apiFetch('/api/v1/sitrep/' + id + '/subscribe', {
+      method: isSub ? 'DELETE' : 'POST', headers: authHeaders()
+    });
+    let d = {};
+    try { d = await r.json(); } catch (e) {}
+    if (!r.ok) { toast('Erreur : ' + (d.detail || r.status), 'err'); return; }
+    if (d.subscribed) {
+      if (btn) {
+        btn.classList.add('subscribed');
+        btn.style.opacity = '1'; btn.style.color = '#003189'; btn.style.borderColor = '#003189';
+        btn.title = t('incidents.mail_unsubscribe', 'Se désabonner des alertes mail');
+      }
+      if (d.has_email === false) toast(t('incidents.no_email_warn', 'Abonné, mais aucun email n\u0027est configuré sur votre compte'), 'warn');
+      else toast(t('incidents.subscribed', 'Abonné aux alertes mail de cet incident'), 'ok');
+    } else {
+      if (btn) {
+        btn.classList.remove('subscribed');
+        btn.style.opacity = ''; btn.style.color = ''; btn.style.borderColor = '';
+        btn.title = t('incidents.mail_subscribe', 'S\u0027abonner aux alertes mail de cet incident');
+      }
+      toast(t('incidents.unsubscribed', 'Désabonné'), 'ok');
+    }
+  } catch (e) { toast('Erreur réseau : ' + e, 'err'); }
+}
+
+async function refreshIncidentBadges() {
+  try {
+    const r = await apiFetch('/api/v1/notifications/sent-incidents');
+    if (r.ok) {
+      const d = await r.json();
+      const set = new Set((d.incident_ids || []).map(String));
+      document.querySelectorAll('.inc-bell[data-inc-id]').forEach(function (el) {
+        if (set.has(String(el.dataset.incId))) {
+          el.style.opacity = '1'; el.style.color = '#16a34a'; el.style.borderColor = '#16a34a';
+          el.title = t('incidents.notif_sent', 'Notification envoyée');
+        }
+      });
+    }
+  } catch (e) {}
+  try {
+    const r2 = await apiFetch('/api/v1/sitrep/my-subscriptions');
+    if (r2.ok) {
+      const d2 = await r2.json();
+      const subs = new Set((d2.incident_ids || []).map(String));
+      document.querySelectorAll('.inc-mailsub[data-inc-id]').forEach(function (el) {
+        if (subs.has(String(el.dataset.incId))) {
+          el.classList.add('subscribed');
+          el.style.opacity = '1'; el.style.color = '#003189'; el.style.borderColor = '#003189';
+          el.title = t('incidents.mail_unsubscribe', 'Se désabonner des alertes mail');
+        }
+      });
+    }
+  } catch (e) {}
+}
+
+window.smsForIncident = smsForIncident;
+window.toggleIncidentMailSub = toggleIncidentMailSub;
+window.refreshIncidentBadges = refreshIncidentBadges;
+
+// ── h79 — Chaîne d'alerte (mobilisation) ─────────────────────────────────────
+async function mobInit() { await mobLoadFacets(); mobLoadAlertes(); }
+
+async function mobLoadFacets() {
+  try {
+    const r = await apiFetch('/api/v1/mobilisation/facets');
+    if (!r.ok) return;
+    const d = await r.json();
+    const fill = (id, vals) => {
+      const box = document.getElementById(id);
+      if (box) box.innerHTML = (vals || []).map(v =>
+        '<label class="mob-check"><input type="checkbox" value="' + escapeHtmlSafe(v) + '"> <span>' + escapeHtmlSafe(v) + '</span></label>'
+      ).join('') || '<span style="color:var(--muted);font-size:12px">—</span>';
+    };
+    fill('mob-site', d.site); fill('mob-pole', d.pole); fill('mob-uf', d.uf);
+    const tot = document.getElementById('mob-total');
+    if (tot) tot.textContent = t('mobilisation.total_contacts', '{n} contacts').replace('{n}', d.total || 0);
+  } catch (e) {}
+  mobLoadContacts();
+}
+
+let _mobContacts = [];
+let _mobSelectedIds = new Set();
+async function mobLoadContacts() {
+  const box = document.getElementById('mob-names');
+  if (!box) return;
+  try {
+    const r = await apiFetch('/api/v1/mobilisation/contacts');
+    _mobContacts = await r.json().catch(() => []);
+  } catch (e) { _mobContacts = []; }
+  _mobSelectedIds = new Set();
+  mobRenderNames('');
+}
+
+function _mobNameRow(c) {
+  const nm = escapeHtmlSafe(((c.prenom || '') + ' ' + (c.nom || '')).trim());
+  const meta = escapeHtmlSafe([c.fonction, c.site, c.uf].filter(Boolean).join(' · '));
+  const ck = _mobSelectedIds.has(c.id) ? ' checked' : '';
+  return '<label class="mob-check"><input type="checkbox" value="' + c.id + '"' + ck + ' onchange="mobToggleName(this)"> <span>' + nm + ' <span class="meta">' + meta + '</span></span></label>';
+}
+
+function mobRenderNames(query) {
+  const box = document.getElementById('mob-names');
+  if (!box) return;
+  const q = (query || '').trim().toLowerCase();
+  const sc = _mobSelectedIds.size;
+  const head = '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">'
+    + (sc ? (sc + ' ' + t('mobilisation.selected', 'sélectionné(s)')) : t('mobilisation.type_to_search', 'Tapez pour rechercher'))
+    + ' · ' + _mobContacts.length + ' ' + t('mobilisation.people', 'personnes') + '</div>';
+  let rows;
+  if (!q) {
+    const sel = _mobContacts.filter(c => _mobSelectedIds.has(c.id));
+    rows = sel.length ? sel.map(_mobNameRow).join('') : '';
+  } else {
+    const matches = _mobContacts.filter(c =>
+      (((c.prenom || '') + ' ' + (c.nom || '') + ' ' + (c.fonction || '') + ' ' + (c.site || '') + ' ' + (c.uf || '')).toLowerCase().indexOf(q) >= 0));
+    rows = matches.slice(0, 50).map(_mobNameRow).join('');
+    if (matches.length > 50) rows += '<div style="font-size:11px;color:var(--muted);margin-top:4px">+' + (matches.length - 50) + ' ' + t('mobilisation.others', 'autres') + ' — ' + t('mobilisation.refine', 'affinez la recherche') + '</div>';
+    if (!matches.length) rows = '<div style="font-size:12px;color:var(--muted)">—</div>';
+  }
+  box.innerHTML = head + rows;
+}
+
+function mobToggleName(input) {
+  const id = parseInt(input.value, 10);
+  if (isNaN(id)) return;
+  if (input.checked) _mobSelectedIds.add(id); else _mobSelectedIds.delete(id);
+  const f = document.getElementById('mob-name-filter');
+  mobRenderNames(f ? f.value : '');
+}
+
+function mobFilterGroup(containerId, q) {
+  const box = document.getElementById(containerId);
+  if (!box) return;
+  const ql = (q || '').toLowerCase();
+  box.querySelectorAll('.mob-check').forEach(function (row) {
+    const txt = (row.textContent || '').toLowerCase();
+    row.style.display = (!ql || txt.indexOf(ql) >= 0) ? '' : 'none';
+  });
+}
+
+function mobCriteres() {
+  const checked = id => Array.from(document.querySelectorAll('#' + id + ' input[type=checkbox]:checked')).map(i => i.value);
+  return {
+    site: checked('mob-site'), pole: checked('mob-pole'), uf: checked('mob-uf'), fonction: [],
+    contact_ids: Array.from(_mobSelectedIds),
+  };
+}
+
+let _mobPoll = null;
+function mobRefresh() {
+  // Recharge la liste (met à jour les compteurs du sélecteur) ET le tableau de
+  // bord de la campagne sélectionnée — fin de l'incohérence 0/2 vs 1/2.
+  mobLoadAlertes();
+}
+function mobToggleAutopoll(on) {
+  if (_mobPoll) { clearInterval(_mobPoll); _mobPoll = null; }
+  if (on) _mobPoll = setInterval(mobRefresh, 15000);
+}
+
+async function mobImport() {
+  const inp = document.getElementById('mob-file');
+  const msg = document.getElementById('mob-import-msg');
+  if (!inp || !inp.files || !inp.files.length) { if (msg) { msg.style.color = '#dc2626'; msg.textContent = 'Sélectionnez un fichier .xlsx'; } return; }
+  const fd = new FormData();
+  fd.append('fichier', inp.files[0]);
+  fd.append('remplacer', document.getElementById('mob-replace').checked ? 'true' : 'false');
+  if (msg) { msg.style.color = 'var(--muted)'; msg.textContent = '⏳ Import…'; }
+  try {
+    const r = await apiFetch('/api/v1/mobilisation/import', { method: 'POST', body: fd });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.ok) {
+      if (msg) { msg.style.color = '#16a34a'; msg.textContent = '✓ ' + (d.importes || 0) + ' importés, ' + (d.mis_a_jour || 0) + ' mis à jour (' + (d.total || 0) + ' au total)'; }
+      mobLoadFacets();
+    } else if (msg) { msg.style.color = '#dc2626'; msg.textContent = '✗ ' + (d.detail || r.status); }
+  } catch (e) { if (msg) { msg.style.color = '#dc2626'; msg.textContent = 'Erreur : ' + e; } }
+}
+
+async function mobTemplate() {
+  try {
+    const r = await apiFetch('/api/v1/mobilisation/template');
+    if (!r.ok) { toast('Erreur téléchargement', 'err'); return; }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'modele_mobilisation_scribe.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (e) { toast('Erreur : ' + e, 'err'); }
+}
+
+async function mobPreview() {
+  const out = document.getElementById('mob-preview');
+  if (out) { out.style.color = 'var(--muted)'; out.textContent = '⏳…'; }
+  try {
+    const r = await apiFetch('/api/v1/mobilisation/preview', { method: 'POST', headers: authHeaders(), body: JSON.stringify(mobCriteres()) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { out.style.color = '#dc2626'; out.textContent = d.detail || r.status; return; }
+    out.style.color = 'var(--text)';
+    const total = d.total || 0;
+    const sample = (d.apercu || []).slice(0, 12).map(c => {
+      const nm = escapeHtmlSafe(((c.prenom || '') + ' ' + (c.nom || '')).trim());
+      return '<span style="display:inline-block;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:2px 10px;margin:3px 4px 0 0;font-size:11px">' + nm + '</span>';
+    }).join('');
+    const more = total > 12 ? '<span style="font-size:11px;color:var(--muted);margin-left:4px">+' + (total - 12) + ' ' + t('mobilisation.others', 'autres') + '</span>' : '';
+    out.innerHTML = '<div style="font-size:15px;font-weight:700">' + total + ' ' + t('mobilisation.people', 'personnes') + '</div>'
+      + '<div style="font-size:12px;color:var(--muted);margin:2px 0 4px">📱 ' + (d.avec_tel || 0) + '  ·  ✉️ ' + (d.avec_mail || 0) + '</div>'
+      + '<div>' + sample + more + '</div>';
+  } catch (e) { if (out) { out.style.color = '#dc2626'; out.textContent = 'Erreur : ' + e; } }
+}
+
+async function mobTrigger() {
+  const msg = document.getElementById('mob-trigger-msg');
+  const titre = (document.getElementById('mob-titre') || {}).value || '';
+  const message = (document.getElementById('mob-message') || {}).value || '';
+  const canaux = [];
+  if (document.getElementById('mob-ch-sms').checked) canaux.push('sms');
+  if (document.getElementById('mob-ch-mail').checked) canaux.push('mail');
+  if (!titre.trim()) { if (msg) { msg.style.color = '#dc2626'; msg.textContent = 'Objet requis'; } return; }
+  if (!canaux.length) { if (msg) { msg.style.color = '#dc2626'; msg.textContent = 'Sélectionnez au moins un canal'; } return; }
+  if (msg) { msg.style.color = 'var(--muted)'; msg.textContent = '⏳ Envoi…'; }
+  const body = Object.assign({ titre: titre, message: message, canaux: canaux }, mobCriteres());
+  try {
+    const r = await apiFetch('/api/v1/mobilisation/alerte', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.ok) {
+      msg.style.color = '#16a34a';
+      msg.textContent = t('mobilisation.trigger_done', 'Alerte déclenchée : {sms} SMS, {mail} mails')
+        .replace('{sms}', d.sms_envoyes || 0).replace('{mail}', d.mails_envoyes || 0);
+      mobLoadAlertes();
+      if (d.alerte_id) mobShowAlerte(d.alerte_id);
+    } else { msg.style.color = '#dc2626'; msg.textContent = '✗ ' + (d.detail || r.status); }
+  } catch (e) { if (msg) { msg.style.color = '#dc2626'; msg.textContent = 'Erreur : ' + e; } }
+}
+
+let _mobCurrentId = null;
+async function mobLoadAlertes() {
+  const sel = document.getElementById('mob-campaign-select');
+  const detail = document.getElementById('mob-alerte-detail');
+  const archBtn = document.getElementById('mob-archive-btn');
+  if (!sel) return;
+  try {
+    const r = await apiFetch('/api/v1/mobilisation/alertes');
+    const list = await r.json().catch(() => []);
+    if (!list.length) {
+      sel.innerHTML = '<option value="">' + t('mobilisation.no_campaign', 'Aucune campagne active') + '</option>';
+      if (detail) detail.innerHTML = '';
+      if (archBtn) archBtn.style.display = 'none';
+      _mobCurrentId = null;
+      return;
+    }
+    sel.innerHTML = list.map(a =>
+      '<option value="' + a.id + '">' + escapeHtmlSafe(a.titre) + ' — ' + (a.repondus || 0) + '/' + (a.cibles || 0) + '</option>'
+    ).join('');
+    const keep = list.find(a => String(a.id) === String(_mobCurrentId));
+    const chosen = keep ? _mobCurrentId : list[0].id;
+    sel.value = String(chosen);
+    mobSelectCampaign(chosen);
+  } catch (e) {}
+}
+
+function mobSelectCampaign(id) {
+  const archBtn = document.getElementById('mob-archive-btn');
+  const detail = document.getElementById('mob-alerte-detail');
+  if (!id) { _mobCurrentId = null; if (detail) detail.innerHTML = ''; if (archBtn) archBtn.style.display = 'none'; return; }
+  _mobCurrentId = id;
+  if (archBtn) archBtn.style.display = '';
+  mobShowAlerte(id);
+}
+
+async function mobArchiveCurrent() {
+  if (!_mobCurrentId) return;
+  try {
+    const r = await apiFetch('/api/v1/mobilisation/alerte/' + _mobCurrentId + '/archive', { method: 'POST', headers: authHeaders() });
+    if (r.ok) { toast(t('mobilisation.archived_ok', 'Campagne archivée'), 'ok'); _mobCurrentId = null; mobLoadAlertes(); }
+    else { toast('Erreur', 'err'); }
+  } catch (e) { toast('Erreur : ' + e, 'err'); }
+}
+
+let _mobDetail = null;
+const _ETA_CATS = [
+  { k: '15', color: '#16a34a' }, { k: '30', color: '#0ea5e9' },
+  { k: '60', color: '#f59e0b' }, { k: 'indispo', color: '#dc2626' },
+  { k: 'attente', color: '#94a3b8' },
+];
+function _etaCatLabel(k) {
+  return ({ '15': t('mobilisation.eta_15', 'Moins de 15 min'), '30': t('mobilisation.eta_30', 'Environ 30 min'),
+            '60': t('mobilisation.eta_60', 'Environ 1 h'), 'indispo': t('mobilisation.eta_indispo', 'Indisponible'),
+            'attente': t('mobilisation.st_waiting', 'En attente') })[k] || k;
+}
+function _cibleCat(c) { return c.statut === 'repondu' ? (c.eta_choice || '?') : 'attente'; }
+
+async function mobShowAlerte(id) {
+  const el = document.getElementById('mob-alerte-detail');
+  if (!el) return;
+  el.innerHTML = '<span style="color:var(--muted)">⏳…</span>';
+  try {
+    const r = await apiFetch('/api/v1/mobilisation/alerte/' + id);
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { el.innerHTML = '<span style="color:#dc2626">' + (d.detail || r.status) + '</span>'; return; }
+    d._id = id; _mobDetail = d;
+    mobRenderDashboard();
+  } catch (e) { el.innerHTML = '<span style="color:#dc2626">Erreur : ' + e + '</span>'; }
+}
+
+function _gaugeColor(pct) { return pct >= 67 ? '#16a34a' : (pct >= 34 ? '#f59e0b' : '#dc2626'); }
+function _vGauge(pct, label, sub) {
+  const col = _gaugeColor(pct);
+  return '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:50px">'
+    + '<div style="position:relative;width:20px;height:78px;background:var(--surface3);border-radius:10px;overflow:hidden;border:1px solid var(--border2)">'
+    +   '<div style="position:absolute;bottom:0;left:0;right:0;height:' + pct + '%;background:' + col + ';transition:height .3s"></div>'
+    + '</div>'
+    + '<div style="font-family:var(--mono);font-size:11px;font-weight:800;color:' + col + '">' + pct + '%</div>'
+    + '<div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-align:center;line-height:1.1">' + label + (sub ? '<br><span style="color:var(--muted2)">' + sub + '</span>' : '') + '</div>'
+    + '</div>';
+}
+
+function mobRenderDashboard(filterCat) {
+  const el = document.getElementById('mob-alerte-detail');
+  const d = _mobDetail; if (!el || !d) return;
+  const cibles = d.cibles || [];
+  const total = cibles.length;
+  const repondus = cibles.filter(c => c.statut === 'repondu').length;
+  const taux = total ? Math.round(repondus / total * 100) : 0;
+  const counts = {}; _ETA_CATS.forEach(c => counts[c.k] = 0);
+  cibles.forEach(c => { const k = _cibleCat(c); counts[k] = (counts[k] || 0) + 1; });
+
+  const cards = _ETA_CATS.map(cat => {
+    const n = counts[cat.k] || 0;
+    const sel = (filterCat === cat.k) ? 'outline:2px solid ' + cat.color + ';' : '';
+    return '<div onclick="mobRenderDashboard(\'' + cat.k + '\')" style="cursor:pointer;flex:1;min-width:78px;border:1px solid var(--border2);border-left:3px solid ' + cat.color + ';border-radius:6px;padding:6px 8px;' + sel + '">'
+      + '<div style="font-size:18px;font-weight:800;color:' + cat.color + '">' + n + '</div>'
+      + '<div style="font-family:var(--mono);font-size:9px;color:var(--muted)">' + escapeHtmlSafe(_etaCatLabel(cat.k)) + '</div></div>';
+  }).join('');
+
+  const byUf = {};
+  cibles.forEach(c => { const u = c.uf || '—'; (byUf[u] = byUf[u] || []).push(c); });
+  const ufGauges = Object.keys(byUf).sort().map(u => {
+    const list = byUf[u]; const tt = list.length;
+    const rep = list.filter(c => c.statut === 'repondu').length;
+    const pct = tt ? Math.round(rep / tt * 100) : 0;
+    const relBtn = (u !== '—')
+      ? '<button class="mob-uf-relance" title="' + t('mobilisation.relance', 'Relancer les non-répondants') + '" onclick="mobRelancer(' + d._id + ',\'' + encodeURIComponent(u) + '\')">↻</button>'
+      : '';
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:3px">' + _vGauge(pct, 'UF ' + escapeHtmlSafe(u), rep + '/' + tt) + relBtn + '</div>';
+  }).join('');
+
+  let names = cibles;
+  if (filterCat) names = cibles.filter(c => _cibleCat(c) === filterCat);
+  const nameRows = names.map(c => {
+    const cat = _cibleCat(c); const col = (_ETA_CATS.find(x => x.k === cat) || {}).color || '#94a3b8';
+    const cmt = c.commentaire ? ' <span title="' + escapeHtmlSafe(c.commentaire) + '" style="cursor:help">💬</span>' : '';
+    return '<tr style="border-bottom:1px solid var(--border)"><td style="padding:3px 6px">' + escapeHtmlSafe(c.nom || '') + cmt + '</td>'
+      + '<td style="padding:3px 6px;color:var(--muted)">' + escapeHtmlSafe(c.fonction || '') + '</td>'
+      + '<td style="padding:3px 6px;color:var(--muted)">' + escapeHtmlSafe(c.uf || '') + '</td>'
+      + '<td style="padding:3px 6px;text-align:right;color:' + col + ';font-weight:700">' + escapeHtmlSafe(_etaCatLabel(cat)) + '</td></tr>';
+  }).join('');
+  const responders = cibles.filter(c => c.statut === 'repondu');
+  const notesHtml = responders.length ? responders.map(c => {
+    const rcat = _cibleCat(c); const rcol = (_ETA_CATS.find(x => x.k === rcat) || {}).color || '#94a3b8';
+    const cmt = c.commentaire
+      ? '<div style="font-size:12px;color:var(--text);margin:4px 0 6px">💬 ' + escapeHtmlSafe(c.commentaire) + '</div>'
+      : '<div style="font-size:11px;color:var(--muted);margin:2px 0 6px">' + t('mobilisation.no_note', '(pas de note)') + '</div>';
+    const replyBtn = (c.has_tel || c.has_mail) ? '<button class="mob-reply-link" onclick="mobReplyOpen(' + c.id + ')">' + t('mobilisation.reply', 'Répondre') + '</button>' : '';
+    return '<div style="border-bottom:1px solid var(--border);padding:8px 0">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b style="font-size:13px">' + escapeHtmlSafe(c.nom || '') + '</b>'
+      + '<span style="color:' + rcol + ';font-weight:700;font-size:11px;white-space:nowrap">' + escapeHtmlSafe(_etaCatLabel(rcat)) + '</span></div>'
+      + cmt + replyBtn
+      + '<div id="mob-reply-box-' + c.id + '" style="display:none;margin-top:6px"></div></div>';
+  }).join('') : '<div style="color:var(--muted);font-size:12px">' + t('mobilisation.no_replies', 'Aucune réponse pour le moment') + '</div>';
+
+  const filterLine = filterCat
+    ? escapeHtmlSafe(_etaCatLabel(filterCat)) + ' <span style="cursor:pointer;text-decoration:underline" onclick="mobRenderDashboard()">(' + t('mobilisation.clear_filter', 'tout afficher') + ')</span>'
+    : t('mobilisation.all', 'TOUS');
+
+  el.innerHTML =
+    '<div style="font-weight:700;margin-bottom:8px">' + escapeHtmlSafe(d.titre) + '</div>'
+    + '<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">'
+    +   '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">' + _vGauge(taux, t('mobilisation.rate', 'Taux de retour'), repondus + '/' + total)
+    +     '<button class="mob-relance-btn" onclick="mobRelancer(' + d._id + ')">↻ ' + t('mobilisation.relance', 'Relancer') + '</button></div>'
+    +   '<div style="flex:1;display:flex;gap:6px;flex-wrap:wrap;min-width:200px;align-content:flex-start">' + cards + '</div>'
+    + '</div>'
+    + '<div id="mob-relance-msg" style="font-family:var(--mono);font-size:10px;margin-bottom:8px"></div>'
+    + '<div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin:6px 0 4px">' + t('mobilisation.by_uf', 'LECTURE PAR UF') + '</div>'
+    + '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;padding:4px 0">' + ufGauges + '</div>'
+    + '<div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:12px;align-items:flex-start">'
+    +   '<div style="flex:1.4;min-width:300px">'
+    +     '<div style="font-size:11px;color:var(--muted);letter-spacing:.5px;margin:0 0 6px">' + filterLine + '</div>'
+    +     '<table style="width:100%;border-collapse:collapse;font-size:12px">' + nameRows + '</table>'
+    +   '</div>'
+    +   '<div style="flex:1;min-width:260px">'
+    +     '<div class="mob-grp-label" style="margin-bottom:8px">' + t('mobilisation.notes_title', 'Notes & réponses') + '</div>' + notesHtml
+    +   '</div>'
+    + '</div>';
+}
+
+async function mobRelancer(id, uf) {
+  const msg = document.getElementById('mob-relance-msg');
+  if (msg) { msg.style.color = 'var(--muted)'; msg.textContent = '⏳…'; }
+  try {
+    let url = '/api/v1/mobilisation/alerte/' + id + '/relancer';
+    if (uf) url += '?uf=' + uf;
+    const r = await apiFetch(url, { method: 'POST', headers: authHeaders() });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.ok) {
+      if (msg) { msg.style.color = '#16a34a'; msg.textContent = '✓ ' + (d.relances || 0) + ' relancé(s) (' + (d.sms_envoyes || 0) + ' SMS, ' + (d.mails_envoyes || 0) + ' mails)'; }
+      setTimeout(() => mobShowAlerte(id), 700);
+    } else if (msg) { msg.style.color = '#dc2626'; msg.textContent = '✗ ' + (d.detail || r.status); }
+  } catch (e) { if (msg) { msg.style.color = '#dc2626'; msg.textContent = 'Erreur : ' + e; } }
+}
+
+window.mobInit = mobInit; window.mobImport = mobImport; window.mobTemplate = mobTemplate;
+window.mobPreview = mobPreview; window.mobTrigger = mobTrigger;
+window.mobLoadAlertes = mobLoadAlertes; window.mobShowAlerte = mobShowAlerte;
+window.mobRenderDashboard = mobRenderDashboard; window.mobRelancer = mobRelancer;
+window.mobSelectCampaign = mobSelectCampaign; window.mobArchiveCurrent = mobArchiveCurrent;
+window.mobLoadContacts = mobLoadContacts; window.mobFilterGroup = mobFilterGroup;
+window.mobRenderNames = mobRenderNames; window.mobToggleName = mobToggleName;
+window.mobRefresh = mobRefresh; window.mobToggleAutopoll = mobToggleAutopoll;
+
+function mobReplyOpen(cibleId) {
+  const box = document.getElementById('mob-reply-box-' + cibleId);
+  if (!box) return;
+  if (box.style.display === 'block') { box.style.display = 'none'; return; }
+  const c = ((_mobDetail && _mobDetail.cibles) || []).find(x => String(x.id) === String(cibleId)) || {};
+  const sms = c.has_tel ? '<button class="mob-send-btn" onclick="mobReplySend(' + cibleId + ',\'sms\')">📱 SMS</button>' : '';
+  const mail = c.has_mail ? '<button class="mob-send-btn" onclick="mobReplySend(' + cibleId + ',\'mail\')">✉️ Mail</button>' : '';
+  box.innerHTML = '<textarea id="mob-reply-txt-' + cibleId + '" rows="2" class="mob-filter" style="max-width:100%;margin-bottom:4px" placeholder="' + t('mobilisation.reply_ph', 'Votre réponse…') + '"></textarea>'
+    + '<div style="display:flex;gap:6px">' + sms + mail + '</div>'
+    + '<div id="mob-reply-msg-' + cibleId + '" style="font-size:11px;margin-top:4px"></div>';
+  box.style.display = 'block';
+}
+
+async function mobReplySend(cibleId, canal) {
+  const txt = document.getElementById('mob-reply-txt-' + cibleId);
+  const msgEl = document.getElementById('mob-reply-msg-' + cibleId);
+  const message = ((txt && txt.value) || '').trim();
+  if (!message) { if (msgEl) { msgEl.style.color = '#dc2626'; msgEl.textContent = 'Message vide'; } return; }
+  if (msgEl) { msgEl.style.color = 'var(--muted)'; msgEl.textContent = '⏳…'; }
+  try {
+    const r = await apiFetch('/api/v1/mobilisation/alerte/' + _mobCurrentId + '/cible/' + cibleId + '/reply',
+      { method: 'POST', headers: authHeaders(), body: JSON.stringify({ message: message, canal: canal }) });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.ok) { if (msgEl) { msgEl.style.color = '#16a34a'; msgEl.textContent = '✓ ' + t('mobilisation.reply_sent', 'Envoyé') + ' (' + d.via + ')'; } if (txt) txt.value = ''; }
+    else if (msgEl) { msgEl.style.color = '#dc2626'; msgEl.textContent = '✗ ' + (d.detail || r.status); }
+  } catch (e) { if (msgEl) { msgEl.style.color = '#dc2626'; msgEl.textContent = 'Erreur : ' + e; } }
+}
+window.mobReplyOpen = mobReplyOpen; window.mobReplySend = mobReplySend;
 
 async function notifySend() {
   const destId = parseInt(document.getElementById('notify-dest')?.value);
@@ -6536,6 +7309,358 @@ async function trLoadUfDest() {
   } catch(e) { sel.style.display='none'; if(manualDiv) manualDiv.style.display=''; }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PLUGIN BLUEFILES — v3.5.0-alpha1
+// Envoi sécurisé HDS depuis fiche transfert (v1). 
+// Phase 2+ : Communiqués, Cellule, REX.
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _bfFiles = [];          // File[] sélectionnés dans le modal
+let _bfRecipients = [];     // [{email, nom?}]
+let _bfPluginStatus = null; // {enabled, mode, ready, version}
+
+/** Charge l'état du plugin Bluefiles au boot ou à l'ouverture du tab transfert.
+ *  Stocke en _bfPluginStatus et déclenche l'affichage/masquage des éléments UI. */
+async function bfLoadStatus() {
+  try {
+    const r = await apiFetch('/api/v1/bluefiles/status');
+    if (r.ok) {
+      _bfPluginStatus = await r.json();
+    } else {
+      _bfPluginStatus = { enabled: false };
+    }
+  } catch(e) {
+    _bfPluginStatus = { enabled: false };
+  }
+  // Maj badge mode
+  const badge = document.getElementById('bf-mode-badge');
+  if (badge) {
+    if (_bfPluginStatus.mode === 'dev') {
+      badge.style.display = 'inline-block';
+      badge.textContent = '🧪 DEV';
+      badge.title = 'Mode simulation : aucun envoi réel à Bluefiles';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+
+/** Affiche ou masque le bouton "Joindre dossier sécurisé" selon le contexte.
+ *  Appelée à l'ouverture du modal transfert (par trOpenForm/trOpenEdit). */
+function bfShowOrHide() {
+  const btn = document.getElementById('tr-bluefiles-btn');
+  if (!btn) return;
+  // Visible uniquement si :
+  //   - plugin chargé
+  //   - on est en mode édition (tr-edit-id non vide = transfert déjà créé)
+  // En "nouveau transfert", on attend l'enregistrement pour ne pas créer un
+  // envoi orphelin (sans ref_id valide).
+  const editId = (document.getElementById('tr-edit-id') || {}).value || '';
+  const enabled = _bfPluginStatus && _bfPluginStatus.enabled !== false && editId;
+  btn.style.display = enabled ? 'inline-block' : 'none';
+}
+
+/** Construit le label métier pour un transfert (snapshot ref_label). */
+function _bfTransfertLabel() {
+  const id = (document.getElementById('tr-edit-id') || {}).value || '';
+  const nom = (document.getElementById('tr-nom') || {}).value || '';
+  const prenom = (document.getElementById('tr-prenom') || {}).value || '';
+  const initials = nom ? `${nom.toUpperCase()} ${prenom ? prenom[0].toUpperCase() + '.' : ''}` : '';
+  return `Transfert #${id}${initials ? ' — ' + initials : ''}`;
+}
+
+/** Ouvre le modal d'envoi Bluefiles avec un contexte métier. */
+function bfOpenModal(moduleOrigine, refId, refLabel) {
+  // Reset état
+  _bfFiles = [];
+  _bfRecipients = [];
+  document.getElementById('bf-module').value     = moduleOrigine || '';
+  document.getElementById('bf-ref-id').value     = refId || '';
+  document.getElementById('bf-ref-label').value  = refLabel || '';
+  document.getElementById('bf-recipient-input').value = '';
+  document.getElementById('bf-comment').value    = '';
+  document.getElementById('bf-expiration').value = '15';
+  document.getElementById('bf-pwd-required').checked = true;
+  document.getElementById('bf-ar-enabled').checked   = true;
+  bfRenderFiles();
+  bfRenderRecipients();
+  const msg = document.getElementById('bf-msg');
+  if (msg) { msg.style.display = 'none'; msg.textContent = ''; }
+
+  // Pré-remplir destinataire si on a un email dans le commentaire transfert ?
+  // → v1 : non, l'utilisateur saisit lui-même les destinataires (typiquement
+  //   un médecin du CHU destinataire qu'il connaît). v2 : auto-complétion
+  //   via l'annuaire SCRIBE.
+
+  document.getElementById('bf-modal').style.display = 'flex';
+  if (typeof applyI18nDOM === 'function') applyI18nDOM();
+}
+
+/** Gère l'ajout de fichiers (drag&drop OU sélection input). */
+function bfHandleFiles(filesList) {
+  if (!filesList || !filesList.length) return;
+  const MAX_FILES = 50;
+  const MAX_TOTAL = 4 * 1024 * 1024 * 1024;
+  for (const f of filesList) {
+    if (_bfFiles.length >= MAX_FILES) {
+      bfShowError(`Maximum ${MAX_FILES} fichiers par envoi.`);
+      break;
+    }
+    _bfFiles.push(f);
+  }
+  const total = _bfFiles.reduce((s, f) => s + f.size, 0);
+  if (total > MAX_TOTAL) {
+    bfShowError(`Taille totale > 4 Go : retirez des fichiers.`);
+  }
+  bfRenderFiles();
+}
+
+function bfRemoveFile(idx) {
+  _bfFiles.splice(idx, 1);
+  bfRenderFiles();
+}
+
+function bfRenderFiles() {
+  const list = document.getElementById('bf-files-list');
+  if (!list) return;
+  if (!_bfFiles.length) {
+    list.innerHTML = '';
+    return;
+  }
+  const total = _bfFiles.reduce((s, f) => s + f.size, 0);
+  list.innerHTML = _bfFiles.map((f, i) => {
+    const sizeStr = _bfFormatSize(f.size);
+    const icon = _bfFileIcon(f.name);
+    const safeName = String(f.name).replace(/</g, '&lt;');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:10px">
+      <span style="font-size:14px">${icon}</span>
+      <span style="flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${safeName}</span>
+      <span style="color:var(--muted);font-size:9px">${sizeStr}</span>
+      <button onclick="bfRemoveFile(${i})" type="button" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 4px" title="Retirer">×</button>
+    </div>`;
+  }).join('') +
+  `<div style="font-family:var(--mono);font-size:9px;color:var(--muted);text-align:right;margin-top:2px">
+    ${_bfFiles.length} fichier${_bfFiles.length > 1 ? 's' : ''} · ${_bfFormatSize(total)} au total
+  </div>`;
+}
+
+function _bfFileIcon(name) {
+  const ext = (name || '').toLowerCase().split('.').pop();
+  if (['pdf'].includes(ext)) return '📄';
+  if (['doc','docx','odt','rtf','txt'].includes(ext)) return '📝';
+  if (['xls','xlsx','ods','csv'].includes(ext)) return '📊';
+  if (['jpg','jpeg','png','gif','bmp','webp','heic'].includes(ext)) return '🖼';
+  if (['mp3','wav','m4a','ogg'].includes(ext)) return '🎵';
+  if (['mp4','mov','avi','mkv','webm'].includes(ext)) return '🎬';
+  if (['dcm','dicom','nii','nifti'].includes(ext)) return '🩻';
+  if (['zip','rar','7z','tar','gz'].includes(ext)) return '🗜';
+  return '📎';
+}
+
+function _bfFormatSize(bytes) {
+  if (bytes < 1024) return bytes + ' o';
+  if (bytes < 1024*1024) return (bytes / 1024).toFixed(1) + ' Ko';
+  if (bytes < 1024*1024*1024) return (bytes / 1024 / 1024).toFixed(1) + ' Mo';
+  return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' Go';
+}
+
+function bfAddRecipient() {
+  const input = document.getElementById('bf-recipient-input');
+  const email = (input.value || '').trim().toLowerCase();
+  if (!email) return;
+  // Validation simple
+  if (!email.includes('@') || !email.split('@')[1].includes('.')) {
+    bfShowError("Email invalide : " + email);
+    return;
+  }
+  if (_bfRecipients.some(r => r.email === email)) {
+    bfShowError("Destinataire déjà ajouté : " + email);
+    return;
+  }
+  if (_bfRecipients.length >= 50) {
+    bfShowError("Maximum 50 destinataires par envoi.");
+    return;
+  }
+  _bfRecipients.push({ email });
+  input.value = '';
+  bfRenderRecipients();
+}
+
+function bfRemoveRecipient(idx) {
+  _bfRecipients.splice(idx, 1);
+  bfRenderRecipients();
+}
+
+function bfRenderRecipients() {
+  const list = document.getElementById('bf-recipients-list');
+  if (!list) return;
+  if (!_bfRecipients.length) {
+    list.innerHTML = `<div style="font-family:var(--mono);font-size:9px;color:var(--muted);font-style:italic;padding:4px 0">Aucun destinataire — ajoutez au moins une adresse email.</div>`;
+    return;
+  }
+  list.innerHTML = _bfRecipients.map((r, i) =>
+    `<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:10px">
+      <span style="font-size:13px">📧</span>
+      <span style="flex:1;color:var(--text)">${String(r.email).replace(/</g, '&lt;')}</span>
+      <button onclick="bfRemoveRecipient(${i})" type="button" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 4px">×</button>
+    </div>`
+  ).join('');
+}
+
+function bfShowError(msg) {
+  const el = document.getElementById('bf-msg');
+  if (!el) return;
+  el.style.display = 'block';
+  el.style.background = 'rgba(239,68,68,.1)';
+  el.style.border = '1px solid rgba(239,68,68,.3)';
+  el.style.color = '#ef4444';
+  el.textContent = '⚠ ' + msg;
+}
+
+function bfShowInfo(msg) {
+  const el = document.getElementById('bf-msg');
+  if (!el) return;
+  el.style.display = 'block';
+  el.style.background = 'rgba(0,49,137,.08)';
+  el.style.border = '1px solid rgba(0,49,137,.3)';
+  el.style.color = '#003189';
+  el.textContent = msg;
+}
+
+/** Soumet l'envoi : appelle POST /api/v1/bluefiles/send en multipart. */
+async function bfSubmit() {
+  // Validation
+  if (!_bfFiles.length) {
+    bfShowError("Ajoutez au moins un fichier.");
+    return;
+  }
+  if (!_bfRecipients.length) {
+    bfShowError("Ajoutez au moins un destinataire.");
+    return;
+  }
+  const btn = document.getElementById('bf-send-btn');
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+  bfShowInfo("⏳ Envoi en cours… ne fermez pas cette fenêtre.");
+
+  const fd = new FormData();
+  fd.append('module',        document.getElementById('bf-module').value || 'test');
+  fd.append('ref_id',        document.getElementById('bf-ref-id').value || '');
+  fd.append('ref_label',     document.getElementById('bf-ref-label').value || '');
+  fd.append('destinataires', JSON.stringify(_bfRecipients));
+  fd.append('expiration_days',   document.getElementById('bf-expiration').value);
+  fd.append('password_required', document.getElementById('bf-pwd-required').checked ? 'true' : 'false');
+  fd.append('ar_enabled',        document.getElementById('bf-ar-enabled').checked ? 'true' : 'false');
+  fd.append('commentaire',   document.getElementById('bf-comment').value || '');
+  for (const f of _bfFiles) {
+    fd.append('fichiers', f, f.name);
+  }
+
+  try {
+    const r = await apiFetch('/api/v1/bluefiles/send', {
+      method: 'POST',
+      body: fd,
+      // PAS de Content-Type : laisser le browser mettre multipart avec boundary
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      bfShowError("Échec : " + (err.detail || r.statusText));
+      return;
+    }
+    const data = await r.json();
+    if (!data.ok) {
+      bfShowError("Échec : " + (data.error || "raison inconnue"));
+      return;
+    }
+    // Succès → fermer le modal d'envoi et ouvrir la confirmation avec MdP
+    document.getElementById('bf-modal').style.display = 'none';
+    bfShowConfirmation(data);
+    // Rafraîchir éventuellement la fiche transfert pour montrer le nouvel envoi
+    bfRefreshEnvoisInTransfertModal();
+  } catch(e) {
+    bfShowError("Erreur réseau : " + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+}
+
+/** Affiche le modal de confirmation post-envoi avec les MdP destinataires. */
+function bfShowConfirmation(data) {
+  const summary = document.getElementById('bf-confirm-summary');
+  if (summary) {
+    const nFiles = _bfFiles.length;
+    const nDest  = _bfRecipients.length;
+    const mode   = data.mode === 'dev' ? ' · 🧪 mode simulation' : '';
+    summary.textContent = `${nFiles} fichier${nFiles>1?'s':''} envoyé${nFiles>1?'s':''} à ${nDest} destinataire${nDest>1?'s':''}${mode}`;
+  }
+  const c = document.getElementById('bf-confirm-passwords');
+  if (c) {
+    const passwords = data.destinataires_passwords || [];
+    c.innerHTML = passwords.map(d => {
+      const safeEmail = String(d.email).replace(/</g, '&lt;');
+      if (d.mode_auth === 'account') {
+        return `<div style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text);font-weight:700">${safeEmail}</div>
+          <div style="font-family:var(--mono);font-size:9px;color:#4ade80;margin-top:2px">🔑 Compte Bluefiles — pas de mot de passe à transmettre</div>
+        </div>`;
+      } else if (d.password) {
+        const safePwd = String(d.password).replace(/</g, '&lt;');
+        return `<div style="padding:10px 12px;background:linear-gradient(135deg,rgba(255,206,0,.12),rgba(0,49,137,.05));border:1px solid rgba(255,206,0,.4);border-radius:4px">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text);font-weight:700;margin-bottom:6px">📧 ${safeEmail}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">MOT DE PASSE :</span>
+            <code style="font-family:var(--mono);font-size:13px;background:white;color:#003189;padding:4px 10px;border-radius:3px;border:1px solid rgba(0,49,137,.2);letter-spacing:1px;font-weight:700;flex:1">${safePwd}</code>
+            <button onclick="bfCopyPwd('${safePwd}', this)" type="button" style="font-family:var(--mono);font-size:9px;padding:5px 10px;background:#003189;color:white;border:none;border-radius:3px;cursor:pointer;font-weight:700">📋 Copier</button>
+          </div>
+        </div>`;
+      } else {
+        return `<div style="padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text)">${safeEmail}</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px">Lien ouvert (sans mot de passe)</div>
+        </div>`;
+      }
+    }).join('');
+  }
+  document.getElementById('bf-confirm-modal').style.display = 'flex';
+  if (typeof applyI18nDOM === 'function') applyI18nDOM();
+}
+
+function bfCopyPwd(pwd, btnEl) {
+  navigator.clipboard.writeText(pwd).then(() => {
+    if (btnEl) {
+      const orig = btnEl.textContent;
+      btnEl.textContent = '✓ Copié';
+      setTimeout(() => { btnEl.textContent = orig; }, 1500);
+    }
+  });
+}
+
+function bfCloseConfirm() {
+  document.getElementById('bf-confirm-modal').style.display = 'none';
+  // Vider la liste des MdP pour éviter qu'elle traîne en DOM
+  const c = document.getElementById('bf-confirm-passwords');
+  if (c) c.innerHTML = '';
+}
+
+/** Récupère les envois liés à un transfert et les affiche.
+ *  Pour la v1, on rafraîchit la fiche transfert (modal) après un envoi.
+ *  L'affichage permanent des envois liés dans la liste des transferts viendra
+ *  en v1.1 si besoin (cf renderTransfertList).
+ */
+async function bfRefreshEnvoisInTransfertModal() {
+  const refId = document.getElementById('bf-ref-id').value;
+  if (!refId) return;
+  try {
+    const r = await apiFetch(`/api/v1/bluefiles/by_ref?module=transfert&ref_id=${refId}`);
+    if (!r.ok) return;
+    const data = await r.json();
+    // Pour v1, on log juste — l'UI d'affichage liée arrivera quand on
+    // ajoutera une section "Documents transmis" dans la fiche transfert.
+    console.log(`Transfert #${refId} : ${data.envois.length} envoi(s) Bluefiles`);
+  } catch(e) {}
+}
+
+// ─── Fin module BLUEFILES ───────────────────────────────────────────────────
+
 function trOpenForm() {
   document.getElementById('tr-edit-id').value = '';
   document.getElementById('tr-modal-title').textContent = '🚑 Nouveau transfert';
@@ -6546,6 +7671,8 @@ function trOpenForm() {
   trPopulateSites();
   const _trModal = document.getElementById('tr-modal');
   _trModal.style.display = 'flex';
+  // v3.5 — Masquer le bouton Bluefiles en mode "nouveau" (pas encore d'ID)
+  if (typeof bfShowOrHide === 'function') bfShowOrHide();
   // Scroll au top pour que le formulaire commence depuis le début
   setTimeout(() => {
     const _trContent = _trModal.querySelector('[style*="overflow-y:auto"]');
@@ -6586,7 +7713,7 @@ async function trOpenEdit(id) {
     'tr-ipp':t.ipp,'tr-ddn':t.date_naissance,
     'tr-redacteur':currentUser?(currentUser.display_name||currentUser.username):(t.redacteur||''),
     // v2.4.8 : ETA — convertir UTC → heure locale pour l'input datetime-local
-    // (bug Example Territory : avant on injectait l'UTC brut, l'input l'affichait
+    // (bug terrain : avant on injectait l'UTC brut, l'input l'affichait
     //  comme local, et à la sauvegarde new Date(local).toISOString() re-décalait
     //  de +4h → +8h après 2 éditions)
     'tr-comment':t.commentaire,'tr-eta': t.eta ? _utcToLocalInput(t.eta) : ''
@@ -6594,6 +7721,8 @@ async function trOpenEdit(id) {
   Object.entries(simpleFields).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val||'';});
   await trPopulateSitesForEdit(t);
   document.getElementById('tr-modal').style.display = 'flex';
+  // v3.5 — Afficher le bouton Bluefiles (mode édition = ref_id disponible)
+  if (typeof bfShowOrHide === 'function') bfShowOrHide();
 }
 
 async function trPopulateSitesForEdit(t) {
@@ -6648,7 +7777,7 @@ async function trSave() {
   const redc=document.getElementById('tr-redacteur').value.trim();
   // v2.4.6 : l'input datetime-local renvoie "YYYY-MM-DDTHH:MM" en heure LOCALE
   // du navigateur. On le convertit en ISO UTC pour que le backend stocke en UTC
-  // cohérent (Example Territory : 13:30 local → 23:30Z, Paris : 13:30 local → 11:30Z).
+  // cohérent (terrain : 13:30 local → 23:30Z, Paris : 13:30 local → 11:30Z).
   // v2.4.8 : l'input datetime-local renvoie "YYYY-MM-DDTHH:MM" en heure
   // locale (du navigateur OU de la TZ configurée). On utilise _localInputToUtc
   // qui inverse correctement la conversion appliquée par _utcToLocalInput,
@@ -7071,21 +8200,130 @@ async function loadAdminPlugins() {
       const trackBg = p.enabled ? '#003189' : 'var(--border2)';
       const thumbLeft = p.enabled ? '18px' : '2px';
       const checked = p.enabled ? 'checked' : '';
+      // v3000h41 — Plugins disposant d'un panneau de configuration admin
+      const CONFIGURABLE = { bluefiles: 'openBluefilesConfig' };
+      const cfgBtn = CONFIGURABLE[p.id]
+        ? '<button class="kc-btn" title="Configurer" data-i18n-title="admin.plugin_configure" style="margin-right:4px" onclick="' + CONFIGURABLE[p.id] + '()">⚙</button>'
+        : '';
       return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border-radius:6px;border:1px solid var(--border2)">' +
         '<span style="font-size:14px">' + (p.icon || '🔌') + '</span>' +
         '<div style="flex:1">' +
           '<div style="font-family:var(--mono);font-size:10px;font-weight:700">' + p.id + legacyBadge + '</div>' +
           '<div style="font-size:10px;color:' + stateColor + '">' + stateLabel + '</div>' +
         '</div>' +
+        cfgBtn +
         '<div style="position:relative;width:36px;height:20px;cursor:pointer" data-plugin-id="' + p.id + '" data-enabled="' + p.enabled + '" onclick="pluginToggleClick(this)">' +
           '<div id="plug-track-' + p.id + '" style="position:absolute;inset:0;border-radius:10px;background:' + trackBg + ';transition:background .2s"></div>' +
           '<div id="plug-thumb-' + p.id + '" style="position:absolute;top:2px;left:' + thumbLeft + ';width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s"></div>' +
         '</div>' +
       '</div>';
     }).join('');
+    if (typeof applyI18nDOM === 'function') applyI18nDOM();
   } catch(e) {
     box.innerHTML = '<div style="color:#f87171;font-size:11px">Erreur : ' + e.message + '</div>';
   }
+}
+
+// ── v3000h41 — CONFIGURATION DU PLUGIN BLUEFILES (transfert sécurisé) ────────
+// Édition de l'intégration Bluefiles (URL API, clé, compte, secret webhook)
+// directement depuis l'admin, en cliquant sur ⚙ de la carte du plugin.
+// Les secrets (clé API, secret webhook) ne sont jamais réaffichés : on montre
+// un aperçu masqué et on ne les remplace que si l'admin saisit une valeur.
+function _bfConfigModal() {
+  let m = document.getElementById('bluefiles-config-modal');
+  if (m) return m;
+  m = document.createElement('div');
+  m.id = 'bluefiles-config-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:9000';
+  m.innerHTML =
+    '<div style="background:var(--surface,#fff);border:1px solid var(--border2,#e2e8f0);border-radius:10px;padding:20px;width:min(520px,94vw);max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.25)">' +
+      '<h3 style="margin:0 0 2px;font-size:13px;color:#003189">🔒 <span data-i18n="bluefiles.cfg_title">Configuration Bluefiles</span></h3>' +
+      '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:14px" data-i18n="bluefiles.cfg_subtitle">Transfert sécurisé HDS — intégration API</div>' +
+      '<div id="bf-cfg-mode" style="font-family:var(--mono);font-size:10px;margin-bottom:12px"></div>' +
+      '<div class="admin-field" style="margin-bottom:10px"><label data-i18n="bluefiles.cfg_api_url">URL de l\'API</label>' +
+        '<input type="text" id="bf-cfg-url" placeholder="https://api.bluefiles.com/v1" style="width:100%"></div>' +
+      '<div class="admin-field" style="margin-bottom:10px"><label data-i18n="bluefiles.cfg_account">Compte Bluefiles</label>' +
+        '<input type="text" id="bf-cfg-account" placeholder="compte / identifiant client" style="width:100%"></div>' +
+      '<div class="admin-field" style="margin-bottom:10px"><label data-i18n="bluefiles.cfg_api_key">Clé API</label>' +
+        '<input type="password" id="bf-cfg-key" autocomplete="new-password" style="width:100%">' +
+        '<div id="bf-cfg-key-state" style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:3px"></div></div>' +
+      '<div class="admin-field" style="margin-bottom:10px"><label data-i18n="bluefiles.cfg_webhook">Secret webhook (AR)</label>' +
+        '<input type="password" id="bf-cfg-webhook" autocomplete="new-password" style="width:100%">' +
+        '<div id="bf-cfg-webhook-state" style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:3px"></div></div>' +
+      '<div style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5;margin:10px 0;padding:8px;background:var(--surface2,#f1f5f9);border-radius:6px" data-i18n="bluefiles.cfg_hint">Laissez la clé / le secret vides pour conserver la valeur actuelle. Sans clé, le connecteur fonctionne en mode DEV (envois simulés, aucun appel réseau). La configuration en base prend le pas sur les variables d\'environnement SCRIBE_BLUEFILES_*.</div>' +
+      '<div id="bf-cfg-result" style="font-size:10px;margin:8px 0;min-height:14px"></div>' +
+      '<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap">' +
+        '<button class="kc-btn" onclick="testBluefilesConfig()" data-i18n="bluefiles.cfg_test">Tester la connexion</button>' +
+        '<div style="display:flex;gap:8px">' +
+          '<button class="kc-btn" onclick="closeBluefilesConfig()" data-i18n="bluefiles.cancel">Annuler</button>' +
+          '<button class="btn-primary" style="font-size:11px" onclick="saveBluefilesConfig()" data-i18n="common.save">Enregistrer</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(m);
+  m.addEventListener('click', e => { if (e.target === m) closeBluefilesConfig(); });
+  return m;
+}
+
+async function openBluefilesConfig() {
+  const m = _bfConfigModal();
+  m.style.display = 'flex';
+  const res = document.getElementById('bf-cfg-result'); if (res) res.textContent = '';
+  if (typeof applyI18nDOM === 'function') applyI18nDOM();
+  try {
+    const r = await apiFetch('/api/v1/bluefiles/admin/config');
+    if (!r.ok) { toast(t('errors.load','Erreur de chargement'), 'err'); return; }
+    const c = await r.json();
+    document.getElementById('bf-cfg-url').value = c.api_url || '';
+    document.getElementById('bf-cfg-account').value = c.account || '';
+    document.getElementById('bf-cfg-key').value = '';
+    document.getElementById('bf-cfg-webhook').value = '';
+    const modeEl = document.getElementById('bf-cfg-mode');
+    const live = c.mode === 'live';
+    modeEl.innerHTML = (live
+      ? '<span style="color:#16a34a">● ' + t('bluefiles.cfg_mode_live','Mode LIVE — envois réels') + '</span>'
+      : '<span style="color:#f59e0b">● ' + t('bluefiles.cfg_mode_dev','Mode DEV — envois simulés') + '</span>');
+    const srcLabel = s => s === 'db' ? t('bluefiles.cfg_src_db','(base)') : (s === 'env' ? t('bluefiles.cfg_src_env','(variable d\'env)') : '');
+    document.getElementById('bf-cfg-key-state').textContent = c.api_key_set
+      ? t('bluefiles.cfg_key_set','Clé configurée : ') + c.api_key_preview + ' ' + srcLabel(c.sources.api_key)
+      : t('bluefiles.cfg_key_none','Aucune clé configurée');
+    document.getElementById('bf-cfg-webhook-state').textContent = c.webhook_secret_set
+      ? t('bluefiles.cfg_webhook_set','Secret configuré : ') + c.webhook_secret_preview + ' ' + srcLabel(c.sources.webhook_secret)
+      : t('bluefiles.cfg_webhook_none','Aucun secret configuré');
+  } catch(e) { toast('Erreur réseau', 'err'); }
+}
+
+function closeBluefilesConfig() {
+  const m = document.getElementById('bluefiles-config-modal');
+  if (m) m.style.display = 'none';
+}
+
+async function saveBluefilesConfig() {
+  const body = {
+    api_url: document.getElementById('bf-cfg-url').value.trim(),
+    account: document.getElementById('bf-cfg-account').value.trim(),
+    api_key: document.getElementById('bf-cfg-key').value,
+    webhook_secret: document.getElementById('bf-cfg-webhook').value
+  };
+  const res = document.getElementById('bf-cfg-result');
+  try {
+    const r = await apiFetch('/api/v1/bluefiles/admin/config', { method:'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    if (!r.ok) { const d=await r.json().catch(()=>({})); if(res){res.style.color='#f87171';res.textContent=d.detail||'Erreur';} return; }
+    const d = await r.json();
+    toast(t('common.saved','✓ Enregistré') + ' — ' + (d.mode === 'live' ? 'LIVE' : 'DEV'), 'ok');
+    closeBluefilesConfig();
+    if (typeof loadAdminPlugins === 'function') loadAdminPlugins();
+  } catch(e) { if(res){res.style.color='#f87171';res.textContent='Erreur réseau';} }
+}
+
+async function testBluefilesConfig() {
+  const res = document.getElementById('bf-cfg-result');
+  if (res) { res.style.color = 'var(--muted)'; res.textContent = t('bluefiles.cfg_testing','Test en cours…'); }
+  try {
+    const r = await apiFetch('/api/v1/bluefiles/admin/config/test', { method:'POST', headers: authHeaders() });
+    const d = await r.json();
+    if (res) { res.style.color = d.ok ? '#16a34a' : '#f87171'; res.textContent = (d.ok ? '✓ ' : '✗ ') + (d.detail || ''); }
+  } catch(e) { if(res){res.style.color='#f87171';res.textContent='Erreur réseau';} }
 }
 
 function pluginToggleClick(el) {
@@ -8322,7 +9560,7 @@ function capToggleSynthese() {
 }
 
 // v2.4.7 : toggle "Lits > 0 uniquement" (persisté en localStorage)
-// v2.4.8 : "Lits > 0" coché par défaut (demande Example Territory).
+// v2.4.8 : "Lits > 0" coché par défaut (demande terrain).
 // Sauf si l'utilisateur l'a explicitement désactivé (-> localStorage = "0")
 let capFilterLitsOnly = (localStorage.getItem('cap_filter_lits') !== '0');
 function capToggleFilterLits() {
@@ -8875,328 +10113,1183 @@ async function capAlbertQuestion(question) {
 /* ════════════════════════════════════════════════════════════ */
 
 // ═══════════════════════════════════════════════════════════════
-// SCRIBE v2.3.65 — MESSAGERIE INTERNE
+// SCRIBE v3.6.0-alpha1 — MESSAGERIE (Phase 1 refonte)
 // ═══════════════════════════════════════════════════════════════
+//
+// Architecture :
+//   - 1 canal actif en v1 : "interne"
+//   - Boîtes virtuelles : inbox / sent / drafts / important / trash
+//   - Dossiers personnels (creates/list/delete)
+//   - Actions : reply / reply-all / forward / soft-delete / restore / classer / important
+//   - PJ locales (upload multipart)
+//   - i18n via data-i18n et fonction t()
+//
+// État global du module
+let _msgState = {
+  canal:    'interne',
+  box:      'inbox',
+  folderId: null,
+  search:   '',
+  currentId: null,
+  composeMode: 'new',    // new | reply | reply-all | forward
+  composeOriginalId: null,
+  composeRecipients: [],   // [{type:'user', value:id, display:'...'}]
+  composeAttachments: [],  // File[] (locales) + bluefiles
+  personalFolders: [],     // [{id, nom, canal, ...}]
+  searchTimer: null,
+  allUsers: [],            // cache des users pour le picker
+};
 
-let _msgBoite = 'reception';
-let _msgCurrentId = null;
-
-async function msgLoad(boite) {
-  boite = boite || _msgBoite;
-  _msgBoite = boite;
-  const listEl = document.getElementById('msg-list');
-  if (!listEl) return;
-  listEl.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:24px;text-align:center">Chargement…</div>';
-  try {
-    const r = await apiFetch('/api/v1/messagerie?boite=' + boite);
-    if (!r.ok) { listEl.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:24px;text-align:center">Erreur ' + r.status + '</div>'; return; }
-    const msgs = await r.json();
-    if (!msgs.length) {
-      listEl.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:40px;text-align:center;opacity:.6">' + (boite === 'reception' ? 'Aucun message reçu' : 'Aucun message envoyé') + '</div>';
-      return;
-    }
-    listEl.innerHTML = msgs.map(m => {
-      const isUnread = !m.lu && boite === 'reception';
-      const date = parseUTC(m.created_at).toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-      const contact = boite === 'reception' ? (m.expediteur_nom || '—') : ('→ ' + (m.destinataire_nom || '—'));
-      return `<div onclick="msgOpen(${m.id},'${boite}')" style="padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;background:${isUnread ? 'rgba(37,99,235,.08)' : 'transparent'};transition:background .1s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background='${isUnread ? 'rgba(37,99,235,.08)' : 'transparent'}'">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
-          <span style="font-family:var(--mono);font-size:10px;font-weight:${isUnread ? '700' : '500'};color:var(--muted2)">${contact}</span>
-          <span style="font-family:var(--mono);font-size:9px;color:var(--muted)">${date}</span>
-        </div>
-        <div style="font-family:var(--mono);font-size:10px;font-weight:${isUnread ? '700' : '400'};color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.sujet || '(sans objet)'}</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(m.contenu || '').substring(0, 72)}</div>
-        ${isUnread ? '<span style="display:inline-block;width:6px;height:6px;background:#2563eb;border-radius:50%;margin-top:4px"></span>' : ''}
-      </div>`;
-    }).join('');
-  } catch(e) { listEl.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:24px;text-align:center">Erreur réseau</div>'; }
-}
-
-async function msgOpen(id, boite) {
-  _msgCurrentId = id;
-  if (boite === 'reception') {
-    await apiFetch('/api/v1/messagerie/' + id + '/lire', { method:'PUT' }).catch(()=>{});
-  }
-  await msgLoad(boite);
-  const detailEl = document.getElementById('msg-detail');
-  if (!detailEl) return;
-  detailEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:10px">Chargement…</div>';
-  try {
-    const allMsgs = await (await apiFetch('/api/v1/messagerie?boite=all')).json().catch(() => []);
-    const m = allMsgs.find(x => x.id === id);
-    if (!m) return;
-    const rootId = m.reply_to ? m.reply_to : m.id;
-    const root   = allMsgs.find(x => x.id === rootId) || m;
-    const thread = [root, ...allMsgs.filter(x => x.reply_to === rootId && x.id !== rootId)]
-                   .sort((a,b) => parseUTC(a.created_at) - parseUTC(b.created_at));
-
-    const renderBubble = (msg) => {
-      const isMine = !!msg.is_mine;
-      const date   = parseUTC(msg.created_at).toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-      const who    = isMine ? 'Vous' : (msg.expediteur_nom || msg.ght_source || '—');
-      const replyBtn = !isMine
-        ? '<button class="conv-reply-btn" onclick="msgReply(' + msg.id + ',&quot;' + (msg.expediteur_nom||'').replace(/"/g,'') + '&quot;)">↩ Répondre</button>'
-        : '';
-      return '<div class="conv-row ' + (isMine ? 'mine' : 'theirs') + '">' +
-        '<div class="conv-meta">' + who + ' · ' + date + '</div>' +
-        '<div class="conv-bubble ' + (isMine ? 'mine' : 'theirs') + '">' +
-          (msg.contenu||'').replace(/</g,'&lt;') +
-        '</div>' + replyBtn +
-      '</div>';
-    };
-
-    detailEl.innerHTML =
-      '<div style="padding:8px 12px">' +
-        '<div style="font-family:var(--mono);font-size:9px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:10px;text-transform:uppercase;text-align:center;padding:4px 0">' +
-          (root.sujet || '(sans objet)') + '</div>' +
-        '<div class="conv-container">' +
-          thread.map(renderBubble).join('') +
-        '</div>' +
-      '</div>';
-    // Scroll en bas
-    detailEl.scrollTop = detailEl.scrollHeight;
-  } catch(e) { console.warn('msgOpen', e); }
-  msgPollBadge();
-}
-function switchMsgBoite(boite, btn) {
-  _msgBoite = boite;
-  document.querySelectorAll('.msg-tab-btn').forEach(b => {
-    b.style.background = 'transparent'; b.style.borderColor = 'transparent'; b.style.color = 'var(--muted)';
-  });
-  if (btn) { btn.style.background = 'var(--surface2)'; btn.style.borderColor = 'var(--border2)'; btn.style.color = 'var(--text)'; }
-  document.getElementById('msg-detail').innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--muted)"><span style="font-size:36px;opacity:.3">✉️</span><span style="font-family:var(--mono);font-size:10px;letter-spacing:1px">Sélectionnez un message</span></div>';
-  msgLoad(boite);
-}
-
-let _msgAllUsers = [];  // cache des utilisateurs pour la messagerie
-let _msgSitesExercice = null;  // v2309-hotfix : sites engagés dans l'exercice courant (null = pas de filtrage)
-
-async function msgOpenCompose(prefillUserId, prefillSite) {
-  ['msg-compose-sujet','msg-compose-body'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  // v2309-hotfix — Reset du hint "message externe" à chaque ouverture
-  // classique (il sera réactivé depuis msgReply si nécessaire).
-  const hint = document.getElementById('msg-compose-externe-hint');
-  if (hint) hint.style.display = 'none';
-  
-  // Charger le statut fédération + annuaire inter-GHT pour les options destinataire
-  await loadFedStatus();
-  if (!_annInterGHT.length) await loadAnnuaireMessagerie();
-
-  // v2309-hotfix — Si un exercice est en cours sur le collecteur, récupérer
-  // la liste des sites engagés pour filtrer le dropdown. Cela évite de
-  // présenter tout l'univers SCRIBE (pollution visuelle + risque d'envoyer
-  // un message à un hôpital non concerné). Fail-safe : si la route n'est
-  // pas dispo ou aucun exo actif, on retombe sur le comportement actuel.
-  _msgSitesExercice = null;  // null = pas de filtrage, [] = filtrage strict
-  try {
-    if (_fedStatus?.ready && _fedStatus?.collecteur_url) {
-      const collBase = _fedStatus.collecteur_url.replace('/api/push','');
-      const rExo = await fetch(`${collBase}/api/exercice/sites-actifs`);
-      if (rExo.ok) {
-        const dExo = await rExo.json();
-        if (dExo.running && Array.isArray(dExo.sites) && dExo.sites.length) {
-          _msgSitesExercice = dExo.sites.map(s => String(s).toUpperCase());
-        }
-      }
-    }
-  } catch(e) { /* fail-safe : pas de filtrage */ }
-
-  // Charger la liste des utilisateurs
-  try {
-    const r = await apiFetch('/api/v1/auth/users');
-    if (r.ok) {
-      const users = await r.json();
-      const me = currentUser && currentUser.id;
-      _msgAllUsers = users.filter(u => u.active && u.id !== me);
-    }
-  } catch(e) { _msgAllUsers = []; }
-
-  // Peupler le filtre par site (extrait du username: <service>_demo_<site>)
-  const siteSel = document.getElementById('msg-compose-site');
-  if (siteSel) {
-    // Extraire les "sites" depuis les usernames: tout ce qui est après _demo_ ou le display_name
-    const sites = new Set();
-    _msgAllUsers.forEach(u => {
-      // Grouper par : présence dans allSites (hostname match) ou tag dans username
-      const match = u.username.match(/_demo_(.+)$/) || u.username.match(/_(.{3,12})$/);
-      if (match) sites.add(match[1]);
-      // Aussi ajouter via display_name — "X — Site Y" → "Site Y"
-      const dn = u.display_name || '';
-      const dnMatch = dn.match(/— (.+)$/);
-      if (dnMatch) sites.add(dnMatch[1].substring(0, 30));
-    });
-    // Aussi ajouter les sites de l'instance courante
-    allSites.forEach(s => sites.add(s.nom));
-
-    // v2309-hotfix — Filtrage au périmètre exercice si applicable
-    let sortedSites = [...sites].sort();
-    if (_msgSitesExercice && _msgSitesExercice.length) {
-      const upperSites = new Set(_msgSitesExercice);
-      sortedSites = sortedSites.filter(s => {
-        const u = s.toUpperCase();
-        // Match souple : le sigle exo doit apparaître dans le nom de site
-        return [...upperSites].some(sig => u.includes(sig) || sig.includes(u.substring(0,6)));
-      });
-    }
-
-    siteSel.innerHTML = '<option value="">— Tous les sites —</option>' +
-      sortedSites.map(s => `<option value="${s}">${s}</option>`).join('');
-    if (prefillSite) siteSel.value = prefillSite;
-  }
-
-  msgFilterUsers(prefillUserId);
-  const m = document.getElementById('msg-modal-compose');
-  if (m) m.style.display = 'flex';
-}
-
-function msgFilterUsers(prefillId) {
-  const site = document.getElementById('msg-compose-site')?.value || '';
-  const sel = document.getElementById('msg-compose-dest');
-  if (!sel) return;
-  
-  let filtered = _msgAllUsers;
-  if (site) {
-    filtered = _msgAllUsers.filter(u => {
-      const tag = site.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 14);
-      return u.username.includes(tag) || 
-             u.username.includes(site.toLowerCase().substring(0,8)) ||
-             (u.display_name || '').toLowerCase().includes(site.toLowerCase().substring(0, 12));
-    });
-  }
-  
-  // Option inter-GHT via collecteur (si fédération active)
-  let interGHTopts = '';
-  if (_fedStatus?.ready && _fedStatus?.collecteur_url) {
-    const autresGHTs = _annInterGHT.filter(e => e.ght !== (_fedStatus?.etablissement || ''));
-    interGHTopts = '<optgroup label="━━ Inter-GHT (via supervision) ━━">' +
-      '<option value="INTERGHT:TOUS">📢 Diffuser à tous les GHTs</option>' +
-      autresGHTs.map(e =>
-        `<option value="INTERGHT:${e.ght}">${e.ght} — ${e.ght_nom||e.ght}</option>`
-      ).join('') +
-      '</optgroup>';
-  }
-  
-  sel.innerHTML = interGHTopts + (filtered.length
-    ? filtered.map(u => `<option value="${u.id}">${u.display_name || u.username}</option>`).join('')
-    : '<option value="">Aucun correspondant local</option>');
-  
-  if (prefillId) sel.value = prefillId;
-}
-
-function msgCloseCompose() {
-  const m = document.getElementById('msg-modal-compose');
-  if (m) m.style.display = 'none';
-}
-
-async function msgSend() {
-  const destVal = document.getElementById('msg-compose-dest')?.value || '';
-  const sujet   = document.getElementById('msg-compose-sujet')?.value?.trim() || '';
-  const contenu = document.getElementById('msg-compose-body')?.value?.trim() || '';
-  if (!destVal) { toast('Sélectionnez un destinataire', 'err'); return; }
-  if (!contenu) { toast('Le message est vide', 'err'); return; }
-
-  // Envoi inter-GHT via collecteur
-  if (destVal.startsWith('INTERGHT:')) {
-    const sigle = destVal.replace('INTERGHT:', '');
-    const destinataire = sigle === 'TOUS' ? 'TOUS' : sigle;
-    // Charger _fedStatus si pas encore disponible (ex: onglet Inter-GHT jamais ouvert)
-    if (!_fedStatus) await loadFedStatus();
-    const collBase = (_fedStatus?.collecteur_url || '').replace('/api/push', '');
-    if (!collBase) { toast('Supervision non configurée', 'err'); return; }
-    const token = _fedStatus?.token || '';
-    if (!token) { toast('Token fédération manquant — vérifier config.js', 'err'); return; }
-    try {
-      const r = await fetch(collBase + '/api/messages', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          destinataire,
-          sujet,
-          contenu,
-          expediteur_nom: currentUser?.display_name || currentUser?.username || 'SCRIBE'
-        })
-      });
-      if (r.ok) {
-        toast('Message inter-GHT envoyé ✓', 'ok');
-        msgCloseCompose();
-      } else {
-        toast('Erreur envoi inter-GHT (' + r.status + ')', 'err');
-      }
-    } catch(e) { toast('Erreur réseau collecteur', 'err'); }
+// ─── Chargement initial à l'ouverture du tab ───────────────────────────────
+async function msgLoad() {
+  // v3.6.0-alpha3 — Détection plugin non chargé côté serveur.
+  // Si /folders renvoie 404 (= plugin pas enregistré), on affiche un bandeau
+  // de diagnostic clair en haut du tab pour éviter de faire chercher l'admin.
+  const pluginOk = await msgCheckPluginAvailable();
+  if (!pluginOk) {
+    msgShowPluginErrorBanner();
     return;
   }
-
-  // Envoi local
-  const destId = parseInt(destVal);
-  if (!destId || isNaN(destId)) { toast('Sélectionnez un destinataire', 'err'); return; }
-  try {
-    const r = await apiFetch('/api/v1/messagerie', { method:'POST', headers: authHeaders(), body: JSON.stringify({ destinataire_id: destId, sujet, contenu }) });
-    if (!r.ok) { const d = await r.json().catch(()=>{}); toast(d?.detail || 'Erreur envoi', 'err'); return; }
-    toast('✓ Message envoyé', 'ok');
-    msgCloseCompose();
-    const msgTabBtn = document.getElementById('tab-btn-messagerie');
-    if (msgTabBtn) openTab('tab-messagerie', msgTabBtn);
-    setTimeout(() => switchMsgBoite('envoi', document.getElementById('msg-tab-envoi')), 150);
-  } catch(e) { toast('Erreur réseau', 'err'); }
+  await msgLoadPersonalFolders();
+  await msgLoadCounters();
+  await msgLoadList();
 }
 
-// v2309-hotfix — Répondre à un message (interne ou externe).
-// Distinction : si le nom de l'expéditeur ne correspond à aucun user
-// interne (cas d'un message externe injecté via broadcast-externe :
-// CHU Grenoble, ARS, CERT Santé, SAMU...), on ne peut pas répondre
-// directement à cet émetteur (il n'existe pas en tant que compte).
-// Dans ce cas, on ouvre le compose en indiquant que la réponse sera
-// vue par l'équipe de crise locale et on pré-remplit le sujet avec
-// "Re: ...". L'utilisateur choisit ensuite le destinataire interne
-// à qui transmettre sa réponse (admin/directeur de crise).
-function msgReply(id, nom) {
-  msgOpenCompose().then(() => {
-    const sujetEl = document.getElementById('msg-compose-sujet');
-    const bodyEl  = document.getElementById('msg-compose-body');
-    if (sujetEl) sujetEl.value = 'Re: ' + (nom ? 'message de ' + nom : 'votre message');
-    // Pré-remplir le corps avec un contexte clair pour l'animateur/joueur
-    // si l'émetteur est un acteur externe identifié (ARS/CERT/SAMU/CHU/...)
-    const externes = ['ARS','CERT','SAMU','CHU','CH ','CELLULE','PRÉFET','ANSSI','MINISTÈRE'];
-    const isExterne = nom && externes.some(e => nom.toUpperCase().includes(e));
-    if (isExterne && bodyEl && !bodyEl.value) {
-      bodyEl.value =
-        `[Réponse destinée à ${nom} — sera vue par la cellule de crise pour validation avant envoi effectif]\n\n`;
+async function msgCheckPluginAvailable() {
+  try {
+    const r = await apiFetch('/api/v1/messagerie/folders?canal=interne');
+    if (r.status === 404) {
+      console.error('[messagerie] Plugin NON CHARGÉ côté serveur. ' +
+                    'Vérifier les logs Python : probablement python-multipart manquante. ' +
+                    'Exécuter : pip install python-multipart && relancer SCRIBE.');
+      return false;
     }
-    // Signaler visuellement dans le modal que c'est une réponse externe
-    const hint = document.getElementById('msg-compose-externe-hint');
-    if (hint) {
-      if (isExterne) {
-        hint.style.display = 'block';
-        hint.innerHTML = '💡 <strong>Message externe</strong> — Le destinataire d\'origine (' +
-          (nom || 'acteur externe') + ') n\'est pas un compte SCRIBE. ' +
-          'Sélectionnez un collègue interne à qui transmettre votre projet de réponse ' +
-          'pour validation avant envoi par canal officiel (mail, téléphone, fax).';
-      } else {
-        hint.style.display = 'none';
-      }
-    }
-  });
+    return r.ok;
+  } catch(e) {
+    console.error('[messagerie] Erreur réseau check plugin :', e);
+    return false;
+  }
 }
 
-async function msgPollBadge() {
-  if (!authToken) return;
+function msgShowPluginErrorBanner() {
+  const listEl = document.getElementById('msg-list');
+  const detailEl = document.getElementById('msg-detail');
+  const sidebar = document.getElementById('msg-sidebar');
+
+  const banner = `
+    <div style="margin:14px;padding:14px 18px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-left:4px solid #ef4444;border-radius:6px;font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--text)">
+      <div style="font-size:13px;font-weight:700;color:#ef4444;margin-bottom:8px">⚠ Plugin messagerie non chargé côté serveur</div>
+      <div style="margin-bottom:8px">Les routes <code>/api/v1/messagerie/*</code> retournent 404.</div>
+      <div style="font-weight:700;margin-top:10px;margin-bottom:4px">Cause probable :</div>
+      <div>La dépendance Python <code>python-multipart</code> est manquante sur le serveur.</div>
+      <div style="font-weight:700;margin-top:10px;margin-bottom:4px">Action requise (côté admin VPS) :</div>
+      <div style="background:var(--surface2);padding:8px 12px;border-radius:4px;margin-top:4px;font-family:var(--mono);font-size:10px">
+        <div>1. pip install python-multipart</div>
+        <div>2. ou : pip install -r requirements.txt</div>
+        <div>3. Redémarrer SCRIBE : pkill -f main.py &amp;&amp; bash lancer_scribe.sh</div>
+        <div>4. Vérifier au démarrage les logs : "[messagerie] Plugin v3.6.0-alpha* chargé ✓"</div>
+      </div>
+      <div style="margin-top:12px;font-size:10px;color:var(--muted)">
+        Diagnostic auto : si les logs serveur disent "<b>DÉPENDANCE MANQUANTE</b>", c'est confirmé.<br>
+        Une fois corrigé, recharger cette page avec <kbd>Ctrl+Shift+R</kbd> pour vider le cache.
+      </div>
+    </div>
+  `;
+  if (listEl) listEl.innerHTML = '';
+  if (detailEl) detailEl.innerHTML = banner;
+}
+
+// ─── Dossiers personnels ────────────────────────────────────────────────────
+async function msgLoadPersonalFolders() {
   try {
-    const r = await apiFetch('/api/v1/messagerie/non-lus', { headers: authHeaders() });
+    const r = await apiFetch('/api/v1/messagerie/folders?canal=' + _msgState.canal);
+    if (!r.ok) { _msgState.personalFolders = []; }
+    else { const d = await r.json(); _msgState.personalFolders = d.folders || []; }
+  } catch(e) { _msgState.personalFolders = []; }
+  msgRenderPersonalFolders();
+}
+
+function msgRenderPersonalFolders() {
+  const container = document.getElementById('msg-personal-folders-' + _msgState.canal);
+  if (!container) return;
+  const folders = _msgState.personalFolders.filter(f => f.canal === _msgState.canal);
+  if (!folders.length) { container.innerHTML = ''; return; }
+  container.innerHTML = folders.map(f => {
+    const icon = f.icon || '📁';
+    const safeName = String(f.nom).replace(/</g, '&lt;');
+    const safeIcon = String(icon).replace(/</g, '&lt;');
+    const active = (_msgState.box === 'folder' && _msgState.folderId === f.id) ? 'active' : '';
+    return `<button class="msg-folder-btn ${active}" 
+                onclick="msgSelectFolder(${f.id}, this)"
+                data-folder-id="${f.id}">
+        <span class="msg-fb-ic">${safeIcon}</span>
+        <span class="msg-fb-lbl">${safeName}</span>
+        <span class="msg-fb-count" id="msg-cnt-folder-${f.id}"></span>
+      </button>`;
+  }).join('');
+}
+
+async function msgPromptNewFolder(canal) {
+  const name = prompt(t('messagerie.prompt_new_folder', 'Nom du nouveau dossier ?'));
+  if (!name || !name.trim()) return;
+  try {
+    const r = await apiFetch('/api/v1/messagerie/folders', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ nom: name.trim(), canal: canal, icon: '📁' })
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      alert(t('messagerie.err_folder', 'Erreur : ') + (err.detail || r.statusText));
+      return;
+    }
+    await msgLoadPersonalFolders();
+    await msgLoadCounters();
+  } catch(e) { alert('Erreur : ' + e.message); }
+}
+
+// ─── Compteurs (badges sidebar) ─────────────────────────────────────────────
+async function msgLoadCounters() {
+  try {
+    const r = await apiFetch('/api/v1/messagerie/messages/counters?canal=' + _msgState.canal);
     if (!r.ok) return;
-    const d = await r.json();
+    const c = await r.json();
+    // Boîtes standards
+    _msgSetCounter('inbox',     c.inbox_unread, c.inbox);
+    _msgSetCounter('sent',      0,              c.sent);
+    _msgSetCounter('drafts',    0,              c.drafts);
+    _msgSetCounter('important', 0,              c.important);
+    _msgSetCounter('trash',     0,              c.trash);
+    // Dossiers persos
+    Object.keys(c.folders || {}).forEach(fid => {
+      const el = document.getElementById('msg-cnt-folder-' + fid);
+      if (el) {
+        const n = c.folders[fid];
+        el.textContent = n > 0 ? String(n) : '';
+      }
+    });
+    // Badge global onglet (= inbox non lus)
     const badge = document.getElementById('msg-badge');
-    if (badge) { if (d.count > 0) { badge.textContent = d.count; badge.style.display = 'inline'; } else { badge.style.display = 'none'; } }
+    if (badge) {
+      if (c.inbox_unread > 0) { badge.textContent = c.inbox_unread; badge.style.display = 'inline'; }
+      else { badge.style.display = 'none'; }
+    }
   } catch(e) {}
 }
 
-// Poll badge toutes les 30s
+function _msgSetCounter(box, unread, total) {
+  const el = document.getElementById(`msg-cnt-${_msgState.canal}-${box}`);
+  if (!el) return;
+  // Pour inbox on affiche le NON LU en gras ; pour les autres c'est le total
+  if (box === 'inbox') {
+    if (unread > 0) { el.textContent = String(unread); el.style.fontWeight = '700'; }
+    else if (total > 0) { el.textContent = String(total); el.style.fontWeight = '400'; }
+    else { el.textContent = ''; }
+  } else {
+    el.textContent = (total > 0) ? String(total) : '';
+    el.style.fontWeight = '400';
+  }
+}
+
+// ─── Sélection d'une boîte virtuelle ───────────────────────────────────────
+function msgSelectBox(canal, box, btnEl) {
+  _msgState.canal = canal;
+  _msgState.box = box;
+  _msgState.folderId = null;
+  _msgState.currentId = null;
+  // Active state visuel
+  document.querySelectorAll(`.msg-folders[data-canal="${canal}"] .msg-folder-btn`).forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  msgLoadList();
+  msgClearDetail();
+}
+
+function msgSelectFolder(folderId, btnEl) {
+  _msgState.box = 'folder';
+  _msgState.folderId = folderId;
+  _msgState.currentId = null;
+  document.querySelectorAll(`.msg-folders[data-canal="${_msgState.canal}"] .msg-folder-btn`).forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  msgLoadList();
+  msgClearDetail();
+}
+
+// ─── Recherche ──────────────────────────────────────────────────────────────
+function msgScheduleSearch() {
+  if (_msgState.searchTimer) clearTimeout(_msgState.searchTimer);
+  _msgState.searchTimer = setTimeout(() => {
+    const input = document.getElementById('msg-search');
+    _msgState.search = (input.value || '').trim();
+    msgLoadList();
+  }, 300);
+}
+
+// ─── Liste des messages ─────────────────────────────────────────────────────
+async function msgLoadList() {
+  const listEl = document.getElementById('msg-list');
+  if (!listEl) return;
+  listEl.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:24px;text-align:center">${t('messagerie.loading','Chargement…')}</div>`;
+
+  const params = new URLSearchParams({
+    canal:  _msgState.canal,
+    box:    _msgState.box,
+    limit:  '100',
+  });
+  if (_msgState.box === 'folder' && _msgState.folderId) params.set('folder_id', String(_msgState.folderId));
+  if (_msgState.search) params.set('search', _msgState.search);
+
+  try {
+    const r = await apiFetch('/api/v1/messagerie/messages?' + params.toString());
+    if (!r.ok) {
+      listEl.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:24px;text-align:center">${t('messagerie.error_loading','Erreur chargement')} (${r.status})</div>`;
+      return;
+    }
+    const data = await r.json();
+    if (!data.messages || !data.messages.length) {
+      const emptyMsg = _msgGetEmptyLabel();
+      listEl.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:40px;text-align:center;opacity:.6">${emptyMsg}</div>`;
+      return;
+    }
+    listEl.innerHTML = data.messages.map(m => _msgRenderListItem(m)).join('');
+  } catch(e) {
+    listEl.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:#ef4444;padding:24px">${e.message}</div>`;
+  }
+}
+
+function _msgGetEmptyLabel() {
+  const labels = {
+    inbox:     t('messagerie.empty_inbox',     'Aucun message dans la boîte'),
+    sent:      t('messagerie.empty_sent',      'Aucun message envoyé'),
+    drafts:    t('messagerie.empty_drafts',    'Aucun brouillon'),
+    important: t('messagerie.empty_important', 'Aucun message important'),
+    trash:     t('messagerie.empty_trash',     'Corbeille vide'),
+    folder:    t('messagerie.empty_folder',    'Dossier vide'),
+  };
+  return labels[_msgState.box] || labels.inbox;
+}
+
+function _msgRenderListItem(m) {
+  const isUnread = !m.lu && m.is_inbox;
+  const isActive = (m.id === _msgState.currentId);
+  const cls = ['msg-list-item'];
+  if (isUnread) cls.push('unread');
+  if (isActive) cls.push('active');
+
+  // Pour Envoyés/Brouillons : afficher le destinataire ; sinon l'expéditeur
+  let fromOrTo = '—';
+  if (_msgState.box === 'sent' || _msgState.box === 'drafts') {
+    const destNames = (m.destinataires || []).map(d => d.display || d.value).join(', ');
+    fromOrTo = destNames || '—';
+  } else {
+    fromOrTo = m.expediteur_nom || m.expediteur_addr || '—';
+  }
+
+  // v3000h42 — parseUTC() : les dates serveur sont en UTC sans 'Z'. new Date()
+  // les interprétait en heure locale → décalage H-2 (CEST). parseUTC corrige.
+  const dateStr = m.created_at ? parseUTC(m.created_at).toLocaleString(t('locale','fr-FR'), 
+    {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+  const safeFrom    = String(fromOrTo).replace(/</g, '&lt;');
+  const safeSubject = String(m.sujet || '(sans objet)').replace(/</g, '&lt;');
+  const safePreview = String(m.preview || '').replace(/</g, '&lt;');
+
+  let flags = '';
+  if (m.flag_important) flags += '⭐';
+  if (m.attachments_count > 0) flags += '📎';
+
+  return `<div class="${cls.join(' ')}" onclick="msgOpenDetail(${m.id})">
+    <div class="msg-list-from">
+      <span>${safeFrom}</span>
+      <span class="msg-list-date">${dateStr}</span>
+    </div>
+    <div class="msg-list-subject">${safeSubject} <span class="msg-list-flags">${flags}</span></div>
+    <div class="msg-list-preview">${safePreview}</div>
+  </div>`;
+}
+
+// ─── Détail d'un message ────────────────────────────────────────────────────
+async function msgOpenDetail(msgId) {
+  _msgState.currentId = msgId;
+  // Marquer visuellement active dans la liste
+  document.querySelectorAll('#msg-list .msg-list-item').forEach(it => it.classList.remove('active'));
+  // Pas évident sans data-attrib... on rerender la liste pour mettre l'active
+  // (suffisant à ce stade, économique)
+
+  const detailEl = document.getElementById('msg-detail');
+  if (!detailEl) return;
+  detailEl.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:24px">${t('messagerie.loading','Chargement…')}</div>`;
+
+  try {
+    const r = await apiFetch('/api/v1/messagerie/messages/' + msgId);
+    if (!r.ok) {
+      detailEl.innerHTML = `<div style="color:#ef4444;font-family:var(--mono);font-size:10px;padding:24px">${t('messagerie.error_loading','Erreur')} ${r.status}</div>`;
+      return;
+    }
+    const m = await r.json();
+    detailEl.innerHTML = _msgRenderDetail(m);
+
+    // Si je suis destinataire et non lu : marquer lu
+    if (m.is_inbox && !m.lu) {
+      apiFetch('/api/v1/messagerie/messages/' + msgId, {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ lu: true })
+      }).then(() => {
+        msgLoadCounters();
+        msgLoadList();   // pour mettre à jour le style (plus gras)
+      }).catch(()=>{});
+    }
+  } catch(e) {
+    detailEl.innerHTML = `<div style="color:#ef4444;font-family:var(--mono);font-size:10px;padding:24px">${e.message}</div>`;
+  }
+}
+
+function _msgRenderDetail(m) {
+  // v3000h42 — parseUTC() pour corriger le décalage H-2 (cf. _msgRenderListItem)
+  const dateStr = m.created_at ? parseUTC(m.created_at).toLocaleString(t('locale','fr-FR')) : '';
+  const safeFrom = String(m.expediteur_nom || '—').replace(/</g, '&lt;');
+  const safeSubject = String(m.sujet || '(sans objet)').replace(/</g, '&lt;');
+  // Destinataires
+  const destHtml = (m.destinataires || []).map(d => {
+    const display = String(d.display || d.value || '').replace(/</g, '&lt;');
+    return `<span style="background:rgba(0,49,137,.08);padding:2px 8px;border-radius:3px;font-size:10px">${display}</span>`;
+  }).join(' ');
+
+  // Contenu (préserver les retours à la ligne, échapper HTML)
+  const safeBody = String(m.contenu || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // Pièces jointes
+  let attachmentsHtml = '';
+  if (m.attachments && m.attachments.length) {
+    attachmentsHtml = `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">
+        📎 ${t('messagerie.attachments_label','PIÈCES JOINTES')} (${m.attachments.length})
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+      ${m.attachments.map(a => {
+        const safeName = String(a.nom).replace(/</g, '&lt;');
+        const size = _msgFormatSize(a.taille || 0);
+        if (a.kind === 'bluefiles' && a.bluefiles_short_link) {
+          return `<a href="${a.bluefiles_short_link}" target="_blank" rel="noopener" 
+              style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(0,49,137,.08);border:1px solid rgba(0,49,137,.2);border-radius:4px;font-family:var(--mono);font-size:10px;text-decoration:none;color:#003189">
+              🔒 <span style="flex:1">${safeName}</span><span style="font-size:9px">Bluefiles · ${size}</span></a>`;
+        }
+        return `<a href="/api/v1/messagerie/attachments/${a.id}" target="_blank" rel="noopener"
+            style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:10px;text-decoration:none;color:var(--text)">
+            📎 <span style="flex:1">${safeName}</span><span style="font-size:9px;color:var(--muted)">${size}</span></a>`;
+      }).join('')}
+      </div></div>`;
+  }
+
+  // Barre d'actions
+  const isInTrash = !!m.deleted_at;
+  let actionsHtml;
+  if (isInTrash) {
+    actionsHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button onclick="msgRestore(${m.id})" class="msg-action-btn" style="background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:#22c55e">
+        ↩ <span data-i18n="messagerie.restore">Restaurer</span>
+      </button>
+      <button onclick="msgPermanentDelete(${m.id})" class="msg-action-btn" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#ef4444">
+        🗑 <span data-i18n="messagerie.permanent_delete">Supprimer définitivement</span>
+      </button>
+    </div>`;
+  } else {
+    actionsHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button onclick="msgReply(${m.id})" class="msg-action-btn">↩ <span data-i18n="messagerie.reply">Répondre</span></button>
+      <button onclick="msgReplyAll(${m.id})" class="msg-action-btn">↩↩ <span data-i18n="messagerie.reply_all">Répondre à tous</span></button>
+      <button onclick="msgForward(${m.id})" class="msg-action-btn">↪ <span data-i18n="messagerie.forward">Transférer</span></button>
+      <button onclick="msgToggleImportant(${m.id}, ${!m.flag_important})" class="msg-action-btn">
+        ${m.flag_important ? '★' : '☆'} <span data-i18n="messagerie.important">Important</span>
+      </button>
+      <button onclick="msgClassify(${m.id})" class="msg-action-btn">📁 <span data-i18n="messagerie.classify">Classer</span></button>
+      <button onclick="msgSoftDelete(${m.id})" class="msg-action-btn" style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.2);color:#ef4444">
+        🗑 <span data-i18n="messagerie.delete">Supprimer</span>
+      </button>
+    </div>`;
+  }
+
+  return `
+    <style>
+      .msg-action-btn { font-family: var(--mono); font-size: 9px; padding: 5px 10px;
+        background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px;
+        color: var(--text); cursor: pointer; }
+      .msg-action-btn:hover { background: var(--surface); }
+    </style>
+    <div style="max-width:800px">
+      <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">
+        ${safeSubject} ${m.flag_important ? '<span style="color:#f59e0b">★</span>' : ''}
+      </div>
+      <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px">
+        <div style="flex:1">
+          <div style="color:var(--muted);font-size:9px;letter-spacing:1px;margin-bottom:3px" data-i18n="messagerie.from">DE</div>
+          <div style="color:var(--text);font-weight:700">${safeFrom}</div>
+        </div>
+        <div style="flex:2">
+          <div style="color:var(--muted);font-size:9px;letter-spacing:1px;margin-bottom:3px" data-i18n="messagerie.to">À</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">${destHtml || '<span style="color:var(--muted)">—</span>'}</div>
+        </div>
+        <div>
+          <div style="color:var(--muted);font-size:9px;letter-spacing:1px;margin-bottom:3px" data-i18n="messagerie.date">DATE</div>
+          <div style="color:var(--text)">${dateStr}</div>
+        </div>
+      </div>
+      <div style="padding:20px 0;font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-wrap:break-word">${safeBody}</div>
+      ${attachmentsHtml}
+      <div style="margin-top:24px;padding-top:14px;border-top:1px solid var(--border)">${actionsHtml}</div>
+    </div>
+  `;
+}
+
+function msgClearDetail() {
+  const detailEl = document.getElementById('msg-detail');
+  if (!detailEl) return;
+  detailEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--muted)">
+    <span style="font-size:48px;opacity:.25">✉️</span>
+    <span style="font-family:var(--mono);font-size:10px;letter-spacing:1px">${t('messagerie.select_message','Sélectionnez un message')}</span>
+  </div>`;
+}
+
+function _msgFormatSize(bytes) {
+  if (bytes < 1024) return bytes + ' o';
+  if (bytes < 1024*1024) return (bytes / 1024).toFixed(1) + ' Ko';
+  if (bytes < 1024*1024*1024) return (bytes / 1024 / 1024).toFixed(1) + ' Mo';
+  return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' Go';
+}
+
+// ─── Actions sur un message ────────────────────────────────────────────────
+async function msgReply(msgId) {
+  const r = await apiFetch('/api/v1/messagerie/messages/' + msgId + '/reply', { method: 'POST' });
+  if (!r.ok) { alert(t('messagerie.error_loading','Erreur')); return; }
+  const ctx = await r.json();
+  msgOpenComposeWithContext('reply', msgId, ctx);
+}
+
+async function msgReplyAll(msgId) {
+  const r = await apiFetch('/api/v1/messagerie/messages/' + msgId + '/reply-all', { method: 'POST' });
+  if (!r.ok) { alert(t('messagerie.error_loading','Erreur')); return; }
+  const ctx = await r.json();
+  msgOpenComposeWithContext('reply-all', msgId, ctx);
+}
+
+async function msgForward(msgId) {
+  const r = await apiFetch('/api/v1/messagerie/messages/' + msgId + '/forward', { method: 'POST' });
+  if (!r.ok) { alert(t('messagerie.error_loading','Erreur')); return; }
+  const ctx = await r.json();
+  msgOpenComposeWithContext('forward', msgId, ctx);
+}
+
+async function msgToggleImportant(msgId, newValue) {
+  await apiFetch('/api/v1/messagerie/messages/' + msgId, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ flag_important: newValue }),
+  });
+  msgLoadCounters();
+  msgLoadList();
+  msgOpenDetail(msgId);
+}
+
+async function msgClassify(msgId) {
+  // Récupère les dossiers persos du canal courant
+  const folders = _msgState.personalFolders.filter(f => f.canal === _msgState.canal);
+  if (!folders.length) {
+    if (confirm(t('messagerie.no_folders_prompt','Aucun dossier personnel. En créer un ?'))) {
+      await msgPromptNewFolder(_msgState.canal);
+    }
+    return;
+  }
+  const options = folders.map(f => `${f.id} : ${f.icon || '📁'} ${f.nom}`).join('\n');
+  const choice = prompt(t('messagerie.classify_prompt','Dans quel dossier ?\n') + '\n' + options + '\n\n(saisir l\'ID, ou 0 pour décrocher)');
+  if (choice === null) return;
+  const folderId = parseInt(choice, 10);
+  if (isNaN(folderId)) { alert(t('messagerie.invalid_id','ID invalide')); return; }
+  await apiFetch('/api/v1/messagerie/messages/' + msgId, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ folder_id: folderId }),
+  });
+  msgLoadCounters();
+  msgLoadList();
+}
+
+async function msgSoftDelete(msgId) {
+  if (!confirm(t('messagerie.confirm_delete','Placer ce message dans la corbeille ?'))) return;
+  await apiFetch('/api/v1/messagerie/messages/' + msgId, { method: 'DELETE' });
+  _msgState.currentId = null;
+  msgClearDetail();
+  msgLoadCounters();
+  msgLoadList();
+}
+
+async function msgRestore(msgId) {
+  await apiFetch('/api/v1/messagerie/messages/' + msgId + '/restore', { method: 'POST' });
+  _msgState.currentId = null;
+  msgClearDetail();
+  msgLoadCounters();
+  msgLoadList();
+}
+
+async function msgPermanentDelete(msgId) {
+  if (!confirm(t('messagerie.confirm_perm_delete','Suppression DÉFINITIVE — les pièces jointes seront effacées. Confirmer ?'))) return;
+  await apiFetch('/api/v1/messagerie/messages/' + msgId + '/permanent', { method: 'DELETE' });
+  _msgState.currentId = null;
+  msgClearDetail();
+  msgLoadCounters();
+  msgLoadList();
+}
+
+// ─── Composer ──────────────────────────────────────────────────────────────
+async function msgOpenCompose(prefillUserId, prefillSite) {
+  await msgComposeInit();
+  _msgState.composeMode = 'new';
+  _msgState.composeOriginalId = null;
+  _msgState.composeRecipients = [];
+  _msgState.composeAttachments = [];
+
+  document.getElementById('msg-compose-title-icon').textContent = '✏️';
+  document.getElementById('msg-compose-title').textContent = t('messagerie.compose_new','NOUVEAU MESSAGE');
+  document.getElementById('msg-compose-subject').value = '';
+  document.getElementById('msg-compose-body').value    = '';
+  document.getElementById('msg-compose-reply-to').value = '';
+  document.getElementById('msg-compose-thread-id').value = '';
+  document.getElementById('msg-compose-msg').style.display = 'none';
+
+  if (prefillUserId) {
+    const user = _msgState.allUsers.find(u => u.id === prefillUserId);
+    if (user) {
+      _msgState.composeRecipients.push({type:'user', value:user.id, display: user.display_name || user.username});
+    }
+  }
+  msgComposeRenderRecipients();
+  msgComposeRenderAttachments();
+  msgComposeUpdateBluefilesBtn();
+
+  document.getElementById('msg-modal-compose').style.display = 'flex';
+  if (typeof applyI18nDOM === 'function') applyI18nDOM();
+  setTimeout(() => document.getElementById('msg-compose-subject').focus(), 50);
+}
+
+async function msgOpenComposeWithContext(mode, originalId, ctx) {
+  await msgComposeInit();
+  _msgState.composeMode = mode;
+  _msgState.composeOriginalId = originalId;
+  _msgState.composeRecipients = ctx.destinataires || [];
+  _msgState.composeAttachments = [];
+
+  const titleIcons = { 'reply':'↩', 'reply-all':'↩↩', 'forward':'↪' };
+  const titleLabels = {
+    'reply':     t('messagerie.compose_reply',     'RÉPONDRE'),
+    'reply-all': t('messagerie.compose_reply_all', 'RÉPONDRE À TOUS'),
+    'forward':   t('messagerie.compose_forward',   'TRANSFÉRER'),
+  };
+  document.getElementById('msg-compose-title-icon').textContent = titleIcons[mode] || '✏️';
+  document.getElementById('msg-compose-title').textContent = titleLabels[mode] || t('messagerie.compose_new','NOUVEAU MESSAGE');
+  document.getElementById('msg-compose-subject').value = ctx.sujet || '';
+  document.getElementById('msg-compose-body').value    = ctx.quote || '';
+  document.getElementById('msg-compose-reply-to').value = ctx.reply_to_id || '';
+  document.getElementById('msg-compose-thread-id').value = ctx.thread_id || '';
+  document.getElementById('msg-compose-msg').style.display = 'none';
+
+  msgComposeRenderRecipients();
+  msgComposeRenderAttachments();
+  msgComposeUpdateBluefilesBtn();
+
+  document.getElementById('msg-modal-compose').style.display = 'flex';
+  if (typeof applyI18nDOM === 'function') applyI18nDOM();
+  setTimeout(() => document.getElementById('msg-compose-body').focus(), 50);
+}
+
+async function msgComposeInit() {
+  // Charge la liste des users si pas encore fait
+  if (_msgState.allUsers.length) {
+    console.log('[messagerie] users déjà chargés (' + _msgState.allUsers.length + ')');
+    return;
+  }
+  try {
+    console.log('[messagerie] Chargement liste users via /api/v1/auth/users …');
+    const r = await apiFetch('/api/v1/auth/users');
+    if (!r.ok) {
+      console.error('[messagerie] /api/v1/auth/users a retourné', r.status, '→ picker vide');
+      return;
+    }
+    const users = await r.json();
+    _msgState.allUsers = (users || []).filter(u => u.active !== false);
+    console.log('[messagerie] ' + _msgState.allUsers.length + ' users chargés');
+    const picker = document.getElementById('msg-compose-user-picker');
+    if (!picker) {
+      console.warn('[messagerie] #msg-compose-user-picker introuvable dans le DOM');
+      return;
+    }
+    // h69 — Charger aussi l'annuaire fédéré (agents des AUTRES établissements
+    // synchronisés, via le collecteur). Best-effort.
+    try {
+      const rf = await apiFetch('/api/v1/messagerie/correspondants-federes');
+      if (rf.ok) { const jf = await rf.json(); _msgState.fedEtabs = (jf && jf.etablissements) || []; }
+      else { _msgState.fedEtabs = []; }
+    } catch(e) { _msgState.fedEtabs = []; }
+    msgComposeRenderPicker('');
+    console.log('[messagerie] picker peuplé (local + ' +
+                ((_msgState.fedEtabs||[]).length) + ' établissement(s) fédéré(s))');
+  } catch(e) {
+    console.error('[messagerie] Erreur msgComposeInit :', e);
+  }
+}
+
+/** h69 — (Re)construit les options du picker de destinataires, filtrées par
+ *  `filter`. Agents locaux + agents fédérés groupés par établissement (optgroup
+ *  = affichage nested natif). Le champ de recherche appelle cette fonction. */
+function msgComposeRenderPicker(filter) {
+  const picker = document.getElementById('msg-compose-user-picker');
+  if (!picker) return;
+  const q = (filter || '').trim().toLowerCase();
+  const match = (s) => !q || String(s || '').toLowerCase().includes(q);
+  const esc = (s) => String(s||'').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  const opts = ['<option value="">' + t('messagerie.select_user','— Sélectionner un correspondant —') + '</option>'];
+  if (match('supervision'))
+    opts.push('<option value="SUPERVISION">📡 ' + t('messagerie.supervision_label','Supervision') + '</option>');
+  // Agents locaux
+  const locaux = (_msgState.allUsers || [])
+    .filter(u => u.id !== (currentUser && currentUser.id))
+    .filter(u => match(u.display_name) || match(u.username))
+    .sort((a,b) => (a.display_name||a.username).localeCompare(b.display_name||b.username));
+  if (locaux.length) {
+    opts.push('<optgroup label="' + esc(t('messagerie.mon_etablissement','Mon établissement')) + '">');
+    locaux.forEach(u => {
+      const label = (u.display_name || u.username) + ' (' + u.username + ')';
+      opts.push('<option value="' + u.id + '">' + esc(label) + '</option>');
+    });
+    opts.push('</optgroup>');
+  }
+  // Agents fédérés, groupés par établissement
+  (_msgState.fedEtabs || []).forEach(etb => {
+    const agents = (etb.agents || []).filter(a =>
+      match(a.display_name) || match(a.username) || match(etb.sigle) || match(etb.nom));
+    if (!agents.length) return;
+    opts.push('<optgroup label="' + esc(etb.sigle + ' — ' + (etb.nom||'')) + '">');
+    agents.forEach(a => {
+      const label = (a.display_name || a.username) + ' (' + a.username + ')';
+      const val = 'fed:' + etb.sigle + ':' + a.username;
+      opts.push('<option value="' + esc(val) + '">' + esc(label) + '</option>');
+    });
+    opts.push('</optgroup>');
+  });
+  picker.innerHTML = opts.join('');
+}
+
+function msgComposeAddUser() {
+  const picker = document.getElementById('msg-compose-user-picker');
+  if (!picker) {
+    console.error('[messagerie] picker introuvable dans le DOM');
+    return;
+  }
+  // Cas 1 : picker pas peuplé (aucune option chargée)
+  if (picker.options.length <= 1) {
+    console.warn('[messagerie] Picker vide — aucun user chargé. Tentative de rechargement…');
+    msgComposeShowError(t('messagerie.err_no_users_loaded',
+      'Aucun correspondant chargé. Recharger la page (Ctrl+F5).'));
+    // Tentative de recharger
+    _msgState.allUsers = [];
+    msgComposeInit();
+    return;
+  }
+  // Cas 2 : utilisateur n'a rien sélectionné dans le dropdown
+  if (!picker.value || picker.value === '') {
+    console.warn('[messagerie] Aucune option sélectionnée — clic + Ajouter ignoré');
+    msgComposeShowError(t('messagerie.err_pick_first',
+      'Sélectionnez d\u2019abord un correspondant dans la liste déroulante.'));
+    // Mettre le focus sur le picker pour aider l'utilisateur
+    picker.focus();
+    return;
+  }
+  // v3000h45 — Destinataire virtuel SUPERVISION
+  if (picker.value === 'SUPERVISION') {
+    if (_msgState.composeRecipients.some(r => r.type === 'supervision')) {
+      msgComposeShowError(t('messagerie.err_already_added','Ce correspondant est déjà ajouté.'));
+      return;
+    }
+    _msgState.composeRecipients.push({type:'supervision', value:'SUPERVISION', display: t('messagerie.supervision_label','Supervision')});
+    picker.value = '';
+    msgComposeRenderRecipients();
+    const e0 = document.getElementById('msg-compose-msg'); if (e0) e0.style.display = 'none';
+    return;
+  }
+  // h69 — Agent nominatif d'un AUTRE établissement : value = "fed:SIGLE:username"
+  if (picker.value.indexOf('fed:') === 0) {
+    const parts = picker.value.split(':');
+    const etab = (parts[1] || '').toUpperCase();
+    const uname = parts.slice(2).join(':');
+    if (!etab || !uname) return;
+    if (_msgState.composeRecipients.some(r => r.type === 'agent_federe' && r.value === uname && r.etab === etab)) {
+      msgComposeShowError(t('messagerie.err_already_added','Ce correspondant est déjà ajouté.'));
+      return;
+    }
+    let disp = uname + ' · ' + etab;
+    (_msgState.fedEtabs || []).forEach(e => { if (e.sigle === etab) (e.agents||[]).forEach(a => {
+      if (a.username === uname) disp = (a.display_name || uname) + ' · ' + etab; }); });
+    _msgState.composeRecipients.push({type:'agent_federe', value:uname, etab:etab, display:disp});
+    picker.value = '';
+    msgComposeRenderRecipients();
+    const ef = document.getElementById('msg-compose-msg'); if (ef) ef.style.display = 'none';
+    return;
+  }
+  const uid = parseInt(picker.value, 10);
+  if (!uid || isNaN(uid)) {
+    console.error('[messagerie] picker.value invalide :', picker.value);
+    return;
+  }
+  // Cas 3 : déjà ajouté
+  if (_msgState.composeRecipients.some(r => r.type === 'user' && r.value === uid)) {
+    msgComposeShowError(t('messagerie.err_already_added',
+      'Ce correspondant est déjà ajouté.'));
+    return;
+  }
+  // Trouve l'user dans la liste cached
+  const u = _msgState.allUsers.find(x => x.id === uid);
+  if (!u) {
+    console.error('[messagerie] User id', uid, 'introuvable dans allUsers (', _msgState.allUsers.length, 'users)');
+    msgComposeShowError(t('messagerie.err_user_not_found',
+      'Correspondant introuvable. Recharger la page.'));
+    return;
+  }
+  // OK, on ajoute
+  _msgState.composeRecipients.push({type:'user', value:uid, display: u.display_name || u.username});
+  picker.value = '';
+  msgComposeRenderRecipients();
+  // Effacer message d'erreur s'il y en avait
+  const errEl = document.getElementById('msg-compose-msg');
+  if (errEl) errEl.style.display = 'none';
+  console.log('[messagerie] Destinataire ajouté :', u.display_name || u.username);
+}
+
+function msgComposeRemoveRecipient(idx) {
+  _msgState.composeRecipients.splice(idx, 1);
+  msgComposeRenderRecipients();
+}
+
+// h77 — Canal mail : bascule interne/mail + ajout d'une adresse e-mail libre.
+function msgComposeSetCanal(v) {
+  const canal = (v === 'mail') ? 'mail' : 'interne';
+  const hid = document.getElementById('msg-compose-canal');
+  if (hid) hid.value = canal;
+  const row = document.getElementById('msg-compose-email-row');
+  if (row) row.style.display = (canal === 'mail') ? 'flex' : 'none';
+}
+
+function msgComposeAddEmail() {
+  const inp = document.getElementById('msg-compose-email');
+  if (!inp) return;
+  const addr = (inp.value || '').trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
+    msgComposeShowError(t('messagerie.err_bad_email', 'Adresse e-mail invalide.'));
+    return;
+  }
+  if (_msgState.composeRecipients.some(r => r.type === 'email' && String(r.value).toLowerCase() === addr.toLowerCase())) {
+    msgComposeShowError(t('messagerie.err_already_added', 'Ce correspondant est déjà ajouté.'));
+    return;
+  }
+  // Une adresse implique le canal mail : on bascule automatiquement.
+  const sel = document.getElementById('msg-compose-canal-select');
+  if (sel && sel.value !== 'mail') { sel.value = 'mail'; }
+  msgComposeSetCanal('mail');
+  _msgState.composeRecipients.push({ type: 'email', value: addr, display: addr });
+  inp.value = '';
+  msgComposeRenderRecipients();
+  const errEl = document.getElementById('msg-compose-msg');
+  if (errEl) errEl.style.display = 'none';
+}
+
+window.msgComposeSetCanal = msgComposeSetCanal;
+window.msgComposeAddEmail = msgComposeAddEmail;
+
+function msgComposeRenderRecipients() {
+  const container = document.getElementById('msg-compose-recipients');
+  if (!container) return;
+  if (!_msgState.composeRecipients.length) {
+    container.innerHTML = `<span style="font-family:var(--mono);font-size:9px;color:var(--muted);font-style:italic">${t('messagerie.no_recipients','Aucun destinataire')}</span>`;
+    return;
+  }
+  container.innerHTML = _msgState.composeRecipients.map((r, i) => {
+    const safe = String(r.display || r.value).replace(/</g, '&lt;');
+    const icon = r.type === 'user' ? '💬' : (r.type === 'email' ? '📧' : '📱');
+    return `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(0,49,137,.1);color:#003189;font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:3px">
+      ${icon} ${safe}
+      <button onclick="msgComposeRemoveRecipient(${i})" type="button"
+              style="background:none;border:none;color:#003189;cursor:pointer;font-size:11px;padding:0 0 0 4px;line-height:1">×</button>
+    </span>`;
+  }).join('');
+}
+
+function msgComposeHandleFiles(filesList) {
+  if (!filesList || !filesList.length) return;
+  const MAX_ATT = 10, MAX_SIZE = 10*1024*1024, MAX_TOTAL = 25*1024*1024;
+  let curTotal = _msgState.composeAttachments.reduce((s,f) => s + (f.size || 0), 0);
+  for (const f of filesList) {
+    if (_msgState.composeAttachments.length >= MAX_ATT) {
+      msgComposeShowError(t('messagerie.err_max_attachments','Maximum 10 pièces jointes.'));
+      break;
+    }
+    if (f.size > MAX_SIZE) {
+      msgComposeShowError(t('messagerie.err_pj_too_big','Pièce jointe trop grosse (max 10 Mo) : ') + f.name);
+      continue;
+    }
+    if (curTotal + f.size > MAX_TOTAL) {
+      msgComposeShowError(t('messagerie.err_total_too_big','Taille totale > 25 Mo. Utilisez plutôt Bluefiles pour les gros fichiers.'));
+      break;
+    }
+    _msgState.composeAttachments.push(f);
+    curTotal += f.size;
+  }
+  msgComposeRenderAttachments();
+}
+
+function msgComposeRemoveAttachment(idx) {
+  _msgState.composeAttachments.splice(idx, 1);
+  msgComposeRenderAttachments();
+}
+
+function msgComposeRenderAttachments() {
+  const container = document.getElementById('msg-compose-attachments');
+  if (!container) return;
+  if (!_msgState.composeAttachments.length) { container.innerHTML = ''; return; }
+  container.innerHTML = _msgState.composeAttachments.map((f, i) => {
+    const safe = String(f.name).replace(/</g, '&lt;');
+    const sizeStr = _msgFormatSize(f.size);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:10px">
+      <span>📎</span>
+      <span style="flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${safe}</span>
+      <span style="color:var(--muted);font-size:9px">${sizeStr}</span>
+      <button onclick="msgComposeRemoveAttachment(${i})" type="button"
+              style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 4px">×</button>
+    </div>`;
+  }).join('');
+}
+
+function msgComposeShowError(msg) {
+  const el = document.getElementById('msg-compose-msg');
+  if (!el) return;
+  el.style.display = 'block';
+  el.style.background = 'rgba(239,68,68,.1)';
+  el.style.border = '1px solid rgba(239,68,68,.3)';
+  el.style.color = '#ef4444';
+  el.textContent = '⚠ ' + msg;
+}
+
+function msgComposeShowInfo(msg) {
+  const el = document.getElementById('msg-compose-msg');
+  if (!el) return;
+  el.style.display = 'block';
+  el.style.background = 'rgba(0,49,137,.08)';
+  el.style.border = '1px solid rgba(0,49,137,.3)';
+  el.style.color = '#003189';
+  el.textContent = msg;
+}
+
+function msgComposeUpdateBluefilesBtn() {
+  // Affiche le bouton Bluefiles uniquement si le plugin est chargé (mode dev ou live)
+  const btn = document.getElementById('msg-compose-bluefiles-btn');
+  if (!btn) return;
+  if (typeof _bfPluginStatus !== 'undefined' && _bfPluginStatus && _bfPluginStatus.enabled !== false) {
+    btn.style.display = 'inline-flex';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+function msgComposeOpenBluefiles() {
+  // Délègue au plugin Bluefiles avec module="messagerie" et ref_id=0 (brouillon transitoire)
+  if (typeof bfOpenModal === 'function') {
+    // v3.6 — Bumper le z-index du bf-modal pour qu'il passe AU-DESSUS du composer messagerie
+    const bfModal = document.getElementById('bf-modal');
+    if (bfModal) { bfModal.style.zIndex = '10001'; }
+    const bfConfirm = document.getElementById('bf-confirm-modal');
+    if (bfConfirm) { bfConfirm.style.zIndex = '10002'; }
+    bfOpenModal('messagerie', 0, t('messagerie.compose_new','Nouveau message'));
+  } else {
+    alert(t('messagerie.bluefiles_unavailable','Plugin Bluefiles indisponible.'));
+  }
+}
+
+async function msgComposeSubmit(asDraft) {
+  // Validation
+  if (!asDraft && !_msgState.composeRecipients.length) {
+    msgComposeShowError(t('messagerie.err_no_recipient','Ajoutez au moins un destinataire.'));
+    return;
+  }
+  const subject = document.getElementById('msg-compose-subject').value;
+  const body    = document.getElementById('msg-compose-body').value;
+  if (!asDraft && !subject.trim() && !body.trim()) {
+    msgComposeShowError(t('messagerie.err_empty','Le message est vide.'));
+    return;
+  }
+
+  // v3000h48 — Tous les destinataires (y compris « Supervision ») passent par le
+  // backend messagerie : le message est écrit dans Envoyés (avec PJ) et, si un
+  // destinataire supervision est présent, le serveur le livre au collecteur
+  // (qui fait tourner le même plugin messagerie). Plus de bypass client.
+  const fd = new FormData();
+  fd.append('canal', (document.getElementById('msg-compose-canal') || {}).value || 'interne');
+  fd.append('sujet',   subject);
+  fd.append('contenu', body);
+  fd.append('destinataires_json', JSON.stringify(_msgState.composeRecipients));
+  const replyTo = document.getElementById('msg-compose-reply-to').value;
+  if (replyTo) fd.append('reply_to_id', replyTo);
+  fd.append('draft', asDraft ? 'true' : 'false');
+  for (const f of _msgState.composeAttachments) fd.append('fichiers', f, f.name);
+
+  const sendBtn = document.getElementById('msg-compose-send-btn');
+  const draftBtn = document.getElementById('msg-compose-draft-btn');
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.style.opacity = '0.6'; }
+  if (draftBtn) { draftBtn.disabled = true; draftBtn.style.opacity = '0.6'; }
+  msgComposeShowInfo(t('messagerie.sending','⏳ Envoi en cours…'));
+
+  try {
+    const r = await apiFetch('/api/v1/messagerie/messages', { method: 'POST', body: fd });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      msgComposeShowError((err.detail || r.statusText));
+      return;
+    }
+    msgCloseCompose();
+    await msgLoadCounters();
+    if (asDraft) {
+      msgSelectBox('interne','drafts', document.querySelector('.msg-folder-btn[data-box="drafts"]'));
+    } else {
+      msgSelectBox('interne','sent', document.querySelector('.msg-folder-btn[data-box="sent"]'));
+    }
+  } catch(e) {
+    msgComposeShowError(e.message);
+  } finally {
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.style.opacity = '1'; }
+    if (draftBtn) { draftBtn.disabled = false; draftBtn.style.opacity = '1'; }
+  }
+}
+
+function msgCloseCompose() {
+  document.getElementById('msg-modal-compose').style.display = 'none';
+}
+
+// ─── Badge poll (compat) ───────────────────────────────────────────────────
+let _msgPrevUnread = null;  // v3000h42 — pour détecter l'arrivée de nouveaux messages
+async function msgPollBadge() {
+  if (!authToken) return;
+  try {
+    const r = await apiFetch('/api/v1/messagerie/non-lus');
+    if (!r.ok) return;
+    const d = await r.json();
+    const count = d.count || 0;
+    const badge = document.getElementById('msg-badge');
+    if (badge) {
+      if (count > 0) { badge.textContent = count; badge.style.display = 'inline'; }
+      else { badge.style.display = 'none'; }
+    }
+    // v3000h42 — Toast cliquable à l'arrivée d'un (ou plusieurs) message(s).
+    // On ne notifie que sur une AUGMENTATION du compteur (pas au 1er chargement,
+    // pas quand on lit des messages → le compteur baisse). Pas de toast si on est
+    // déjà sur l'onglet messagerie (on voit la liste se mettre à jour).
+    if (_msgPrevUnread !== null && count > _msgPrevUnread) {
+      const onMsgTab = document.getElementById('tab-messagerie')?.classList.contains('active');
+      if (!onMsgTab) {
+        const nNew = count - _msgPrevUnread;
+        const msg = nNew === 1
+          ? t('messagerie.toast_new_one', 'Nouveau message reçu')
+          : t('messagerie.toast_new_many', '{n} nouveaux messages reçus').replace('{n}', nNew);
+        notifyToast(msg, () => {
+          const btn = document.getElementById('tab-btn-messagerie');
+          openTab('tab-messagerie', btn);
+          try { msgSelectBox('interne', 'reception', null); } catch(e) {}
+        }, { icon: '✉' });
+      }
+    }
+    _msgPrevUnread = count;
+  } catch(e) {}
+}
+
 setInterval(msgPollBadge, 30000);
+
+// ═══════════════════════════════════════════════════════════════
+// SUPERVISION dans la messagerie — v3000h44 (additif, isolé)
+// Réutilise le transport collecteur existant (/api/messages, destinataire
+// "SUPERVISION") et le flux Bluefiles existant (bfOpenModal). Ne touche NI à
+// la messagerie locale (create_message, msg-list/detail) NI au cœur Bluefiles.
+// ═══════════════════════════════════════════════════════════════
+function msgSuperOpen(btn) {
+  const p3 = document.getElementById('msg-3panel');
+  const sp = document.getElementById('msg-super-panel');
+  if (p3) p3.style.display = 'none';
+  if (sp) sp.style.display = 'flex';
+  // état actif visuel sur les boutons de dossier
+  document.querySelectorAll('#msg-sidebar .msg-folder-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  msgSuperLoad();
+}
+function msgSuperBack() {
+  const p3 = document.getElementById('msg-3panel');
+  const sp = document.getElementById('msg-super-panel');
+  if (sp) sp.style.display = 'none';
+  if (p3) p3.style.display = 'flex';
+}
+
+async function _msgSuperColl() {
+  // Retourne {base, token} du collecteur, ou null si supervision indisponible.
+  if (!_fedStatus) { try { await loadFedStatus(); } catch(e) {} }
+  if (!_fedStatus || !_fedStatus.ready || !_fedStatus.collecteur_url) return null;
+  return {
+    base: _fedStatus.collecteur_url.replace('/api/push', ''),
+    token: _fedStatus.token || (window.SCRIBE_CONFIG?.federation?.token || '')
+  };
+}
+
+function _msgSuperRender(m, mine) {
+  const date = m.created_at ? parseUTC(m.created_at).toLocaleString(t('locale','fr-FR'),
+    {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+  const who = mine ? (currentUser?.display_name || t('messagerie.me','Moi'))
+                   : (m.expediteur_nom || m.expediteur || 'Supervision');
+  const align = mine ? 'margin-left:auto;background:#dbeafe' : 'background:var(--surface)';
+  const safe = (m.contenu || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+  const subj = m.sujet ? '<div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--muted2);margin-bottom:3px">' + String(m.sujet).replace(/</g,'&lt;') + '</div>' : '';
+  return '<div style="max-width:80%;' + align + ';border:1px solid var(--border2);border-radius:8px;padding:9px 12px;margin-bottom:8px">' +
+    '<div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:4px">' +
+      '<span style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--text)">' + String(who).replace(/</g,'&lt;') + '</span>' +
+      '<span style="font-family:var(--mono);font-size:8px;color:var(--muted)">' + date + '</span>' +
+    '</div>' + subj +
+    '<div style="font-size:12px;color:var(--text);line-height:1.5;white-space:normal">' + safe + '</div>' +
+  '</div>';
+}
+
+async function msgSuperLoad() {
+  const list = document.getElementById('msg-super-list');
+  if (!list) return;
+  list.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:30px;text-align:center">' + t('messagerie.loading','Chargement…') + '</div>';
+  const coll = await _msgSuperColl();
+  if (!coll) {
+    list.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:40px;text-align:center">⚠ ' + t('messagerie.super_unavailable','Supervision non configurée ou non joignable') + '</div>';
+    return;
+  }
+  const mySigle = (window.SCRIBE_CONFIG?.etablissement?.sigle || '').toUpperCase();
+  try {
+    const r = await fetch(coll.base + '/api/messages', { headers: { 'Authorization': 'Bearer ' + coll.token } });
+    if (!r.ok) { list.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:#f87171;padding:24px;text-align:center">Erreur ' + r.status + '</div>'; return; }
+    const data = await r.json();
+    const all = [...(data.received || []), ...(data.sent || [])];
+    // Conversation avec la SUPERVISION uniquement
+    const conv = all.filter(m =>
+      (m.expediteur === 'SUPERVISION' && (m.destinataire === mySigle || m.destinataire === 'TOUS')) ||
+      (m.destinataire === 'SUPERVISION' && m.expediteur === mySigle)
+    ).sort((a, b) => parseUTC(a.created_at) - parseUTC(b.created_at));
+    if (!conv.length) {
+      list.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:40px;text-align:center">' + t('messagerie.super_empty','Aucun échange avec la supervision pour le moment.') + '</div>';
+      return;
+    }
+    list.innerHTML = conv.map(m => _msgSuperRender(m, m.expediteur === mySigle)).join('');
+    list.scrollTop = list.scrollHeight;
+    // marquer comme lus (best-effort)
+    conv.filter(m => m.expediteur === 'SUPERVISION').forEach(m => {
+      fetch(coll.base + '/api/messages/' + m.id + '/lire', { method: 'PUT', headers: { 'Authorization': 'Bearer ' + coll.token } }).catch(() => {});
+    });
+    const badge = document.getElementById('msg-super-badge');
+    if (badge) { badge.textContent = ''; badge.style.display = 'none'; }
+  } catch(e) {
+    list.innerHTML = '<div style="font-family:var(--mono);font-size:10px;color:#f87171;padding:24px;text-align:center">' + t('errors.network','Erreur réseau') + '</div>';
+  }
+}
+
+async function msgSuperSend() {
+  const subjEl = document.getElementById('msg-super-subject');
+  const bodyEl = document.getElementById('msg-super-body');
+  const contenu = (bodyEl?.value || '').trim();
+  if (!contenu) { toast(t('messagerie.reply_empty','Message vide'), 'warn'); return; }
+  const coll = await _msgSuperColl();
+  if (!coll) { toast(t('messagerie.super_unavailable','Supervision non disponible'), 'warn'); return; }
+  try {
+    const r = await fetch(coll.base + '/api/messages', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + coll.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        destinataire: 'SUPERVISION',
+        sujet: (subjEl?.value || '').trim() || '(sans objet)',
+        contenu: contenu,
+        expediteur_nom: currentUser?.display_name || ''
+      })
+    });
+    if (r.ok) {
+      if (subjEl) subjEl.value = '';
+      if (bodyEl) bodyEl.value = '';
+      toast(t('messagerie.reply_sent','✓ Message envoyé'), 'ok');
+      msgSuperLoad();
+    } else {
+      toast(t('errors.send','Erreur envoi'), 'err');
+    }
+  } catch(e) { toast(t('errors.network','Erreur réseau'), 'err'); }
+}
+
+// v3000h45 — Relais d'un message vers la SUPERVISION via le collecteur.
+// Réutilisé par le compositeur messagerie quand « Supervision » est choisi.
+async function _msgRelaySupervision(subject, body) {
+  const coll = await _msgSuperColl();
+  if (!coll) return false;
+  try {
+    const r = await fetch(coll.base + '/api/messages', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + coll.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        destinataire: 'SUPERVISION',
+        sujet: (subject || '').trim() || '(sans objet)',
+        contenu: (body || '').trim(),
+        expediteur_nom: (typeof currentUser !== 'undefined' && currentUser?.display_name) || ''
+      })
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+function msgSuperAttachBluefiles() {
+  // Réutilise le flux Bluefiles existant, INTACT. Le fichier chiffré part vers
+  // la supervision via Bluefiles (HDS) ; le collecteur ne voit aucun fichier.
+  if (typeof bfOpenModal === 'function') {
+    const bfModal = document.getElementById('bf-modal');
+    if (bfModal) bfModal.style.zIndex = '10001';
+    const bfConfirm = document.getElementById('bf-confirm-modal');
+    if (bfConfirm) bfConfirm.style.zIndex = '10002';
+    bfOpenModal('supervision', 0, t('messagerie.supervision_label', 'Supervision'));
+  } else {
+    toast(t('messagerie.bluefiles_unavailable', 'Plugin Bluefiles indisponible.'), 'warn');
+  }
+}
+
+// Badge léger sur l'entrée Supervision (messages SUPERVISION non lus)
+async function msgSuperPollBadge() {
+  if (!authToken) return;
+  const coll = await _msgSuperColl();
+  if (!coll) return;
+  const mySigle = (window.SCRIBE_CONFIG?.etablissement?.sigle || '').toUpperCase();
+  try {
+    const r = await fetch(coll.base + '/api/messages', { headers: { 'Authorization': 'Bearer ' + coll.token } });
+    if (!r.ok) return;
+    const data = await r.json();
+    const unread = (data.received || []).filter(m =>
+      m.expediteur === 'SUPERVISION' &&
+      (m.destinataire === mySigle || m.destinataire === 'TOUS') &&
+      !(m.lu_par || []).includes(mySigle)
+    ).length;
+    const badge = document.getElementById('msg-super-badge');
+    if (badge) {
+      badge.textContent = unread > 0 ? String(unread) : '';
+      badge.style.display = unread > 0 ? 'inline' : 'none';
+    }
+  } catch(e) {}
+}
+setInterval(msgSuperPollBadge, 45000);
+
+
+// ═══════════════════════════════════════════════════════════════
 
 // Patch openTab pour charger messagerie/inter-ght
 
 // ═══════════════════════════════════════════════════════════════
 
 let _ightMode = 'demandes';
+let _ightMsgPrev = null;  // v3000h42 — suivi du nombre de messages supervision (toast/badge)
+let _ightMsgLastSeen = parseInt(localStorage.getItem('scribe_ight_msg_seen') || '0', 10) || 0;
 let _reponseCurrentDemId = null;
 
 function switchIGHT(mode, btn) {
@@ -9219,6 +11312,13 @@ function switchIGHT(mode, btn) {
   } else if (mode === 'messages') {
     if (msgsPane) msgsPane.style.display = 'flex';
     if (newBtn)   newBtn.style.display = 'none';
+    // v3000h42 — Marquer les messages supervision comme vus : clôt le badge
+    // du sous-onglet et évite qu'il réapparaisse au prochain poll.
+    _ightMsgLastSeen = Date.now();
+    try { localStorage.setItem('scribe_ight_msg_seen', String(_ightMsgLastSeen)); } catch(e) {}
+    _ightMsgPrev = 0;
+    const mb = document.getElementById('ight-msgs-badge');
+    if (mb) { mb.textContent = ''; mb.style.display = 'none'; }
     ightLoadMsgsCollecteur();
   }
 }
@@ -9227,7 +11327,7 @@ function switchIGHT(mode, btn) {
   const _prev = openTab;
   openTab = function(id, btn) {
     _prev(id, btn);
-    if (id === 'tab-messagerie') { msgLoad(); msgPollBadge(); }
+    if (id === 'tab-messagerie') { msgSuperBack(); msgLoad(); msgPollBadge(); msgSuperPollBadge(); }
     if (id === 'tab-declarations') {
       // Toujours ouvrir sur les demandes (déclarations de situation supprimées)
       const demBtn = document.getElementById('ight-tab-dem');
@@ -9352,10 +11452,37 @@ async function ightLoadDecl() {
 
 let _supervisionMsgReplyTo = null;
 
-async function ightReplySuperMsg(msgId, expediteur) {
+// v3000h42 — Réponse inter-GHT EN LIGNE (plus de window.prompt()).
+// Affiche un composer (textarea + Envoyer/Annuler) directement sous le message.
+function ightToggleReply(msgId, expediteur) {
+  const zone = document.getElementById('ightreply-' + msgId);
+  if (!zone) return;
+  if (zone.style.display !== 'none' && zone.dataset.open === '1') {
+    zone.style.display = 'none'; zone.dataset.open = '0'; zone.innerHTML = '';
+    return;
+  }
+  zone.dataset.exp = expediteur || '';
+  zone.innerHTML =
+    '<textarea id="ightreply-ta-' + msgId + '" rows="3" placeholder="' +
+      String(t('messagerie.reply_placeholder', 'Votre réponse…')).replace(/"/g,'&quot;') +
+      '" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:6px 8px;border:1px solid var(--border2);border-radius:4px;background:var(--surface2);color:var(--text);resize:vertical"></textarea>' +
+    '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px">' +
+      '<button onclick="ightToggleReply(' + msgId + ', this.closest(\'[id^=ightreply-]\').dataset.exp)" style="font-family:var(--mono);font-size:9px;padding:3px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">' + t('bluefiles.cancel','Annuler') + '</button>' +
+      '<button onclick="ightSendReply(' + msgId + ')" style="font-family:var(--mono);font-size:9px;padding:3px 12px;background:#003189;border:none;border-radius:4px;color:#fff;cursor:pointer">' + t('messagerie.send','Envoyer') + '</button>' +
+    '</div>';
+  zone.style.display = 'block'; zone.dataset.open = '1';
+  const ta = document.getElementById('ightreply-ta-' + msgId);
+  if (ta) ta.focus();
+}
+
+async function ightSendReply(msgId) {
+  const zone = document.getElementById('ightreply-' + msgId);
+  const ta = document.getElementById('ightreply-ta-' + msgId);
+  if (!ta) return;
+  const reponse = ta.value.trim();
+  if (!reponse) { toast(t('messagerie.reply_empty', 'Message vide'), 'warn'); return; }
+  const expediteur = zone ? (zone.dataset.exp || '') : '';
   _supervisionMsgReplyTo = msgId;
-  const reponse = prompt('Votre réponse à ' + expediteur + ' :');
-  if (!reponse || !reponse.trim()) return;
   if (!_fedStatus) await loadFedStatus();
   if (!_fedStatus?.ready || !_fedStatus?.collecteur_url) { toast('Supervision non disponible', 'warn'); return; }
   const collBase = _fedStatus.collecteur_url.replace('/api/push', '');
@@ -9368,12 +11495,12 @@ async function ightReplySuperMsg(msgId, expediteur) {
       body: JSON.stringify({
         destinataire: expediteur || 'TOUS',
         sujet: 'Re: message #' + msgId,
-        contenu: '[' + monSigle + '] ' + reponse.trim(),
+        contenu: '[' + monSigle + '] ' + reponse,
         expediteur_sigle: monSigle,
         reply_to: msgId
       })
     });
-    if (r.ok) { toast('✓ Réponse envoyée', 'ok'); ightLoadMsgsCollecteur(); }
+    if (r.ok) { toast(t('messagerie.reply_sent','✓ Réponse envoyée'), 'ok'); ightLoadMsgsCollecteur(); }
     else toast('Erreur envoi', 'err');
   } catch(e) { toast('Erreur réseau', 'err'); }
 }
@@ -9422,7 +11549,7 @@ async function ightLoadMsgsCollecteur() {
       const ml   = isReply ? 'margin-left:20px;' : '';
       const bg   = isReply ? 'var(--surface2)' : 'var(--surface)';
       const bdr  = isReply ? '1px solid var(--border)' : '1px solid var(--border2)';
-      return `<div style="${ml}background:${bg};border:${bdr};border-radius:6px;padding:10px 14px;margin-bottom:6px">
+      return `<div id="ightmsg-${m.id}" style="${ml}background:${bg};border:${bdr};border-radius:6px;padding:10px 14px;margin-bottom:6px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--text)">${who}</span>
@@ -9430,11 +11557,12 @@ async function ightLoadMsgsCollecteur() {
           </div>
           <div style="display:flex;align-items:center;gap:8px">
             <span style="font-family:var(--mono);font-size:8px;color:var(--muted)">${date}</span>
-            ${!isReply ? `<button onclick="ightReplySuperMsg(${m.id},'${(m.expediteur||'').replace(/'/g,'')}')" style="font-family:var(--mono);font-size:8px;padding:2px 8px;background:transparent;border:1px solid var(--border2);border-radius:3px;color:var(--muted);cursor:pointer">↩ Répondre</button>` : ''}
+            ${!isReply ? `<button data-exp="${(m.expediteur||'').replace(/"/g,'&quot;')}" onclick="ightToggleReply(${m.id}, this.getAttribute('data-exp'))" style="font-family:var(--mono);font-size:8px;padding:2px 8px;background:transparent;border:1px solid var(--border2);border-radius:3px;color:var(--muted);cursor:pointer">↩ ${t('messagerie.reply','Répondre')}</button>` : ''}
           </div>
         </div>
         <div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--muted2);margin-bottom:4px">${m.sujet || '(sans objet)'}</div>
         <div style="font-size:12px;color:var(--text);line-height:1.6;white-space:pre-wrap">${(m.contenu||'').replace(/</g,'&lt;')}</div>
+        ${!isReply ? `<div id="ightreply-${m.id}" style="display:none;margin-top:8px"></div>` : ''}
       </div>`;
     };
 
@@ -9654,12 +11782,16 @@ async function ightRepondre(id) {
 // ═══════════════════════════════════════════════════════════════
 
 function openForcedPasswordChange() {
+  const m = document.getElementById('modal-forced-pw');
+  // h67 — Si le modal est DÉJÀ ouvert, ne rien réinitialiser : sinon le polling
+  // de fond (qui prend des 403 PASSWORD_CHANGE_REQUIRED) rappelle cette fonction
+  // en boucle et efface les champs pendant la saisie.
+  if (m && m.style.display === 'flex') return;
   ['fpw-old','fpw-new','fpw-confirm'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
   const errEl = document.getElementById('fpw-err');
   if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
-  const m = document.getElementById('modal-forced-pw');
   if (m) m.style.display = 'flex';
   // v3.4 (h38n) — Réappliquer les traductions car le modal peut être ouvert
   // avant ou après le boot complet i18n. applyI18nDOM est idempotent.
@@ -9746,7 +11878,7 @@ async function submitForcedPw() {
 }
 
 async function importComptes() {
-  // v2.4.8.2 : le bon ID était "import-users-file" pas "import-file" (bug Example Territory)
+  // v2.4.8.2 : le bon ID était "import-users-file" pas "import-file" (bug terrain)
   const fileInput = document.getElementById('import-users-file');
   const resultEl  = document.getElementById('import-result');
   if (!fileInput || !fileInput.files || !fileInput.files[0]) {

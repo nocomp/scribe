@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SCRIBE v3.4.0-beta1 | Crisis OS</title>
+<title>SCRIBE v3.6.0-beta1 | Crisis OS</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="/api/config.js"></script>
-<link rel="stylesheet" href="/static/css/scribe.css">
+<link rel="stylesheet" href="/static/css/scribe.css?v=3000h88">
 
 </head>
 <body>
@@ -39,14 +39,14 @@
   </div>
 </div>
 
-<script src="/static/js/scribe.js"></script>
-<script src="/static/js/coach.js"></script>
+<script src="/static/js/scribe.js?v=3000h88"></script>
+<script src="/static/js/coach.js?v=3000h88"></script>
 
 <header id="main-header" style="display:none">
   <div class="header-top">
   <div class="brand">
     <img src="/static/logo-scribe.png" alt="SCRIBE" style="height:30px;width:auto;flex-shrink:0">
-    <span style="font-family:var(--mono);font-weight:300;font-size:9px;color:rgba(255,255,255,.6);letter-spacing:1px">v2.4.8.3</span>
+    <span style="font-family:var(--mono);font-weight:300;font-size:9px;color:rgba(255,255,255,.6);letter-spacing:1px">v3.6.0-beta1</span>
     <span id="etab-sigle" style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.8);margin-left:4px;letter-spacing:1px;padding:1px 6px;background:rgba(255,255,255,.15);border-radius:3px"></span>
   </div>
   <div class="header-right">
@@ -108,7 +108,10 @@
          désactivé depuis cette version (le chat natif couvre le besoin).
          Le bouton reste dans le DOM pour que l'auto-découverte puisse le
          ré-afficher si un admin réactive le plugin via l'admin → Plugins. -->
-    <button class="tab-btn" style="display:none" onclick="openTab('tab-declarations',this)" id="tab-btn-declarations" data-roles="cellule_crise,admin">📡 INTER-GHT<span id="ight-badge" style="display:none;margin-left:4px;background:#7c3aed;color:#fff;border-radius:8px;padding:0 5px;font-size:9px"></span></button>
+    <!-- v3000h88 — Onglet INTER-GHT retiré du HTML (le chat natif couvre le
+         besoin). Suppression du bouton pour qu'il ne réapparaisse jamais, quel
+         que soit le build/JS/état des plugins. Le conteneur tab-declarations
+         reste présent (orphelin, non atteignable) pour ne rien casser. -->
   </nav>
 </header>
 
@@ -265,7 +268,7 @@ window.changeLanguagePreference = function(code) {
             <div id="db-poles" style="display:flex;flex-direction:column;gap:7px"></div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">Example Network G7</div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">Supervision territoriale</div>
             <div id="db-g7" style="display:flex;flex-direction:column;gap:6px"></div>
           </div>
         </div>
@@ -313,10 +316,10 @@ window.changeLanguagePreference = function(code) {
       </div>
 
       <div class="form-row">
-        <div class="field" style="flex:1"><labeldata-i18n="incidents.etablissement">Établissement</label>
+        <div class="field" style="flex:1"><label data-i18n="incidents.etablissement">Établissement</label>
           <select id="site_id" onchange="loadUF()"><option value="">-- Établissement --</option></select>
         </div>
-        <div class="field" style="flex:1;position:relative"><labeldata-i18n="incidents.unite_fonct">Unité Fonct.</label>
+        <div class="field" style="flex:1;position:relative"><label data-i18n="incidents.unite_fonct">Unité Fonct.</label>
           <div style="display:flex;gap:4px;align-items:center">
             <div style="position:relative;flex:1">
               <input type="text" id="uf_search" placeholder="Code ou nom UF..." autocomplete="off"
@@ -334,12 +337,12 @@ window.changeLanguagePreference = function(code) {
         </div>
       </div>
 
-      <div class="field"><labeldata-i18n="incidents.declarant">Déclarant</label>
+      <div class="field"><label data-i18n="incidents.declarant">Déclarant</label>
         <input type="text" id="declarant_nom" placeholder="Nom du déclarant" data-i18n-placeholder="ph.nom_declarant" list="acteurs-generiques" autocomplete="off">
       </div>
 
       <div class="field">
-        <labeldata-i18n="incidents.niveau_urgence">Niveau d'urgence</label>
+        <label data-i18n="incidents.niveau_urgence">Niveau d'urgence</label>
         <div class="selector-row" id="urgency-selector">
           <button class="sel-btn sel-active" data-val="1" onclick="selectUrgency(this)" data-i18n="incidents.urgence.veille">1 VEILLE</button>
           <button class="sel-btn"            data-val="2" onclick="selectUrgency(this)" data-i18n="incidents.urgence.alerte">2 ALERTE</button>
@@ -385,7 +388,7 @@ window.changeLanguagePreference = function(code) {
       <div class="field"><label>Analyse — Impact ?</label>
         <textarea id="analyse" placeholder="Systèmes/services affectés..." data-i18n-placeholder="ph.systemes_affectes" rows="2"></textarea>
       </div>
-      <div class="field"><labeldata-i18n="incidents.moyens_engages">Moyens engagés</label>
+      <div class="field"><label data-i18n="incidents.moyens_engages">Moyens engagés</label>
         <textarea id="moyens_engages" placeholder="Ressources déployées..." data-i18n-placeholder="ph.ressources_deployees" rows="2"></textarea>
       </div>
 
@@ -416,7 +419,7 @@ window.changeLanguagePreference = function(code) {
         </div>
         <div class="jalon-tags" id="jalon-tags"></div>
         <div class="field" style="margin-top:7px">
-          <labeldata-i18n="incidents.resolution_dans">Résolution estimée dans</label>
+          <label data-i18n="incidents.resolution_dans">Résolution estimée dans</label>
           <select id="resolution-hours">
             <option value="">-- Durée --</option>
             <option value="0.5">30 min</option><option value="1">1 heure</option>
@@ -437,6 +440,7 @@ window.changeLanguagePreference = function(code) {
         <button class="btn-primary" onclick="submitIncident()">📡 DIFFUSER</button>
         <button class="btn-ai"      onclick="askAlbertForm()">🤖 ASSISTANT IA</button>
         <button style="font-family:var(--mono);font-size:9px;padding:4px 10px;background:rgba(0,207,255,.1);border:1px solid rgba(0,207,255,.3);border-radius:4px;color:var(--cyan);cursor:pointer" onclick="openNotifyModal()">✉️ NOTIFIER</button>
+        <button id="btn-sms-incident" style="font-family:var(--mono);font-size:9px;padding:4px 10px;background:rgba(22,163,74,.12);border:1px solid rgba(22,163,74,.4);border-radius:4px;color:#16a34a;cursor:pointer" onclick="openSmsIncidentModal()">📱 SMS</button>
       </div>
     </div>
   </aside>
@@ -701,8 +705,43 @@ window.changeLanguagePreference = function(code) {
   </div>
 </div>
 
+<!-- ══ MODAL SMS INCIDENT (h73) ══ -->
+<div id="sms-incident-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:540px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)">📱 NOTIFIER PAR SMS</span>
+      <button onclick="closeSmsIncidentModal()" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1">
+      <div>
+        <label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:4px">OBJET</label>
+        <input type="text" id="sms-inc-titre" maxlength="120" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:4px">MESSAGE (court — 1 SMS ≈ 160 caractères)</label>
+        <textarea id="sms-inc-msg" rows="3" maxlength="480" oninput="smsIncUpdateCount()" style="width:100%;font-family:var(--mono);font-size:11px;padding:7px 9px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);text-align:right" id="sms-inc-count"></div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <label style="font-family:var(--mono);font-size:8px;color:var(--muted)">DESTINATAIRES — uniquement les comptes avec téléphone configuré</label>
+          <button onclick="smsIncToggleAll()" id="sms-inc-toggle-all" style="font-family:var(--mono);font-size:8px;padding:2px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Tout cocher</button>
+        </div>
+        <div id="sms-inc-recipients" style="max-height:230px;overflow-y:auto;border:1px solid var(--border2);border-radius:4px;padding:6px">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:14px;text-align:center">Chargement…</div>
+        </div>
+      </div>
+      <div id="sms-inc-result" style="font-family:var(--mono);font-size:10px;display:none"></div>
+    </div>
+    <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+      <button onclick="closeSmsIncidentModal()" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">Annuler</button>
+      <button onclick="smsIncSend()" id="sms-inc-send-btn" style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:#16a34a;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:700">Envoyer SMS 📱</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL NOUVEAU TRANSFERT ══ -->
-<div class="modal-overlay" id="tr-modal" style="display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto" onclick="if(event.target===this)this.style.display='none'">
+<div class="modal-overlay" id="tr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto" onclick="if(event.target===this)this.style.display='none'">
   <div style="background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:640px;max-width:96vw;max-height:calc(100vh - 80px);display:flex;flex-direction:column;overflow:hidden;margin-bottom:16px">
     <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
       <div>
@@ -762,9 +801,146 @@ window.changeLanguagePreference = function(code) {
       <div><label style="font-family:var(--mono);font-size:8px;color:var(--muted);display:block;margin-bottom:3px" data-i18n="transferts.commentaire">COMMENTAIRE</label>
         <textarea id="tr-comment" style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);min-height:50px;resize:vertical"></textarea></div>
     </div>
-    <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0">
-      <button onclick="document.getElementById('tr-modal').style.display='none'" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer" data-i18n="transferts.annuler">Annuler</button>
-      <button onclick="trSave()" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">✓ Enregistrer</button>
+    <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;flex-shrink:0;align-items:center">
+      <!-- v3.5 (alpha1) — Bouton Bluefiles : visible UNIQUEMENT en mode édition
+           d'un transfert existant (donc tr-edit-id non vide) ET si plugin chargé.
+           bfShowOrHide() est appelé à l'ouverture du modal. -->
+      <button id="tr-bluefiles-btn" type="button" onclick="bfOpenModal('transfert', document.getElementById('tr-edit-id').value, _bfTransfertLabel())"
+              style="display:none;font-family:var(--mono);font-size:10px;padding:6px 12px;background:rgba(0,49,137,.08);color:#003189;border:1px solid rgba(0,49,137,.3);border-radius:4px;cursor:pointer;font-weight:700"
+              data-i18n="bluefiles.btn_joindre_dossier">
+        🔒 Joindre dossier sécurisé Bluefiles
+      </button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button onclick="document.getElementById('tr-modal').style.display='none'" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer" data-i18n="transferts.annuler">Annuler</button>
+        <button onclick="trSave()" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">✓ Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL BLUEFILES — ENVOI SÉCURISÉ ══ (v3.5 alpha1) -->
+<div class="modal-overlay" id="bf-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10005;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:680px;max-width:96vw;max-height:calc(100vh - 80px);display:flex;flex-direction:column;overflow:hidden;margin-bottom:16px">
+    <!-- Header -->
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#003189;color:white">
+      <div>
+        <div style="font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px">
+          🔒 <span data-i18n="bluefiles.modal_title">ENVOI SÉCURISÉ — BLUEFILES</span>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.7);margin-top:2px">
+          <span data-i18n="bluefiles.modal_subtitle">Hébergement HDS · Chiffrement bout-en-bout</span>
+          <span id="bf-mode-badge" style="margin-left:8px;background:rgba(255,206,0,.25);color:#FFCE00;padding:1px 6px;border-radius:3px;font-weight:700;display:none">DEV</span>
+        </div>
+      </div>
+      <button onclick="document.getElementById('bf-modal').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;line-height:1">✕</button>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:14px">
+      <input type="hidden" id="bf-module">
+      <input type="hidden" id="bf-ref-id">
+      <input type="hidden" id="bf-ref-label">
+
+      <!-- ── 1. Fichiers ────────────────────────────────────────────── -->
+      <div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted2);font-weight:700;letter-spacing:1px;margin-bottom:6px" data-i18n="bluefiles.section_files">📎 FICHIERS À ENVOYER</div>
+        <div id="bf-dropzone"
+             ondragover="event.preventDefault();this.style.borderColor='#003189';this.style.background='rgba(0,49,137,.05)'"
+             ondragleave="this.style.borderColor='var(--border2)';this.style.background='var(--surface2)'"
+             ondrop="event.preventDefault();this.style.borderColor='var(--border2)';this.style.background='var(--surface2)';bfHandleFiles(event.dataTransfer.files)"
+             onclick="document.getElementById('bf-file-input').click()"
+             style="border:2px dashed var(--border2);border-radius:6px;padding:24px;text-align:center;cursor:pointer;background:var(--surface2);transition:all 0.15s">
+          <div style="font-size:24px;margin-bottom:4px">📁</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--text)" data-i18n="bluefiles.dropzone_hint">Déposez vos fichiers ici · ou cliquez pour parcourir</div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px" data-i18n="bluefiles.dropzone_max">Maximum 4 Go par envoi · jusqu'à 50 fichiers</div>
+          <input type="file" id="bf-file-input" multiple style="display:none" onchange="bfHandleFiles(this.files)">
+        </div>
+        <div id="bf-files-list" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+
+      <!-- ── 2. Destinataires ──────────────────────────────────────── -->
+      <div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted2);font-weight:700;letter-spacing:1px;margin-bottom:6px" data-i18n="bluefiles.section_recipients">👥 DESTINATAIRES</div>
+        <div id="bf-recipients-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px"></div>
+        <div style="display:flex;gap:6px">
+          <input id="bf-recipient-input" type="email" placeholder="email@destinataire.fr" data-i18n-placeholder="bluefiles.email_placeholder"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();bfAddRecipient();}"
+                 style="flex:1;font-family:var(--mono);font-size:11px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+          <button onclick="bfAddRecipient()" type="button"
+                  style="font-family:var(--mono);font-size:10px;padding:6px 14px;background:rgba(0,49,137,.1);color:#003189;border:1px solid rgba(0,49,137,.3);border-radius:4px;cursor:pointer;font-weight:700"
+                  data-i18n="bluefiles.add_recipient">+ Ajouter</button>
+        </div>
+      </div>
+
+      <!-- ── 3. Politique ──────────────────────────────────────────── -->
+      <div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted2);font-weight:700;letter-spacing:1px;margin-bottom:6px" data-i18n="bluefiles.section_policy">⚙ POLITIQUE</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-family:var(--mono);font-size:10px">
+          <div>
+            <label style="display:block;color:var(--muted);font-size:9px;margin-bottom:3px" data-i18n="bluefiles.expiration_label">Expiration</label>
+            <select id="bf-expiration" style="width:100%;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+              <option value="3">3 jours</option>
+              <option value="7">7 jours</option>
+              <option value="15" selected>15 jours (max HDS)</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;justify-content:center">
+            <label style="display:flex;align-items:center;gap:6px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="bf-pwd-required" checked> <span data-i18n="bluefiles.password_required">Mot de passe destinataire</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;color:var(--text);cursor:pointer">
+              <input type="checkbox" id="bf-ar-enabled" checked> <span data-i18n="bluefiles.ar_enabled">Accusé de lecture</span>
+            </label>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <label style="display:block;font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:3px" data-i18n="bluefiles.comment_label">COMMENTAIRE (optionnel)</label>
+          <textarea id="bf-comment" rows="2" placeholder="Contexte de l'envoi (lu par le destinataire)..." data-i18n-placeholder="bluefiles.comment_placeholder"
+                    style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical"></textarea>
+        </div>
+      </div>
+
+      <!-- ── Bandeau RGPD ──────────────────────────────────────────── -->
+      <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:4px;padding:8px 12px;font-family:var(--mono);font-size:9px;color:#ef4444;line-height:1.5">
+        ⚠ <b><span data-i18n="bluefiles.rgpd_warn_strong">Données sensibles</span></b> — <span data-i18n="bluefiles.rgpd_warn_body">Cet envoi sera tracé dans SCRIBE. Le contenu reste chiffré bout-en-bout (Bluefiles), aucune copie en local sur SCRIBE.</span>
+      </div>
+
+      <!-- ── Zone d'erreur / progression ───────────────────────────── -->
+      <div id="bf-msg" style="display:none;font-family:var(--mono);font-size:10px;padding:8px 10px;border-radius:4px"></div>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;background:var(--surface2)">
+      <button onclick="document.getElementById('bf-modal').style.display='none'" style="font-family:var(--mono);font-size:10px;padding:8px 18px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer" data-i18n="bluefiles.cancel">Annuler</button>
+      <button id="bf-send-btn" onclick="bfSubmit()" style="font-family:var(--mono);font-size:10px;padding:8px 18px;background:#003189;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700;letter-spacing:1px">
+        🚀 <span data-i18n="bluefiles.submit">Envoyer</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL BLUEFILES — CONFIRMATION POST-ENVOI (mot de passe affiché 1×) ══ -->
+<div class="modal-overlay" id="bf-confirm-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10006;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:var(--surface);border:2px solid #FFCE00;border-radius:8px;width:560px;max-width:96vw;display:flex;flex-direction:column;overflow:hidden;margin-bottom:16px;box-shadow:0 10px 40px rgba(0,49,137,.3)">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#003189,#1e4ec4);color:white">
+      <div style="font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px">
+        ✓ <span data-i18n="bluefiles.confirm_title">ENVOI SÉCURISÉ EFFECTUÉ</span>
+      </div>
+      <div id="bf-confirm-summary" style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.8);margin-top:3px"></div>
+    </div>
+    <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted)" data-i18n="bluefiles.confirm_passwords_intro">
+        Mots de passe à transmettre aux destinataires <b>par canal séparé</b> (SMS, téléphone). Ils ne seront plus visibles après fermeture.
+      </div>
+      <div id="bf-confirm-passwords" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div style="background:rgba(255,206,0,.1);border:1px solid rgba(255,206,0,.4);border-radius:4px;padding:8px 12px;font-family:var(--mono);font-size:9px;color:#d97706;line-height:1.5">
+        ⚠ <b><span data-i18n="bluefiles.confirm_warn_strong">Important</span></b> — <span data-i18n="bluefiles.confirm_warn_body">Transmettez ces mots de passe par un canal DIFFÉRENT du mail (SMS ou téléphone). Une fois cette fenêtre fermée, ils ne pourront plus être affichés.</span>
+      </div>
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;background:var(--surface2)">
+      <button onclick="bfCloseConfirm()" style="font-family:var(--mono);font-size:10px;padding:8px 22px;background:#003189;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">
+        <span data-i18n="bluefiles.confirm_close">J'ai noté · Fermer ✓</span>
+      </button>
     </div>
   </div>
 </div>
@@ -774,7 +950,7 @@ window.changeLanguagePreference = function(code) {
   <div class="cellule-col" style="max-width:340px">
     <div class="col-header"><h2>🔄 Nouvelle consigne</h2></div>
     <div class="col-footer" style="border-top:none;border-bottom:1px solid var(--border)">
-      <div class="field" style="margin-bottom:4px"><labeldata-i18n="communique.pour_qui">Pour qui ?</label>
+      <div class="field" style="margin-bottom:4px"><label data-i18n="communique.pour_qui">Pour qui ?</label>
         <input type="text" id="r-pour" placeholder="Reprenant">
       </div>
       <div class="field" style="margin-bottom:7px"><label>Consigne</label>
@@ -875,6 +1051,7 @@ window.changeLanguagePreference = function(code) {
         <button class="admin-sidebar-btn active" id="admin-nav-users" onclick="adminShowSection('users',this)">👥 Utilisateurs</button>
         <button class="admin-sidebar-btn" id="admin-nav-plugins" onclick="adminShowSection('plugins',this)">🧩 Plugins</button>
         <button class="admin-sidebar-btn" id="admin-nav-notifications" onclick="adminShowSection('notifications',this)">🔔 Notifications</button>
+        <button class="admin-sidebar-btn" id="admin-nav-mobilisation" onclick="adminShowSection('mobilisation',this)">📣 <span data-i18n="mobilisation.open_chain">Chaîne d'alerte</span></button>
         <!-- v2307-hotfix — Section "Contenu & scénarios" retirée : la
              génération de scénario est maintenant intégrée au flow
              d'archivage de crise (checkbox dans le modal archiver),
@@ -892,23 +1069,42 @@ window.changeLanguagePreference = function(code) {
 
         <!-- SECTION : Utilisateurs -->
         <div id="admin-section-users">
-          <h2 style="font-family:var(--mono);font-size:13px;font-weight:700;margin:0 0 20px;color:var(--text)">👥 Gestion des utilisateurs</h2>
+          <style>
+            #admin-section-users .admin-section{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px 22px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+            #admin-section-users h3{ font-family:inherit; font-size:15px; font-weight:600; color:var(--text); margin:0 0 16px; letter-spacing:0; text-transform:none; }
+            #admin-section-users .admin-form-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 22px; max-width:900px; }
+            #admin-section-users .admin-field label{ font-family:inherit; font-size:12px; font-weight:600; color:var(--muted); letter-spacing:0; text-transform:none; }
+            #admin-section-users .admin-field input, #admin-section-users .admin-field select{ max-width:420px; width:100%; padding:9px 11px; border-radius:10px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:13px; box-sizing:border-box; }
+            #admin-section-users .kc-btn{ font-size:13px; padding:6px 11px; border-radius:8px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-weight:500; }
+            #admin-section-users .kc-btn:hover{ border-color:#003189; background:#eef2fb; }
+            #admin-section-users .btn-primary{ background:#003189; border:1px solid #003189; color:#fff; border-radius:10px; padding:10px 18px; font-size:13px !important; font-weight:600; }
+            #admin-section-users .btn-primary:hover{ background:#00256b; }
+            #admin-section-users .btn-sm{ border-radius:9px; padding:8px 14px; font-size:13px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; }
+            #admin-section-users .btn-sm.blue{ background:#003189; color:#fff; border-color:#003189; }
+            #admin-section-users .btn-sm.blue:hover{ background:#00256b; }
+            #admin-section-users .user-row{ padding:9px 12px; border-radius:10px; gap:10px; align-items:center; }
+            #admin-section-users .user-row .role-cellule_crise, #admin-section-users .user-row select{ font-size:12px !important; padding:5px 8px !important; border-radius:8px !important; max-width:320px; }
+          </style>
+          <h2 style="font-size:18px;font-weight:700;margin:0 0 20px;color:var(--text)">👥 <span data-i18n="admin.users_title">Gestion des utilisateurs</span></h2>
           <div class="admin-section">
-            <h3data-i18n="admin.comptes_actifs">Comptes actifs</h3>
+            <h3 data-i18n="admin.comptes_actifs">Comptes actifs</h3>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
             <button onclick="adminSelectAllUsers()" style="font-family:var(--mono);font-size:9px;padding:3px 10px;background:transparent;border:1px solid var(--border2);border-radius:3px;color:var(--muted);cursor:pointer" data-i18n="admin.tout_selectionner">Tout sélectionner</button>
             <button onclick="adminDeleteSelected()" style="font-family:var(--mono);font-size:9px;padding:3px 10px;background:rgba(239,68,68,.1);border:1px solid #ef4444;border-radius:3px;color:#f87171;cursor:pointer">🗑 Supprimer la sélection</button>
+            <button onclick="rappelPersonnel()" title="Notifie par SMS/mail tous les comptes ayant un téléphone renseigné" style="font-family:var(--mono);font-size:9px;padding:3px 10px;background:rgba(225,0,15,.1);border:1px solid #e1000f;border-radius:3px;color:#e1000f;cursor:pointer;font-weight:700">📲 Rappel du personnel</button>
             <span id="admin-select-count" style="font-family:var(--mono);font-size:9px;color:var(--muted)"></span>
           </div>
           <div id="admin-user-list"><div style="color:var(--muted);font-size:11px">Chargement...</div></div>
           </div>
           <div class="admin-section" id="create-user-section">
-            <h3data-i18n="admin.creer_compte">Créer un compte</h3>
+            <h3 data-i18n="admin.creer_compte">Créer un compte</h3>
             <div class="admin-form-grid">
-              <div class="admin-field"><labeldata-i18n="login.identifiant">Identifiant</label><input type="text" id="nu-username" placeholder="ex: jdupont"></div>
-              <div class="admin-field"><labeldata-i18n="admin.nom_affiche">Nom affiché</label><input type="text" id="nu-display" placeholder="ex: M. Dupont"></div>
+              <div class="admin-field"><label data-i18n="login.identifiant">Identifiant</label><input type="text" id="nu-username" placeholder="ex: jdupont"></div>
+              <div class="admin-field"><label data-i18n="admin.nom_affiche">Nom affiché</label><input type="text" id="nu-display" placeholder="ex: M. Dupont"></div>
               <div class="admin-field"><label>Mot de passe</label><input type="password" id="nu-pass" placeholder="••••••••"></div>
-              <div class="admin-field"><labeldata-i18n="admin.role">Rôle</label>
+              <div class="admin-field"><label data-i18n="admin.email">Email (notifications)</label><input type="email" id="nu-email" placeholder="ex: j.dupont@chx.fr" autocomplete="off"></div>
+              <div class="admin-field"><label data-i18n="admin.telephone">Téléphone (SMS, format +33…)</label><input type="tel" id="nu-telephone" placeholder="ex: +33612345678" autocomplete="off"></div>
+              <div class="admin-field"><label data-i18n="admin.role">Rôle</label>
                 <select id="nu-role">
                   <option value="cellule_crise" data-i18n="admin.role_cellule">Cellule de crise (directeur, RSSI, cadre supérieur)</option>
                   <option value="soignant">Soignant (brancardage, transferts patient)</option>
@@ -920,7 +1116,8 @@ window.changeLanguagePreference = function(code) {
                   <strong>Admin</strong> : tout + gestion des comptes
                 </div>
               </div>
-              <div class="admin-field" style="grid-column:1/-1"><labeldata-i18n="admin.perimetre_opt">Périmètre (optionnel)</label><input type="text" id="nu-perimetre" placeholder="ex: CANCEROLOGIE, DNA, ANNECY..."></div>
+              <div class="admin-field" style="grid-column:1/-1"><label data-i18n="admin.perimetre_opt">Périmètre (optionnel)</label><input type="text" id="nu-perimetre" placeholder="ex: CANCEROLOGIE, DNA, ANNECY..."></div>
+              <div class="admin-field" style="grid-column:1/-1"><div style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.4" data-i18n="admin.contact_hint">Email et téléphone servent aux notifications (mail / SMS) si les passerelles correspondantes sont configurées.</div></div>
             </div>
             <button class="btn-primary" style="margin-top:12px;font-size:11px" onclick="createUser()">+ Créer le compte</button>
           </div>
@@ -932,10 +1129,10 @@ window.changeLanguagePreference = function(code) {
               <input type="hidden" id="setpw-user-id">
             </div>
             <div class="admin-form-grid">
-              <div class="admin-field"><labeldata-i18n="admin.nouveau_mdp">Nouveau mot de passe</label>
+              <div class="admin-field"><label data-i18n="admin.nouveau_mdp">Nouveau mot de passe</label>
                 <input type="password" id="setpw-new" placeholder="••••••••" oninput="adminCheckPw()">
               </div>
-              <div class="admin-field"><labeldata-i18n="admin.confirmer_mdp">Confirmer le mot de passe</label>
+              <div class="admin-field"><label data-i18n="admin.confirmer_mdp">Confirmer le mot de passe</label>
                 <input type="password" id="setpw-confirm" placeholder="••••••••" oninput="adminCheckPw()">
               </div>
             </div>
@@ -944,12 +1141,94 @@ window.changeLanguagePreference = function(code) {
             <span id="setpw-result" style="font-family:var(--mono);font-size:10px;margin-left:12px"></span>
           </div>
           <div class="admin-section" id="import-users-section">
-            <h3data-i18n="admin.import_excel">Import de comptes (Excel)</h3>
+            <h3 data-i18n="admin.import_excel">Import de comptes (Excel)</h3>
             <input type="file" id="import-users-file" accept=".xlsx,.xls">
             <button class="btn-sm blue" style="margin-top:8px" onclick="importComptes()">Importer</button>
             <button class="btn-sm" style="margin-left:8px" onclick="downloadComptesModele()" data-i18n="admin.telecharger_modele">Télécharger modèle</button>
             <div id="import-result" style="margin-top:8px;font-family:var(--mono);font-size:10px;padding:6px 10px;border:1px solid var(--border);border-radius:4px;display:none"></div>
           </div>
+        </div>
+
+        <!-- SECTION : Chaîne d'alerte (mobilisation) -->
+        <div id="admin-section-mobilisation" style="display:none">
+          <style>
+            #admin-section-mobilisation .admin-section{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px 22px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+            #admin-section-mobilisation h3{ font-family:inherit; font-size:15px; font-weight:600; color:var(--text); margin:0 0 16px; letter-spacing:0; text-transform:none; }
+            #admin-section-mobilisation .mob-grp-label{ font-family:inherit; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:7px; }
+            #admin-section-mobilisation .mob-target-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+            #admin-section-mobilisation .mob-checkbox-group{ max-height:150px; overflow-y:auto; border:1px solid var(--border); border-radius:10px; padding:8px 12px; background:var(--surface2); }
+            #admin-section-mobilisation .mob-check{ display:flex; align-items:center; gap:9px; padding:5px 2px; font-size:13px; cursor:pointer; color:var(--text); }
+            #admin-section-mobilisation .mob-check input{ accent-color:#000091; width:16px; height:16px; flex-shrink:0; }
+            #admin-section-mobilisation .mob-check .meta{ color:var(--muted); font-size:11px; }
+            #admin-section-mobilisation .mob-filter{ width:100%; max-width:340px; padding:9px 12px; border:1px solid var(--border); border-radius:10px; font-size:13px; margin-bottom:7px; box-sizing:border-box; background:var(--surface2); color:var(--text); }
+            #admin-section-mobilisation .btn-primary, #admin-section-mobilisation .btn-secondary{ border-radius:10px; font-family:inherit !important; letter-spacing:0; }
+            #admin-section-mobilisation .btn-secondary.mob-btn,
+            #admin-section-mobilisation .mob-iconbtn{ background:#003189; border:1px solid #003189; color:#fff; border-radius:10px; padding:10px 18px; font-size:13px; font-weight:600; cursor:pointer; }
+            #admin-section-mobilisation .btn-secondary.mob-btn:hover,
+            #admin-section-mobilisation .mob-iconbtn:hover{ background:#00256b; border-color:#00256b; }
+            #admin-section-mobilisation #mob-archive-btn{ background:var(--surface); color:#003189; border:1px solid #003189; }
+            #admin-section-mobilisation #mob-archive-btn:hover{ background:#eef2fb; }
+            #admin-section-mobilisation input[type=text], #admin-section-mobilisation textarea, #admin-section-mobilisation select{ border-radius:10px; }
+            #admin-section-mobilisation .mob-relance-btn{ background:#e1000f; border:1px solid #e1000f; color:#fff; border-radius:9px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
+            #admin-section-mobilisation .mob-relance-btn:hover{ background:#b8000c; }
+            #admin-section-mobilisation .mob-uf-relance{ background:#003189; border:none; color:#fff; border-radius:8px; padding:5px 9px; font-size:14px; cursor:pointer; line-height:1; }
+            #admin-section-mobilisation .mob-uf-relance:hover{ background:#00256b; }
+            #admin-section-mobilisation .mob-reply-link{ background:none; border:none; color:#003189; font-size:12px; font-weight:600; cursor:pointer; padding:2px 0; text-decoration:underline; }
+            #admin-section-mobilisation .mob-send-btn{ background:#003189; border:none; color:#fff; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+            #admin-section-mobilisation .mob-send-btn:hover{ background:#00256b; }
+          </style>
+          <h2 style="font-size:18px;font-weight:700;margin:0 0 4px;color:var(--text)">📣 <span data-i18n="mobilisation.title">Chaîne d'alerte</span></h2>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:18px" data-i18n="mobilisation.subtitle">Annuaire de mobilisation — données locales (RGPD)</div>
+          <div class="admin-section">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+              <h3 style="margin:0" data-i18n="mobilisation.current_campaign">Campagne d'alerte en cours</h3>
+              <select id="mob-campaign-select" onchange="mobSelectCampaign(this.value)" style="flex:1;min-width:200px;max-width:380px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--text);font-size:13px"></select>
+              <button class="mob-iconbtn" id="mob-refresh-btn" onclick="mobRefresh()" title="Actualiser les réponses"><span style="font-size:15px;line-height:1">↻</span> <span data-i18n="mobilisation.refresh">Actualiser</span></button>
+              <label class="mob-check" style="font-size:12px"><input type="checkbox" id="mob-autopoll" onchange="mobToggleAutopoll(this.checked)"> <span data-i18n="mobilisation.autorefresh">Auto</span></label>
+              <button class="btn-secondary mob-btn" id="mob-archive-btn" style="display:none" onclick="mobArchiveCurrent()" data-i18n="mobilisation.archive">Archiver</button>
+            </div>
+            <div id="mob-alerte-detail"></div>
+          </div>
+
+
+          <div class="admin-section">
+            <div id="mob-total" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px">—</div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+              <input type="file" id="mob-file" accept=".xlsx" style="font-size:11px">
+              <label style="font-family:var(--mono);font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px"><input type="checkbox" id="mob-replace"> <span data-i18n="mobilisation.import_replace">Remplacer l'annuaire existant</span></label>
+              <button class="btn-secondary mob-btn" style="display:inline-flex;align-items:center" onclick="mobImport()" data-i18n="mobilisation.import">Importer un annuaire (.xlsx)</button>
+              <button class="btn-secondary mob-btn" style="display:inline-flex;align-items:center" onclick="mobTemplate()" data-i18n="mobilisation.template_dl">Télécharger le modèle vierge</button>
+            </div>
+            <div id="mob-import-msg" style="font-family:var(--mono);font-size:10px;margin-top:8px"></div>
+          </div>
+
+          <div class="admin-section">
+            <h3 data-i18n="mobilisation.target">Ciblage</h3>
+            <div class="mob-target-grid">
+              <div><div class="mob-grp-label" data-i18n="mobilisation.f_site">Site</div><div id="mob-site" class="mob-checkbox-group"></div></div>
+              <div><div class="mob-grp-label" data-i18n="mobilisation.f_pole">Pôle</div><div id="mob-pole" class="mob-checkbox-group"></div></div>
+              <div><div class="mob-grp-label" data-i18n="mobilisation.f_uf">UF</div><input class="mob-filter" id="mob-uf-filter" oninput="mobFilterGroup('mob-uf',this.value)" placeholder="filtrer…"><div id="mob-uf" class="mob-checkbox-group"></div></div>
+            </div>
+            <div class="mob-grp-label" style="margin-top:16px" data-i18n="mobilisation.by_name">Personnes (sélection nominative)</div>
+            <input class="mob-filter" id="mob-name-filter" oninput="mobRenderNames(this.value)" placeholder="Rechercher un nom…" data-i18n-placeholder="mobilisation.search_name">
+            <div id="mob-names" class="mob-checkbox-group" style="max-height:180px"></div>
+            <button class="btn-secondary mob-btn" style="margin-top:16px" onclick="mobPreview()" data-i18n="mobilisation.preview">Aperçu des destinataires</button>
+            <div id="mob-preview" style="margin-top:12px;font-size:13px;color:var(--text)"></div>
+          </div>
+
+          <div class="admin-section">
+            <h3 data-i18n="mobilisation.compose">Message d'alerte</h3>
+            <input type="text" id="mob-titre" placeholder="Objet" data-i18n-placeholder="mobilisation.f_titre" style="width:100%;max-width:560px;font-size:12px;margin-bottom:8px;box-sizing:border-box;padding:9px 11px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);display:block">
+            <textarea id="mob-message" rows="3" placeholder="Message" data-i18n-placeholder="mobilisation.f_message" style="width:100%;max-width:560px;font-size:12px;box-sizing:border-box;padding:9px 11px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical;display:block"></textarea>
+            <div style="display:flex;gap:14px;align-items:center;margin:10px 0">
+              <span style="font-family:var(--mono);font-size:9px;color:var(--muted)" data-i18n="mobilisation.channels">Canaux</span>
+              <label style="font-size:11px;display:flex;gap:4px;align-items:center"><input type="checkbox" id="mob-ch-sms" checked> <span data-i18n="mobilisation.ch_sms">SMS</span></label>
+              <label style="font-size:11px;display:flex;gap:4px;align-items:center"><input type="checkbox" id="mob-ch-mail" checked> <span data-i18n="mobilisation.ch_mail">Mail</span></label>
+            </div>
+            <button class="btn-primary" style="font-size:12px;width:auto;display:inline-flex;align-items:center;padding:10px 22px;background:#e1000f;border-color:#e1000f;font-weight:700" onclick="mobTrigger()" data-i18n="mobilisation.trigger">📣 Déclencher l'alerte</button>
+            <div id="mob-trigger-msg" style="font-family:var(--mono);font-size:11px;margin-top:8px"></div>
+          </div>
+
         </div>
 
         <!-- SECTION : Plugins -->
@@ -1014,7 +1293,7 @@ window.changeLanguagePreference = function(code) {
               </div>
               <div>
                 <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">SIGLE CIBLE</label>
-                <input type="text" id="scen-cible" value="DEMO1"
+                <input type="text" id="scen-cible" value="DEMO"
                        style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
               </div>
             </div>
@@ -1143,7 +1422,7 @@ window.changeLanguagePreference = function(code) {
         <div id="admin-section-lang" style="display:none">
           <h2 style="font-family:var(--mono);font-size:13px;font-weight:700;margin:0 0 20px;color:var(--text)">🌍 Langue & localisation</h2>
           <div class="admin-section">
-            <h3data-i18n="wizard.langue_defaut">Langue par défaut de l'instance</h3>
+            <h3 data-i18n="wizard.langue_defaut">Langue par défaut de l'instance</h3>
             <p style="font-family:var(--mono);font-size:10px;color:var(--muted);margin:0 0 14px;line-height:1.6">
               Cette langue sera appliquée à tous les utilisateurs de l'instance
               au prochain chargement de page. Toutes les langues disponibles ont
@@ -1357,7 +1636,7 @@ window.changeLanguagePreference = function(code) {
     <div class="rex-chart-box" id="rex-incident-import-section">
       <div class="rex-chart-title" data-i18n="rex.generer_depuis">Générer REX depuis un incident</div>
       <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-        <div class="admin-field" style="flex:1"><labeldata-i18n="rex.incident_analyser">Incident à analyser</label>
+        <div class="admin-field" style="flex:1"><label data-i18n="rex.incident_analyser">Incident à analyser</label>
           <select id="rex-inc-id">
             <option value="">— Sélectionner un incident —</option>
           </select>
@@ -1380,8 +1659,8 @@ window.changeLanguagePreference = function(code) {
     <div class="task-modal-body">
       <div class="admin-field"><label>Titre</label><input type="text" id="tm-titre" placeholder="Description courte de la tâche" data-i18n-placeholder="ph.desc_tache"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="admin-field"><labeldata-i18n="kanban.assigne_a">Assigné à</label><input type="text" id="tm-assignee" placeholder="ex: jdupont"></div>
-        <div class="admin-field"><labeldata-i18n="kanban.priorite">Priorité</label>
+        <div class="admin-field"><label data-i18n="kanban.assigne_a">Assigné à</label><input type="text" id="tm-assignee" placeholder="ex: jdupont"></div>
+        <div class="admin-field"><label data-i18n="kanban.priorite">Priorité</label>
           <select id="tm-priorite">
             <option value="4">🔴 4 — Critique</option>
             <option value="3">🟠 3 — Haute</option>
@@ -1397,14 +1676,14 @@ window.changeLanguagePreference = function(code) {
             <option value="TERMINÉ" data-i18n="kanban.termine">Terminé</option>
           </select>
         </div>
-        <div class="admin-field"><labeldata-i18n="kanban.lie_incident">Lié à l'incident</label>
+        <div class="admin-field"><label data-i18n="kanban.lie_incident">Lié à l'incident</label>
           <select id="tm-incident">
             <option value="">— Aucun —</option>
           </select>
         </div>
       </div>
       <div class="admin-field"><label>Description</label><textarea id="tm-desc" rows="3" placeholder="Détails, contexte..." data-i18n-placeholder="ph.detail_contexte"></textarea></div>
-      <div class="admin-field"><labeldata-i18n="kanban.echeance">Échéance</label><input type="datetime-local" id="tm-due"></div>
+      <div class="admin-field"><label data-i18n="kanban.echeance">Échéance</label><input type="datetime-local" id="tm-due"></div>
     </div>
     <div class="task-modal-footer">
       <button style="font-family:var(--mono);font-size:9px;padding:4px 10px;background:rgba(0,207,255,.1);border:1px solid rgba(0,207,255,.3);border-radius:4px;color:var(--cyan);cursor:pointer;margin-right:auto" onclick="openNotifyModal('Kanban — '+(document.getElementById('tm-titre')?.value||''), 'Une tâche vous concerne : '+(document.getElementById('tm-titre')?.value||'')+'. Vérifiez KANBAN.')">✉️ Notifier</button>
@@ -1426,7 +1705,7 @@ window.changeLanguagePreference = function(code) {
       <div class="rex-wizard-step">
         <div class="rex-wizard-step-title"><span class="rex-wizard-step-num">1</span>Informations générales</div>
         <div class="rex-natural-field">
-          <labeldata-i18n="rex.quel_incident">Quel incident analysez-vous ?</label>
+          <label data-i18n="rex.quel_incident">Quel incident analysez-vous ?</label>
           <input type="text" id="rex-titre" placeholder="ex: Panne serveur imagerie médicale — nuit du 10 mars" data-i18n-placeholder="ph.ex_panne">
           <span class="hint" data-i18n="rex.nommez_evenement">Nommez l'événement de façon simple et mémorable</span>
         </div>
@@ -1440,7 +1719,7 @@ window.changeLanguagePreference = function(code) {
             </select>
           </div>
           <div class="rex-natural-field" style="flex:1;min-width:140px">
-            <labeldata-i18n="rex.redige_par">Rédigé par</label>
+            <label data-i18n="rex.redige_par">Rédigé par</label>
             <input type="text" id="rex-redacteur" placeholder="Votre nom / fonction">
           </div>
         </div>
@@ -1553,7 +1832,7 @@ window.changeLanguagePreference = function(code) {
       </div>
 
       <div class="communique-section">
-        <h3data-i18n="communique.message_officiel">Message officiel</h3>
+        <h3 data-i18n="communique.message_officiel">Message officiel</h3>
         <textarea id="comm-message" rows="3" placeholder="2-3 phrases décrivant la situation pour le public (prestataires, journalistes, partenaires)..."
           style="width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:10px;padding:7px 9px;border-radius:4px;resize:none;line-height:1.6"
           onchange="saveStatus()"></textarea>
@@ -1570,7 +1849,7 @@ window.changeLanguagePreference = function(code) {
       </div>
 
       <div class="communique-section">
-        <h3data-i18n="communique.questions_freq">Questions fréquentes</h3>
+        <h3 data-i18n="communique.questions_freq">Questions fréquentes</h3>
         <div id="comm-faq-list"></div>
       </div>
 
@@ -2010,74 +2289,322 @@ window.changeLanguagePreference = function(code) {
 
   <!-- Toolbar -->
   <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0">
-    <span style="font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--muted2)">✉️ MESSAGERIE INTERNE</span>
-    <div style="display:flex;gap:4px;margin-left:8px">
-      <button class="msg-tab-btn active" id="msg-tab-reception" onclick="switchMsgBoite('reception',this)" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer" data-i18n="messagerie.reception">Réception</button>
-      <button class="msg-tab-btn" id="msg-tab-envoi" onclick="switchMsgBoite('envoi',this)" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer" data-i18n="messagerie.envoyes">Envoyés</button>
-    </div>
+    <span style="font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--muted2)">
+      ✉️ <span data-i18n="messagerie.title">MESSAGERIE</span>
+    </span>
     <div style="flex:1"></div>
-    <button onclick="msgOpenCompose()" style="font-family:var(--mono);font-size:9px;padding:4px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">✏️ Nouveau message</button>
+    <input id="msg-search" type="text" placeholder="🔍 Rechercher…" data-i18n-placeholder="messagerie.search_placeholder"
+           oninput="msgScheduleSearch()" 
+           style="font-family:var(--mono);font-size:10px;padding:4px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);width:200px">
+    <button onclick="msgOpenCompose()" 
+            style="font-family:var(--mono);font-size:9px;padding:5px 14px;background:#003189;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">
+      ✏️ <span data-i18n="messagerie.new_message">Nouveau message</span>
+    </button>
   </div>
 
-  <!-- Split : liste gauche + détail droite -->
-  <div style="display:flex;flex:1;overflow:hidden">
+  <!-- 3 PANELS : sidebar arbo / liste / détail -->
+  <div id="msg-3panel" style="display:flex;flex:1;overflow:hidden">
 
-    <!-- Liste messages -->
-    <div id="msg-list" style="width:340px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;background:var(--surface)">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:20px;text-align:center">Chargement…</div>
+    <!-- ── SIDEBAR ARBORESCENCE ────────────────────────────────────────── -->
+    <div id="msg-sidebar" style="width:240px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;background:var(--surface);padding:8px 0">
+
+      <!-- 💬 INTERNE (canal v1) -->
+      <div class="msg-channel-section" data-canal="interne">
+        <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted2);padding:6px 14px 4px;display:flex;align-items:center;gap:6px">
+          <span>💬</span>
+          <span data-i18n="messagerie.canal_interne">INTERNE</span>
+        </div>
+        <div class="msg-folders" data-canal="interne">
+          <button class="msg-folder-btn active" onclick="msgSelectBox('interne','inbox',this)" data-box="inbox">
+            <span class="msg-fb-ic">📥</span>
+            <span class="msg-fb-lbl" data-i18n="messagerie.box_inbox">Inbox</span>
+            <span class="msg-fb-count" id="msg-cnt-interne-inbox"></span>
+          </button>
+          <button class="msg-folder-btn" onclick="msgSelectBox('interne','sent',this)" data-box="sent">
+            <span class="msg-fb-ic">📤</span>
+            <span class="msg-fb-lbl" data-i18n="messagerie.box_sent">Envoyés</span>
+            <span class="msg-fb-count" id="msg-cnt-interne-sent"></span>
+          </button>
+          <button class="msg-folder-btn" onclick="msgSelectBox('interne','drafts',this)" data-box="drafts">
+            <span class="msg-fb-ic">📝</span>
+            <span class="msg-fb-lbl" data-i18n="messagerie.box_drafts">Brouillons</span>
+            <span class="msg-fb-count" id="msg-cnt-interne-drafts"></span>
+          </button>
+          <button class="msg-folder-btn" onclick="msgSelectBox('interne','important',this)" data-box="important">
+            <span class="msg-fb-ic">⭐</span>
+            <span class="msg-fb-lbl" data-i18n="messagerie.box_important">Important</span>
+            <span class="msg-fb-count" id="msg-cnt-interne-important"></span>
+          </button>
+          <button class="msg-folder-btn" onclick="msgSelectBox('interne','trash',this)" data-box="trash">
+            <span class="msg-fb-ic">🗑</span>
+            <span class="msg-fb-lbl" data-i18n="messagerie.box_trash">Corbeille</span>
+            <span class="msg-fb-count" id="msg-cnt-interne-trash"></span>
+          </button>
+          <!-- Dossiers personnels du canal interne -->
+          <div id="msg-personal-folders-interne"></div>
+          <button class="msg-folder-btn msg-folder-add" onclick="msgPromptNewFolder('interne')">
+            <span class="msg-fb-ic">＋</span>
+            <span class="msg-fb-lbl" data-i18n="messagerie.new_folder">Nouveau dossier</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 📡 SUPERVISION — messagerie inter-établissement via collecteur -->
+      <div class="msg-channel-section" data-canal="supervision" style="margin-top:14px">
+        <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted2);padding:6px 14px 4px;display:flex;align-items:center;gap:6px">
+          <span>📡</span>
+          <span data-i18n="messagerie.canal_supervision">SUPERVISION</span>
+        </div>
+        <div class="msg-folders">
+          <button class="msg-folder-btn" onclick="msgSuperOpen(this)" data-box="supervision">
+            <span class="msg-fb-ic">🏛️</span>
+            <span class="msg-fb-lbl" data-i18n="messagerie.supervision_label">Supervision</span>
+            <span class="msg-fb-count" id="msg-super-badge"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 📧 MAIL (Phase 3) -->
+      <div class="msg-channel-section" data-canal="mail" style="margin-top:14px">
+        <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted2);padding:6px 14px 4px;display:flex;align-items:center;gap:6px">
+          <span>📧</span>
+          <span data-i18n="messagerie.canal_mail">MAIL</span>
+          <span style="font-size:8px;background:rgba(22,163,74,.15);color:#16a34a;padding:1px 5px;border-radius:3px;margin-left:auto" data-i18n="messagerie.canal_active">Activé</span>
+        </div>
+        <div style="padding:4px 14px;font-family:var(--mono);font-size:9px;color:var(--muted);font-style:italic" data-i18n="messagerie.mail_hint">Nouveau message → choisir le canal Mail</div>
+      </div>
+
+      <!-- 📱 SMS (Phase 3) -->
+      <div class="msg-channel-section" data-canal="sms" style="margin-top:8px;opacity:.45">
+        <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted2);padding:6px 14px 4px;display:flex;align-items:center;gap:6px">
+          <span>📱</span>
+          <span data-i18n="messagerie.canal_sms">SMS</span>
+          <span style="font-size:8px;background:rgba(0,49,137,.15);color:#003189;padding:1px 5px;border-radius:3px;margin-left:auto" data-i18n="messagerie.phase3_soon">Phase 3</span>
+        </div>
+        <div style="padding:4px 14px;font-family:var(--mono);font-size:9px;color:var(--muted);font-style:italic" data-i18n="messagerie.phase3_hint_sms">Disponible après configuration gateway SMS</div>
+      </div>
     </div>
 
-    <!-- Détail message -->
-    <div id="msg-detail" style="flex:1;overflow-y:auto;padding:28px 36px;background:var(--bg)">
+    <!-- ── LISTE MESSAGES ──────────────────────────────────────────────── -->
+    <div id="msg-list" style="width:340px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;background:var(--surface2)">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:20px;text-align:center" data-i18n="messagerie.loading">Chargement…</div>
+    </div>
+
+    <!-- ── DÉTAIL MESSAGE ──────────────────────────────────────────────── -->
+    <div id="msg-detail" style="flex:1;overflow-y:auto;padding:24px 32px;background:var(--bg)">
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--muted)">
-        <span style="font-size:36px;opacity:.3">✉️</span>
-        <span style="font-family:var(--mono);font-size:10px;letter-spacing:1px" data-i18n="messagerie.selectionner">Sélectionnez un message</span>
+        <span style="font-size:48px;opacity:.25">✉️</span>
+        <span style="font-family:var(--mono);font-size:10px;letter-spacing:1px" data-i18n="messagerie.select_message">Sélectionnez un message</span>
       </div>
     </div>
   </div>
 
-  <!-- Modal Composer -->
-  <div id="msg-modal-compose" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
-    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;width:520px;max-width:95vw;overflow:hidden">
-      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-        <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)">✏️ NOUVEAU MESSAGE</span>
-        <button onclick="msgCloseCompose()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px">✕</button>
+  <!-- ── PANNEAU SUPERVISION — isolé, additif (v3000h44) ──────────── -->
+  <div id="msg-super-panel" style="display:none;flex:1;flex-direction:column;overflow:hidden;background:var(--bg)">
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0">
+      <button onclick="msgSuperBack()" style="font-family:var(--mono);font-size:9px;padding:4px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">← <span data-i18n="messagerie.back">Messagerie</span></button>
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text)">🏛️ <span data-i18n="messagerie.supervision_label">Supervision</span></span>
+      <div style="flex:1"></div>
+      <button onclick="msgSuperLoad()" style="font-family:var(--mono);font-size:9px;padding:4px 10px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer">⟳</button>
+    </div>
+    <div style="margin:10px 16px;padding:8px 12px;background:rgba(225,0,15,.06);border:1px solid rgba(225,0,15,.25);border-radius:6px;font-size:11px;color:var(--text);line-height:1.4">
+      ⚠️ <span data-i18n="messagerie.super_hds_warn">Ce canal sort de l'établissement (transite par la supervision). N'y mettez aucune donnée patient. Pour transmettre un fichier sensible, utilisez le transfert sécurisé Bluefiles ci-dessous.</span>
+    </div>
+    <div id="msg-super-list" style="flex:1;overflow-y:auto;padding:12px 16px">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:30px;text-align:center" data-i18n="messagerie.loading">Chargement…</div>
+    </div>
+    <div style="border-top:1px solid var(--border);background:var(--surface);padding:10px 16px;flex-shrink:0">
+      <input id="msg-super-subject" type="text" data-i18n-placeholder="messagerie.subject_placeholder" placeholder="Objet"
+             style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:6px 10px;border:1px solid var(--border2);border-radius:4px;background:var(--surface2);color:var(--text);margin-bottom:6px">
+      <textarea id="msg-super-body" rows="2" data-i18n-placeholder="messagerie.body_placeholder" placeholder="Votre message à la supervision…"
+                style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:6px 10px;border:1px solid var(--border2);border-radius:4px;background:var(--surface2);color:var(--text);resize:vertical"></textarea>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+        <button id="msg-super-bf-btn" onclick="msgSuperAttachBluefiles()" style="font-family:var(--mono);font-size:9px;padding:5px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);cursor:pointer">🔒 <span data-i18n="messagerie.secure_transfer">Transfert sécurisé</span></button>
+        <button onclick="msgSuperSend()" style="font-family:var(--mono);font-size:9px;padding:5px 16px;background:#003189;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">📡 <span data-i18n="messagerie.send">Envoyer</span></button>
       </div>
-      <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
-        <!-- v2309-hotfix — Hint affiché quand on répond à un message externe
-             (ARS/CERT/SAMU/CHU...). Le destinataire d'origine n'est pas un
-             compte SCRIBE, donc la réponse doit être transmise à un collègue
-             interne pour validation avant envoi par canal officiel. -->
-        <div id="msg-compose-externe-hint"
-             style="display:none;padding:10px 12px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:5px;font-family:var(--mono);font-size:10px;line-height:1.5;color:#fbbf24"></div>
-        <div>
-          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:5px" data-i18n="transferts.site_service">SITE / SERVICE</label>
-          <select id="msg-compose-site" onchange="msgFilterUsers()" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text)">
-            <option value="">— Tous les sites —</option>
+    </div>
+  </div>
+
+</div>
+
+<style>
+  /* Sidebar messagerie — boutons de dossiers */
+  #msg-sidebar .msg-folder-btn {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 5px 14px;
+    background: transparent; border: none;
+    color: var(--text); cursor: pointer;
+    font-family: var(--mono); font-size: 10px;
+    text-align: left;
+    transition: background .12s;
+  }
+  #msg-sidebar .msg-folder-btn:hover { background: rgba(0,49,137,.06); }
+  #msg-sidebar .msg-folder-btn.active {
+    background: rgba(0,49,137,.10);
+    color: #003189; font-weight: 700;
+    border-left: 2px solid #003189; padding-left: 12px;
+  }
+  #msg-sidebar .msg-fb-ic { font-size: 12px; width: 16px; text-align: center; }
+  #msg-sidebar .msg-fb-lbl { flex: 1; }
+  #msg-sidebar .msg-fb-count {
+    font-size: 8px; color: var(--muted);
+    background: var(--surface2); padding: 1px 6px; border-radius: 8px;
+    min-width: 16px; text-align: center;
+  }
+  #msg-sidebar .msg-folder-btn.active .msg-fb-count {
+    background: rgba(0,49,137,.15); color: #003189; font-weight: 700;
+  }
+  #msg-sidebar .msg-folder-add { color: var(--muted); font-style: italic; }
+  #msg-sidebar .msg-folder-add:hover { color: var(--text); }
+
+  /* Liste messages */
+  #msg-list .msg-list-item {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background .12s;
+  }
+  #msg-list .msg-list-item:hover { background: var(--surface); }
+  #msg-list .msg-list-item.active {
+    background: rgba(0,49,137,.08);
+    border-left: 3px solid #003189; padding-left: 11px;
+  }
+  #msg-list .msg-list-item.unread .msg-list-from { font-weight: 700; color: var(--text); }
+  #msg-list .msg-list-item.unread .msg-list-subject { font-weight: 700; }
+  #msg-list .msg-list-from {
+    font-family: var(--mono); font-size: 11px; color: var(--muted2);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  #msg-list .msg-list-date {
+    font-size: 9px; color: var(--muted); font-weight: 400;
+  }
+  #msg-list .msg-list-subject {
+    font-family: var(--mono); font-size: 10px; color: var(--text);
+    margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #msg-list .msg-list-preview {
+    font-family: var(--mono); font-size: 9px; color: var(--muted);
+    margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #msg-list .msg-list-flags {
+    display: inline-flex; gap: 4px; font-size: 10px;
+    margin-left: 6px;
+  }
+</style>
+
+<!-- ══ MODAL COMPOSER (nouveau message / réponse / transfert) ══ -->
+<div class="modal-overlay" id="msg-modal-compose" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto" onclick="if(event.target===this)msgCloseCompose()">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:680px;max-width:96vw;max-height:calc(100vh - 80px);display:flex;flex-direction:column;overflow:hidden;margin-bottom:16px">
+    <!-- Header -->
+    <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface)">
+      <span style="font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--text)">
+        <span id="msg-compose-title-icon">✏️</span>
+        <span id="msg-compose-title" data-i18n="messagerie.compose_new">NOUVEAU MESSAGE</span>
+      </span>
+      <button onclick="msgCloseCompose()" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer">✕</button>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:14px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px">
+
+      <!-- Canal : interne ou mail (h77) -->
+      <input type="hidden" id="msg-compose-canal" value="interne">
+      <input type="hidden" id="msg-compose-reply-to" value="">
+      <input type="hidden" id="msg-compose-thread-id" value="">
+
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px" data-i18n="messagerie.canal_label">CANAL</label>
+        <select id="msg-compose-canal-select" onchange="msgComposeSetCanal(this.value)"
+                style="font-family:var(--mono);font-size:10px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+          <option value="interne" data-i18n="messagerie.canal_interne">INTERNE</option>
+          <option value="mail" data-i18n="messagerie.canal_mail">MAIL</option>
+        </select>
+      </div>
+
+      <!-- Destinataires -->
+      <div>
+        <label style="display:block;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px" data-i18n="messagerie.to_label">DESTINATAIRES</label>
+        <div id="msg-compose-recipients" style="display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;min-height:32px">
+          <!-- Chips ajoutés dynamiquement -->
+        </div>
+        <input id="msg-compose-search" type="text" oninput="msgComposeRenderPicker(this.value)"
+               placeholder="🔍 Filtrer par nom ou établissement…" autocomplete="off"
+               style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:10px;padding:5px 8px;margin-top:6px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <select id="msg-compose-user-picker" 
+                  onchange="if(this.value) msgComposeAddUser()"
+                  style="flex:1;font-family:var(--mono);font-size:10px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+            <option value="" data-i18n="messagerie.select_user">— Sélectionner un correspondant —</option>
           </select>
+          <button onclick="msgComposeAddUser()" type="button"
+                  style="font-family:var(--mono);font-size:9px;padding:5px 12px;background:rgba(0,49,137,.1);color:#003189;border:1px solid rgba(0,49,137,.3);border-radius:4px;cursor:pointer;font-weight:700">
+            + <span data-i18n="messagerie.add_btn">Ajouter</span>
+          </button>
         </div>
-        <div>
-          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:5px">DESTINATAIRE</label>
-          <select id="msg-compose-dest" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text)">
-            <option value="">— Sélectionner un correspondant —</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:5px">OBJET</label>
-          <input id="msg-compose-sujet" type="text" placeholder="Objet du message" data-i18n-placeholder="ph.objet_message" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);box-sizing:border-box">
-        </div>
-        <div>
-          <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:5px" data-i18n="common.message_upper">MESSAGE</label>
-          <textarea id="msg-compose-body" rows="6" placeholder="Rédigez votre message…" data-i18n-placeholder="ph.redigez_message" style="width:100%;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
-        </div>
-        <div style="display:flex;justify-content:flex-end;gap:8px">
-          <button onclick="msgCloseCompose()" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer" data-i18n="transferts.annuler">Annuler</button>
-          <button onclick="msgSend()" style="font-family:var(--mono);font-size:10px;padding:6px 16px;background:#2563eb;border:none;border-radius:4px;color:#fff;cursor:pointer;font-weight:700">Envoyer ✉️</button>
+        <div id="msg-compose-email-row" style="display:none;gap:6px;margin-top:6px">
+          <input id="msg-compose-email" type="email" placeholder="adresse@exemple.fr" autocomplete="off"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();msgComposeAddEmail();}"
+                 style="flex:1;font-family:var(--mono);font-size:10px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+          <button onclick="msgComposeAddEmail()" type="button"
+                  style="font-family:var(--mono);font-size:9px;padding:5px 12px;background:rgba(22,163,74,.1);color:#16a34a;border:1px solid rgba(22,163,74,.3);border-radius:4px;cursor:pointer;font-weight:700">
+            + <span data-i18n="messagerie.add_email_btn">Adresse</span>
+          </button>
         </div>
       </div>
+
+      <!-- Objet -->
+      <div>
+        <label style="display:block;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px" data-i18n="messagerie.subject_label">OBJET</label>
+        <input type="text" id="msg-compose-subject" maxlength="500"
+               style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
+      </div>
+
+      <!-- Corps -->
+      <div>
+        <label style="display:block;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px" data-i18n="messagerie.body_label">MESSAGE</label>
+        <textarea id="msg-compose-body" rows="9" 
+                  placeholder="Rédigez votre message…" data-i18n-placeholder="messagerie.body_placeholder"
+                  style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical;min-height:140px"></textarea>
+      </div>
+
+      <!-- Pièces jointes -->
+      <div>
+        <label style="display:block;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px" data-i18n="messagerie.attachments_label">PIÈCES JOINTES</label>
+        <div id="msg-compose-attachments" style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="document.getElementById('msg-compose-file-input').click()" type="button"
+                  style="font-family:var(--mono);font-size:9px;padding:5px 12px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--text);cursor:pointer">
+            📎 <span data-i18n="messagerie.attach_local">Joindre un fichier</span>
+          </button>
+          <button id="msg-compose-bluefiles-btn" onclick="msgComposeOpenBluefiles()" type="button"
+                  style="display:none;font-family:var(--mono);font-size:9px;padding:5px 12px;background:rgba(0,49,137,.08);border:1px solid rgba(0,49,137,.3);color:#003189;border-radius:4px;cursor:pointer;font-weight:700">
+            🔒 <span data-i18n="messagerie.attach_bluefiles">Joindre via Bluefiles</span>
+          </button>
+          <input type="file" id="msg-compose-file-input" multiple style="display:none" onchange="msgComposeHandleFiles(this.files)">
+          <span style="font-family:var(--mono);font-size:8px;color:var(--muted);align-self:center" data-i18n="messagerie.attach_hint">10 Mo/PJ · 25 Mo total · 10 max</span>
+        </div>
+      </div>
+
+      <!-- Erreur / info -->
+      <div id="msg-compose-msg" style="display:none;font-family:var(--mono);font-size:10px;padding:8px 10px;border-radius:4px"></div>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;background:var(--surface2)">
+      <button onclick="msgCloseCompose()" 
+              style="font-family:var(--mono);font-size:10px;padding:7px 16px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--muted);cursor:pointer" data-i18n="messagerie.cancel">Annuler</button>
+      <button onclick="msgComposeSubmit(true)" id="msg-compose-draft-btn"
+              style="font-family:var(--mono);font-size:10px;padding:7px 16px;background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--text);cursor:pointer">
+        💾 <span data-i18n="messagerie.save_draft">Brouillon</span>
+      </button>
+      <button onclick="msgComposeSubmit(false)" id="msg-compose-send-btn"
+              style="font-family:var(--mono);font-size:10px;padding:7px 18px;background:#003189;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">
+        📤 <span data-i18n="messagerie.send">Envoyer</span>
+      </button>
     </div>
   </div>
 </div>
+
 
 <!-- ══ ONGLET INTER-GHT / DÉCLARATIONS ════════════════════════════════════ -->
 <div id="tab-declarations" class="tab-content" style="flex-direction:column;background:var(--bg)">
@@ -2087,7 +2614,6 @@ window.changeLanguagePreference = function(code) {
     <span style="font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--muted2)">📡 COORDINATION INTER-GHT</span>
     <div style="display:flex;gap:4px;margin-left:8px">
       <button class="ight-tab-btn active" id="ight-tab-dem" onclick="switchIGHT('demandes',this)" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer">📤 Demandes inter-GHT</button>
-      <button class="ight-tab-btn" id="ight-tab-msgs" onclick="switchIGHT('messages',this)" style="font-family:var(--mono);font-size:9px;padding:3px 10px;border-radius:4px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer">✉ Messages supervision</button>
     </div>
     <div style="flex:1"></div>
     <button id="ight-btn-new" onclick="ightOpenNew()" style="font-family:var(--mono);font-size:9px;padding:4px 12px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">+ Nouvelle déclaration</button>
@@ -2221,11 +2747,11 @@ window.changeLanguagePreference = function(code) {
 
 <!-- ══ MODAL CHANGEMENT MOT DE PASSE OBLIGATOIRE ══════════════════════════ -->
 <div id="modal-forced-pw" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:99999;align-items:center;justify-content:center">
-  <div style="background:var(--surface);border:2px solid #f59e0b;border-radius:12px;width:420px;max-width:95vw;overflow:hidden">
-    <div style="padding:16px 20px;background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);display:flex;align-items:center;gap:10px">
+  <div style="background:var(--surface);border:2px solid #003189;border-radius:12px;width:420px;max-width:95vw;overflow:hidden">
+    <div style="padding:16px 20px;background:rgba(0,49,137,.1);border-bottom:1px solid rgba(0,49,137,.3);display:flex;align-items:center;gap:10px">
       <span style="font-size:20px">🔐</span>
       <div>
-        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:#f59e0b" data-i18n="fpw.title">CHANGEMENT DE MOT DE PASSE REQUIS</div>
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:#003189" data-i18n="fpw.title">CHANGEMENT DE MOT DE PASSE REQUIS</div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px" data-i18n="fpw.intro">Votre compte utilise un mot de passe temporaire. Veuillez le modifier avant de continuer.</div>
       </div>
     </div>
@@ -2255,7 +2781,7 @@ window.changeLanguagePreference = function(code) {
         </div>
       </div>
       <div id="fpw-err" style="display:none;font-family:var(--mono);font-size:10px;color:#f87171;padding:6px 8px;background:rgba(248,113,113,.1);border-radius:4px;border:1px solid rgba(248,113,113,.3)"></div>
-      <button onclick="submitForcedPw()" data-i18n-label="fpw.submit_btn" style="font-family:var(--mono);font-size:11px;padding:10px;background:#d97706;border:none;border-radius:5px;color:#fff;cursor:pointer;font-weight:700;margin-top:4px">
+      <button onclick="submitForcedPw()" data-i18n-label="fpw.submit_btn" style="font-family:var(--mono);font-size:11px;padding:10px;background:#003189;border:none;border-radius:5px;color:#fff;cursor:pointer;font-weight:700;margin-top:4px">
         🔒 <span data-i18n="fpw.submit_btn_label">Définir mon nouveau mot de passe</span>
       </button>
     </div>

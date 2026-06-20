@@ -172,7 +172,7 @@ async def _run(scenario: dict, session_uid: str, token: str, base_urls: dict):
 
 async def _inject_stimulus(stimulus: dict, token: str, base_urls: dict, manuel: bool = False) -> dict:
     """Injecte un stimulus sur l'instance cible."""
-    sigle = stimulus.get("cible", "DEMO1")
+    sigle = stimulus.get("cible", "DEMO")
     base_url = base_urls.get(sigle)
     if not base_url:
         logger.error(f"URL inconnue pour {sigle}")
@@ -187,6 +187,11 @@ async def _inject_stimulus(stimulus: dict, token: str, base_urls: dict, manuel: 
     }
     payload = stimulus.get("payload", {})
     stype = stimulus.get("type", "incident")
+    if stype == "transfert_entrant":   # h59 — alias
+        stype = "transfert"
+    if stype == "stimulus_animateur":  # h59 — instruction joueur, rien à injecter
+        logger.info(f"Stimulus {stimulus.get('id','?')} (stimulus_animateur) — instruction animateur/joueur, pas d'injection technique")
+        return {"ok": True, "animateur": True, "id": stimulus.get("id", "?")}
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -212,6 +217,21 @@ async def _inject_stimulus(stimulus: dict, token: str, base_urls: dict, manuel: 
                 # ne casse pas si le scénario n'a pas explicitement mis tous
                 # les champs obligatoires de TransfertCreate.
                 payload = dict(payload)  # ne pas muter le scénario chargé
+                if payload.get("ght_emetteur") and not payload.get("etablissement_origine"):
+                    payload["etablissement_origine"] = payload.pop("ght_emetteur")
+                if payload.get("ght_destinataire") and not payload.get("etablissement_destination"):
+                    payload["etablissement_destination"] = payload.pop("ght_destinataire")
+                payload.setdefault("etablissement_destination", sigle)
+                payload.setdefault("unite_origine", "URGENCES")
+                payload.setdefault("unite_destination", "URGENCES")
+                if (payload.get("patient_genre") or payload.get("patient_age")) and not payload.get("nom"):
+                    _g = str(payload.get("patient_genre", "")).strip()
+                    _a = payload.get("patient_age", "")
+                    _det = _g + ((", " + str(_a) + " ans") if _a else "")
+                    payload["nom"] = "Patient exercice" + ((" (" + _det + ")") if _det else "")
+                if payload.get("pathologie") and not payload.get("commentaire"):
+                    _urg = str(payload.get("urgence", "")).strip()
+                    payload["commentaire"] = str(payload["pathologie"]) + ((" [" + _urg + "]") if _urg else "")
                 payload.setdefault("etablissement_origine", sigle)
                 payload.setdefault("redacteur", "Animateur (stimulus exercice)")
                 payload.setdefault("statut", "EN_COURS")

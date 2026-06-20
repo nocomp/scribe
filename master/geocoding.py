@@ -77,7 +77,8 @@ def geocode(query: str, *, country: str = "", timeout: float = 8.0) -> GeocodeRe
     params = {
         "q":      query,
         "format": "json",
-        "limit":  3,    # demander 3 résultats pour pouvoir choisir le meilleur
+        "limit":  5,    # plusieurs résultats pour pouvoir choisir par code postal
+        "addressdetails": 1,
     }
     if country:
         params["countrycodes"] = country
@@ -94,11 +95,23 @@ def geocode(query: str, *, country: str = "", timeout: float = 8.0) -> GeocodeRe
             _put_cache(key, None)
             return None
 
-        # Heuristique : choisir le meilleur résultat. Nominatim trie déjà
-        # par pertinence, mais on peut rejeter les résultats clairement
-        # absurdes en cas de query non-correspondante.
-        # On prend le 1er résultat sauf cas particulier.
+        # h72 — Sélection par CODE POSTAL. Nominatim trie par pertinence, mais
+        # pour une rue très commune (« rue de la République ») il peut classer
+        # une grande ville (Paris) avant la bonne commune malgré le code postal
+        # saisi (74200 Ville → Paris). Si la requête contient un code
+        # postal (4 à 5 chiffres), on privilégie le résultat dont le code postal
+        # — ou le display_name — correspond. Sinon comportement inchangé (data[0]),
+        # ce qui préserve les adresses internationales sans code postal explicite.
+        import re as _re
+        _pcs = _re.findall(r"\b\d{4,5}\b", query)
         first = data[0]
+        if _pcs:
+            for _cand in data:
+                _addr_pc = ((_cand.get("address") or {}).get("postcode") or "").replace(" ", "")
+                _dn = _cand.get("display_name", "") or ""
+                if any(_p == _addr_pc or _p in _dn for _p in _pcs):
+                    first = _cand
+                    break
         result: GeocodeResult = {
             "lat":          float(first["lat"]),
             "lon":          float(first["lon"]),

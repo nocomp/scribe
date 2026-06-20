@@ -23,7 +23,7 @@ from app.database import get_db
 from app.models import (
     CapaciteReferentiel, CapaciteDeclaration, SitrepEntry
 )
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, require_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -154,7 +154,7 @@ def _ref_to_dict(ref: CapaciteReferentiel,
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @router.get("/referentiel")
-def get_referentiel(db: Session = Depends(get_db)):
+def get_referentiel(db: Session = Depends(get_db), user=Depends(require_user)):
     """Renvoie toutes les unités avec leur dernière déclaration."""
     refs = db.query(CapaciteReferentiel).filter(
         CapaciteReferentiel.actif == True
@@ -266,7 +266,8 @@ def submit_declaration(
 def get_declarations(
     referentiel_id: Optional[int] = None,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user=Depends(require_user)   # h62 — auth requise
 ):
     """Historique des déclarations."""
     q = db.query(CapaciteDeclaration).order_by(CapaciteDeclaration.horodatage.desc())
@@ -276,7 +277,7 @@ def get_declarations(
 
 
 @router.get("/synthese")
-def get_synthese(db: Session = Depends(get_db)):
+def get_synthese(db: Session = Depends(get_db), user=Depends(require_user)):  # h62
     """Agrégation par site et pôle — vue d'ensemble pour la cellule."""
     refs = db.query(CapaciteReferentiel).filter(
         CapaciteReferentiel.actif == True
@@ -341,7 +342,7 @@ def get_synthese(db: Session = Depends(get_db)):
 
 
 @router.get("/evolution/{referentiel_id}")
-def get_evolution(referentiel_id: int, jours: int = 3, db: Session = Depends(get_db)):
+def get_evolution(referentiel_id: int, jours: int = 3, db: Session = Depends(get_db), user=Depends(require_user)):  # h62
     """Historique pour graphique d'évolution (derniers N jours)."""
     depuis = datetime.now(timezone.utc) - timedelta(days=jours)
     decls = (db.query(CapaciteDeclaration)
@@ -358,7 +359,7 @@ def get_evolution(referentiel_id: int, jours: int = 3, db: Session = Depends(get
 
 
 @router.get("/export-csv")
-def export_capacite_csv(db: Session = Depends(get_db)):
+def export_capacite_csv(db: Session = Depends(get_db), user=Depends(require_user)):  # h62
     """Export CSV des déclarations — intégré dans la main courante."""
     import csv, io as _io
     from fastapi.responses import StreamingResponse

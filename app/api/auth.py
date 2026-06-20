@@ -89,21 +89,31 @@ elif len(ADMIN_PASS) < 8:
         "Utilisez un mot de passe fort (>= 12 caractères recommandés)."
     )
 
-# ── Hachage bcrypt (remplace SHA-256 sans sel) ────────────────────────────────
-_pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# ── Hachage : bcrypt en lib DIRECTE (immunisé contre la dérive passlib/bcrypt) ─
+# h61 — On n'utilise plus passlib pour bcrypt : avec bcrypt>=4.1, passlib 1.7.4
+# casse (AttributeError __about__) → _hash plantait silencieusement. La lib bcrypt
+# directe est stable. Le repli SHA-256 reste pour migrer les anciens comptes.
+import bcrypt as _bcrypt
+import hashlib as _hashlib
 
 def _hash(pw: str) -> str:
-    """Hache avec bcrypt. Migration transparente depuis SHA-256."""
-    return _pwd_ctx.hash(pw)
+    """Hache avec bcrypt (lib directe). Tronque à 72 octets (limite bcrypt)."""
+    return _bcrypt.hashpw(pw.encode("utf-8")[:72], _bcrypt.gensalt()).decode("utf-8")
 
 def _verify(pw: str, hashed: str) -> bool:
-    """Vérifie bcrypt ET accepte les anciens hashes SHA-256 (migration)."""
+    """Vérifie bcrypt ET accepte les anciens hashes SHA-256 (migration transparente)."""
+    if not hashed:
+        return False
     try:
-        return _pwd_ctx.verify(pw, hashed)
+        if hashed.startswith("$2"):
+            return _bcrypt.checkpw(pw.encode("utf-8")[:72], hashed.encode("utf-8"))
     except Exception:
-        # Fallback SHA-256 pour migration transparente des anciens comptes
-        import hashlib
-        return hashlib.sha256(pw.encode()).hexdigest() == hashed
+        pass
+    # Repli / legacy : SHA-256 sans sel
+    try:
+        return _hashlib.sha256(pw.encode("utf-8")).hexdigest() == hashed
+    except Exception:
+        return False
 
 # ── Rate limiting login (en mémoire, sans dépendance externe) ─────────────────
 _login_attempts: dict = defaultdict(list)  # ip → [timestamps]
@@ -163,6 +173,23 @@ def require_admin(user: Optional[User] = Depends(get_current_user)):
     return user
 
 
+def require_user(user: Optional[User] = Depends(get_current_user)):
+    """h61 — Garde d'authentification strict : 401 si aucun token valide.
+    À appliquer sur tout endpoint de données (règle « rien avant login »).
+    get_current_user renvoie None sans token ; les routes qui se contentaient de
+    `Depends(get_current_user)` sans vérifier None laissaient fuiter les données."""
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentification requise")
+    if getattr(user, "must_change_password", False):
+        # h64 — Verrou SERVEUR du changement de mot de passe. Tant que le mdp
+        # n'est pas changé, aucun accès aux données : ça ferme le contournement
+        # du popup côté client (un simple reload sautait la modale).
+        # L'endpoint POST /change-password dépend de get_current_user (et non de
+        # require_user) → il reste accessible pour effectuer le changement.
+        raise HTTPException(status_code=403, detail="PASSWORD_CHANGE_REQUIRED")
+    return user
+
+
 # v3.4 (h34) — Système de rôles RGPD-compliant.
 # Permet de restreindre l'accès à une route à certains rôles applicatifs.
 # Le rôle 'admin' court-circuite toujours les checks (il a tous les droits).
@@ -218,10 +245,16 @@ class UserCreate(BaseModel):
     password:     str
     role:         str = "collaborateur"
     perimetre:    Optional[str] = None
+    # v3000h41 — Coordonnées de contact (notifications mail/SMS)
+    email:        Optional[str] = None
+    telephone:    Optional[str] = None
 
 class UserOut(BaseModel):
     id: int; username: str; display_name: str; role: str
     perimetre: Optional[str]; active: bool
+    # v3000h41 — Exposer les coordonnées de contact pour l'admin
+    email: Optional[str] = None
+    telephone: Optional[str] = None
     # v2315 — Exposer l'état MFA pour la gestion admin
     mfa_enabled: Optional[bool] = False
     class Config: from_attributes = True
@@ -232,6 +265,9 @@ class UserUpdate(BaseModel):
     role:         Optional[str] = None
     perimetre:    Optional[str] = None
     active:       Optional[bool] = None
+    # v3000h41 — Coordonnées de contact. Chaîne vide = effacer la valeur.
+    email:        Optional[str] = None
+    telephone:    Optional[str] = None
 
 
 # ── Initialisation compte admin ──────────────────────────
@@ -254,7 +290,8 @@ def ensure_admin(db: Session):
             active=True
         )
         try:
-            admin.must_change_password = not is_exercice
+            admin.must_change_password = (not is_exercice) and (
+                os.getenv("SCRIBE_ADMIN_MUST_CHANGE", "1") != "0")
         except Exception:
             pass
         db.add(admin)
@@ -271,7 +308,8 @@ def ensure_admin(db: Session):
         # `verify_password(ADMIN_PASS, hash)` est False → on ne touche
         # plus à `must_change_password` (l'utilisateur reste libre).
         is_exercice = os.getenv("SCRIBE_EXERCICE_MODE", "0") == "1"
-        if not is_exercice and ADMIN_PASS and verify_password(ADMIN_PASS, existing.hashed_password):
+        if (os.getenv("SCRIBE_ADMIN_MUST_CHANGE", "1") != "0") and not is_exercice \
+                and ADMIN_PASS and verify_password(ADMIN_PASS, existing.hashed_password):
             try:
                 if not getattr(existing, "must_change_password", False):
                     existing.must_change_password = True
@@ -290,6 +328,17 @@ def ensure_admin(db: Session):
                 existing.hashed_password = _hash(ADMIN_PASS)
                 existing.active = True
                 db.commit()
+            # h60 — En mode exercice, JAMAIS de changement de mot de passe forcé.
+            # On lève le flag sur tous les comptes : couvre l'admin, les comptes
+            # importés, et les DB exercice créées avant ce correctif.
+            try:
+                changed = db.query(User).filter(
+                    User.must_change_password == True   # noqa: E712
+                ).update({User.must_change_password: False}, synchronize_session=False)
+                if changed:
+                    db.commit()
+            except Exception:
+                db.rollback()
 
 
 # ── Endpoints ────────────────────────────────────────────
@@ -403,6 +452,60 @@ def change_password(
     return {"ok": True, "must_change_password": False}
 
 
+# v3000h41 — Synchronisation des coordonnées de contact vers le plugin
+# notifications. Quand l'admin renseigne l'email / le téléphone d'un compte,
+# on crée (ou met à jour) une souscription "mail" / "sms" pour cet utilisateur,
+# afin que le dispatcher de notifications puisse réellement l'atteindre dès que
+# le backend SMTP ou SMS est configuré.
+#
+# Conception défensive :
+#   - Le plugin notifications est OPTIONNEL : tout est encapsulé dans un
+#     try/except large. Si le plugin (ou sa table) n'existe pas, on ne lève
+#     jamais d'erreur — la création/édition de compte n'en dépend pas.
+#   - On reconnaît les souscriptions auto-gérées via le label "auto:contact"
+#     pour ne JAMAIS écraser une souscription saisie manuellement par
+#     l'utilisateur (mail perso, numéro d'astreinte alternatif, etc.).
+#   - Si la coordonnée est effacée (None), la souscription auto correspondante
+#     est désactivée (active=False) plutôt que supprimée, pour conserver l'audit.
+_AUTO_CONTACT_LABEL = "auto:contact"
+
+def _sync_contact_subscriptions(db: Session, u: User) -> None:
+    try:
+        from plugins.notifications.models import NotifSubscription
+    except Exception:
+        return  # plugin notifications absent → rien à faire
+
+    def _upsert(kind: str, target: Optional[str]) -> None:
+        try:
+            sub = (db.query(NotifSubscription)
+                     .filter(NotifSubscription.user_id == u.id,
+                             NotifSubscription.channel_kind == kind,
+                             NotifSubscription.label == _AUTO_CONTACT_LABEL)
+                     .first())
+            if target:
+                if sub:
+                    sub.target = target
+                    sub.active = True
+                else:
+                    db.add(NotifSubscription(
+                        user_id=u.id, channel_kind=kind,
+                        target=target, label=_AUTO_CONTACT_LABEL,
+                        min_urgency=2, active=True,
+                    ))
+            elif sub:
+                sub.active = False  # coordonnée effacée → on coupe le canal auto
+        except Exception:
+            pass
+
+    try:
+        _upsert("mail", (u.email or "").strip() or None)
+        _upsert("sms",  (u.telephone or "").strip() or None)
+        db.commit()
+    except Exception:
+        try: db.rollback()
+        except Exception: pass
+
+
 @router.get("/users", response_model=List[UserOut])
 def list_users(user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
     """Liste tous les utilisateurs actifs — accessible à tout utilisateur authentifié (nécessaire pour la messagerie)."""
@@ -416,8 +519,11 @@ def create_user(body: UserCreate, admin: User = Depends(require_admin), db: Sess
         raise HTTPException(status_code=409, detail="Nom d'utilisateur déjà pris")
     u = User(username=body.username, display_name=body.display_name,
              role=body.role, hashed_password=_hash(body.password),  # bcrypt
-             perimetre=body.perimetre, active=True)
+             perimetre=body.perimetre,
+             email=(body.email or None), telephone=(body.telephone or None),
+             active=True)
     db.add(u); db.commit(); db.refresh(u)
+    _sync_contact_subscriptions(db, u)
     return u
 
 @router.put("/users/{uid}", response_model=UserOut)
@@ -447,7 +553,16 @@ def update_user(uid: int, body: UserUpdate, admin: User = Depends(require_admin)
         u.role = body.role
     if body.perimetre    is not None: u.perimetre = body.perimetre
     if body.active       is not None: u.active = body.active
-    db.commit(); db.refresh(u); return u
+    # v3000h41 — Coordonnées de contact. Chaîne vide => on efface (None).
+    contact_changed = False
+    if body.email     is not None:
+        u.email = body.email.strip() or None;     contact_changed = True
+    if body.telephone is not None:
+        u.telephone = body.telephone.strip() or None; contact_changed = True
+    db.commit(); db.refresh(u)
+    if contact_changed:
+        _sync_contact_subscriptions(db, u)
+    return u
 
 @router.delete("/users/{uid}")
 def delete_user(uid: int, admin: User = Depends(require_admin), db: Session = Depends(get_db)):

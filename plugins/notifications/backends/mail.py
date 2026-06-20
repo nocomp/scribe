@@ -22,6 +22,8 @@ import ssl
 import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders as _email_encoders
 from email.utils import formatdate, make_msgid
 from typing import Dict, Any
 
@@ -37,7 +39,7 @@ class MailBackend(NotificationBackend):
         c = self.config
         return bool(c.get("smtp_host")) and bool(c.get("from_addr"))
 
-    def _build_message(self, payload: NotifPayload, to_addr: str) -> MIMEMultipart:
+    def _build_message(self, payload: NotifPayload, to_addr: str, attachments=None) -> MIMEMultipart:
         emoji = payload.severity_emoji()
         subject = f"{emoji} SCRIBE — {payload.title}"[:200]
 
@@ -50,6 +52,11 @@ class MailBackend(NotificationBackend):
             f"Type : {payload.event_type}\n"
         )
         url = payload.context.get("url")
+        # h81 — Lien ABSOLU : si url est relatif (ex. /api/v1/...), on préfixe
+        # base_url (sinon le client mail forge un lien cassé « http:/// »).
+        _mbase = (payload.context.get("base_url") or "").rstrip("/")
+        if url and url.startswith("/") and _mbase:
+            url = _mbase + url
         if url:
             text += f"Consulter : {url}\n"
 
@@ -84,7 +91,27 @@ class MailBackend(NotificationBackend):
   </div>
 </body></html>"""
 
-        msg = MIMEMultipart("alternative")
+        alt = MIMEMultipart("alternative")
+        alt.attach(MIMEText(text, "plain", "utf-8"))
+        alt.attach(MIMEText(html, "html",  "utf-8"))
+        # h78 — Pièces jointes : on enveloppe l'alternative texte/HTML dans un
+        # conteneur « mixed » et on y ajoute chaque fichier.
+        if attachments:
+            msg = MIMEMultipart("mixed")
+            msg.attach(alt)
+            for att in attachments:
+                try:
+                    fname, data, mime = att
+                except Exception:
+                    continue
+                maintype, _, subtype = (mime or "application/octet-stream").partition("/")
+                part = MIMEBase(maintype or "application", subtype or "octet-stream")
+                part.set_payload(data)
+                _email_encoders.encode_base64(part)
+                part.add_header("Content-Disposition", "attachment", filename=(fname or "fichier"))
+                msg.attach(part)
+        else:
+            msg = alt
         msg["Subject"] = subject
         msg["From"]    = self.config.get("from_addr", "scribe@localhost")
         msg["To"]      = to_addr
@@ -93,15 +120,13 @@ class MailBackend(NotificationBackend):
         if payload.urgency >= 3:
             msg["X-Priority"] = "1"
             msg["Importance"] = "high"
-        msg.attach(MIMEText(text, "plain", "utf-8"))
-        msg.attach(MIMEText(html, "html",  "utf-8"))
         return msg
 
-    async def send(self, payload: NotifPayload, target: str) -> NotifResult:
+    async def send(self, payload: NotifPayload, target: str, attachments=None) -> NotifResult:
         if not self.is_configured():
             return NotifResult(False, target, "Backend mail non configuré (smtp_host ou from_addr manquant)")
         try:
-            msg = self._build_message(payload, target)
+            msg = self._build_message(payload, target, attachments=attachments)
             # smtplib est bloquant : on le pousse dans un thread pour ne pas
             # bloquer l'event loop FastAPI.
             await asyncio.get_event_loop().run_in_executor(

@@ -16,6 +16,8 @@ logger = logging.getLogger("scribe.plugins")
 
 # ── Registre en mémoire des plugins chargés ───────────────────────────────────
 _loaded_plugins: dict[str, dict] = {}
+# v3.6.0-alpha3 — Registre des erreurs de chargement (pour diagnostic admin)
+_plugin_errors: dict[str, str] = {}
 
 
 def load_all_plugins(app: FastAPI, db_session: Session) -> list[dict]:
@@ -93,8 +95,16 @@ def _load_plugin(app: FastAPI, plugin_id: str) -> Optional[dict]:
         return manifest
 
     except Exception as e:
+        # v3.6.0-alpha3 — Stocker l'erreur pour diagnostic via endpoint debug
+        import traceback as _tb
+        _plugin_errors[plugin_id] = f"{type(e).__name__}: {e}\n{_tb.format_exc()}"
         logger.error(f"Plugin '{plugin_id}' en échec : {e}", exc_info=True)
         return None
+
+
+def get_plugin_errors() -> dict[str, str]:
+    """Retourne les erreurs de chargement des plugins (vide si tout OK)."""
+    return dict(_plugin_errors)
 
 
 def _compat_manifest(plugin_id: str) -> dict:

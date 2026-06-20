@@ -208,13 +208,13 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
       <div style="padding:10px 12px;border-bottom:1px solid var(--bd)">
         <div style="font-family:var(--mo);font-size:9px;color:var(--mu);margin-bottom:6px">SITES PARTICIPANTS</div>
         <div class="sites-checkboxes" id="sites-sel">
-          <div class="site-cb sel" data-sigle="DEMO1" onclick="toggleSite(this)">CHANGE</div>
-          <div class="site-cb" data-sigle="DEMO2" onclick="toggleSite(this)">DEMO2</div>
-          <div class="site-cb" data-sigle="DEMO3" onclick="toggleSite(this)">DEMO3</div>
-          <div class="site-cb" data-sigle="DEMO4" onclick="toggleSite(this)">DEMO4</div>
-          <div class="site-cb" data-sigle="DEMO5" onclick="toggleSite(this)">DEMO5</div>
-          <div class="site-cb" data-sigle="DEMO6" onclick="toggleSite(this)">DEMO6</div>
-          <div class="site-cb" data-sigle="DEMO7" onclick="toggleSite(this)">DEMO7</div>
+          <div class="site-cb sel" data-sigle="DEMO" onclick="toggleSite(this)">CHANGE</div>
+          <div class="site-cb" data-sigle="HOSPITAL-B" onclick="toggleSite(this)">HOSPITAL-B</div>
+          <div class="site-cb" data-sigle="HOSPITAL-C" onclick="toggleSite(this)">HOSPITAL-C</div>
+          <div class="site-cb" data-sigle="HOSPITAL-D" onclick="toggleSite(this)">HOSPITAL-D</div>
+          <div class="site-cb" data-sigle="HOSPITAL-E" onclick="toggleSite(this)">HOSPITAL-E</div>
+          <div class="site-cb" data-sigle="HOSPITAL-F" onclick="toggleSite(this)">HOSPITAL-F</div>
+          <div class="site-cb" data-sigle="HOSPITAL-G" onclick="toggleSite(this)">HOSPITAL-G</div>
         </div>
       </div>
 
@@ -307,13 +307,13 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
       <div class="form-row">
         <label>Sites participants</label>
         <div class="sites-checkboxes" id="ia-sites">
-          <div class="site-cb sel" data-sigle="DEMO1">CHANGE</div>
-          <div class="site-cb" data-sigle="DEMO2">DEMO2</div>
-          <div class="site-cb" data-sigle="DEMO3">DEMO3</div>
-          <div class="site-cb" data-sigle="DEMO4">DEMO4</div>
-          <div class="site-cb" data-sigle="DEMO5">DEMO5</div>
-          <div class="site-cb" data-sigle="DEMO6">DEMO6</div>
-          <div class="site-cb" data-sigle="DEMO7">DEMO7</div>
+          <div class="site-cb sel" data-sigle="DEMO">CHANGE</div>
+          <div class="site-cb" data-sigle="HOSPITAL-B">HOSPITAL-B</div>
+          <div class="site-cb" data-sigle="HOSPITAL-C">HOSPITAL-C</div>
+          <div class="site-cb" data-sigle="HOSPITAL-D">HOSPITAL-D</div>
+          <div class="site-cb" data-sigle="HOSPITAL-E">HOSPITAL-E</div>
+          <div class="site-cb" data-sigle="HOSPITAL-F">HOSPITAL-F</div>
+          <div class="site-cb" data-sigle="HOSPITAL-G">HOSPITAL-G</div>
         </div>
       </div>
       <div id="ia-status" style="font-family:var(--mo);font-size:10px;color:var(--mu);display:none;text-align:center;padding:10px">
@@ -340,13 +340,13 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
       <div class="form-row"><label>Rôle dans l'exercice *</label><input id="j-role" placeholder="Médecin urgentiste CHANGE"></div>
       <div class="form-row"><label>Site assigné</label>
         <select id="j-site">
-          <option value="DEMO1:8660">CHANGE (port 8660)</option>
-          <option value="DEMO2:8661">DEMO2 (port 8661)</option>
-          <option value="DEMO3:8662">DEMO3 (port 8662)</option>
-          <option value="DEMO4:8663">DEMO4 (port 8663)</option>
-          <option value="DEMO5:8664">DEMO5 (port 8664)</option>
-          <option value="DEMO6:8665">DEMO6 (port 8665)</option>
-          <option value="DEMO7:8666">DEMO7 (port 8666)</option>
+          <option value="DEMO:8660">CHANGE (port 8660)</option>
+          <option value="HOSPITAL-B:8661">HOSPITAL-B (port 8661)</option>
+          <option value="HOSPITAL-C:8662">HOSPITAL-C (port 8662)</option>
+          <option value="HOSPITAL-D:8663">HOSPITAL-D (port 8663)</option>
+          <option value="HOSPITAL-E:8664">HOSPITAL-E (port 8664)</option>
+          <option value="HOSPITAL-F:8665">HOSPITAL-F (port 8665)</option>
+          <option value="HOSPITAL-G:8666">HOSPITAL-G (port 8666)</option>
         </select>
       </div>
       <div class="form-row"><label>Mot de passe temporaire</label><input id="j-pwd" value="Exercice2026!"></div>
@@ -786,7 +786,7 @@ function submitGenerateIA() {
   var body = {
     sujet: sujet,
     nb_sites: sites.length || 1,
-    sites: sites.length ? sites : ['DEMO1'],
+    sites: sites.length ? sites : ['DEMO'],
     duree_exercice_min: parseInt(document.getElementById('ia-duree').value),
     duree_reel_min: parseInt(document.getElementById('ia-duree-reel').value),
     type_crise: document.getElementById('ia-type').value,

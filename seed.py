@@ -19,7 +19,7 @@ def seed():
             "code_finess": "740000001",
             "latitude": 45.9336015,
             "longitude": 6.1145528,
-            "adresse": "1 avenue de l'Hôpital, Epagny-Metz-Tessy",
+            "adresse": "1 avenue de l'Hôpital, Epagny-Ville",
             "telephone_garde": None
         },
         {
@@ -35,7 +35,7 @@ def seed():
             "code_finess": "740000003",
             "latitude": 45.9292121,
             "longitude": 6.112887,
-            "adresse": "149 route des Sarves, Epagny-Metz-Tessy",
+            "adresse": "149 route des Sarves, Epagny-Ville",
             "telephone_garde": None
         },
         {
@@ -67,7 +67,7 @@ def seed():
             "code_finess": "740000007",
             "latitude": 45.938598,
             "longitude": 6.1181999,
-            "adresse": "Impasse de la Ravoire, Epagny-Metz-Tessy",
+            "adresse": "Impasse de la Ravoire, Epagny-Ville",
             "telephone_garde": None
         },
     ]

@@ -12,7 +12,7 @@
 **Open-source hospital crisis management platform**
 **Plateforme open-source de gestion de crise hospitalière**
 
-[![Version](https://img.shields.io/badge/version-3.4.0--beta1-orange)](https://github.com/nocomp/scribe/tree/beta)
+[![Version](https://img.shields.io/badge/version-3.6.0--beta1-orange)](https://github.com/nocomp/scribe/tree/beta)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-red)](https://github.com/nocomp/scribe/blob/main/LICENSE)
 [![Stack](https://img.shields.io/badge/stack-Python%20%7C%20FastAPI%20%7C%20SQLite-orange)](https://github.com/nocomp/scribe)
 [![EU languages](https://img.shields.io/badge/languages-24%20EU%20official-FFCE00)](https://github.com/nocomp/scribe)
@@ -28,14 +28,14 @@
 
 ## 🇬🇧 English
 
-SCRIBE is an open-source platform for **hospital crisis management and capacity monitoring**. It provides a complete digital logbook, real-time capacity tracking, a multi-establishment territorial collector, and an AI-powered post-crisis debriefing module.
+SCRIBE is an open-source platform for **hospital crisis management and capacity monitoring**. It provides a complete digital logbook, real-time capacity tracking, a multi-establishment territorial collector, a **staff alert chain (personnel recall)**, and an AI-powered decision-support and post-crisis debriefing module.
 
 ### Dual-purpose design
 
 SCRIBE is built to be useful **both in normal operations and during a crisis**:
 
 - **Normal mode** — daily monitoring of service capacity (beds, HR, equipment), three-times-a-day declarations by ward managers, dashboard for medical direction and HR
-- **Crisis mode** — incident logbook, crisis cell, operational kanban, public bulletins, inter-hospital territorial coordination
+- **Crisis mode** — incident logbook, crisis cell, operational kanban, public bulletins, staff recall, inter-hospital territorial coordination
 
 Designed for **non-technical users** — clinical managers, directors, crisis coordinators — SCRIBE requires no cloud, no LDAP, and operates on an isolated network.
 
@@ -45,13 +45,13 @@ Every official language of the European Union is selectable from the login scree
 
 🇫🇷 Français · 🇬🇧 English · 🇩🇪 Deutsch · 🇪🇸 Español · 🇮🇹 Italiano · 🇳🇱 Nederlands · 🇵🇹 Português · 🇵🇱 Polski · 🇷🇴 Română · 🇬🇷 Ελληνικά · 🇨🇿 Čeština · 🇸🇰 Slovenčina · 🇸🇪 Svenska · 🇩🇰 Dansk · 🇫🇮 Suomi · 🇭🇺 Magyar · 🇧🇬 Български · 🇭🇷 Hrvatski · 🇸🇮 Slovenščina · 🇪🇪 Eesti · 🇱🇹 Lietuvių · 🇱🇻 Latviešu · 🇲🇹 Malti · 🇮🇪 Gaeilge
 
-- **5 fully native UI translations**: FR, EN, DE, ES, IT (663 keys each in beta1)
-- **19 essential native translations**: ~111 keys for the most-used UI elements
+- **5 fully native UI translations**: FR, EN, DE, ES, IT
+- **19 essential native translations**: the most-used UI elements
 - **Coherent English fallback** for the rest
 
 ### Architecture
 
-Each hospital runs an **isolated SCRIBE instance** with its own SQLite database. Personal patient data **never leaves the establishment**. The territorial collector only receives aggregated indicators (capacity levels, incident counts) — GDPR-compliant by design.
+Each hospital runs an **isolated SCRIBE instance** with its own SQLite database. Personal patient data **never leaves the establishment**, and so do staff contact details used for recall. The territorial collector only receives aggregated indicators (capacity levels, incident counts) — GDPR-compliant by design.
 
 ### Stack
 
@@ -64,11 +64,14 @@ Each hospital runs an **isolated SCRIBE instance** with its own SQLite database.
 | Mapping | Leaflet.js + OSRM |
 | AI (optional) | Albert (French government LLM) |
 | Design system | DSFR (French government) |
+| Notifications | SMS, email (configurable gateways) |
 
 ### Key features
 
 - 🚨 **Incident management** — typology (cyber / health / mixed), urgency levels, escalation
+- 🔔 **Incident subscription** — subscribe to an incident to be notified by email on every status change *(new)*
 - 🏥 **Capacity declarations** — per service / functional unit, with tension thresholds
+- 📣 **Staff alert chain / recall** — import a directory, target by **site / unit (UF) / pole / name**, multi-channel **SMS + email** recall; each person declares their **ETA** via a link; real-time dashboard with response rate, per-UF gauges, reminders to non-responders and individual reply *(new)*
 - 🤝 **Crisis cell** — roster, roles, meeting log
 - 📋 **Kanban** — operational task tracking with priorities and assignment
 - 🚑 **Patient transfers** — inter-hospital with destination, ETA, OSRM routing
@@ -79,21 +82,17 @@ Each hospital runs an **isolated SCRIBE instance** with its own SQLite database.
 - 📊 **Post-crisis AAR** — automatic generation, decision analysis, lessons learned
 - 🗺️ **Territorial supervision** — multi-hospital aggregated dashboard
 - 🎓 **Exercise mode** — isolated drill instances with animator console
-- 🤖 **AI assistant** — situational analysis via Albert (French sovereign LLM)
+- 🤖 **AI decision support** — situational analysis via Albert; **now cross-references the competencies arriving (from the staff recall) with open incidents** to support the decision (it *proposes and observes* — the crisis cell decides) *(new)*
 - 🌐 **Self-hosted** — no cloud, no telemetry, full sovereignty
 
-### What's new in 3.4.0-beta1
+### What's new in 3.6.0-beta1
 
-- ✨ **24 EU languages** — selectable from the login screen
-- ✨ **Wizard-driven instance creation** — full setup in 5 steps
-- ✨ **Modular plugin architecture** — enable/disable per instance
-- ✨ **Forced password change** on first login with temporary credentials
-- ✨ **RBAC** with 3 roles: `cellule_crise`, `soignant`, `admin`
-- 🐛 **Fix**: language chosen at wizard properly propagates to instance
-- 🐛 **Fix**: admin language selector pre-fills correctly
-- 🐛 **Fix**: forced password change modal now translates
-- 🐛 **Fix**: Care plugin (Soins) fully translatable
-- 🐛 **Fix**: Bulletin preview uses dynamic translations
+- ✨ **Staff alert chain / personnel recall** — directory import (Excel), multi-criteria **and** by-name targeting, SMS + email dispatch, ETA responses via a tokenized link, real-time dashboard with per-UF gauges, reminders to non-responders, and individual reply by email/SMS
+- ✨ **Incident subscription** — email notifications on status changes, to the right people, without flooding everyone
+- ✨ **AI decision support** — the assistant crosses the arriving competencies with open incidents (e.g. *"2 technicians within 30 min: wait for their assessment before calling an external provider"*); only **anonymized aggregates** are sent to the AI, never personal identifiers
+- ✨ **Scales to large directories** — search-driven targeting and previews built for thousands of staff
+- ✨ **UI refresh** aligned with the French State design system (DSFR)
+- 🔒 **Data minimization** — staff contact details stay local to the establishment
 
 ### Installation
 
@@ -135,14 +134,14 @@ This is a **personal open-source project**, independent of any employer.
 
 ## 🇫🇷 Français
 
-SCRIBE est une plateforme open-source de **gestion de crise et de pilotage capacitaire hospitalier**. Elle fournit une main courante numérique complète, un suivi capacitaire en temps réel, un collecteur territorial multi-établissements et un module de débriefing post-crise alimenté par l'IA.
+SCRIBE est une plateforme open-source de **gestion de crise et de pilotage capacitaire hospitalier**. Elle fournit une main courante numérique complète, un suivi capacitaire en temps réel, un collecteur territorial multi-établissements, une **chaîne d'alerte (rappel du personnel)** et un module d'aide à la décision et de débriefing post-crise alimenté par l'IA.
 
 ### Double usage
 
 SCRIBE est conçu pour être utile **aussi bien en mode nominal qu'en crise** :
 
 - **Mode nominal** — suivi quotidien de la capacité des services (lits, RH, matériel), déclarations 3 fois/jour par les cadres, tableau de bord pour la direction des soins et la DRH
-- **Mode crise** — main courante incidents, cellule de crise, kanban opérationnel, communiqués publics, coordination territoriale GHT/ARS
+- **Mode crise** — main courante incidents, cellule de crise, kanban opérationnel, communiqués publics, rappel du personnel, coordination territoriale
 
 Conçu pour les **non-techniciens** — cadres soignants, directeurs, gestionnaires de crise — SCRIBE ne nécessite aucun cloud, aucun LDAP et fonctionne en réseau isolé.
 
@@ -150,18 +149,20 @@ Conçu pour les **non-techniciens** — cadres soignants, directeurs, gestionnai
 
 Toutes les langues officielles de l'Union européenne sont sélectionnables dès la mire de connexion, avant authentification.
 
-- **5 traductions UI complètement natives** : FR, EN, DE, ES, IT (663 clés en beta1)
-- **19 traductions natives essentielles** : ~111 clés pour les éléments UI les plus utilisés
+- **5 traductions UI complètement natives** : FR, EN, DE, ES, IT
+- **19 traductions natives essentielles** : les éléments UI les plus utilisés
 - **Fallback anglais cohérent** pour le reste
 
 ### Architecture
 
-Chaque hôpital fait tourner une **instance SCRIBE isolée** avec sa propre base SQLite. **Aucune donnée patient nominative ne sort de l'établissement**. Le collecteur territorial ne reçoit que des indicateurs agrégés (niveaux de capacité, comptages d'incidents) — RGPD-compliant by design.
+Chaque hôpital fait tourner une **instance SCRIBE isolée** avec sa propre base SQLite. **Aucune donnée patient nominative ne sort de l'établissement** — pas plus que les coordonnées du personnel utilisées pour le rappel. Le collecteur territorial ne reçoit que des indicateurs agrégés (niveaux de capacité, comptages d'incidents) — RGPD-compliant by design.
 
 ### Fonctionnalités principales
 
 - 🚨 **Gestion d'incidents** — typologie (cyber / sanitaire / mixte), niveaux d'urgence, escalade
+- 🔔 **Abonnement aux incidents** — s'abonner à un incident pour être notifié par e-mail à chaque changement de statut *(nouveau)*
 - 🏥 **Déclarations capacitaires** — par service / UF, avec seuils de tension
+- 📣 **Chaîne d'alerte / rappel du personnel** — import d'un annuaire, ciblage par **site / pôle / UF / nom**, envoi **multicanal SMS + e-mail** ; chaque personne déclare son **délai d'arrivée** via un lien ; tableau de bord temps réel avec taux de retour, jauges par UF, relance des non-répondants et réponse individuelle *(nouveau)*
 - 🤝 **Cellule de crise** — présence, rôles, journal de réunion
 - 📋 **Kanban** — suivi opérationnel des tâches avec priorités et assignation
 - 🚑 **Transferts patients** — inter-établissements avec destination, ETA, routing OSRM
@@ -172,21 +173,17 @@ Chaque hôpital fait tourner une **instance SCRIBE isolée** avec sa propre base
 - 📊 **REX post-crise** — génération automatique, analyse des décisions
 - 🗺️ **Supervision territoriale** — dashboard agrégé multi-établissements
 - 🎓 **Mode Exercice** — instances de simulation isolées avec console animateur
-- 🤖 **Assistant IA** — analyse situationnelle via Albert (LLM souverain français)
+- 🤖 **Aide à la décision par IA** — analyse situationnelle via Albert ; **croise désormais les compétences qui arrivent (issues du rappel du personnel) avec les incidents en cours** pour éclairer la décision (il *propose et observe* — la cellule décide) *(nouveau)*
 - 🌐 **Auto-hébergé** — pas de cloud, pas de télémétrie, souveraineté complète
 
-### Nouveautés 3.4.0-beta1
+### Nouveautés 3.6.0-beta1
 
-- ✨ **24 langues UE** sélectionnables dès la mire de connexion
-- ✨ **Création d'instance par wizard** en 5 étapes
-- ✨ **Architecture plugin modulaire** — activable par instance
-- ✨ **Changement de mot de passe forcé** à la première connexion
-- ✨ **RBAC** avec 3 rôles : `cellule_crise`, `soignant`, `admin`
-- 🐛 Fix : la langue choisie au wizard se propage maintenant à l'instance
-- 🐛 Fix : sélecteur de langue admin pré-rempli correctement
-- 🐛 Fix : modal changement de mot de passe traduit
-- 🐛 Fix : plugin Soins entièrement traduisible
-- 🐛 Fix : preview du communiqué utilise les traductions dynamiques
+- ✨ **Chaîne d'alerte / rappel du personnel** — import d'annuaire (Excel), ciblage multi-critères **et** par nom, envoi SMS + e-mail, réponses ETA via un lien tokenisé, tableau de bord temps réel avec jauges par UF, relance des non-répondants et réponse individuelle par e-mail/SMS
+- ✨ **Abonnement aux incidents** — notifications e-mail sur les changements de statut, à la bonne personne, sans saturer tout le monde
+- ✨ **Aide à la décision par IA** — l'assistant croise les compétences qui arrivent avec les incidents ouverts (ex. *« 2 techniciens sous 30 min : attendre leur constat avant d'engager un prestataire »*) ; seuls des **agrégats anonymisés** sont transmis à l'IA, jamais de nominatif
+- ✨ **Tient à l'échelle des grands annuaires** — ciblage et aperçu pensés pour des milliers d'agents (recherche)
+- ✨ **Refonte UI** alignée sur le système de design de l'État (DSFR)
+- 🔒 **Minimisation des données** — les coordonnées du personnel restent locales à l'établissement
 
 ### Installation
 

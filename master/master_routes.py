@@ -944,7 +944,7 @@ def onboarding_create_instance(payload: WizardInstanceCreate, request: Request):
     # v2.4.8 : marquer l'onboarding comme terminé automatiquement dès qu'une
     # instance non-démo a été configurée. Évite que le wizard se relance en
     # navigation privée quand l'utilisateur a déjà importé/configuré un
-    # établissement (bug Example Territory : le client appelait /onboarding/finish
+    # établissement (correctif : le client appelait /onboarding/finish
     # dans certains cas mais pas tous → flag manquant au redémarrage).
     # v2.4.8.4 : helper nettoie aussi wizard_force éventuel
     _mark_onboarding_done()

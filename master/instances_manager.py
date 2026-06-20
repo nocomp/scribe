@@ -808,7 +808,7 @@ class InstanceManager:
             else:
                 hospital_principal = Hospital(
                     nom=hospital_nom,
-                    latitude=state.config.latitude or 45.8992,    # Example City par défaut
+                    latitude=state.config.latitude or 48.8566,    # coordonnée par défaut
                     longitude=state.config.longitude or 6.1294,
                 )
                 sess.add(hospital_principal)
@@ -1134,6 +1134,11 @@ class InstanceManager:
         existing = sess.query(User).filter(
             User.username == state.config.admin_login
         ).first()
+        # h60 — En mode EXERCICE, le mot de passe est fixe et non secret
+        # (« Exercice2026! ») : on ne force JAMAIS son changement (sinon les
+        # joueurs et le collecteur animateur sont bloqués à la 1ère connexion).
+        # Détection sans import circulaire via le nom de la dataclass de config.
+        _is_exo = type(state.config).__name__ == "ExerciceInstanceConfig"
         if existing:
             existing.hashed_password = _hash(state.config.admin_password)
             existing.role = "admin"
@@ -1149,7 +1154,7 @@ class InstanceManager:
             # Le mdp initial étant généré par le wizard et potentiellement
             # transmis par email/chat, l'utilisateur doit le changer.
             try:
-                existing.must_change_password = True
+                existing.must_change_password = not _is_exo
             except Exception:
                 pass
             logger.info(f"  Compte admin mis à jour : {state.config.admin_login} (display='{existing.display_name}')")
@@ -1164,7 +1169,7 @@ class InstanceManager:
             # v3.4 (h38c) — Forcer le changement de mot de passe à la
             # première connexion
             try:
-                new_admin.must_change_password = True
+                new_admin.must_change_password = not _is_exo
             except Exception:
                 pass
             sess.add(new_admin)

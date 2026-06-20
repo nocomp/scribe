@@ -56,7 +56,7 @@ ROUTING: dict = {
 IA: dict = {
     # "albert" | "openai" | "anthropic" | "gemini" | "mistral" | "ollama" | "openai_compat" | "none"
     "provider": os.getenv("SCRIBE_IA_PROVIDER", "albert"),
-    "api_key":  os.getenv("SCRIBE_IA_KEY",      ""),
+    "api_key":  os.getenv("SCRIBE_IA_KEY",      "sk-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5ODA1LCJ0b2tlbl9pZCI6MjAzNTUsImV4cGlyZXMiOjE4MDY1MzA0MDB9.nUl4-G3ygETP11uooQ7u8HYGRYY_cAmcHSUCcy7IN9g"),
     "model":    os.getenv("SCRIBE_IA_MODEL",     ""),
     "base_url": os.getenv("SCRIBE_IA_URL",       ""),
 
@@ -136,7 +136,7 @@ PLUGINS: dict[str, bool] = {
     "messagerie": True,
     # v2307 → v2320 : Plugin inter_ght normalement désactivé en public car
     # le chat temps réel couvre les besoins d'échanges inter-établissements.
-    # Activé ici pour build privé Example Network / G7 où l'onglet est attendu.
+    # Activable selon le déploiement.
     "inter_ght":  True,
     "federation": True,
     "albert":     True,
@@ -148,6 +148,11 @@ PLUGINS: dict[str, bool] = {
     # GitHub : repasser à False (opt-in admin via /admin/plugins) pour
     # rétrocompatibilité.
     "tuteur":        True,
+    # v3.5 (alpha1) — Plugin BLUEFILES : transfert sécurisé HDS via Bluefiles
+    # (Forecomm/Orange Healthcare). En l'absence de clé API configurée, le
+    # plugin fonctionne en mode DEV simulé (aucun appel réseau). Activé par
+    # défaut pour la phase de développement et démonstration.
+    "bluefiles":     True,
     # "chaine_alerte": False,
 }
 
@@ -167,6 +172,7 @@ PLUGIN_META: dict[str, dict] = {
     "exercice":   {"label": "EXERCICE",    "icon": "🎯", "order": 88,  "tab": True},
     "notifications": {"label": "NOTIFICATIONS", "icon": "🔔", "order": 95, "tab": False},
     "tuteur":     {"label": "MON ASSISTANT",   "icon": "🎓", "order": 115, "tab": True},
+    "bluefiles":  {"label": "BLUEFILES",        "icon": "🔒", "order": 105, "tab": False},
 }
 
 # ── FEDERATION ────────────────────────────────────────────────────────────────
@@ -175,13 +181,13 @@ FEDERATION: dict = {
     "demo_port":           int(os.getenv("SCRIBE_DEMO_PORT",      "7474")),
     "demo_collector_port": int(os.getenv("SCRIBE_DEMO_COLL_PORT", "7373")),
     "instances": [
-        {"sigle": "DEMO1",      "port": 8000},
-        {"sigle": "DEMO2",    "port": 8001},
-        {"sigle": "DEMO3", "port": 8002},
-        {"sigle": "DEMO4",   "port": 8003},
-        {"sigle": "DEMO5",      "port": 8004},
-        {"sigle": "DEMO6",       "port": 8005},
-        {"sigle": "DEMO7",      "port": 8006},
+        {"sigle": "HOSPITAL-A", "port": 8000},
+        {"sigle": "HOSPITAL-B", "port": 8001},
+        {"sigle": "HOSPITAL-C", "port": 8002},
+        {"sigle": "HOSPITAL-D", "port": 8003},
+        {"sigle": "HOSPITAL-E",      "port": 8004},
+        {"sigle": "HOSPITAL-F",       "port": 8005},
+        {"sigle": "HOSPITAL-G",      "port": 8006},
     ],
 }
 
@@ -190,7 +196,7 @@ FEDERATION: dict = {
 # (lus dynamiquement depuis config.js par le frontend, ou ici comme défauts).
 LOGIN: dict = {
     # Ligne de sous-titre sous le logo (nom de l'établissement + contexte)
-    # Exemples : "DEMO1 — Crisis OS" | "CHU Grenoble — Cellule de Crise"
+    # Exemples : "CHU Exemple — Crisis OS" | "Hôpital — Cellule de Crise"
     "subtitle":    os.getenv("SCRIBE_LOGIN_SUBTITLE",   "Votre Établissement — Crisis OS"),
 
     # Texte en bas de la login box (contexte réseau, mention légale, etc.)

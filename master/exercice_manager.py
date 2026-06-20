@@ -78,9 +78,11 @@ class ExerciceInstanceConfig:
     nom: str = ""
     admin_login: str = "dircrise"
     admin_password: str = ""
+    admin_display_name: str = ""   # h58 — aligné sur InstanceConfig (lu par _bootstrap_db)
     adresse: str = ""
     latitude: float | None = None
     longitude: float | None = None
+    timezone: str = ""  # h58 — aligné sur InstanceConfig (lu par _bootstrap_db)
     # Pas de mode "solo" en exercice : toute instance exo pousse au :8565.
     # Champ conservé pour compat ascendante avec InstanceConfig si besoin
     # de réutiliser des helpers communs.
@@ -108,6 +110,8 @@ class ExerciceInstanceConfig:
             # cassait l'injection (0 stimulus). Ce n'est pas un secret : c'est un
             # identifiant d'exercice partagé, connu des joueurs.
             self.admin_password = "Exercice2026!"
+        if not self.admin_display_name:
+            self.admin_display_name = self.admin_login.upper() if self.admin_login else "Admin"
 
 
 @dataclass

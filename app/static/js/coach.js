@@ -955,7 +955,7 @@
       const isAck = !!latest.ack_at;
       const opacity = isAck ? 0.55 : 1;
       const tsRecent = latest.created_at
-        ? new Date(latest.created_at).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
+        ? (window.parseUTC?parseUTC(latest.created_at):new Date(latest.created_at)).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
         : '';
       const acklabel = isAck ? ' <span style="font-size:10px;color:#94a3b8">(traité)</span>' : '';
       const compteur = grp.length > 1
@@ -967,7 +967,7 @@
       if (grp.length > 1) {
         const tsList = grp.map(function(m) {
           const t = m.created_at
-            ? new Date(m.created_at).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
+            ? (window.parseUTC?parseUTC(m.created_at):new Date(m.created_at)).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
             : '?';
           const a = m.ack_at ? ' ✓' : '';
           return '<span style="display:inline-block;padding:1px 6px;margin:1px;background:#f1f5f9;border-radius:4px;font-size:10px;color:#475569">' + escapeHtml(t) + a + '</span>';

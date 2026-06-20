@@ -2,7 +2,7 @@
 collecteur.py — Collecteur de supervision territoriale SCRIBE
 
 Reçoit les pushs JSON des instances SCRIBE des établissements.
-Interface web en lecture seule pour CERT Santé, ARS, supervision GHT.
+Interface web de supervision (lecture seule).
 
 Usage :
   python collecteur.py
@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Optional
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi import FastAPI, HTTPException, Request, Depends, Form, File, UploadFile
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -140,7 +140,7 @@ ADMIN_TOKEN = _load_or_create_admin_token()
 
 def load_tokens():
     global tokens
-    tokens = dict(ARC_ALPIN_TOKENS)
+    tokens = dict(DEMO_TOKENS)
     if Path(TOKENS_FILE).exists():
         try:
             saved = json.loads(Path(TOKENS_FILE).read_text())
@@ -203,6 +203,26 @@ def save_data():
 # ── App FastAPI ───────────────────────────────────────────────────────────
 
 app = FastAPI(title="SCRIBE Collecteur territorial", version="1.2.1")
+
+# ── v3000h48 — Messagerie ISO : embarque le VRAI plugin messagerie ───────────
+# La supervision utilise exactement le même module que les instances.
+try:
+    import os as _os_mm, sys as _sys_mm
+    _sys_mm.path.insert(0, _os_mm.path.dirname(_os_mm.path.abspath(__file__)))
+    import messagerie_mount as _msg_mount
+    # IDOR fix : la messagerie embarquée exige le token du collecteur (ADMIN_TOKEN
+    # ou session UI admin), en header Bearer ou ?token= (liens PJ). Sans token → 401.
+    def _msg_token_ok(tok):
+        if not tok:
+            return False
+        if tok == ADMIN_TOKEN:
+            return True
+        return tok in ui_sessions
+    _msg_mount.mount(app, token_validator=_msg_token_ok)
+except Exception as _e_mm:
+    import logging as _l_mm
+    _l_mm.getLogger("scribe.collecteur").error("[messagerie] montage KO : %s", _e_mm)
+
 
 # ── CORS : middleware http natif Starlette ────────────────────────────────
 @app.middleware("http")
@@ -280,6 +300,15 @@ def require_admin(credentials: Optional[HTTPAuthorizationCredentials] = Depends(
     if not credentials or credentials.credentials != ADMIN_TOKEN:
         raise HTTPException(status_code=403, detail="Token admin invalide")
     return True
+
+def require_node_or_admin(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> str:
+    """Accepte le token admin collecteur OU un token de fédération d'instance.
+    Renvoie le sigle de l'appelant (SUPERVISEUR pour l'admin). Sert au relais
+    messagerie inter-instances : une instance peut écrire à un agent d'une autre."""
+    etab = get_etab_from_token(credentials)
+    if not etab:
+        raise HTTPException(status_code=403, detail="Token invalide")
+    return etab
 
 def require_ui_admin(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> bool:
     """Accepte le token admin collecteur OU un token de session UI admin."""
@@ -418,17 +447,17 @@ async def accept_pending(token_prefix: str, body: dict = {}):
     logger.info(f"Établissement accepté : {sigle} (token: {token[:12]}...)")
     return {"ok": True, "sigle": sigle, "message": f"{sigle} enrôlé avec succès"}
 
-@app.post("/api/admin/tokens/arc-alpin", dependencies=[Depends(require_admin)])
-async def register_arc_alpin_tokens():
-    """Enregistre les 4 tokens Example Network démo — utile si l'auto-register a échoué."""
+@app.post("/api/admin/tokens/demo", dependencies=[Depends(require_admin)])
+async def register_demo_tokens():
+    """Enregistre des tokens de démonstration — utile si l'auto-register a échoué."""
     added = []
-    for tok, sigle in ARC_ALPIN_TOKENS.items():
+    for tok, sigle in DEMO_TOKENS.items():
         if tok not in tokens:
             tokens[tok] = sigle
             added.append(sigle)
     if added:
         save_tokens()
-        logger.info(f"Tokens Example Network enregistrés manuellement : {added}")
+        logger.info(f"Tokens de démonstration enregistrés manuellement : {added}")
     return {"ok": True, "added": added, "total": len(tokens),
             "message": f"{len(added)} token(s) ajouté(s), {len(tokens)} token(s) total"}
 
@@ -536,6 +565,55 @@ async def non_lus_interght(
                 if (m["destinataire"] == sigle or m["destinataire"] == "TOUS")
                 and sigle not in m.get("lu_par", []))
     return {"count": count}
+
+
+# ── SUPERVISION : messagerie avec les instances (v3000h44, additif) ──────────
+# La supervision lit les messages qui lui sont adressés
+# (destinataire == "SUPERVISION") et répond à une instance précise.
+# Réutilise messages_inter — aucun nouveau stockage. Les instances utilisent
+# leurs endpoints /api/messages existants (destinataire="SUPERVISION" à l'envoi,
+# réception via destinataire == leur sigle). Auth admin (compte supervision).
+
+class SupervisionMessageBody(BaseModel):
+    destinataire: str   # sigle de l'instance cible
+    sujet: str
+    contenu: str
+    expediteur_nom: Optional[str] = "Supervision"
+
+@app.get("/api/supervision/messages", dependencies=[Depends(require_admin)])
+async def supervision_messages():
+    """Inbox supervision : messages reçus (destinataire SUPERVISION) + envoyés."""
+    received = [m for m in messages_inter if m.get("destinataire") == "SUPERVISION"]
+    sent     = [m for m in messages_inter if m.get("expediteur")  == "SUPERVISION"]
+    return {"received": received, "sent": sent}
+
+@app.post("/api/supervision/messages", dependencies=[Depends(require_admin)])
+async def supervision_send(body: SupervisionMessageBody):
+    """La supervision envoie un message à une instance (expediteur forcé SUPERVISION)."""
+    msg = {
+        "id": len(messages_inter) + 1,
+        "expediteur": "SUPERVISION",
+        "expediteur_nom": body.expediteur_nom or "Supervision",
+        "destinataire": body.destinataire.upper(),
+        "sujet": body.sujet,
+        "contenu": body.contenu,
+        "lu_par": [],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    messages_inter.append(msg)
+    save_messages_inter()
+    logger.info(f"Message SUPERVISION → {body.destinataire} | {body.sujet[:40]}")
+    return {"ok": True, "id": msg["id"]}
+
+@app.put("/api/supervision/messages/{msg_id}/lire", dependencies=[Depends(require_admin)])
+async def supervision_marquer_lu(msg_id: int):
+    for m in messages_inter:
+        if m["id"] == msg_id:
+            if "SUPERVISION" not in m.get("lu_par", []):
+                m.setdefault("lu_par", []).append("SUPERVISION")
+            save_messages_inter()
+            return {"ok": True}
+    raise HTTPException(status_code=404, detail="Message non trouvé")
 
 
 # ── Token admin (création / liste) ───────────────────────────────────────
@@ -1038,23 +1116,32 @@ async def chat_get_presence(credentials=Depends(security)):
 
 @app.get("/api/annuaire")
 async def get_annuaire_interght():
-    import httpx
-    result = []
-    PORT_MAP = {"DEMO1":"8000","DEMO2":"8001","GHTSAV":"8002","GHTAD38":"8003",
-                "DEMO3":"8002","DEMO4":"8003","DEMO5":"8004","DEMO6":"8005","DEMO7":"8006"}
-    for token, sigle in tokens.items():
-        etab_data = etablissements.get(sigle)
-        if not etab_data:
-            continue
-        port = PORT_MAP.get(sigle, "8000")
+    """h71 — Annuaire inter-établissements par DÉCOUVERTE directe : on interroge
+    l'annuaire-public de chaque port d'instance connu, en parallèle, et on
+    identifie chaque établissement par le sigle qu'il DÉCLARE lui-même. Plus de
+    PORT_MAP codé en dur (qui cassait avec des sigles personnalisés comme
+    « CH THONON » → tout retombait sur le port 8000). Dédup par sigle déclaré."""
+    import httpx, asyncio
+    ports = list(range(8000, 8010)) + [7474]   # instances nominales + démo
+    async def _fetch(port):
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            async with httpx.AsyncClient(timeout=2.5) as client:
                 r = await client.get(f"http://127.0.0.1:{port}/api/v1/auth/annuaire-public")
                 if r.status_code == 200:
-                    result.append(r.json())
+                    return r.json()
         except Exception:
-            etab_info = etab_data.get("etablissement", {})
-            result.append({"sigle": sigle, "nom": etab_info.get("nom", sigle), "contacts": [], "unavailable": True})
+            return None
+        return None
+    fetched = await asyncio.gather(*[_fetch(p) for p in ports])
+    result, seen = [], set()
+    for data in fetched:
+        if not data:
+            continue
+        sig = (data.get("sigle") or "").upper().strip()
+        if not sig or sig == "?" or sig in seen:
+            continue
+        seen.add(sig)
+        result.append(data)
     return result
 
 @app.get("/api/summary")
@@ -1421,22 +1508,22 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--b
     </select>
   </div>
   <div style="text-align:center"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:56px;object-fit:contain"></div>
-  <div style="font-family:monospace;font-size:10px;letter-spacing:2px;text-align:center;color:#64748b;text-transform:uppercase">Supervision Territoriale</div>
-  <div style="display:flex;flex-direction:column;gap:4px"><label style="font-family:monospace;font-size:9px;color:#64748b;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:3px">Identifiant</label><input id="coll-login" type="text" placeholder="supervision" autocomplete="username" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:5px;font-family:monospace;font-size:11px;color:#0f172a;background:#f8fafc;outline:none;box-sizing:border-box;width:100%"></div>
-  <div style="display:flex;flex-direction:column;gap:4px"><label style="font-family:monospace;font-size:9px;color:#64748b;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:3px">Mot de passe</label><input id="coll-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key===String.fromCharCode(13))collLogin()" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:5px;font-family:monospace;font-size:11px;color:#0f172a;background:#f8fafc;outline:none;box-sizing:border-box;width:100%"></div>
-  <button onclick="collLogin()" style="width:100%;padding:10px;font-family:monospace;font-size:12px;font-weight:700;letter-spacing:2px;background:#003189;color:#fff;border:none;border-radius:5px;cursor:pointer;margin-top:4px">CONNEXION</button>
+  <div data-mi18n="login.subtitle" style="font-family:monospace;font-size:10px;letter-spacing:2px;text-align:center;color:#64748b;text-transform:uppercase">Supervision Territoriale</div>
+  <div style="display:flex;flex-direction:column;gap:4px"><label data-mi18n="login.username" style="font-family:monospace;font-size:9px;color:#64748b;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:3px">Identifiant</label><input id="coll-login" type="text" placeholder="supervision" autocomplete="username" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:5px;font-family:monospace;font-size:11px;color:#0f172a;background:#f8fafc;outline:none;box-sizing:border-box;width:100%"></div>
+  <div style="display:flex;flex-direction:column;gap:4px"><label data-mi18n="login.password" style="font-family:monospace;font-size:9px;color:#64748b;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:3px">Mot de passe</label><input id="coll-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key===String.fromCharCode(13))collLogin()" style="padding:9px 12px;border:1px solid #e2e8f0;border-radius:5px;font-family:monospace;font-size:11px;color:#0f172a;background:#f8fafc;outline:none;box-sizing:border-box;width:100%"></div>
+  <button onclick="collLogin()" data-mi18n="login.button" style="width:100%;padding:10px;font-family:monospace;font-size:12px;font-weight:700;letter-spacing:2px;background:#003189;color:#fff;border:none;border-radius:5px;cursor:pointer;margin-top:4px">CONNEXION</button>
   <div id="coll-err" style="font-family:monospace;font-size:10px;color:#e1000f;text-align:center;min-height:14px"></div>
   <div id="coll-default-hint" style="display:none;background:#e3e3fd;border-radius:4px;padding:10px 12px;font-family:monospace;font-size:10px;color:#000091;line-height:1.5;text-align:left;margin-top:4px">
-    <strong>Première connexion ?</strong><br>
-    Identifiant : <code style="background:rgba(0,0,145,.1);padding:1px 4px;border-radius:2px">supervision</code><br>
-    Mot de passe : <code style="background:rgba(0,0,145,.1);padding:1px 4px;border-radius:2px">Scribe2026!</code><br>
-    <span style="font-size:9px;opacity:.7">À changer après le premier login (onglet Comptes).</span>
+    <strong data-mi18n="login.first_time">Première connexion ?</strong><br>
+    <span data-mi18n="login.username">Identifiant</span> : <code style="background:rgba(0,0,145,.1);padding:1px 4px;border-radius:2px">supervision</code><br>
+    <span data-mi18n="login.password">Mot de passe</span> : <code style="background:rgba(0,0,145,.1);padding:1px 4px;border-radius:2px">Scribe2026!</code><br>
+    <span data-mi18n="login.first_time_hint" style="font-size:9px;opacity:.7">À changer après le premier login (onglet Comptes).</span>
   </div>
-  <!-- v3.4 (h38m) — Footer crédite Hervé PELLARIN (projet personnel, pas DEMO1).
+  <!-- v3.4 (h38m) — Footer crédite l'auteur (projet personnel).
        Liens hypertextes : nom → profil LinkedIn, "SCRIBE Crisis OS" → GitHub repo. -->
   <div style="font-family:monospace;font-size:9px;color:#94a3b8;text-align:center;margin-top:8px;line-height:1.6">
-    Designed by <a href="https://www.linkedin.com/in/%D0%BD%D0%BE-%D0%BA%D0%BE%D0%BC%D0%BF/" target="_blank" rel="noopener noreferrer" style="color:#003189;text-decoration:none;border-bottom:1px dotted #003189">Hervé PELLARIN</a><br>
-    <a href="https://github.com/nocomp/scribe" target="_blank" rel="noopener noreferrer" style="color:#003189;text-decoration:none;border-bottom:1px dotted #003189">SCRIBE Crisis OS</a> · open source · AGPL-3.0
+    <span data-mi18n="login.designed_by">Designed by</span> <a href="https://www.linkedin.com/in/%D0%BD%D0%BE-%D0%BA%D0%BE%D0%BC%D0%BF/" target="_blank" rel="noopener noreferrer" style="color:#003189;text-decoration:none;border-bottom:1px dotted #003189">Hervé PELLARIN</a><br>
+    <a href="https://github.com/nocomp/scribe" target="_blank" rel="noopener noreferrer" style="color:#003189;text-decoration:none;border-bottom:1px dotted #003189">SCRIBE Crisis OS</a> · <span data-mi18n="login.opensource">open source</span> · AGPL-3.0
   </div>
 </div>
 </div>
@@ -1444,8 +1531,47 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--b
 // v3.4 (h38m) — Sélecteur de langue de la mire master.
 // Sauve le choix en localStorage avec la même clé que les instances
 // ('scribe_lang_pref'), pour cohérence cross-master/instance.
-// Le master n'a pas encore d'i18n complet (Bug C en backlog), mais le
-// sélecteur est déjà fonctionnel pour préparer cette traduction.
+// v3.6.0-alpha6 — i18n minimal du login dans 24 langues UE pour cohérence
+// interface ↔ sélecteur. Le dashboard interne reste en français tant que
+// le bug C complet n'est pas traité.
+window.MASTER_LOGIN_I18N = {
+  fr: { "login.subtitle":"Supervision Territoriale", "login.username":"Identifiant", "login.password":"Mot de passe", "login.button":"CONNEXION", "login.first_time":"Première connexion ?", "login.first_time_hint":"À changer après le premier login (onglet Comptes).", "login.designed_by":"Designed by", "login.opensource":"open source" },
+  en: { "login.subtitle":"Territorial Supervision", "login.username":"Username", "login.password":"Password", "login.button":"LOG IN", "login.first_time":"First time?", "login.first_time_hint":"To be changed after first login (Accounts tab).", "login.designed_by":"Designed by", "login.opensource":"open source" },
+  it: { "login.subtitle":"Supervisione Territoriale", "login.username":"Identificativo", "login.password":"Password", "login.button":"ACCEDI", "login.first_time":"Primo accesso?", "login.first_time_hint":"Da cambiare dopo il primo login (scheda Account).", "login.designed_by":"Progettato da", "login.opensource":"open source" },
+  de: { "login.subtitle":"Territoriale Aufsicht", "login.username":"Benutzername", "login.password":"Passwort", "login.button":"ANMELDEN", "login.first_time":"Erste Anmeldung?", "login.first_time_hint":"Nach erster Anmeldung ändern (Tab Konten).", "login.designed_by":"Entwickelt von", "login.opensource":"Open Source" },
+  es: { "login.subtitle":"Supervisión Territorial", "login.username":"Identificador", "login.password":"Contraseña", "login.button":"ACCEDER", "login.first_time":"¿Primera vez?", "login.first_time_hint":"Cambiar tras el primer inicio (pestaña Cuentas).", "login.designed_by":"Diseñado por", "login.opensource":"código abierto" },
+  nl: { "login.subtitle":"Territoriaal Toezicht", "login.username":"Gebruikersnaam", "login.password":"Wachtwoord", "login.button":"INLOGGEN", "login.first_time":"Eerste keer?", "login.first_time_hint":"Wijzigen na eerste login (tab Accounts).", "login.designed_by":"Ontworpen door", "login.opensource":"open source" },
+  pt: { "login.subtitle":"Supervisão Territorial", "login.username":"Identificador", "login.password":"Palavra-passe", "login.button":"ENTRAR", "login.first_time":"Primeira vez?", "login.first_time_hint":"A mudar após o primeiro login (separador Contas).", "login.designed_by":"Concebido por", "login.opensource":"código aberto" },
+  pl: { "login.subtitle":"Nadzór Terytorialny", "login.username":"Identyfikator", "login.password":"Hasło", "login.button":"ZALOGUJ", "login.first_time":"Pierwsze logowanie?", "login.first_time_hint":"Zmień po pierwszym logowaniu (karta Konta).", "login.designed_by":"Zaprojektowane przez", "login.opensource":"open source" },
+  ro: { "login.subtitle":"Supraveghere Teritorială", "login.username":"Identificator", "login.password":"Parolă", "login.button":"AUTENTIFICARE", "login.first_time":"Prima conectare?", "login.first_time_hint":"De schimbat după prima conectare (fila Conturi).", "login.designed_by":"Conceput de", "login.opensource":"open source" },
+  el: { "login.subtitle":"Εδαφική Εποπτεία", "login.username":"Όνομα χρήστη", "login.password":"Κωδικός", "login.button":"ΣΥΝΔΕΣΗ", "login.first_time":"Πρώτη φορά;", "login.first_time_hint":"Αλλαγή μετά την πρώτη σύνδεση (καρτέλα Λογαριασμοί).", "login.designed_by":"Σχεδιάστηκε από", "login.opensource":"ανοιχτού κώδικα" },
+  cs: { "login.subtitle":"Územní Dohled", "login.username":"Uživatelské jméno", "login.password":"Heslo", "login.button":"PŘIHLÁSIT", "login.first_time":"První přihlášení?", "login.first_time_hint":"Změnit po prvním přihlášení (záložka Účty).", "login.designed_by":"Navrženo", "login.opensource":"open source" },
+  sk: { "login.subtitle":"Územný Dohľad", "login.username":"Používateľské meno", "login.password":"Heslo", "login.button":"PRIHLÁSIŤ", "login.first_time":"Prvé prihlásenie?", "login.first_time_hint":"Zmeniť po prvom prihlásení (záložka Účty).", "login.designed_by":"Navrhol", "login.opensource":"open source" },
+  sv: { "login.subtitle":"Territoriell Tillsyn", "login.username":"Användarnamn", "login.password":"Lösenord", "login.button":"LOGGA IN", "login.first_time":"Första gången?", "login.first_time_hint":"Ändra efter första inloggningen (flik Konton).", "login.designed_by":"Designad av", "login.opensource":"öppen källkod" },
+  da: { "login.subtitle":"Territorialt Tilsyn", "login.username":"Brugernavn", "login.password":"Adgangskode", "login.button":"LOG IND", "login.first_time":"Første gang?", "login.first_time_hint":"Skal ændres efter første login (fanen Konti).", "login.designed_by":"Designet af", "login.opensource":"open source" },
+  fi: { "login.subtitle":"Alueellinen Valvonta", "login.username":"Käyttäjätunnus", "login.password":"Salasana", "login.button":"KIRJAUDU", "login.first_time":"Ensimmäinen kerta?", "login.first_time_hint":"Vaihdettava ensimmäisen kirjautumisen jälkeen (Tilit-välilehti).", "login.designed_by":"Suunnitellut", "login.opensource":"avoin lähdekoodi" },
+  hu: { "login.subtitle":"Területi Felügyelet", "login.username":"Felhasználónév", "login.password":"Jelszó", "login.button":"BELÉPÉS", "login.first_time":"Első alkalom?", "login.first_time_hint":"Az első bejelentkezés után módosítandó (Fiókok lap).", "login.designed_by":"Tervezte", "login.opensource":"nyílt forráskód" },
+  bg: { "login.subtitle":"Териториален Надзор", "login.username":"Потребител", "login.password":"Парола", "login.button":"ВХОД", "login.first_time":"За първи път?", "login.first_time_hint":"Промяна след първото влизане (раздел Акаунти).", "login.designed_by":"Проектирано от", "login.opensource":"отворен код" },
+  hr: { "login.subtitle":"Teritorijalni Nadzor", "login.username":"Korisničko ime", "login.password":"Lozinka", "login.button":"PRIJAVA", "login.first_time":"Prvi put?", "login.first_time_hint":"Promijenite nakon prve prijave (kartica Računi).", "login.designed_by":"Dizajnirao", "login.opensource":"otvoreni kod" },
+  sl: { "login.subtitle":"Teritorialni Nadzor", "login.username":"Uporabniško ime", "login.password":"Geslo", "login.button":"PRIJAVA", "login.first_time":"Prvič?", "login.first_time_hint":"Spremenite po prvi prijavi (zavihek Računi).", "login.designed_by":"Oblikoval", "login.opensource":"odprta koda" },
+  et: { "login.subtitle":"Territoriaalne Järelevalve", "login.username":"Kasutajanimi", "login.password":"Parool", "login.button":"LOGI SISSE", "login.first_time":"Esimene kord?", "login.first_time_hint":"Muutke pärast esimest sisselogimist (vahekaart Kontod).", "login.designed_by":"Kujundas", "login.opensource":"avatud lähtekood" },
+  lt: { "login.subtitle":"Teritorinė Priežiūra", "login.username":"Naudotojo vardas", "login.password":"Slaptažodis", "login.button":"PRISIJUNGTI", "login.first_time":"Pirmą kartą?", "login.first_time_hint":"Pakeisti po pirmojo prisijungimo (skirtukas Paskyros).", "login.designed_by":"Sukūrė", "login.opensource":"atviras kodas" },
+  lv: { "login.subtitle":"Teritoriālā Uzraudzība", "login.username":"Lietotājvārds", "login.password":"Parole", "login.button":"PIESLĒGTIES", "login.first_time":"Pirmo reizi?", "login.first_time_hint":"Mainīt pēc pirmās pieteikšanās (cilne Konti).", "login.designed_by":"Izstrādāja", "login.opensource":"atvērtais kods" },
+  mt: { "login.subtitle":"Superviżjoni Territorjali", "login.username":"Isem tal-utent", "login.password":"Password", "login.button":"IDĦOL", "login.first_time":"L-ewwel darba?", "login.first_time_hint":"Ibdel wara l-ewwel dħul (tab Kontijiet).", "login.designed_by":"Iddisinjat minn", "login.opensource":"open source" },
+  ga: { "login.subtitle":"Maoirsiú Críochach", "login.username":"Ainm úsáideora", "login.password":"Pasfhocal", "login.button":"LOGÁIL ISTEACH", "login.first_time":"An chéad uair?", "login.first_time_hint":"Le hathrú tar éis an chéad logála isteach (cluaisín Cuntais).", "login.designed_by":"Deartha ag", "login.opensource":"foinse oscailte" }
+};
+
+window.applyMasterLoginI18n = function() {
+  var lang = 'fr';
+  try { var s = localStorage.getItem('scribe_lang_pref'); if (s) lang = s; } catch(e) {}
+  var dict = window.MASTER_LOGIN_I18N[lang] || window.MASTER_LOGIN_I18N.en;
+  document.querySelectorAll('[data-mi18n]').forEach(function(el) {
+    var key = el.getAttribute('data-mi18n');
+    var val = dict[key];
+    if (val) el.textContent = val;
+  });
+};
+
 window.changeMasterLanguage = function(code) {
   try {
     localStorage.setItem('scribe_lang_pref', code);
@@ -1466,6 +1592,8 @@ window.changeMasterLanguage = function(code) {
     for (var i = 0; i < sel.options.length; i++) {
       if (sel.options[i].value === current) { sel.selectedIndex = i; break; }
     }
+    // Appliquer aussi les traductions au login
+    if (window.applyMasterLoginI18n) window.applyMasterLoginI18n();
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', syncMasterLang);
@@ -1561,11 +1689,11 @@ function openMasterForcedPasswordChange() {
   m.id = 'master-mcp-modal';
   m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;font-family:monospace';
   m.innerHTML = `
-    <div style="background:#fff;border:2px solid #f59e0b;border-radius:12px;width:440px;max-width:95vw;overflow:hidden">
-      <div style="padding:16px 20px;background:rgba(245,158,11,.1);border-bottom:1px solid rgba(245,158,11,.3);display:flex;align-items:center;gap:10px">
+    <div style="background:#fff;border:2px solid #003189;border-radius:12px;width:440px;max-width:95vw;overflow:hidden">
+      <div style="padding:16px 20px;background:rgba(0,49,137,.1);border-bottom:1px solid rgba(0,49,137,.3);display:flex;align-items:center;gap:10px">
         <span style="font-size:20px">🔐</span>
         <div>
-          <div style="font-size:12px;font-weight:700;color:#92400e;letter-spacing:1px">CHANGEMENT DE MOT DE PASSE REQUIS</div>
+          <div style="font-size:12px;font-weight:700;color:#003189;letter-spacing:1px">CHANGEMENT DE MOT DE PASSE REQUIS</div>
           <div style="font-size:10px;color:#78716c;margin-top:4px;line-height:1.5">Vous utilisez encore le mot de passe par défaut. Veuillez le modifier avant d'accéder à la supervision.</div>
         </div>
       </div>
@@ -1599,7 +1727,7 @@ function openMasterForcedPasswordChange() {
           </div>
         </div>
         <div id="mcp-err" style="display:none;font-size:10px;color:#e1000f;padding:6px 10px;background:rgba(225,0,15,.08);border-radius:4px;border:1px solid rgba(225,0,15,.2)"></div>
-        <button onclick="submitMasterForcedPw()" style="font-size:12px;padding:11px;background:#d97706;border:none;border-radius:5px;color:#fff;cursor:pointer;font-weight:700;margin-top:4px">
+        <button onclick="submitMasterForcedPw()" style="font-size:12px;padding:11px;background:#003189;border:none;border-radius:5px;color:#fff;cursor:pointer;font-weight:700;margin-top:4px">
           🔒 Définir mon nouveau mot de passe
         </button>
       </div>
@@ -1662,7 +1790,7 @@ async function submitMasterForcedPw() {
 
   <!-- KPI BAR -->
   <div id="kpi-bar">
-    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.4.0-beta1</div>
+    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.6.0-beta1</div>
     <div class="kpi-cell"><span class="kpi-label">GHT</span><span class="kpi-val" id="k-ght">—</span></div>
     <div class="kpi-cell" style="cursor:pointer" title="Délai avant masquage incidents résolus (clic pour modifier)">
       <span class="kpi-label">RÉSOLU → masqué</span>
@@ -1691,6 +1819,7 @@ async function submitMasterForcedPw() {
     <button class="tab-btn" onclick="switchTab('chat',this)">💬 CHAT</button>
     <button class="tab-btn" onclick="switchTab('comptes',this)">&#128100; COMPTES</button>
     <button class="tab-btn" onclick="switchTab('instances',this)">📦 INSTANCES</button>
+    <button class="tab-btn" onclick="switchTab('admin',this)">⚙️ ADMIN</button>
     <button class="tab-btn" onclick="switchTab('exercice',this)" style="border-left:1px solid var(--border);margin-left:6px;padding-left:14px" title="Mode exercice / simulation">🎯 EXERCICE</button>
     <div class="tab-spacer"></div>
   </div>
@@ -1717,7 +1846,7 @@ async function submitMasterForcedPw() {
         <div style="border-bottom:1px solid var(--border);padding:6px 12px;background:rgba(249,115,22,.04)">
           <div style="font-family:var(--mono);font-size:8px;color:var(--muted2);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
             <span>🔧 INSTANCES SYNCHRONISÉES</span>
-            <button onclick="registerArcAlpinTokens()" style="font-family:var(--mono);font-size:7px;padding:2px 8px;background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.4);border-radius:3px;color:#f97316;cursor:pointer">
+            <button onclick="registerDemoTokens()" style="font-family:var(--mono);font-size:7px;padding:2px 8px;background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.4);border-radius:3px;color:#f97316;cursor:pointer">
               ⚡ Enregistrer
             </button>
           </div>
@@ -1795,23 +1924,76 @@ async function submitMasterForcedPw() {
 
     <!-- MESSAGERIE INTER-GHT -->
     <div class="tab-pane" id="pane-messagerie">
-      <div id="msg-toolbar">
-        <span id="msg-toolbar-title">✉ MESSAGERIE INTER-GHT</span>
-        <button class="msg-sub-btn active" id="btn-recu" onclick="msgSwitch('recu',this)">Reçus</button>
-        <button class="msg-sub-btn" id="btn-envoyes" onclick="msgSwitch('envoyes',this)">Envoyés</button>
-        <button id="btn-compose-ight" onclick="openCompose()">✏ Nouveau message</button>
-      </div>
-      <div id="msg-split">
-        <div id="msg-list-pane">
-          <div style="padding:30px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--muted)">Chargement…</div>
+      <iframe id="msg-iframe" title="Messagerie supervision"
+              src="/messagerie/ui?token=PLACEHOLDER_ADMIN_TOKEN"
+              style="flex:1;width:100%;border:none;display:block"></iframe>
+    </div>
+
+    <div id="pane-admin" style="display:none;flex:1;flex-direction:column;overflow-y:auto;padding:20px;gap:16px;width:100%;height:100%">
+      <div style="font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--text)">⚙️ ADMINISTRATION — CONFIGURATION CENTRALE</div>
+      <div style="font-size:11px;color:var(--muted);max-width:780px;line-height:1.55">Ces réglages sont <b>tirés par les instances</b> (modèle pull, rafraîchi périodiquement). Chaque instance peut les surcharger localement — précédence <b>local &gt; central &gt; env</b>. Les secrets sont masqués ici et chiffrés au repos.</div>
+
+      <div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:16px;max-width:780px">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;margin-bottom:12px;color:var(--blue)">🧠 INTELLIGENCE ARTIFICIELLE (agent IA)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <label style="font-size:10px;color:var(--muted)">Fournisseur<select id="adm-ia-provider" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"><option value="albert">Albert (DINUM)</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="mistral">Mistral</option><option value="gemini">Gemini</option><option value="ollama">Ollama</option><option value="openai_compat">OpenAI-compatible</option></select></label>
+          <label style="font-size:10px;color:var(--muted)">Clé API<input id="adm-ia-key" type="password" autocomplete="off" placeholder="(laisser vide pour conserver)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)">URL base<input id="adm-ia-url" placeholder="https://albert.api.etalab.gouv.fr/v1" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)">Modèle<input id="adm-ia-model" placeholder="(défaut fournisseur)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
         </div>
-        <div id="msg-detail-pane">
-          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:var(--muted)">
-            <span style="font-size:32px;opacity:.2">✉</span>
-            <span style="font-family:var(--mono);font-size:9px">Sélectionnez un message</span>
+        <label style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:12px;cursor:pointer"><input type="checkbox" id="adm-ia-enabled"> Diffuser cette config IA aux instances</label>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px"><span id="adm-ia-state" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span><button onclick="adminSave('ia')" style="margin-left:auto;font-family:var(--mono);font-size:11px;padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700">Enregistrer</button></div>
+      </div>
+
+      <div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:16px;max-width:780px">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;margin-bottom:12px;color:var(--blue)">🔐 TRANSFERT SÉCURISÉ (Bluefiles)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <label style="font-size:10px;color:var(--muted)">Clé API<input id="adm-bf-key" type="password" autocomplete="off" placeholder="(laisser vide pour conserver)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)">URL API<input id="adm-bf-url" placeholder="https://api.bluefiles.com/v1" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)">Compte<input id="adm-bf-account" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)">Mode<select id="adm-bf-mode" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"><option value="LIVE">LIVE</option><option value="DEV">DEV</option></select></label>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:12px;cursor:pointer"><input type="checkbox" id="adm-bf-enabled"> Diffuser cette config Bluefiles aux instances</label>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px"><span id="adm-bf-state" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span><button onclick="adminSave('bluefiles')" style="margin-left:auto;font-family:var(--mono);font-size:11px;padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700">Enregistrer</button></div>
+      </div>
+
+      <div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:16px;max-width:780px">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;margin-bottom:12px;color:var(--blue)">📧 SMTP (envoi e-mail)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <label style="font-size:10px;color:var(--muted)">Serveur SMTP<input id="adm-smtp-host" placeholder="smtp.exemple.fr" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)">Port<input id="adm-smtp-port" type="number" placeholder="587" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)">Utilisateur<input id="adm-smtp-user" autocomplete="off" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)">Mot de passe<input id="adm-smtp-pass" type="password" autocomplete="off" placeholder="(laisser vide pour conserver)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)">Adresse expéditeur<input id="adm-smtp-from" placeholder="SCRIBE &lt;alerts@exemple.fr&gt;" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <div style="display:flex;gap:14px;align-items:flex-end;padding-bottom:4px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer"><input type="checkbox" id="adm-smtp-tls"> STARTTLS</label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer"><input type="checkbox" id="adm-smtp-ssl"> SSL direct</label>
           </div>
         </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:12px;cursor:pointer"><input type="checkbox" id="adm-smtp-enabled"> Diffuser cette config SMTP aux instances</label>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px"><span id="adm-smtp-state" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span><button onclick="adminSave('smtp')" style="margin-left:auto;font-family:var(--mono);font-size:11px;padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700">Enregistrer</button></div>
       </div>
+
+      <div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:16px;max-width:780px">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;margin-bottom:12px;color:var(--blue)">💬 PASSERELLE SMS</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <label style="font-size:10px;color:var(--muted)">Fournisseur<select id="adm-sms-provider" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"><option value="ovh">OVH</option><option value="twilio">Twilio</option><option value="free">Free Mobile (test)</option></select></label>
+          <label style="font-size:10px;color:var(--muted)">Émetteur (sender)<input id="adm-sms-sender" placeholder="SCRIBE" maxlength="11" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)">Clé / identifiant API<input id="adm-sms-key" type="password" autocomplete="off" placeholder="(laisser vide pour conserver)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)">Secret API<input id="adm-sms-secret" type="password" autocomplete="off" placeholder="(laisser vide pour conserver)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)">URL base / endpoint<input id="adm-sms-url" placeholder="(optionnel)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:12px;cursor:pointer"><input type="checkbox" id="adm-sms-enabled"> Diffuser cette config SMS aux instances</label>
+        <div style="font-size:9px;color:var(--muted);margin-top:6px">Les champs spécifiques au fournisseur (ex. consumer_key / service_name OVH) restent complétables dans l'admin notifications de chaque instance.</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:10px"><span id="adm-sms-state" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span><button onclick="adminSave('sms')" style="margin-left:auto;font-family:var(--mono);font-size:11px;padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700">Enregistrer</button></div>
+      </div>
+
+      <div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:16px;max-width:780px">
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;margin-bottom:10px;color:var(--blue)">📡 PROPAGATION</div>
+        <div id="adm-prop" style="font-size:11px;color:var(--muted);line-height:1.7">—</div>
+      </div>
+
+      <div style="font-size:10px;color:var(--muted);max-width:780px">La gestion des comptes (avec import Excel) arrive au prochain build.</div>
     </div>
 
     <!-- STATUTS PUBLICS -->
@@ -1841,6 +2023,16 @@ async function submitMasterForcedPw() {
           </select>
           <button onclick="createCompte()" style="font-family:var(--mono);font-size:10px;padding:7px 14px;background:#003189;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;width:fit-content">Créer</button>
         </div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px">
+        <div style="font-family:var(--mono);font-size:10px;font-weight:700;margin-bottom:12px">IMPORT EXCEL</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">Créez plusieurs comptes d'un coup. Colonnes : <b>login</b>, <b>role</b> (admin / viewer), <b>mot_de_passe</b> (laisser vide = mot de passe temporaire généré).</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button onclick="downloadUserTemplate()" style="font-family:var(--mono);font-size:10px;padding:7px 14px;background:none;border:1px solid var(--border2);border-radius:5px;cursor:pointer;color:var(--text)">⬇ Télécharger le modèle</button>
+          <input type="file" id="users-xlsx" accept=".xlsx" style="display:none" onchange="importUsers(this)">
+          <button onclick="document.getElementById('users-xlsx').click()" style="font-family:var(--mono);font-size:10px;padding:7px 14px;background:#003189;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700">⬆ Importer un .xlsx</button>
+        </div>
+        <div id="import-result" style="margin-top:12px;font-size:11px;line-height:1.6"></div>
       </div>
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px">
         <div style="font-family:var(--mono);font-size:10px;font-weight:700;margin-bottom:12px">COMPTES EXISTANTS</div>
@@ -1916,14 +2108,14 @@ async function submitMasterForcedPw() {
 <div class="modal-overlay" id="modal-compose">
   <div class="modal-box">
     <div class="modal-hdr">
-      <span class="modal-hdr-title">✏ NOUVEAU MESSAGE INTER-GHT</span>
+      <span class="modal-hdr-title">✏ NOUVEAU MESSAGE</span>
       <button class="modal-close" onclick="closeModal('modal-compose')">✕</button>
     </div>
     <div class="modal-body">
       <div>
         <label class="form-label">DESTINATAIRE</label>
         <select id="compose-dest" class="form-select">
-          <option value="TOUS">📢 Tous les GHT</option>
+          <option value="TOUS">📢 Toutes les instances</option>
         </select>
       </div>
       <div>
@@ -2007,7 +2199,7 @@ function closeModal(id) {
 function switchTab(id, btn) {
   // Masquer tous les panes (classe tab-pane ET nos panes custom)
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  ['pane-chat','pane-comptes','pane-instances','pane-exercice'].forEach(pid => {
+  ['pane-chat','pane-comptes','pane-instances','pane-exercice','pane-admin'].forEach(pid => {
     var el = document.getElementById(pid);
     if (el) el.style.display = 'none';
   });
@@ -2016,7 +2208,7 @@ function switchTab(id, btn) {
   // Panes natifs via classe active
   var pane = document.getElementById('pane-' + id);
   if (pane) {
-    if (id === 'chat' || id === 'comptes' || id === 'instances' || id === 'exercice') {
+    if (id === 'chat' || id === 'comptes' || id === 'instances' || id === 'exercice' || id === 'admin') {
       pane.style.display = 'flex';
     } else {
       pane.classList.add('active');
@@ -2024,8 +2216,9 @@ function switchTab(id, btn) {
   }
   if (btn) btn.classList.add('active');
   if (id === 'carto') { setTimeout(() => { if (map) { map.invalidateSize(); updateMapMarkers(); } else { initMap(); } window._mapUpdatePending = false; }, 150); }
-  if (id === 'messagerie') loadMessages();
+  if (id === 'messagerie') { /* iframe autonome — pas d'ancien rendu */ }
   if (id === 'statuts') renderStatuts(allData);
+  if (id === 'admin') adminLoad();
   if (id === 'chat') {
     var iframe = document.getElementById('chat-iframe');
     if (iframe) {
@@ -2426,6 +2619,9 @@ ${a} → ${b}`, {sticky:true});
   });
 }
 
+const _NIV_RANK = {NOMINAL:0, ALERTE:1, CRISE:2, CRITIQUE:3, INCONNU:0};
+function _worstNiv(a, b){ return (_NIV_RANK[a]||0) >= (_NIV_RANK[b]||0) ? a : b; }
+
 function updateMapMarkers() {
   Object.values(mapMarkers).forEach(m => map.removeLayer(m));
   mapMarkers = {};
@@ -2433,7 +2629,7 @@ function updateMapMarkers() {
     const col = LEVEL_COLOR[e.niveau_global] || LEVEL_COLOR.INCONNU;
     const sites = e.sites || [];
     const coords = sites.length
-      ? sites.map(s=>({lat:s.latitude,lng:s.longitude,nom:s.nom,niv:s.incidents_ouverts>0?s.niveau||e.niveau_global:(['CRITIQUE','CRISE'].includes(e.niveau_global)?'ALERTE':s.niveau||'NOMINAL'),inc:s.incidents_ouverts||0,own:s.incidents_ouverts>0})).filter(s=>s.lat&&s.lng&&!isNaN(+s.lat)&&!isNaN(+s.lng))
+      ? sites.map(s=>({lat:s.latitude,lng:s.longitude,nom:s.nom,niv:_worstNiv(s.niveau||'NOMINAL', e.niveau_global||'NOMINAL'),inc:s.incidents_ouverts||0,own:s.incidents_ouverts>0})).filter(s=>s.lat&&s.lng&&!isNaN(+s.lat)&&!isNaN(+s.lng))
       : (e.latitude && e.longitude ? [{lat:e.latitude,lng:e.longitude,nom:e.nom||e.sigle,niv:e.niveau_global}] : []);
     coords.forEach(s => {
       if (!s.lat || !s.lng || isNaN(+s.lat) || isNaN(+s.lng)) return;
@@ -2511,29 +2707,139 @@ function renderStatuts(data) {
 // ── MESSAGERIE INTER-GHT ──────────────────────────────────────
 let msgData = {received:[], sent:[]};
 
+// ── ADMIN : configuration centrale ──────────────────────────
+async function adminLoad() {
+  try {
+    const r = await fetch('/api/admin/central-config', {headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if (!r.ok) return;
+    const d = await r.json(); const c = d.config || {};
+    const ia = c.ia || {};
+    document.getElementById('adm-ia-provider').value = ia.provider || 'albert';
+    document.getElementById('adm-ia-url').value = ia.base_url || '';
+    document.getElementById('adm-ia-model').value = ia.model || '';
+    document.getElementById('adm-ia-enabled').checked = !!ia.enabled;
+    document.getElementById('adm-ia-key').value = '';
+    document.getElementById('adm-ia-key').placeholder = ia.has_api_key ? '•••• clé configurée (vide = conserver)' : 'aucune clé';
+    document.getElementById('adm-ia-state').textContent = ia.has_api_key ? '🔑 clé configurée' : '— pas de clé';
+    const bf = c.bluefiles || {};
+    document.getElementById('adm-bf-url').value = bf.api_url || '';
+    document.getElementById('adm-bf-account').value = bf.account || '';
+    document.getElementById('adm-bf-mode').value = bf.mode || 'LIVE';
+    document.getElementById('adm-bf-enabled').checked = !!bf.enabled;
+    document.getElementById('adm-bf-key').value = '';
+    document.getElementById('adm-bf-key').placeholder = bf.has_api_key ? '•••• clé configurée (vide = conserver)' : 'aucune clé';
+    document.getElementById('adm-bf-state').textContent = bf.has_api_key ? '🔑 clé configurée' : '— pas de clé';
+    const sm = c.smtp || {};
+    document.getElementById('adm-smtp-host').value = sm.smtp_host || '';
+    document.getElementById('adm-smtp-port').value = sm.smtp_port || 587;
+    document.getElementById('adm-smtp-user').value = sm.smtp_user || '';
+    document.getElementById('adm-smtp-from').value = sm.from_addr || '';
+    document.getElementById('adm-smtp-tls').checked = sm.use_tls !== false;
+    document.getElementById('adm-smtp-ssl').checked = !!sm.use_ssl;
+    document.getElementById('adm-smtp-enabled').checked = !!sm.enabled;
+    document.getElementById('adm-smtp-pass').value = '';
+    document.getElementById('adm-smtp-pass').placeholder = sm.has_smtp_pass ? '•••• mot de passe configuré (vide = conserver)' : '(aucun)';
+    document.getElementById('adm-smtp-state').textContent = sm.has_smtp_pass ? '🔑 mot de passe configuré' : '— non configuré';
+    const ss = c.sms || {};
+    document.getElementById('adm-sms-provider').value = ss.provider || 'ovh';
+    document.getElementById('adm-sms-sender').value = ss.sender || '';
+    document.getElementById('adm-sms-url').value = ss.base_url || '';
+    document.getElementById('adm-sms-enabled').checked = !!ss.enabled;
+    document.getElementById('adm-sms-key').value = '';
+    document.getElementById('adm-sms-secret').value = '';
+    document.getElementById('adm-sms-key').placeholder = ss.has_api_key ? '•••• configurée (vide = conserver)' : '(aucune)';
+    document.getElementById('adm-sms-secret').placeholder = ss.has_api_secret ? '•••• configuré (vide = conserver)' : '(aucun)';
+    document.getElementById('adm-sms-state').textContent = (ss.has_api_key || ss.has_api_secret) ? '🔑 identifiants configurés' : '— non configuré';
+    adminRenderProp(d.propagation || {});
+  } catch(e) {}
+}
+
+function adminRenderProp(p) {
+  const el = document.getElementById('adm-prop');
+  const keys = Object.keys(p || {});
+  if (!keys.length) { el.textContent = "Aucune instance n'a encore tiré la config centrale."; return; }
+  el.innerHTML = keys.sort().map(s => '🏥 <b>' + s + '</b> — config tirée le ' + new Date(p[s]).toLocaleString('fr-FR')).join('<br>');
+}
+
+async function adminSave(domain) {
+  let fields = {};
+  if (domain === 'ia') {
+    fields = {
+      provider: document.getElementById('adm-ia-provider').value,
+      base_url: document.getElementById('adm-ia-url').value.trim(),
+      model:    document.getElementById('adm-ia-model').value.trim(),
+      enabled:  document.getElementById('adm-ia-enabled').checked
+    };
+    const k = document.getElementById('adm-ia-key').value; if (k) fields.api_key = k;
+  } else if (domain === 'bluefiles') {
+    fields = {
+      api_url: document.getElementById('adm-bf-url').value.trim(),
+      account: document.getElementById('adm-bf-account').value.trim(),
+      mode:    document.getElementById('adm-bf-mode').value,
+      enabled: document.getElementById('adm-bf-enabled').checked
+    };
+    const k = document.getElementById('adm-bf-key').value; if (k) fields.api_key = k;
+  } else if (domain === 'smtp') {
+    fields = {
+      smtp_host: document.getElementById('adm-smtp-host').value.trim(),
+      smtp_port: parseInt(document.getElementById('adm-smtp-port').value) || 587,
+      smtp_user: document.getElementById('adm-smtp-user').value.trim(),
+      from_addr: document.getElementById('adm-smtp-from').value.trim(),
+      use_tls:   document.getElementById('adm-smtp-tls').checked,
+      use_ssl:   document.getElementById('adm-smtp-ssl').checked,
+      enabled:   document.getElementById('adm-smtp-enabled').checked
+    };
+    const p = document.getElementById('adm-smtp-pass').value; if (p) fields.smtp_pass = p;
+  } else if (domain === 'sms') {
+    fields = {
+      provider: document.getElementById('adm-sms-provider').value,
+      sender:   document.getElementById('adm-sms-sender').value.trim(),
+      base_url: document.getElementById('adm-sms-url').value.trim(),
+      enabled:  document.getElementById('adm-sms-enabled').checked
+    };
+    const ak = document.getElementById('adm-sms-key').value; if (ak) fields.api_key = ak;
+    const sk = document.getElementById('adm-sms-secret').value; if (sk) fields.api_secret = sk;
+  }
+  try {
+    const r = await fetch('/api/admin/central-config', {
+      method:'POST',
+      headers:{'Authorization':'Bearer '+ADMIN_TOKEN,'Content-Type':'application/json'},
+      body: JSON.stringify({domain, fields})
+    });
+    if (r.ok) { toast('Config ' + domain + ' enregistrée ✓', 'ok'); adminLoad(); }
+    else toast('Échec enregistrement', 'err');
+  } catch(e) { toast('Erreur réseau', 'err'); }
+}
+
 async function fetchMsgBadge() {
   try {
-    const r = await fetch('/api/messages/non-lus', {headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    const r = await fetch('/api/v1/messagerie/non-lus', {headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
     if (!r.ok) return;
     const d = await r.json();
+    const count = d.count || 0;
     const b = document.getElementById('msg-badge-hdr');
-    if (d.count > 0) { b.textContent = d.count; b.style.display = 'inline'; }
-    else b.style.display = 'none';
-    document.getElementById('k-msg').textContent = d.count || '0';
+    if (b) { if (count > 0) { b.textContent = count; b.style.display = 'inline'; } else b.style.display = 'none'; }
+    const k = document.getElementById('k-msg'); if (k) k.textContent = count || '0';
   } catch(e) {}
 }
 
 async function loadMessages() {
   try {
-    const r = await fetch('/api/messages', {headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
-    if (!r.ok) return;
-    msgData = await r.json();
+    const _h = {headers:{'Authorization':'Bearer '+ADMIN_TOKEN}};
+    const [ri, rs] = await Promise.all([
+      fetch('/api/v1/messagerie/messages?canal=interne&box=inbox', _h),
+      fetch('/api/v1/messagerie/messages?canal=interne&box=sent', _h)
+    ]);
+    const di = ri.ok ? await ri.json() : {messages:[]};
+    const ds = rs.ok ? await rs.json() : {messages:[]};
+    msgData = {received: di.messages || [], sent: ds.messages || []};
   } catch(e) {}
   renderMsgList();
-  // Populate dest select
   const sel = document.getElementById('compose-dest');
-  sel.innerHTML = '<option value="TOUS">📢 Tous les GHT</option>';
-  allData.forEach(e => { const opt = document.createElement('option'); opt.value = e.sigle; opt.textContent = e.sigle + (e.nom ? ' — ' + e.nom : ''); sel.appendChild(opt); });
+  if (sel) {
+    sel.innerHTML = '<option value="TOUS">📢 Toutes les instances</option>';
+    allData.forEach(e => { const opt = document.createElement('option'); opt.value = e.sigle; opt.textContent = e.sigle + (e.nom ? ' — ' + e.nom : ''); sel.appendChild(opt); });
+  }
   fetchMsgBadge();
 }
 
@@ -2547,42 +2853,55 @@ function msgSwitch(mode, btn) {
 
 function renderMsgList() {
   const el = document.getElementById('msg-list-pane');
+  if (!el) return;  // ancien panneau remplacé par l'iframe — ne rien faire
   const list = msgMode === 'recu' ? msgData.received : msgData.sent;
   if (!list || !list.length) {
     el.innerHTML = '<div style="padding:30px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--muted)">' + (msgMode==='recu'?'Aucun message reçu':'Aucun message envoyé') + '</div>';
     return;
   }
   el.innerHTML = list.slice().reverse().map(m => {
-    const unread = msgMode==='recu' && !m.lu_par?.includes('COLLECTEUR');
-    const contact = msgMode==='recu' ? m.expediteur : ('→ ' + (m.destinataire === 'TOUS' ? 'Tous les GHT' : m.destinataire));
+    const unread = msgMode==='recu' && !m.lu;
+    const contact = msgMode==='recu'
+      ? (m.expediteur_nom || m.expediteur_addr || 'Instance')
+      : ('→ ' + ((m.destinataires||[]).map(d => d.display || d.value).join(', ') || 'Instance'));
+    const pj = (m.attachments_count > 0) ? ' 📎' : '';
     return `<div class="msg-item ${unread?'unread':''}" onclick="openMsg(${m.id})">
       <div style="display:flex;justify-content:space-between;margin-bottom:2px">
         <span class="msg-from">${contact}</span>
         <span class="msg-date">${fmtDate(m.created_at)}</span>
       </div>
-      <div class="msg-subj" style="font-weight:${unread?700:400}">${m.sujet||'(sans objet)'}</div>
+      <div class="msg-subj" style="font-weight:${unread?700:400}">${(m.sujet||'(sans objet)')}${pj}</div>
       <div class="msg-prev">${(m.contenu||'').substring(0,60)}</div>
     </div>`;
   }).join('');
 }
 
 async function openMsg(id) {
-  await fetch('/api/messages/'+id+'/lire', {method:'PUT', headers:{'Authorization':'Bearer '+ADMIN_TOKEN}}).catch(()=>{});
-  const list = msgMode==='recu' ? msgData.received : msgData.sent;
-  const m = list.find(x => x.id === id);
+  let m = null;
+  try {
+    const r = await fetch('/api/v1/messagerie/messages/' + id, {headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if (r.ok) m = await r.json();
+  } catch(e) {}
+  try { await fetch('/api/v1/messagerie/' + id + '/lire', {method:'PUT', headers:{'Authorization':'Bearer '+ADMIN_TOKEN}}); } catch(e) {}
   if (!m) return;
   const el = document.getElementById('msg-detail-pane');
+  const pjHtml = (m.attachments || []).map(a =>
+    '<a href="/api/v1/messagerie/attachments/' + a.id + '?token=' + encodeURIComponent(ADMIN_TOKEN) + '" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;font-size:11px;text-decoration:none;color:var(--text);margin:4px 6px 0 0">📎 ' +
+    (a.nom || 'fichier') + ' <span style="color:var(--muted);font-size:9px">' + Math.round((a.taille||0)/1024) + 'Ko</span></a>'
+  ).join('');
+  const from = m.expediteur_nom || m.expediteur_addr || 'Instance';
   el.innerHTML = `
-    <div style="max-width:620px">
+    <div style="max-width:640px">
       <h2 style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px">${m.sujet||'(sans objet)'}</h2>
       <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--s2);border:1px solid var(--border2);border-radius:7px;margin-bottom:20px">
         <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,207,255,.1);display:flex;align-items:center;justify-content:center;font-size:14px">🏥</div>
         <div style="flex:1">
-          <div style="font-family:var(--mono);font-size:9px;font-weight:700;color:var(--cyan)">${msgMode==='recu'?m.expediteur_nom||m.expediteur:'Vous'}</div>
-          <div style="font-family:var(--mono);font-size:8px;color:var(--muted)">${msgMode==='recu'?'De':'À'} · ${fmtDate(m.created_at)}</div>
+          <div style="font-family:var(--mono);font-size:9px;font-weight:700;color:var(--cyan)">${from}</div>
+          <div style="font-family:var(--mono);font-size:8px;color:var(--muted)">${fmtDate(m.created_at)}</div>
         </div>
       </div>
       <div style="font-family:var(--body);font-size:13px;line-height:1.75;color:var(--text);white-space:pre-wrap">${(m.contenu||'').replace(/</g,'&lt;')}</div>
+      ${pjHtml ? '<div style="margin-top:18px;border-top:1px solid var(--border2);padding-top:12px"><div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:6px">PIÈCES JOINTES</div>'+pjHtml+'</div>' : ''}
     </div>`;
   await loadMessages();
 }
@@ -2597,10 +2916,10 @@ async function sendMsg() {
   const sujet   = document.getElementById('compose-sujet')?.value?.trim() || '';
   const contenu = document.getElementById('compose-body')?.value?.trim() || '';
   if (!contenu) { toast('Message vide', 'err'); return; }
-  const r = await fetch('/api/messages', {
+  const r = await fetch('/api/supervision/messages', {
     method:'POST',
     headers:{'Authorization':'Bearer '+ADMIN_TOKEN, 'Content-Type':'application/json'},
-    body: JSON.stringify({destinataire:dest, sujet, contenu, expediteur_nom:'Collecteur GHT'})
+    body: JSON.stringify({destinataire:dest, sujet, contenu, expediteur_nom:'Supervision'})
   });
   if (r.ok) { toast('Message envoyé ✓', 'ok'); closeModal('modal-compose'); msgSwitch('envoyes', document.getElementById('btn-envoyes')); loadMessages(); }
   else toast('Erreur envoi', 'err');
@@ -2627,8 +2946,8 @@ function renderRelays(relays) {
     <button onclick="deleteRelay(${i})" style="font-family:var(--mono);font-size:7px;padding:2px 5px;background:transparent;border:1px solid rgba(255,45,85,.3);border-radius:3px;color:var(--red);cursor:pointer">✕</button>
   </div>`).join('');
 }
-async function registerArcAlpinTokens() {
-  const r = await fetch('/api/admin/tokens/arc-alpin', {
+async function registerDemoTokens() {
+  const r = await fetch('/api/admin/tokens/demo', {
     method: 'POST',
     headers: {'Authorization': 'Bearer ' + ADMIN_TOKEN}
   });
@@ -2821,6 +3140,46 @@ async function changePass(login) {
   }).catch(()=>null);
   if (r && r.ok) alert('Mot de passe modifié');
   else alert('Erreur');
+}
+
+async function downloadUserTemplate() {
+  var tok = localStorage.getItem('coll_session') || '';
+  try {
+    var r = await fetch('api/admin/users/template.xlsx', {headers:{Authorization:'Bearer '+tok}});
+    if (!r.ok) { toast('Erreur téléchargement du modèle', 'err'); return; }
+    var blob = await r.blob();
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'modele_comptes_supervision.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(a.href);
+  } catch(e) { toast('Erreur réseau', 'err'); }
+}
+
+async function importUsers(input) {
+  var f = input.files && input.files[0];
+  if (!f) return;
+  var tok = localStorage.getItem('coll_session') || '';
+  var fd = new FormData(); fd.append('file', f);
+  var res = document.getElementById('import-result');
+  if (res) res.innerHTML = '<span style="color:var(--muted)">Import en cours…</span>';
+  try {
+    var r = await fetch('api/admin/users/import', {method:'POST', headers:{Authorization:'Bearer '+tok}, body: fd});
+    input.value = '';
+    if (!r.ok) { if (res) res.innerHTML = '<span style="color:#ef4444">Échec de l\'import (' + r.status + ')</span>'; return; }
+    var d = await r.json();
+    var html = '<div style="color:#15803d;font-weight:700">✓ ' + d.created.length + ' compte(s) créé(s)</div>';
+    if (d.skipped && d.skipped.length) {
+      html += '<div style="color:#d97706">⚠ ' + d.skipped.length + ' ignoré(s) (login déjà existant) : ' + escapeHtmlTA(d.skipped.join(', ')) + '</div>';
+    }
+    if (d.temp_passwords && d.temp_passwords.length) {
+      html += '<div style="margin-top:8px;font-weight:700">🔑 Mots de passe temporaires générés (à communiquer aux utilisateurs) :</div>';
+      html += '<div style="font-family:var(--mono);font-size:10px;background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:8px;margin-top:4px">' +
+        d.temp_passwords.map(function(t){ return escapeHtmlTA(t.login) + ' : ' + escapeHtmlTA(t.password); }).join('<br>') + '</div>';
+    }
+    if (res) res.innerHTML = html;
+    loadComptes();
+  } catch(e) { if (res) res.innerHTML = '<span style="color:#ef4444">Erreur réseau</span>'; }
 }
 
 // ── v3000h25 — Assistant territorial ──────────────────────────────────────
@@ -3174,6 +3533,198 @@ async def chat_ui_coll(token: str = "", credentials=Depends(security)):
     )
     return HTMLResponse(tok_inject + patched)
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MESSAGERIE SUPERVISION — interface ISO instance (iframe) + livraison retour
+# ─────────────────────────────────────────────────────────────────────────────
+import os as _os_msgui
+_MSG_UI_PATH = _os_msgui.path.join(_os_msgui.path.dirname(_os_msgui.path.abspath(__file__)), "messagerie_app.html")
+
+@app.get("/messagerie/ui", response_class=HTMLResponse)
+async def messagerie_ui_coll(token: str = "", credentials=Depends(security)):
+    """Sert la page messagerie 3-panneaux (identique aux instances) pour l'iframe."""
+    chk = token or (credentials.credentials if credentials else "")
+    if not chk:
+        raise HTTPException(401, "Token requis")
+    try:
+        html = open(_MSG_UI_PATH, encoding="utf-8").read()
+    except Exception as e:
+        return HTMLResponse(f"<p style='font-family:monospace'>Erreur chargement messagerie : {e}</p>", status_code=500)
+    return HTMLResponse(html)
+
+
+@app.get("/api/coll/instances")
+async def coll_instances(credentials=Depends(security)):
+    """Liste des instances enrôlées (pour le sélecteur destinataire du compose)."""
+    if not _check_any_auth(credentials):
+        raise HTTPException(401)
+    seen = {}
+    for _tok, sig in tokens.items():
+        if not sig or sig in seen:
+            continue
+        nom = ""
+        try:
+            ed = etablissements.get(sig) or {}
+            nom = ed.get("nom") or ed.get("etablissement") or ed.get("nom_etablissement") or ""
+        except Exception:
+            nom = ""
+        seen[sig] = {"sigle": sig, "nom": nom or sig}
+    return {"instances": list(seen.values())}
+
+
+@app.post("/api/coll/msg-to-instance")
+async def coll_msg_to_instance(
+    target_sigle: str = Form(...),
+    sujet:        str = Form(""),
+    contenu:      str = Form(""),
+    recipient_username: str = Form(""),
+    origin_sigle: str = Form(""),
+    origin_nom:   str = Form(""),
+    fichiers:     list[UploadFile] = File([]),
+    caller:       str = Depends(require_node_or_admin),
+):
+    """Livraison messagerie → instance : POST vers /api/v1/messagerie/ingest
+    de l'instance cible (résolue via PORT_MAP). Utilisé par la supervision
+    (broadcast cellule de crise) ET par une instance qui écrit à un agent
+    nominatif d'une autre instance (recipient_username renseigné).
+    `caller` = sigle de l'appelant (SUPERVISEUR si admin)."""
+    # h72 — Résolution du port cible par DÉCOUVERTE (sigle réellement déclaré
+    # par chaque instance), comme /api/annuaire. Le PORT_MAP codé en dur cassait
+    # avec des sigles personnalisés (« CH THONON » → défaut 8000 → message livré
+    # à la mauvaise instance). Repli PORT_MAP uniquement si la découverte échoue.
+    import httpx, asyncio
+    _want = (target_sigle or "").upper().strip()
+    _ports = list(range(8000, 8010)) + [7474]
+    async def _probe(p):
+        try:
+            async with httpx.AsyncClient(timeout=2.5) as _c:
+                _r = await _c.get(f"http://127.0.0.1:{p}/api/v1/auth/annuaire-public")
+                if _r.status_code == 200:
+                    _sig = (_r.json().get("sigle") or "").upper().strip()
+                    if _sig == _want:
+                        return p
+        except Exception:
+            return None
+        return None
+    port = None
+    for _p in await asyncio.gather(*[_probe(_pp) for _pp in _ports]):
+        if _p is not None:
+            port = _p
+            break
+    if port is None:
+        PORT_MAP = {"DEMO": "8000", "HOSPITAL-B": "8001", "HOSPITAL-C": "8002", "HOSPITAL-D": "8003",
+                    "HOSPITAL-C": "8002", "HOSPITAL-D": "8003", "HOSPITAL-E": "8004", "HOSPITAL-F": "8005", "HOSPITAL-G": "8006"}
+        port = PORT_MAP.get(_want, "8000")
+    url = f"http://127.0.0.1:{port}/api/v1/messagerie/ingest"
+
+    files = []
+    for up in (fichiers or []):
+        try:
+            data_bytes = await up.read()
+            files.append(("fichiers", (up.filename or "fichier", data_bytes,
+                                       up.content_type or "application/octet-stream")))
+        except Exception:
+            pass
+    # Origine : explicite si fournie, sinon dérivée de l'appelant.
+    _is_superviseur = (caller == "SUPERVISEUR")
+    data = {"origin_sigle": origin_sigle or (caller if not _is_superviseur else "SUPERVISION"),
+            "origin_nom":   origin_nom or (caller if not _is_superviseur else "Supervision"),
+            "sujet": sujet, "contenu": contenu,
+            "recipient_username": recipient_username or ""}
+
+    import httpx
+    delivered, detail = False, ""
+    try:
+        async with httpx.AsyncClient(timeout=20, verify=False) as cli:
+            r = await cli.post(url, data=data, files=files or None)
+            delivered = (r.status_code == 200)
+            detail = f"HTTP {r.status_code} : {(r.text or '')[:160]}"
+            logging.getLogger("scribe.collecteur").info(
+                "[messagerie] supervision → %s (%s) : %s", target_sigle, url, detail)
+    except Exception as e:
+        detail = f"réseau : {e}"
+        logging.getLogger("scribe.collecteur").warning(
+            "[messagerie] livraison supervision → instance ÉCHEC %s : %s", url, e)
+
+    # Copie locale dans 'Envoyés' de la supervision (best-effort)
+    try:
+        from app.database import SessionLocal as _S
+        from app.models import User as _U
+        from plugins.messagerie.models import Message as _M
+        from datetime import datetime as _dt, timezone as _tz
+        _db = _S()
+        try:
+            sup = _db.query(_U).filter(_U.username == "supervision").first()
+            _db.add(_M(canal="interne", direction="out",
+                       expediteur_id=(sup.id if sup else None),
+                       expediteur_nom="Supervision", expediteur_addr="SUPERVISION",
+                       destinataires=[{"type": "instance", "value": target_sigle, "display": target_sigle}],
+                       destinataires_cc=[], destinataires_bcc=[],
+                       sujet=sujet, contenu=contenu, contenu_format="plain",
+                       statut="sent", lu=True, created_at=_dt.now(_tz.utc)))
+            _db.commit()
+        finally:
+            _db.close()
+    except Exception as _e:
+        logging.getLogger("scribe.collecteur").warning("[messagerie] copie Envoyés KO : %s", _e)
+
+    if not delivered:
+        return JSONResponse({"ok": False, "detail": detail}, status_code=502)
+    return {"ok": True, "detail": detail, "port": port}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CONFIGURATION CENTRALE (supervision → instances, modèle PULL)
+# ─────────────────────────────────────────────────────────────────────────────
+try:
+    import sys as _sys_ccs, os as _os_ccs
+    _sys_ccs.path.insert(0, _os_ccs.path.dirname(_os_ccs.path.abspath(__file__)))
+    import central_config_store as _ccs
+except Exception as _e_ccs:
+    _ccs = None
+    logging.getLogger("scribe.collecteur").error("[central] store indisponible : %s", _e_ccs)
+
+last_config_pull: dict = {}  # sigle → horodatage ISO du dernier pull
+
+
+@app.get("/api/admin/central-config")
+async def admin_central_config_get(_ok: bool = Depends(require_admin)):
+    """Console admin : config centrale, secrets MASQUÉS + état de propagation."""
+    if not _ccs:
+        raise HTTPException(500, "magasin de config indisponible")
+    return {"config": _ccs.masked(), "propagation": last_config_pull}
+
+
+@app.post("/api/admin/central-config")
+async def admin_central_config_post(payload: dict, _ok: bool = Depends(require_admin)):
+    """Met à jour un domaine. Champ secret vide reçu = on conserve l'existant."""
+    if not _ccs:
+        raise HTTPException(500, "magasin de config indisponible")
+    domain = payload.get("domain")
+    fields = payload.get("fields") or {}
+    try:
+        masked = _ccs.save(domain, fields, updated_by="supervision")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    logging.getLogger("scribe.collecteur").info("[central] domaine '%s' mis à jour", domain)
+    return {"ok": True, "config": masked}
+
+
+@app.get("/api/central-config")
+async def central_config_pull(credentials=Depends(security)):
+    """Endpoint TIRÉ par les instances (auth token de nœud). Renvoie les secrets
+    EN CLAIR (l'instance en a besoin), uniquement pour les domaines activés."""
+    if not _ccs:
+        raise HTTPException(500, "magasin de config indisponible")
+    tok = credentials.credentials if credentials else ""
+    sigle = tokens.get(tok)
+    if not sigle:
+        raise HTTPException(401, "token de nœud invalide")
+    from datetime import datetime, timezone
+    last_config_pull[sigle] = datetime.now(timezone.utc).isoformat()
+    return {"ok": True, "config": _ccs.for_instance()}
+
+
 @app.get("/api/coll/me")
 async def coll_me(credentials=Depends(security)):
     if not credentials: raise HTTPException(401)
@@ -3363,13 +3914,13 @@ async def get_territorial_debug():
     return debug
 
 
-# v3000h25 — Assistant territorial (vue agrégée Example Network)
+# v3000h25 — Assistant territorial (vue agrégée territorial)
 @app.get("/api/territorial-assistant")
 async def get_territorial_assistant():
     """v3000h25 — Assistant de supervision territoriale.
 
     Évalue les 5 règles territoriales (RT1-RT5) sur la vue agrégée des
-    établissements Example Network et retourne les alertes + un résumé d'état.
+    établissements territorial et retourne les alertes + un résumé d'état.
 
     Sans auth pour faciliter la supervision (la vue agrégée n'expose
     pas de données patients nominatives). Si on veut auth plus tard,
@@ -3502,6 +4053,90 @@ async def delete_ui_user(login: str, credentials=Depends(security)):
     auth["users"] = [u for u in users if u["login"] != login]
     save_ui_auth(auth)
     return {"ok": True}
+
+@app.get("/api/admin/users/template.xlsx")
+async def users_template_xlsx(credentials=Depends(security)):
+    """Modèle Excel téléchargeable pour l'import de comptes supervision."""
+    if not require_ui_admin(credentials):
+        raise HTTPException(401)
+    import openpyxl, io
+    from fastapi.responses import StreamingResponse
+    wb = openpyxl.Workbook()
+    ws = wb.active; ws.title = "Comptes"
+    ws.append(["login", "role", "mot_de_passe", "telephone", "email"])
+    ws.append(["jdupont", "viewer", "", "+33612345678", "j.dupont@chx.fr"])
+    ws.append(["cadre.crise", "admin", "ÀChanger!2026", "+33698765432", "cadre@chx.fr"])
+    ws.column_dimensions["A"].width = 24
+    ws.column_dimensions["B"].width = 14
+    ws.column_dimensions["C"].width = 30
+    ws.column_dimensions["D"].width = 18
+    ws.column_dimensions["E"].width = 28
+    aide = wb.create_sheet("Aide")
+    aide.append(["Colonne", "Description"])
+    aide.append(["login", "Identifiant de connexion — obligatoire, unique"])
+    aide.append(["role", "admin ou viewer (par défaut : viewer)"])
+    aide.append(["mot_de_passe", "Laisser vide = mot de passe temporaire généré automatiquement"])
+    aide.append(["telephone", "Numéro E.164 pour les SMS (ex. +33612345678) — optionnel"])
+    aide.append(["email", "Email pour les notifications mail — optionnel"])
+    aide.column_dimensions["A"].width = 16
+    aide.column_dimensions["B"].width = 64
+    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=modele_comptes_supervision.xlsx"},
+    )
+
+
+@app.post("/api/admin/users/import")
+async def users_import_xlsx(file: UploadFile = File(...), credentials=Depends(security)):
+    """Import en masse de comptes depuis un .xlsx (colonnes login/role/mot_de_passe).
+    Login existant → ignoré. Mot de passe vide → temporaire généré (renvoyé)."""
+    if not require_ui_admin(credentials):
+        raise HTTPException(401)
+    import openpyxl, io, hashlib, secrets as _secrets
+    raw = await file.read()
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(raw), data_only=True)
+        ws = wb.active
+    except Exception as e:
+        raise HTTPException(400, f"Fichier Excel illisible : {e}")
+    auth = load_ui_auth()
+    users = auth.get("users", [])
+    existing = {u.get("login") for u in users}
+    created, skipped, temp = [], [], []
+    rows = list(ws.iter_rows(values_only=True))
+    start = 0
+    if rows and rows[0] and str(rows[0][0] or "").strip().lower() in ("login", "identifiant"):
+        start = 1
+    for r in rows[start:]:
+        if not r or not r[0]:
+            continue
+        login = str(r[0]).strip()
+        if not login:
+            continue
+        role = (str(r[1]).strip().lower() if len(r) > 1 and r[1] else "viewer")
+        if role not in ("admin", "viewer"):
+            role = "viewer"
+        pwd = (str(r[2]).strip() if len(r) > 2 and r[2] else "")
+        telephone = (str(r[3]).strip() if len(r) > 3 and r[3] else "")
+        email = (str(r[4]).strip() if len(r) > 4 and r[4] else "")
+        if login in existing:
+            skipped.append(login)
+            continue
+        if not pwd:
+            pwd = _secrets.token_urlsafe(9)
+            temp.append({"login": login, "password": pwd})
+        users.append({"login": login, "role": role,
+                      "password_hash": hashlib.sha256(pwd.encode()).hexdigest(),
+                      "telephone": telephone or None, "email": email or None})
+        existing.add(login)
+        created.append(login)
+    auth["users"] = users
+    save_ui_auth(auth)
+    logging.getLogger("scribe.collecteur").info("[comptes] import Excel : %d créés, %d ignorés", len(created), len(skipped))
+    return {"ok": True, "created": created, "skipped": skipped, "temp_passwords": temp}
+
 
 @app.post("/api/ui/users/change-password")
 async def admin_change_ui_password(request: Request, credentials=Depends(security)):
@@ -3656,18 +4291,10 @@ def verify_session(credentials=Depends(security)):
 
 # ── Démarrage ──────────────────────────────────────────────────────────────
 
-# ── Tokens Example Network démo — enregistrés automatiquement si tokens vides ─────
-ARC_ALPIN_TOKENS = {
-    "demo_token_demo1_replace_in_production":        "DEMO1",
-    "demo_token_demo2_replace_in_production":          "DEMO2",
-    "token_ghtsav_demo_2026":          "GHTSAV",
-    "token_ghtad38_demo_2026":         "GHTAD38",
-    "demo_token_demo3_replace_in_production":         "DEMO3",
-    "demo_token_demo4_replace_in_production":           "DEMO4",
-    "demo_token_demo5_replace_in_production":              "DEMO5",
-    "demo_token_demo6_replace_in_production":  "DEMO6",
-    "demo_token_demo7_replace_in_production": "DEMO7",
-}
+# ── Tokens territorial démo — enregistrés automatiquement si tokens vides ─────
+# Pré-enrôlement de tokens de démonstration (vide par défaut).
+# Renseigner si besoin : { "token_secret": "SIGLE_ETABLISSEMENT", ... }
+DEMO_TOKENS = {}
 
 if __name__ == "__main__":
     load_tokens()
@@ -3699,11 +4326,6 @@ if __name__ == "__main__":
         print("  ► Aucun établissement enregistré.")
         print("  → Les GHT qui poussent arrivent en section ⏳ EN ATTENTE")
         print("  → Ouvrir http://localhost:9000 et cliquer ✓ ACCEPTER\n")
-        print("  Tokens Example Network démo :")
-        print("    DEMO1    : demo_token_demo1_replace_in_production")
-        print("    DEMO2  : demo_token_demo2_replace_in_production")
-        print("    GHTSAV  : token_ghtsav_demo_2026")
-        print("    GHTAD38 : token_ghtad38_demo_2026\n")
     else:
         etabs = list(set(tokens.values()))
         print(f"  ► Etablissements actifs : {', '.join(etabs)}")

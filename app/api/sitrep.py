@@ -1,7 +1,7 @@
 """
 api/sitrep.py — Main courante complète v2.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from .v140 import _log_mc
 from sqlalchemy import func as sqlfunc
@@ -13,10 +13,11 @@ import json
 from app.database import get_db
 from app.models import SitrepEntry, Attachment
 try:
-    from app.api.auth import notify_incident, get_current_user
+    from app.api.auth import notify_incident, get_current_user, require_user
 except Exception:
     def notify_incident(db, incident, action='INCIDENT'): pass
     def get_current_user(): pass
+    def require_user(): pass
 
 router = APIRouter()
 
@@ -94,7 +95,7 @@ class AlbertAvisUpdate(BaseModel):
 
 
 @router.post("/post", response_model=IncidentOut)
-def create_incident(entry: IncidentCreate, db: Session = Depends(get_db)):
+def create_incident(entry: IncidentCreate, request: Request, db: Session = Depends(get_db)):
     data = entry.dict(exclude={"jalons_labels"})
     # Construire les jalons depuis les labels
     jalons_labels = entry.jalons_labels or []
@@ -126,6 +127,8 @@ def create_incident(entry: IncidentCreate, db: Session = Depends(get_db)):
                 "incident_id": new_incident.id,
                 "uf": entry.unite_fonctionnelle or "",
                 "url": f"/#incidents/{new_incident.id}",
+                # h74 — URL publique (déduite de la requête) pour bâtir un lien SMS absolu
+                "base_url": str(request.base_url).rstrip("/"),
                 "type_crise": entry.type_crise or "",
             },
         )
@@ -161,7 +164,7 @@ def get_history(
     status: Optional[str] = None,
     type_crise: Optional[str] = None,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user),
+    user=Depends(require_user),
 ):
     """
     Liste les incidents.
@@ -231,6 +234,8 @@ def update_status(incident_id: int, update: StatusUpdate, db: Session = Depends(
     _log_mc(db, None, "INCIDENT", f"STATUT→{update.status}",
         f"Incident #{incident_id} : {inc.fait[:60] if inc.fait else ''}", ref_id=incident_id,
         niveau="INFO" if update.status not in ("RÉSOLU","ARCHIVÉ") else "INFO")
+    # h76 — Notifier par mail les abonnés à cet incident du changement d'état.
+    _email_incident_subscribers(db, inc, update.status)
     if update.status == "ARCHIVÉ":
         inc.status = "ARCHIVÉ"
         db.commit()
@@ -382,3 +387,102 @@ def export_csv(db: Session = Depends(get_db)):
         media_type="text/csv; charset=utf-8-sig",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+# ── h76 — Abonnement mail aux changements d'état d'un incident ────────────────
+
+def _email_incident_subscribers(db, inc, new_status):
+    """Envoie un mail aux abonnés de l'incident lors d'un changement d'état.
+    Best-effort : toute erreur est silencieuse (ne doit jamais bloquer la mise
+    à jour du statut). Réutilise le canal mail (SMTP) configuré côté serveur."""
+    try:
+        from app.models import IncidentMailSub, User
+        subs = db.query(IncidentMailSub).filter(IncidentMailSub.incident_id == inc.id).all()
+        if not subs:
+            return
+        from plugins.notifications.models import NotifChannel
+        from plugins.notifications.backends import BACKENDS, NotifPayload
+        from plugins.notifications.dispatcher import _apply_central_config
+        import json as _j, asyncio
+        ch = (db.query(NotifChannel)
+                .filter(NotifChannel.kind == "mail", NotifChannel.enabled == True)  # noqa: E712
+                .first())
+        if not ch:
+            return
+        cfg = _apply_central_config("mail", _j.loads(ch.config_json or "{}"))
+        backend_cls = BACKENDS.get("mail")
+        if not backend_cls:
+            return
+        backend = backend_cls(cfg)
+        if not backend.is_configured():
+            return
+        # Adresses des abonnés (résolues depuis User.email)
+        uids = [s.user_id for s in subs]
+        users = db.query(User).filter(User.id.in_(uids),
+                                      User.email.isnot(None), User.email != "").all()
+        emails = [u.email for u in users]
+        if not emails:
+            return
+        titre = f"[SCRIBE] Incident #{inc.id} → {new_status}"
+        corps = (f"L'incident #{inc.id} a changé d'état : {new_status}.\n\n"
+                 f"{(inc.fait or '')[:600]}")
+        payload = NotifPayload(event_type="incident_status", title=titre, body=corps,
+                               urgency=3, context={})
+        async def _send_all():
+            for addr in emails:
+                try:
+                    await backend.send(payload, addr)
+                except Exception:
+                    pass
+        asyncio.run(_send_all())
+    except Exception:
+        pass
+
+
+class _IncSubResult(BaseModel):
+    subscribed: bool
+
+
+@router.post("/{incident_id}/subscribe")
+def subscribe_incident(incident_id: int, db: Session = Depends(get_db),
+                       user=Depends(get_current_user)):
+    """Abonne l'utilisateur courant aux mails de changement d'état de l'incident."""
+    from app.models import IncidentMailSub
+    inc = db.query(SitrepEntry).filter(SitrepEntry.id == incident_id).first()
+    if not inc:
+        raise HTTPException(404, "Incident non trouvé")
+    existing = (db.query(IncidentMailSub)
+                  .filter(IncidentMailSub.incident_id == incident_id,
+                          IncidentMailSub.user_id == user.id).first())
+    if not existing:
+        db.add(IncidentMailSub(incident_id=incident_id, user_id=user.id))
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+    has_email = bool(getattr(user, "email", None))
+    return {"subscribed": True, "has_email": has_email}
+
+
+@router.delete("/{incident_id}/subscribe")
+def unsubscribe_incident(incident_id: int, db: Session = Depends(get_db),
+                         user=Depends(get_current_user)):
+    from app.models import IncidentMailSub
+    (db.query(IncidentMailSub)
+       .filter(IncidentMailSub.incident_id == incident_id,
+               IncidentMailSub.user_id == user.id).delete())
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+    return {"subscribed": False}
+
+
+@router.get("/my-subscriptions")
+def my_incident_subscriptions(db: Session = Depends(get_db),
+                              user=Depends(get_current_user)):
+    """IDs des incidents auxquels l'utilisateur courant est abonné par mail."""
+    from app.models import IncidentMailSub
+    rows = (db.query(IncidentMailSub.incident_id)
+              .filter(IncidentMailSub.user_id == user.id).all())
+    return {"incident_ids": [r[0] for r in rows]}
