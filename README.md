@@ -200,7 +200,7 @@ Les identifiants par défaut sont affichés à la première connexion. **Changez
 
 ### Licence
 
-[GNU Affero General Public License v3.0](LICENSE)
+agpl v3
 
 ### Auteur
 
