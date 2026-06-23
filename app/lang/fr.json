@@ -766,7 +766,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Rédigez votre message…",
     "attach_local": "Joindre un fichier",
-    "attach_bluefiles": "Joindre via Bluefiles",
+    "attach_bluefiles": "Envoi sécurisé par BlueFiles",
     "attach_hint": "10 Mo/PJ · 25 Mo total · 10 max",
     "cancel": "Annuler",
     "save_draft": "Brouillon",
@@ -926,7 +926,16 @@
     "cfg_key_set": "Clé configurée : ",
     "cfg_key_none": "Aucune clé configurée",
     "cfg_webhook_set": "Secret configuré : ",
-    "cfg_webhook_none": "Aucun secret configuré"
+    "cfg_webhook_none": "Aucun secret configuré",
+    "cfg_login": "Identifiant API (login)",
+    "cfg_password": "Mot de passe API",
+    "cfg_server": "Serveur",
+    "cfg_impersonate": "Émetteur rattaché (facultatif)",
+    "cfg_hint_cli": "Laissez le mot de passe vide pour conserver la valeur actuelle. Serveur par défaut : api.bluefiles.com. « Émetteur rattaché » est facultatif (email au nom duquel l'envoi est fait). La configuration en base prend le pas sur les variables d'environnement.",
+    "cfg_mode_ready": "Prêt — envois réels via api.bluefiles.com",
+    "cfg_mode_incomplete": "Configuration incomplète — renseignez login et mot de passe",
+    "cfg_pwd_set": "Mot de passe configuré : ",
+    "cfg_pwd_none": "Aucun mot de passe configuré"
   },
   "locale": "fr-FR",
   "mobilisation": {
@@ -994,6 +1003,36 @@
     "others": "autres",
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
-    "refine": "affinez la recherche"
+    "refine": "affinez la recherche",
+    "escalade": "Escalade par vagues (priorité)",
+    "preset_load": "Charger",
+    "preset_save": "💾 Enregistrer",
+    "preset_pick": "— préréglage —",
+    "escalade_short": "escalade par vagues"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "TRANSFERT SÉCURISÉ (BlueFiles)",
+      "admin_desc": "Identifiants du compte BlueFiles pour les envois sécurisés depuis la supervision.",
+      "login": "Login",
+      "password": "Mot de passe",
+      "server": "Serveur",
+      "enable": "Activer les envois sécurisés BlueFiles dans la messagerie supervision",
+      "test": "Tester",
+      "save": "Enregistrer",
+      "modal_title": "ENVOI SÉCURISÉ — BLUEFILES",
+      "files": "FICHIERS À ENVOYER",
+      "drop_hint": "Déposez vos fichiers ici · ou cliquez pour parcourir",
+      "drop_limit": "Maximum 200 Mo par fichier",
+      "recipients": "DESTINATAIRES",
+      "no_recipient": "Aucun destinataire — ajoutez au moins une adresse email.",
+      "add_btn": "+ Ajouter",
+      "comment": "COMMENTAIRE (optionnel)",
+      "hds_label": "Données sensibles",
+      "hds_note": "Cet envoi sera tracé dans SCRIBE. Le contenu reste chiffré bout-en-bout (BlueFiles), aucune copie en local.",
+      "sending": "Envoi en cours…",
+      "cancel": "Annuler",
+      "send_btn": "🔒 Envoyer"
+    }
   }
 }

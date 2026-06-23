@@ -770,7 +770,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Ασφαλής αποστολή μέσω BlueFiles",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -999,5 +999,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "ΑΣΦΑΛΗΣ ΜΕΤΑΦΟΡΑ (BlueFiles)",
+      "admin_desc": "Στοιχεία BlueFiles για ασφαλείς αποστολές από την εποπτεία.",
+      "login": "Login",
+      "password": "Κωδικός",
+      "server": "Διακομιστής",
+      "enable": "Ενεργοποίηση ασφαλών αποστολών BlueFiles",
+      "test": "Δοκιμή",
+      "save": "Αποθήκευση",
+      "modal_title": "ΑΣΦΑΛΗΣ ΑΠΟΣΤΟΛΗ — BLUEFILES",
+      "files": "ΑΡΧΕΙΑ ΠΡΟΣ ΑΠΟΣΤΟΛΗ",
+      "drop_hint": "Αποθέστε αρχεία εδώ · ή κάντε κλικ για αναζήτηση",
+      "drop_limit": "Μέγ. 200 MB ανά αρχείο",
+      "recipients": "ΠΑΡΑΛΗΠΤΕΣ",
+      "no_recipient": "Χωρίς παραλήπτες — προσθέστε τουλάχιστον ένα email.",
+      "add_btn": "+ Προσθήκη",
+      "comment": "ΣΧΟΛΙΟ (προαιρετικό)",
+      "hds_label": "Ευαίσθητα δεδομένα",
+      "hds_note": "Αυτή η αποστολή θα καταγραφεί στο SCRIBE. Το περιεχόμενο παραμένει κρυπτογραφημένο.",
+      "sending": "Αποστολή…",
+      "cancel": "Ακύρωση",
+      "send_btn": "🔒 Αποστολή"
+    }
   }
 }

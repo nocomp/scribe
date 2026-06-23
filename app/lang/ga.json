@@ -770,7 +770,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Seoladh slán trí BlueFiles",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -999,5 +999,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "AISTRIÚ SLÁN (BlueFiles)",
+      "admin_desc": "Dintiúir BlueFiles do sheoladh slán ó mhaoirseacht.",
+      "login": "Logáil",
+      "password": "Pasfhocal",
+      "server": "Freastalaí",
+      "enable": "Cumasaigh seoltaí slána BlueFiles i gcomhfhreagras maoirseachta",
+      "test": "Tástáil",
+      "save": "Sábháil",
+      "modal_title": "SEOLADH SLÁN — BLUEFILES",
+      "files": "COMHAID LE SEOLADH",
+      "drop_hint": "Tit comhaid anseo · nó cliceáil chun brabhsáil",
+      "drop_limit": "Uasmhéid 200 MB in aghaidh comhaid",
+      "recipients": "FAIGHTEOIRÍ",
+      "no_recipient": "Gan faighteoirí — cuir isteach seoltaí ríomhphoist.",
+      "add_btn": "+ Cuir leis",
+      "comment": "NÓTA (roghnach)",
+      "hds_label": "Sonraí íogaire",
+      "hds_note": "Logálfar an t-aistriú seo in SCRIBE. Fanann an t-ábhar criptithe ó cheann go ceann.",
+      "sending": "Ag seoladh…",
+      "cancel": "Cealaigh",
+      "send_btn": "🔒 Seol"
+    }
   }
 }

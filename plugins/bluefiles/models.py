@@ -38,6 +38,13 @@ class BluefilesConfig(Base):
     api_key         = Column(String(300), nullable=True)
     account         = Column(String(200), nullable=True)
     webhook_secret  = Column(String(300), nullable=True)
+    # v3000h135 — Champs de l'utilitaire CLI BlueFiles (BlueFilesTransfer).
+    # C'est la voie réelle d'envoi. login/password obligatoires ; server par
+    # défaut api.bluefiles.com ; impersonate facultatif (email émetteur rattaché).
+    cli_login       = Column(String(200), nullable=True)
+    cli_password    = Column(String(300), nullable=True)
+    cli_server      = Column(String(200), nullable=True)
+    cli_impersonate = Column(String(200), nullable=True)
     # Métadonnées d'audit
     updated_at      = Column(DateTime, default=lambda: datetime.now(timezone.utc),
                              onupdate=lambda: datetime.now(timezone.utc))

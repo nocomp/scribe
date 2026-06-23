@@ -770,7 +770,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Saugus siuntimas per BlueFiles",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -999,5 +999,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "SAUGUS PERDAVIMAS (BlueFiles)",
+      "admin_desc": "BlueFiles kredencialai saugiems siuntimams iš priežiūros.",
+      "login": "Login",
+      "password": "Slaptažodis",
+      "server": "Serveris",
+      "enable": "Įgalinti saugius BlueFiles siuntimus priežiūros pranešimuose",
+      "test": "Testuoti",
+      "save": "Išsaugoti",
+      "modal_title": "SAUGUS SIUNTIMAS — BLUEFILES",
+      "files": "SIUNČIAMI FAILAI",
+      "drop_hint": "Numeskite failus čia · arba spustelėkite naršymui",
+      "drop_limit": "Maks. 200 MB vienam failui",
+      "recipients": "GAVĖJAI",
+      "no_recipient": "Nėra gavėjų — pridėkite bent vieną el. paštą.",
+      "add_btn": "+ Pridėti",
+      "comment": "KOMENTARAS (neprivaloma)",
+      "hds_label": "Jautrūs duomenys",
+      "hds_note": "Šis siuntimas bus užregistruotas SCRIBE. Turinys lieka šifruotas nuo galo iki galo.",
+      "sending": "Siunčiama…",
+      "cancel": "Atšaukti",
+      "send_btn": "🔒 Siųsti"
+    }
   }
 }

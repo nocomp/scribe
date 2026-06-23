@@ -136,7 +136,7 @@ PLUGINS: dict[str, bool] = {
     "messagerie": True,
     # v2307 → v2320 : Plugin inter_ght normalement désactivé en public car
     # le chat temps réel couvre les besoins d'échanges inter-établissements.
-    # Activable selon le déploiement.
+    # Activé ici pour build privé Arc Alpin / G7 où l'onglet est attendu.
     "inter_ght":  True,
     "federation": True,
     "albert":     True,
@@ -181,13 +181,13 @@ FEDERATION: dict = {
     "demo_port":           int(os.getenv("SCRIBE_DEMO_PORT",      "7474")),
     "demo_collector_port": int(os.getenv("SCRIBE_DEMO_COLL_PORT", "7373")),
     "instances": [
-        {"sigle": "HOSPITAL-A", "port": 8000},
-        {"sigle": "HOSPITAL-B", "port": 8001},
-        {"sigle": "HOSPITAL-C", "port": 8002},
-        {"sigle": "HOSPITAL-D", "port": 8003},
-        {"sigle": "HOSPITAL-E",      "port": 8004},
-        {"sigle": "HOSPITAL-F",       "port": 8005},
-        {"sigle": "HOSPITAL-G",      "port": 8006},
+        {"sigle": "MONCH",      "port": 8000},
+        {"sigle": "GHTLMB",    "port": 8001},
+        {"sigle": "CHRUMILLY", "port": 8002},
+        {"sigle": "HDLEMAN",   "port": 8003},
+        {"sigle": "HPMB",      "port": 8004},
+        {"sigle": "CHB",       "port": 8005},
+        {"sigle": "CHPG",      "port": 8006},
     ],
 }
 
@@ -196,7 +196,7 @@ FEDERATION: dict = {
 # (lus dynamiquement depuis config.js par le frontend, ou ici comme défauts).
 LOGIN: dict = {
     # Ligne de sous-titre sous le logo (nom de l'établissement + contexte)
-    # Exemples : "CHU Exemple — Crisis OS" | "Hôpital — Cellule de Crise"
+    # Exemples : "SCRIBE — Crisis OS" | "CHU Grenoble — Cellule de Crise"
     "subtitle":    os.getenv("SCRIBE_LOGIN_SUBTITLE",   "Votre Établissement — Crisis OS"),
 
     # Texte en bas de la login box (contexte réseau, mention légale, etc.)

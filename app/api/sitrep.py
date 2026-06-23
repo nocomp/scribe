@@ -42,6 +42,7 @@ class IncidentCreate(BaseModel):
     # Cocher pour les pannes qui impactent l'activité soignante : DPI HS,
     # ascenseur, équipement médical, indisponibilité service.
     visible_soignant: Optional[bool] = False
+    impact_global: Optional[bool] = False  # h96 — impacte tous les services de soins
     # Jalons prédéfinis (liste de labels)
     jalons_labels: Optional[List[str]] = []
 
@@ -68,6 +69,7 @@ class IncidentOut(BaseModel):
     albert_avis: Optional[str]
     impact_fonctionnel: Optional[bool] = False
     visible_soignant: Optional[bool] = False  # v3.4 (h34)
+    impact_global: Optional[bool] = False  # h96
     class Config:
         from_attributes = True
         # v2.3.88 — Les datetimes SQLite sont naïves mais stockées en UTC
@@ -97,6 +99,8 @@ class AlbertAvisUpdate(BaseModel):
 @router.post("/post", response_model=IncidentOut)
 def create_incident(entry: IncidentCreate, request: Request, db: Session = Depends(get_db)):
     data = entry.dict(exclude={"jalons_labels"})
+    if data.get("impact_global"):
+        data["impact_fonctionnel"] = True  # un impact transversal est forcément opérationnel
     # Construire les jalons depuis les labels
     jalons_labels = entry.jalons_labels or []
     if jalons_labels:
@@ -236,6 +240,7 @@ def update_status(incident_id: int, update: StatusUpdate, db: Session = Depends(
         niveau="INFO" if update.status not in ("RÉSOLU","ARCHIVÉ") else "INFO")
     # h76 — Notifier par mail les abonnés à cet incident du changement d'état.
     _email_incident_subscribers(db, inc, update.status)
+    _notify_directory_by_perimeter(db, inc, update.status)
     if update.status == "ARCHIVÉ":
         inc.status = "ARCHIVÉ"
         db.commit()
@@ -428,6 +433,82 @@ def _email_incident_subscribers(db, inc, new_status):
                  f"{(inc.fait or '')[:600]}")
         payload = NotifPayload(event_type="incident_status", title=titre, body=corps,
                                urgency=3, context={})
+        async def _send_all():
+            for addr in emails:
+                try:
+                    await backend.send(payload, addr)
+                except Exception:
+                    pass
+        asyncio.run(_send_all())
+    except Exception:
+        pass
+
+
+def _notify_directory_by_perimeter(db, inc, new_status):
+    """h92 — Abonnement dérivé de l'annuaire : sur changement d'état d'un incident,
+    notifie le personnel selon son périmètre d'abonnement (uf / pole / site /
+    etablissement). Garde-fou : le périmètre 'etablissement' (directeurs) n'est
+    notifié que pour les urgences élevées, afin de ne pas le noyer. Best-effort,
+    jamais bloquant. Données personnelles strictement locales (HDS/RGPD)."""
+    try:
+        from app.models import ContactMobilisation, UniteFonctionnelle
+        from sqlalchemy import or_, and_
+        inc_uf   = (getattr(inc, "unite_fonctionnelle", None) or "").strip()
+        inc_site = (getattr(inc, "site_id", None) or "").strip()
+        urgency  = int(getattr(inc, "urgency", 1) or 1)
+        # L'incident ne porte pas le pôle : on le dérive de l'UF.
+        inc_pole = ""
+        if inc_uf:
+            u = db.query(UniteFonctionnelle).filter(UniteFonctionnelle.code_uf == inc_uf).first()
+            if u and u.pole:
+                inc_pole = u.pole.strip()
+        # Seuil d'urgence pour le périmètre 'etablissement' (1=info … 4=critique).
+        # Les directeurs ne sont notifiés que pour grave/critique (>= 3).
+        ETAB_URGENCY_MIN = 3
+        conds = []
+        if inc_uf:
+            conds.append(and_(ContactMobilisation.perimetre_abonnement == "uf",
+                              ContactMobilisation.uf == inc_uf))
+        if inc_pole:
+            conds.append(and_(ContactMobilisation.perimetre_abonnement == "pole",
+                              ContactMobilisation.pole == inc_pole))
+        if inc_site:
+            conds.append(and_(ContactMobilisation.perimetre_abonnement == "site",
+                              ContactMobilisation.site == inc_site))
+        if urgency >= ETAB_URGENCY_MIN:
+            conds.append(ContactMobilisation.perimetre_abonnement == "etablissement")
+        if not conds:
+            return
+        rows = (db.query(ContactMobilisation)
+                  .filter(ContactMobilisation.actif == True,  # noqa: E712
+                          or_(*conds),
+                          ContactMobilisation.email.isnot(None),
+                          ContactMobilisation.email != "")
+                  .all())
+        emails = sorted({c.email.strip() for c in rows if c.email and c.email.strip()})
+        if not emails:
+            return
+        from plugins.notifications.models import NotifChannel
+        from plugins.notifications.backends import BACKENDS, NotifPayload
+        from plugins.notifications.dispatcher import _apply_central_config
+        import json as _j, asyncio
+        ch = (db.query(NotifChannel)
+                .filter(NotifChannel.kind == "mail", NotifChannel.enabled == True)  # noqa: E712
+                .first())
+        if not ch:
+            return
+        cfg = _apply_central_config("mail", _j.loads(ch.config_json or "{}"))
+        backend_cls = BACKENDS.get("mail")
+        if not backend_cls:
+            return
+        backend = backend_cls(cfg)
+        if not backend.is_configured():
+            return
+        titre = f"[SCRIBE] Incident #{inc.id} \u2192 {new_status}"
+        corps = (f"Un incident de votre p\u00e9rim\u00e8tre a chang\u00e9 d'\u00e9tat : {new_status}.\n\n"
+                 f"{(inc.fait or '')[:600]}")
+        payload = NotifPayload(event_type="incident_status_perimetre", title=titre,
+                               body=corps, urgency=urgency, context={})
         async def _send_all():
             for addr in emails:
                 try:

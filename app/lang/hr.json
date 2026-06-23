@@ -770,7 +770,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Sigurno slanje putem BlueFilesa",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -999,5 +999,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "SIGURNI PRIJENOS (BlueFiles)",
+      "admin_desc": "Vjerodajnice BlueFiles za sigurne prijenose iz nadzora.",
+      "login": "Login",
+      "password": "Lozinka",
+      "server": "Poslužitelj",
+      "enable": "Omogućite sigurne slanja BlueFiles u porukama nadzora",
+      "test": "Testirati",
+      "save": "Spremi",
+      "modal_title": "SIGURNO SLANJE — BLUEFILES",
+      "files": "DATOTEKE ZA SLANJE",
+      "drop_hint": "Ispustite datoteke ovdje · ili kliknite za pregled",
+      "drop_limit": "Maks. 200 MB po datoteci",
+      "recipients": "PRIMATELJI",
+      "no_recipient": "Nema primatelja — dodajte barem jednu adresu e-pošte.",
+      "add_btn": "+ Dodati",
+      "comment": "KOMENTAR (neobavezno)",
+      "hds_label": "Osjetljivi podaci",
+      "hds_note": "Ovo slanje bit će zabilježeno u SCRIBE. Sadržaj ostaje end-to-end kriptiran.",
+      "sending": "Slanje…",
+      "cancel": "Odustani",
+      "send_btn": "🔒 Pošalji"
+    }
   }
 }

@@ -770,7 +770,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Защитено изпращане чрез BlueFiles",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -999,5 +999,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "ЗАЩИТЕН ТРАНСФЕР (BlueFiles)",
+      "admin_desc": "Идентификационни данни BlueFiles за защитени изпращания.",
+      "login": "Логин",
+      "password": "Парола",
+      "server": "Сървър",
+      "enable": "Активирайте защитени изпращания BlueFiles в съобщенията за наблюдение",
+      "test": "Тест",
+      "save": "Запази",
+      "modal_title": "ЗАЩИТЕНО ИЗПРАЩАНЕ — BLUEFILES",
+      "files": "ФАЙЛОВЕ ЗА ИЗПРАЩАНЕ",
+      "drop_hint": "Пуснете файловете тук · или кликнете за преглед",
+      "drop_limit": "Макс. 200 MB на файл",
+      "recipients": "ПОЛУЧАТЕЛИ",
+      "no_recipient": "Без получатели — добавете поне един имейл.",
+      "add_btn": "+ Добавяне",
+      "comment": "КОМЕНТАР (по избор)",
+      "hds_label": "Чувствителни данни",
+      "hds_note": "Това изпращане ще бъде записано в SCRIBE. Съдържанието остава криптирано end-to-end.",
+      "sending": "Изпращане…",
+      "cancel": "Отказ",
+      "send_btn": "🔒 Изпращане"
+    }
   }
 }

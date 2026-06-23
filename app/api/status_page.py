@@ -129,6 +129,19 @@ def _get_or_create(db: Session, site_id: int = 0, site_nom: str = "") -> StatusP
     return row
 
 
+def _global_impact_active(db) -> bool:
+    """h96 — Incident à impact transversal actif (non résolu) ?"""
+    try:
+        from app.models import SitrepEntry
+        return db.query(SitrepEntry).filter(
+            SitrepEntry.impact_global == True,  # noqa: E712
+            SitrepEntry.resolved_at.is_(None),
+            SitrepEntry.archived == False,  # noqa: E712
+        ).first() is not None
+    except Exception:
+        return False
+
+
 def _row_to_dict(row: StatusPage, chrons: list) -> dict:
     return {
         "site_id":         row.site_id,
@@ -263,6 +276,9 @@ def get_public(site_id: int = 0, db: Session = Depends(get_db)):
         for c in chrons
     ]
     data = _row_to_dict(row, chrons_list)
+    if data.get("niveau_global") == "OPERATIONNEL" and _global_impact_active(db):
+        data["niveau_global"] = "PERTURBE"
+        data["impact_global_actif"] = True
     data["etablissement"] = etab
     data["site_id"] = site_id
     data["faq"] = [f for f in data["faq"] if f.get("visible") and f.get("reponse")]

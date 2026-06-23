@@ -769,7 +769,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Bezpieczna wysyłka przez BlueFiles",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -998,5 +998,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "BEZPIECZNY TRANSFER (BlueFiles)",
+      "admin_desc": "Dane dostępu BlueFiles dla bezpiecznych wysyłek z nadzoru.",
+      "login": "Login",
+      "password": "Hasło",
+      "server": "Serwer",
+      "enable": "Włącz bezpieczne wysyłki BlueFiles w wiadomościach nadzoru",
+      "test": "Testuj",
+      "save": "Zapisz",
+      "modal_title": "BEZPIECZNA WYSYŁKA — BLUEFILES",
+      "files": "PLIKI DO WYSŁANIA",
+      "drop_hint": "Upuść pliki tutaj · lub kliknij, aby przeglądać",
+      "drop_limit": "Maks. 200 MB na plik",
+      "recipients": "ODBIORCY",
+      "no_recipient": "Brak odbiorców — dodaj co najmniej jeden adres email.",
+      "add_btn": "+ Dodaj",
+      "comment": "KOMENTARZ (opcjonalnie)",
+      "hds_label": "Dane wrażliwe",
+      "hds_note": "Ta wysyłka zostanie odnotowana w SCRIBE. Treść pozostaje szyfrowana end-to-end.",
+      "sending": "Wysyłanie…",
+      "cancel": "Anuluj",
+      "send_btn": "🔒 Wyślij"
+    }
   }
 }

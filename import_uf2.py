@@ -30,17 +30,17 @@ from app.models import Hospital, UniteFonctionnelle
 #
 # Exemples pour le modèle générique (uf_modele.xlsx) :
 SITE_MAPPING = {
-    # Mapping FICOM DEMO1 → noms EXACTS des sites tels que dans config.xml DEMO1
-    # Valeurs colonne 'Site' dans uf.xlsx DEMO1 : ANNECY, BI SITE, ST JULIEN
+    # Mapping FICOM CHAG → noms EXACTS des sites tels que dans config.xml CHAG
+    # Valeurs colonne 'Site' dans uf.xlsx CHAG : ANNECY, BI SITE, ST JULIEN
     # Les noms ici doivent correspondre aux <nom> dans config.xml <sites>
-    "ANNECY":       ["Site hospitalier principal Example City"],
-    "BI SITE":      ["Site hospitalier principal Example City", "Hopital Saint-Julien"],
+    "ANNECY":       ["Site hospitalier principal Annecy"],
+    "BI SITE":      ["Site hospitalier principal Annecy", "Hopital Saint-Julien"],
     "ST JULIEN":    ["Hopital Saint-Julien"],
     # Variantes avec accent (selon la version du config.xml)
     "SAINT-JULIEN": ["Hopital Saint-Julien", "Hôpital Saint-Julien"],
     "ST-JULIEN":    ["Hopital Saint-Julien", "Hôpital Saint-Julien"],
     # Compatibilité démo générique (config_demo1.xml)
-    "SITE PRINCIPAL":  ["Site Principal — Valmont", "Site hospitalier principal Example City"],
+    "SITE PRINCIPAL":  ["Site Principal — Valmont", "Site hospitalier principal Annecy"],
     "SITE SECONDAIRE": ["Site Secondaire — Crestval", "Hopital Saint-Julien"],
 }
 # Exemple pour un export FICOM d'un établissement bi-sites (Site A / Site B) :
@@ -138,8 +138,8 @@ def import_uf(file_path: str):
                             break
                 if not hospital:
                     # Fallback 2 : mot-clé géographique dans le nom du site
-                    # ex: "Example City" matche "Site hospitalier principal Example City"
-                    # et aussi "Site Principal — Valmont" si config DEMO1 le nomme ainsi
+                    # ex: "Annecy" matche "Site hospitalier principal Annecy"
+                    # et aussi "Site Principal — Valmont" si config CHAG le nomme ainsi
                     mots_cles = [m for m in nom_hosp.lower().split() if len(m) > 3]
                     for nom_db, h in hospitals_cache.items():
                         nom_db_lower = nom_db.lower()

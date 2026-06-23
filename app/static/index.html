@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SCRIBE v3.6.0-beta1 | Crisis OS</title>
+<title>SCRIBE v3.6.0-alpha112 | Crisis OS</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="/api/config.js"></script>
-<link rel="stylesheet" href="/static/css/scribe.css?v=3000h88">
+<link rel="stylesheet" href="/static/css/scribe.css?v=3000h141">
 
 </head>
 <body>
@@ -39,53 +39,55 @@
   </div>
 </div>
 
-<script src="/static/js/scribe.js?v=3000h88"></script>
-<script src="/static/js/coach.js?v=3000h88"></script>
+<script src="/static/js/scribe.js?v=3000h141"></script>
+<script src="/static/js/coach.js?v=3000h141"></script>
 
 <header id="main-header" style="display:none">
   <div class="header-top">
   <div class="brand">
     <img src="/static/logo-scribe.png" alt="SCRIBE" style="height:30px;width:auto;flex-shrink:0">
-    <span style="font-family:var(--mono);font-weight:300;font-size:9px;color:rgba(255,255,255,.6);letter-spacing:1px">v3.6.0-beta1</span>
-    <span id="etab-sigle" style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.8);margin-left:4px;letter-spacing:1px;padding:1px 6px;background:rgba(255,255,255,.15);border-radius:3px"></span>
+    <span style="font-family:var(--font-ui);font-weight:400;font-size:11px;color:#9aa0ac;letter-spacing:0">v3.6.0-alpha112</span>
+    <span id="etab-sigle" style="font-family:var(--font-ui);font-size:11px;color:#000091;margin-left:4px;letter-spacing:0;padding:2px 8px;background:#eef0fb;border-radius:6px;font-weight:500"></span>
   </div>
   <div class="header-right">
     <div id="incident-level" class="green" data-i18n="topbar.situation_normale">SITUATION NORMALE</div>
     <div class="clock" id="clock">--:--:--</div>
-    <a href="https://resana.numerique.gouv.fr/" target="_blank" class="visio-btn" style="background:rgba(99,102,241,.12);color:#a5b4fc;border-color:#6366f1">🔒 RESANA</a>
-    <a href="https://lasuite.numerique.gouv.fr/" target="_blank" class="visio-btn" style="background:rgba(34,211,238,.1);color:#67e8f9;border-color:#0891b2">🇫🇷 LA SUITE</a>
-    <button class="notif-btn" id="notif-toggle" onclick="event.stopPropagation();toggleNotifPanel()" type="button">🔔 <span id="notif-count-txt" data-i18n="topbar.inbox">Inbox</span><span class="notif-badge" id="notif-badge">0</span></button>
-    <button class="user-chip" id="user-chip" onclick="toggleUserMenu()"><span class="role-dot" id="role-dot"></span><span id="current-user-name">...</span> ▾</button>
-    <div id="user-menu" style="display:none;position:absolute;top:100%;right:0;min-width:200px;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:1000;padding:4px 0;font-family:var(--mono);font-size:10px">
-      <div style="padding:8px 14px;border-bottom:1px solid var(--border);color:var(--muted);font-size:9px" id="user-menu-info">—</div>
-      <button onclick="openChangePassword();toggleUserMenu()" style="display:block;width:100%;text-align:left;padding:8px 14px;background:none;border:none;color:var(--text);cursor:pointer" onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background='none'">🔑 Changer le mot de passe</button>
-      <button onclick="showAdminPanel();toggleUserMenu()" id="user-menu-admin" style="display:none;width:100%;text-align:left;padding:8px 14px;background:none;border:none;color:var(--text);cursor:pointer" onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background='none'">⚙️ Admin</button>
-      <div style="border-top:1px solid var(--border);margin:4px 0"></div>
-      <button onclick="doLogout()" style="display:block;width:100%;text-align:left;padding:8px 14px;background:none;border:none;color:#f87171;cursor:pointer" onmouseover="this.style.background='var(--surface3)'" onmouseout="this.style.background='none'">↪ Se déconnecter</button>
+
+    <!-- h98 — Menu Scribe (outils de crise) -->
+    <div class="hdr-menu-wrap">
+      <button class="hdr-iconbtn" id="scribe-mosaic-btn" onclick="event.stopPropagation();toggleScribeMenu()" title="Outils Scribe" aria-label="Outils Scribe">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      </button>
+      <div id="scribe-menu" class="hdr-dropdown" style="display:none">
+        <div class="hdr-dropdown-title">Outils de crise</div>
+        <div class="hdr-tiles">
+          <button class="hdr-tile" onclick="nouveauAvecArchivage()" data-i18n-title="title.reset_dashboard"><span class="hdr-tile-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span><span>Nouveau</span></button>
+          <button class="hdr-tile" onclick="archiverCrise();toggleScribeMenu()" data-i18n-title="title.archiver_zip"><span class="hdr-tile-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg></span><span>Archiver</span></button>
+          <a class="hdr-tile" href="https://resana.numerique.gouv.fr/" target="_blank" rel="noopener" onclick="toggleScribeMenu()"><span class="hdr-tile-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span>Resana</span></a>
+          <a class="hdr-tile" href="https://lasuite.numerique.gouv.fr/" target="_blank" rel="noopener" onclick="toggleScribeMenu()"><span class="hdr-tile-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span>La Suite</span></a>
+        </div>
+      </div>
     </div>
+    <button class="hdr-iconbtn" id="help-btn" onclick="openHelpCenter()" title="Aide" aria-label="Aide"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
+    <button class="hdr-iconbtn" id="hdr-admin-btn" onclick="showAdminPanel()" title="Administration" aria-label="Administration" style="display:none">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+
+    <button class="notif-btn" id="notif-toggle" onclick="event.stopPropagation();toggleNotifPanel()" type="button">🔔 <span id="notif-count-txt" data-i18n="topbar.inbox">Inbox</span><span class="notif-badge" id="notif-badge">0</span></button>
     <span id="ia-badge" style="display:none;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;background:var(--surface2);color:var(--muted2);border:1px solid var(--border2);cursor:default;letter-spacing:.5px"></span>
-    <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" title="Basculer clair/sombre">🌙</button>
-    <button id="header-admin-btn" onclick="showAdminPanel()" title="Panneau d'administration" data-i18n-title="title.admin_panel"
-      style="display:none;font-family:var(--mono);font-size:10px;padding:3px 9px;background:rgba(0,49,137,.15);color:#7ba4f8;border:1px solid #3d5fa0;border-radius:4px;cursor:pointer;font-weight:700">
-      ⚙ ADMIN
-    </button>
-    <button style="font-family:var(--mono);font-size:10px;padding:3px 9px;background:rgba(0,49,137,.2);color:#7ba4f8;border:1px solid #3d5fa0;border-radius:4px;cursor:pointer;font-weight:700" onclick="archiverCrise()" title="Archiver la crise dans un ZIP" data-i18n-title="title.archiver_zip">📦 ARCHIVER</button>
-    <button style="font-family:var(--mono);font-size:10px;padding:3px 9px;background:rgba(239,68,68,.15);color:#f87171;border:1px solid #ef4444;border-radius:4px;cursor:pointer;font-weight:700" onclick="resetTableauDeBord()" title="Remettre le tableau de bord à zéro" data-i18n-title="title.reset_dashboard">🔄 NOUVEAU</button>
-    <button id="hdr-admin-btn" onclick="showAdminPanel()" title="Administration SCRIBE" aria-label="Administration"
-      style="display:none;padding:4px 10px;background:rgba(0,49,137,.15);border:1px solid #3d5fa0;border-radius:4px;cursor:pointer;color:#7ba4f8;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.5px;transition:background .15s"
-      onmouseover="this.style.background='rgba(0,49,137,.35)'"
-      onmouseout="this.style.background='rgba(0,49,137,.15)'">⚙ ADMIN</button>
-    <button onclick="doLogout()" title="Se déconnecter" data-i18n-title="title.logout" aria-label="Se déconnecter"
-      style="padding:4px 8px;background:transparent;border:1px solid var(--border2);border-radius:4px;cursor:pointer;color:var(--muted);display:flex;align-items:center;gap:5px;transition:color .15s,border-color .15s"
-      onmouseover="this.style.color='#f87171';this.style.borderColor='#ef4444'"
-      onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border2)'">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-        <polyline points="16 17 21 12 16 7"/>
-        <line x1="21" y1="12" x2="9" y2="12"/>
-      </svg>
-      <span style="font-family:var(--mono);font-size:9px" data-i18n="topbar.quitter">Quitter</span>
-    </button>
+
+    <!-- h98 — Menu compte (droits) -->
+    <div class="hdr-menu-wrap">
+      <button class="user-chip" id="user-chip" onclick="event.stopPropagation();toggleUserMenu()"><span class="role-dot" id="role-dot"></span><span id="current-user-name">...</span> ▾</button>
+      <div id="user-menu" class="hdr-dropdown" style="display:none;min-width:230px">
+        <div class="hdr-dropdown-info" id="user-menu-info">—</div>
+        <button class="hdr-menu-item" onclick="toggleTheme()"><span id="theme-toggle-btn">🌙</span> <span>Thème clair / sombre</span></button>
+        <button class="hdr-menu-item" onclick="openChangePassword();toggleUserMenu()">🔑 <span>Changer le mot de passe</span></button>
+        <button class="hdr-menu-item" id="user-menu-admin" style="display:none" onclick="showAdminPanel();toggleUserMenu()">⚙️ <span>Admin</span></button>
+        <div class="hdr-menu-sep"></div>
+        <button class="hdr-menu-item danger" onclick="doLogout()">↪ <span data-i18n="topbar.quitter">Se déconnecter</span></button>
+      </div>
+    </div>
   </div>
   </div><!-- /.header-top -->
   <nav class="tabs" id="main-nav" style="display:none">
@@ -108,7 +110,7 @@
          désactivé depuis cette version (le chat natif couvre le besoin).
          Le bouton reste dans le DOM pour que l'auto-découverte puisse le
          ré-afficher si un admin réactive le plugin via l'admin → Plugins. -->
-    <!-- v3000h88 — Onglet INTER-GHT retiré du HTML (le chat natif couvre le
+    <!-- v3000h146 — Onglet INTER-GHT retiré du HTML (le chat natif couvre le
          besoin). Suppression du bouton pour qu'il ne réapparaisse jamais, quel
          que soit le build/JS/état des plugins. Le conteneur tab-declarations
          reste présent (orphelin, non atteignable) pour ne rien casser. -->
@@ -262,13 +264,17 @@ window.changeLanguagePreference = function(code) {
         </div>
 
         <!-- Ligne 2 : capacité par pôle + état G7 -->
+        <div id="db-rappel-card" style="background:var(--surface);border:1px solid var(--border);border-left:3px solid #000091;border-radius:10px;padding:14px 16px;margin-bottom:12px">
+          <div style="font-family:var(--font-ui);font-size:11px;letter-spacing:.3px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;font-weight:600">📣 <span data-i18n="dashboard.rappel_perso">Rappel du personnel</span></div>
+          <div id="db-rappel-body"><div style="color:var(--muted);font-size:13px">—</div></div>
+        </div>
         <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
             <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase" data-i18n="dashboard.section.capacite_pole">Capacité par pôle</div>
             <div id="db-poles" style="display:flex;flex-direction:column;gap:7px"></div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
-            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase">Supervision territoriale</div>
+            <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;text-transform:uppercase" data-i18n="dashboard.cooperation_territoriale">Coopération territoriale</div>
             <div id="db-g7" style="display:flex;flex-direction:column;gap:6px"></div>
           </div>
         </div>
@@ -352,38 +358,33 @@ window.changeLanguagePreference = function(code) {
       </div>
 
       <div class="field" style="background:var(--surface2);padding:8px 10px;border-radius:5px;border:1px solid var(--border)">
-        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin:0">
-          <input type="checkbox" id="impact_fonctionnel" style="margin-top:3px;flex-shrink:0">
-          <span>
-            <b style="font-size:12px">⚙ Impact fonctionnel / opérationnel</b>
-            <span style="display:block;font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4">
-              Cocher si l'incident dégrade le fonctionnement du service (panne équipement,
-              SI indisponible, locaux inaccessibles, effectifs insuffisants). À NE PAS cocher
-              pour les événements cliniques / patient (urgence vitale, afflux, complication).
-            </span>
-          </span>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0">
+          <input type="checkbox" id="impact_fonctionnel" style="flex-shrink:0">
+          <span style="font-size:12px;font-weight:600;flex:1">⚙ Impact fonctionnel / opérationnel</span>
+          <span class="tip" data-tip="Cocher si l'incident dégrade le fonctionnement du service (panne équipement, SI indisponible, locaux inaccessibles, effectifs insuffisants). À NE PAS cocher pour les événements cliniques / patient (urgence vitale, afflux, complication)." style="color:var(--muted);font-size:13px">ⓘ</span>
+        </label>
+      </div>
+
+      <!-- h96 — Impact transversal : tous les services de soins -->
+      <div class="field" style="background:#fff7ed;padding:8px 10px;border-radius:5px;border:1px solid #fdba74">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0">
+          <input type="checkbox" id="impact_global" style="flex-shrink:0" onchange="if(this.checked){var f=document.getElementById('impact_fonctionnel');if(f)f.checked=true;}">
+          <span style="font-size:12px;font-weight:600;flex:1">🌐 Impact transversal — tous les services</span>
+          <span class="tip" data-tip="Cocher si l'incident impacte l'ensemble des services (ex. DPI indisponible : plus d'accès à l'antériorité des soins). Tant qu'il n'est pas résolu, tous les services passent au moins en tension (orange) et la page statut publique en perturbé." style="color:#c2680a;font-size:13px">ⓘ</span>
         </label>
       </div>
 
       <!-- v3.4 (h34) — Visibilité côté personnel soignant -->
       <div class="field" style="background:var(--surface2);padding:8px 10px;border-radius:5px;border:1px solid var(--border)">
-        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin:0">
-          <input type="checkbox" id="visible_soignant" style="margin-top:3px;flex-shrink:0">
-          <span>
-            <b style="font-size:12px">👁 Visible pour le personnel soignant</b>
-            <span style="display:block;font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4">
-              Cocher si cet incident impacte le travail soignant et doit être visible
-              par les brancardiers et les IDE coordinateurs de transferts : panne logiciel
-              métier (DPI, prescription, biologie, imagerie), ascenseur HS, panne
-              d'équipement médical, indisponibilité d'un secteur de soins, coupure
-              fluides médicaux. Par défaut décoché : conformité RGPD (minimisation).
-            </span>
-          </span>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0">
+          <input type="checkbox" id="visible_soignant" style="flex-shrink:0">
+          <span style="font-size:12px;font-weight:600;flex:1">👁 Visible pour le personnel soignant</span>
+          <span class="tip" data-tip="Cocher si cet incident impacte le travail soignant et doit être visible par les brancardiers et les IDE coordinateurs de transferts : panne logiciel métier (DPI, prescription, biologie, imagerie), ascenseur HS, panne d'équipement médical, indisponibilité d'un secteur de soins, coupure fluides médicaux. Par défaut décoché : conformité RGPD (minimisation)." style="color:var(--muted);font-size:13px">ⓘ</span>
         </label>
       </div>
 
       <div class="field"><label>Fait — Quoi ?</label>
-        <textarea id="fait" placeholder="Description factuelle..." rows="3"></textarea>
+        <textarea id="fait" placeholder="Description factuelle..." rows="5"></textarea>
       </div>
       <div class="field"><label>Analyse — Impact ?</label>
         <textarea id="analyse" placeholder="Systèmes/services affectés..." data-i18n-placeholder="ph.systemes_affectes" rows="2"></textarea>
@@ -872,32 +873,11 @@ window.changeLanguagePreference = function(code) {
         </div>
       </div>
 
-      <!-- ── 3. Politique ──────────────────────────────────────────── -->
+      <!-- ── 3. Commentaire ──────────────────────────────────────────── -->
       <div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--muted2);font-weight:700;letter-spacing:1px;margin-bottom:6px" data-i18n="bluefiles.section_policy">⚙ POLITIQUE</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-family:var(--mono);font-size:10px">
-          <div>
-            <label style="display:block;color:var(--muted);font-size:9px;margin-bottom:3px" data-i18n="bluefiles.expiration_label">Expiration</label>
-            <select id="bf-expiration" style="width:100%;font-family:var(--mono);font-size:11px;padding:5px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
-              <option value="3">3 jours</option>
-              <option value="7">7 jours</option>
-              <option value="15" selected>15 jours (max HDS)</option>
-            </select>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:6px;justify-content:center">
-            <label style="display:flex;align-items:center;gap:6px;color:var(--text);cursor:pointer">
-              <input type="checkbox" id="bf-pwd-required" checked> <span data-i18n="bluefiles.password_required">Mot de passe destinataire</span>
-            </label>
-            <label style="display:flex;align-items:center;gap:6px;color:var(--text);cursor:pointer">
-              <input type="checkbox" id="bf-ar-enabled" checked> <span data-i18n="bluefiles.ar_enabled">Accusé de lecture</span>
-            </label>
-          </div>
-        </div>
-        <div style="margin-top:8px">
-          <label style="display:block;font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:3px" data-i18n="bluefiles.comment_label">COMMENTAIRE (optionnel)</label>
-          <textarea id="bf-comment" rows="2" placeholder="Contexte de l'envoi (lu par le destinataire)..." data-i18n-placeholder="bluefiles.comment_placeholder"
-                    style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical"></textarea>
-        </div>
+        <label style="display:block;font-family:var(--mono);font-size:9px;color:var(--muted);margin-bottom:3px" data-i18n="bluefiles.comment_label">COMMENTAIRE (optionnel)</label>
+        <textarea id="bf-comment" rows="2" placeholder="Contexte de l'envoi (lu par le destinataire)..." data-i18n-placeholder="bluefiles.comment_placeholder"
+                  style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical"></textarea>
       </div>
 
       <!-- ── Bandeau RGPD ──────────────────────────────────────────── -->
@@ -929,11 +909,11 @@ window.changeLanguagePreference = function(code) {
       <div id="bf-confirm-summary" style="font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.8);margin-top:3px"></div>
     </div>
     <div style="padding:16px 18px;display:flex;flex-direction:column;gap:12px">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted)" data-i18n="bluefiles.confirm_passwords_intro">
+      <div id="bf-confirm-pwd-intro" style="font-family:var(--mono);font-size:10px;color:var(--muted)" data-i18n="bluefiles.confirm_passwords_intro">
         Mots de passe à transmettre aux destinataires <b>par canal séparé</b> (SMS, téléphone). Ils ne seront plus visibles après fermeture.
       </div>
       <div id="bf-confirm-passwords" style="display:flex;flex-direction:column;gap:8px"></div>
-      <div style="background:rgba(255,206,0,.1);border:1px solid rgba(255,206,0,.4);border-radius:4px;padding:8px 12px;font-family:var(--mono);font-size:9px;color:#d97706;line-height:1.5">
+      <div id="bf-confirm-pwd-warn" style="background:rgba(255,206,0,.1);border:1px solid rgba(255,206,0,.4);border-radius:4px;padding:8px 12px;font-family:var(--mono);font-size:9px;color:#d97706;line-height:1.5">
         ⚠ <b><span data-i18n="bluefiles.confirm_warn_strong">Important</span></b> — <span data-i18n="bluefiles.confirm_warn_body">Transmettez ces mots de passe par un canal DIFFÉRENT du mail (SMS ou téléphone). Une fois cette fenêtre fermée, ils ne pourront plus être affichés.</span>
       </div>
     </div>
@@ -1047,7 +1027,7 @@ window.changeLanguagePreference = function(code) {
     <div style="display:flex;flex:1;overflow:hidden">
       <!-- Sidebar navigation -->
       <div class="admin-sidebar">
-        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:2px;padding:8px 16px 4px">GESTION</div>
+        <div class="admin-sidebar-section" style="margin-top:2px">GESTION</div>
         <button class="admin-sidebar-btn active" id="admin-nav-users" onclick="adminShowSection('users',this)">👥 Utilisateurs</button>
         <button class="admin-sidebar-btn" id="admin-nav-plugins" onclick="adminShowSection('plugins',this)">🧩 Plugins</button>
         <button class="admin-sidebar-btn" id="admin-nav-notifications" onclick="adminShowSection('notifications',this)">🔔 Notifications</button>
@@ -1057,7 +1037,7 @@ window.changeLanguagePreference = function(code) {
              d'archivage de crise (checkbox dans le modal archiver),
              approche beaucoup plus naturelle. La section admin était
              un doublon désormais inutile. Code backend préservé. -->
-        <div style="font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:2px;padding:16px 16px 4px">CONFIGURATION</div>
+        <div class="admin-sidebar-section">CONFIGURATION</div>
         <button class="admin-sidebar-btn" id="admin-nav-apis" onclick="adminShowSection('apis',this)">⚙ APIs & IA</button>
         <button class="admin-sidebar-btn" id="admin-nav-network" onclick="adminShowSection('network',this)">🌐 Réseau</button>
         <button class="admin-sidebar-btn" id="admin-nav-lang" onclick="adminShowSection('lang',this)">🌍 Langue</button>
@@ -1224,6 +1204,12 @@ window.changeLanguagePreference = function(code) {
               <span style="font-family:var(--mono);font-size:9px;color:var(--muted)" data-i18n="mobilisation.channels">Canaux</span>
               <label style="font-size:11px;display:flex;gap:4px;align-items:center"><input type="checkbox" id="mob-ch-sms" checked> <span data-i18n="mobilisation.ch_sms">SMS</span></label>
               <label style="font-size:11px;display:flex;gap:4px;align-items:center"><input type="checkbox" id="mob-ch-mail" checked> <span data-i18n="mobilisation.ch_mail">Mail</span></label>
+              <label style="font-size:11px;display:flex;gap:4px;align-items:center;margin-left:8px"><input type="checkbox" id="mob-escalade"> <span data-i18n="mobilisation.escalade">Escalade par vagues (priorité)</span></label>
+              <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
+                <select id="mob-preset-select" style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:6px"><option value="">— préréglage —</option></select>
+                <button type="button" onclick="mobApplyPreset()" class="mob-btn" style="font-size:12px" data-i18n="mobilisation.preset_load">Charger</button>
+                <button type="button" onclick="mobSavePreset()" class="mob-btn" style="font-size:12px" data-i18n="mobilisation.preset_save">💾 Enregistrer</button>
+              </div>
             </div>
             <button class="btn-primary" style="font-size:12px;width:auto;display:inline-flex;align-items:center;padding:10px 22px;background:#e1000f;border-color:#e1000f;font-weight:700" onclick="mobTrigger()" data-i18n="mobilisation.trigger">📣 Déclencher l'alerte</button>
             <div id="mob-trigger-msg" style="font-family:var(--mono);font-size:11px;margin-top:8px"></div>
@@ -1293,7 +1279,7 @@ window.changeLanguagePreference = function(code) {
               </div>
               <div>
                 <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">SIGLE CIBLE</label>
-                <input type="text" id="scen-cible" value="DEMO"
+                <input type="text" id="scen-cible" value="CHAG"
                        style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
               </div>
             </div>
@@ -2310,7 +2296,7 @@ window.changeLanguagePreference = function(code) {
 
       <!-- 💬 INTERNE (canal v1) -->
       <div class="msg-channel-section" data-canal="interne">
-        <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted2);padding:6px 14px 4px;display:flex;align-items:center;gap:6px">
+        <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:.3px;color:#8a909c;padding:9px 14px 4px;display:flex;align-items:center;gap:6px">
           <span>💬</span>
           <span data-i18n="messagerie.canal_interne">INTERNE</span>
         </div>
@@ -2351,7 +2337,7 @@ window.changeLanguagePreference = function(code) {
 
       <!-- 📡 SUPERVISION — messagerie inter-établissement via collecteur -->
       <div class="msg-channel-section" data-canal="supervision" style="margin-top:14px">
-        <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted2);padding:6px 14px 4px;display:flex;align-items:center;gap:6px">
+        <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:.3px;color:#8a909c;padding:9px 14px 4px;display:flex;align-items:center;gap:6px">
           <span>📡</span>
           <span data-i18n="messagerie.canal_supervision">SUPERVISION</span>
         </div>
@@ -2366,7 +2352,7 @@ window.changeLanguagePreference = function(code) {
 
       <!-- 📧 MAIL (Phase 3) -->
       <div class="msg-channel-section" data-canal="mail" style="margin-top:14px">
-        <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted2);padding:6px 14px 4px;display:flex;align-items:center;gap:6px">
+        <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:.3px;color:#8a909c;padding:9px 14px 4px;display:flex;align-items:center;gap:6px">
           <span>📧</span>
           <span data-i18n="messagerie.canal_mail">MAIL</span>
           <span style="font-size:8px;background:rgba(22,163,74,.15);color:#16a34a;padding:1px 5px;border-radius:3px;margin-left:auto" data-i18n="messagerie.canal_active">Activé</span>
@@ -2376,7 +2362,7 @@ window.changeLanguagePreference = function(code) {
 
       <!-- 📱 SMS (Phase 3) -->
       <div class="msg-channel-section" data-canal="sms" style="margin-top:8px;opacity:.45">
-        <div style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--muted2);padding:6px 14px 4px;display:flex;align-items:center;gap:6px">
+        <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:.3px;color:#8a909c;padding:9px 14px 4px;display:flex;align-items:center;gap:6px">
           <span>📱</span>
           <span data-i18n="messagerie.canal_sms">SMS</span>
           <span style="font-size:8px;background:rgba(0,49,137,.15);color:#003189;padding:1px 5px;border-radius:3px;margin-left:auto" data-i18n="messagerie.phase3_soon">Phase 3</span>
@@ -2431,18 +2417,18 @@ window.changeLanguagePreference = function(code) {
   /* Sidebar messagerie — boutons de dossiers */
   #msg-sidebar .msg-folder-btn {
     display: flex; align-items: center; gap: 8px;
-    width: 100%; padding: 5px 14px;
+    width: 100%; padding: 7px 14px;
     background: transparent; border: none;
     color: var(--text); cursor: pointer;
-    font-family: var(--mono); font-size: 10px;
-    text-align: left;
+    font-family: var(--font-ui); font-size: 13px;
+    text-align: left; border-radius: 6px;
     transition: background .12s;
   }
   #msg-sidebar .msg-folder-btn:hover { background: rgba(0,49,137,.06); }
   #msg-sidebar .msg-folder-btn.active {
-    background: rgba(0,49,137,.10);
-    color: #003189; font-weight: 700;
-    border-left: 2px solid #003189; padding-left: 12px;
+    background: #e6ebf7;
+    color: #000091; font-weight: 600;
+    border-left: 2px solid #000091; padding-left: 12px;
   }
   #msg-sidebar .msg-fb-ic { font-size: 12px; width: 16px; text-align: center; }
   #msg-sidebar .msg-fb-lbl { flex: 1; }
@@ -2452,7 +2438,7 @@ window.changeLanguagePreference = function(code) {
     min-width: 16px; text-align: center;
   }
   #msg-sidebar .msg-folder-btn.active .msg-fb-count {
-    background: rgba(0,49,137,.15); color: #003189; font-weight: 700;
+    background: #d6deef; color: #000091; font-weight: 600;
   }
   #msg-sidebar .msg-folder-add { color: var(--muted); font-style: italic; }
   #msg-sidebar .msg-folder-add:hover { color: var(--text); }
@@ -2578,7 +2564,7 @@ window.changeLanguagePreference = function(code) {
           </button>
           <button id="msg-compose-bluefiles-btn" onclick="msgComposeOpenBluefiles()" type="button"
                   style="display:none;font-family:var(--mono);font-size:9px;padding:5px 12px;background:rgba(0,49,137,.08);border:1px solid rgba(0,49,137,.3);color:#003189;border-radius:4px;cursor:pointer;font-weight:700">
-            🔒 <span data-i18n="messagerie.attach_bluefiles">Joindre via Bluefiles</span>
+            🔒 <span data-i18n="messagerie.attach_bluefiles">Envoi sécurisé par BlueFiles</span>
           </button>
           <input type="file" id="msg-compose-file-input" multiple style="display:none" onchange="msgComposeHandleFiles(this.files)">
           <span style="font-family:var(--mono);font-size:8px;color:var(--muted);align-self:center" data-i18n="messagerie.attach_hint">10 Mo/PJ · 25 Mo total · 10 max</span>
@@ -2899,5 +2885,22 @@ window.changeLanguagePreference = function(code) {
 <datalist id="acteurs-roles"></datalist>
 <datalist id="acteurs-cadres"></datalist>
 
+<div id="help-overlay" onclick="if(event.target===this)closeHelpCenter()">
+  <div id="help-box">
+    <div id="help-hdr">
+      <span id="help-title">Centre d'aide</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        
+        
+        <button id="help-close" onclick="closeHelpCenter()" aria-label="Fermer">✕</button>
+      </div>
+    </div>
+    <div id="help-search-wrap"><input type="text" id="help-search" oninput="helpRender()" autocomplete="off"></div>
+    <div id="help-body">
+      <div id="help-list"></div>
+      <div id="help-article" style="display:none"></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>

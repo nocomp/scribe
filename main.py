@@ -146,7 +146,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app = FastAPI(title="SCRIBE v2.5.0 Crisis OS", version="2.5.0")
 
 # CORS — restreint aux origines configurées (jamais wildcard en prod)
-_VPS = "http://localhost:8000"
+_VPS = "http://vps-389073b7.vps.ovh.net"
 _ALL_PORTS = list(range(8000, 8010)) + list(range(6560, 6568)) + [9000, 7474, 7373]
 _allowed_origins = os.getenv(
     "SCRIBE_ALLOWED_ORIGINS",
@@ -424,6 +424,25 @@ def _run_migrations():
         cible_cols = [r[1] for r in cx.execute("PRAGMA table_info(alerte_cibles)")]
         if cible_cols and "commentaire" not in cible_cols:
             cx.execute("ALTER TABLE alerte_cibles ADD COLUMN commentaire TEXT")
+        # h89 — Périmètre d'abonnement + priorité d'alerte sur l'annuaire de mobilisation.
+        cm_cols = [r[1] for r in cx.execute("PRAGMA table_info(contacts_mobilisation)")]
+        if cm_cols and "perimetre_abonnement" not in cm_cols:
+            cx.execute("ALTER TABLE contacts_mobilisation ADD COLUMN perimetre_abonnement TEXT DEFAULT 'uf'")
+        if cm_cols and "priorite" not in cm_cols:
+            cx.execute("ALTER TABLE contacts_mobilisation ADD COLUMN priorite INTEGER DEFAULT 3")
+        # h93 — Escalade par vagues : vague courante de la campagne + vague par cible.
+        am_cols = [r[1] for r in cx.execute("PRAGMA table_info(alertes_mobilisation)")]
+        if am_cols and "vague_courante" not in am_cols:
+            cx.execute("ALTER TABLE alertes_mobilisation ADD COLUMN vague_courante INTEGER DEFAULT 0")
+        ac_cols = [r[1] for r in cx.execute("PRAGMA table_info(alerte_cibles)")]
+        if ac_cols and "vague" not in ac_cols:
+            cx.execute("ALTER TABLE alerte_cibles ADD COLUMN vague INTEGER DEFAULT 0")
+        if ac_cols and "livraison" not in ac_cols:
+            cx.execute("ALTER TABLE alerte_cibles ADD COLUMN livraison TEXT DEFAULT ''")
+        # h96 — Impact transversal (tous les services de soins).
+        se_cols = [r[1] for r in cx.execute("PRAGMA table_info(sitrep_entries)")]
+        if se_cols and "impact_global" not in se_cols:
+            cx.execute("ALTER TABLE sitrep_entries ADD COLUMN impact_global BOOLEAN DEFAULT 0")
         # v3.4 (h34) — Visibilité salons chat (DM 1-à-1 + salons restreints).
         salon_cols = [r[1] for r in cx.execute("PRAGMA table_info(chat_salons)")]
         if salon_cols and "visibility" not in salon_cols:
@@ -533,7 +552,7 @@ async def public_status():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "3.6.0-beta1", "build": "v3000h88"}
+    return {"status": "ok", "version": "3.6.0-alpha112", "build": "v3000h146"}
 
 
 @app.get("/api/push-test")

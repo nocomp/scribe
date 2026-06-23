@@ -105,5 +105,5 @@ final_lines = clean_content.count('\n') + 1
 print(f"✓ Corrigé: {final_lines} lignes (était {len(lines)})")
 print()
 print("Redémarrer les instances SCRIBE:")
-print("  bash lancer_arc_alpin.sh")
+print("  bash lancer_instances.sh")
 print("  (sans --reset pour préserver les données)")

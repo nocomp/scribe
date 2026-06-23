@@ -766,7 +766,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Secure send via BlueFiles",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -926,7 +926,16 @@
     "cfg_key_set": "Key configured: ",
     "cfg_key_none": "No key configured",
     "cfg_webhook_set": "Secret configured: ",
-    "cfg_webhook_none": "No secret configured"
+    "cfg_webhook_none": "No secret configured",
+    "cfg_login": "API login",
+    "cfg_password": "API password",
+    "cfg_server": "Server",
+    "cfg_impersonate": "Linked sender (optional)",
+    "cfg_hint_cli": "Leave the password blank to keep the current value. Default server: api.bluefiles.com. 'Linked sender' is optional (email the transfer is sent on behalf of). Database config takes precedence over environment variables.",
+    "cfg_mode_ready": "Ready — live transfers via api.bluefiles.com",
+    "cfg_mode_incomplete": "Incomplete configuration — enter login and password",
+    "cfg_pwd_set": "Password configured: ",
+    "cfg_pwd_none": "No password configured"
   },
   "locale": "en-GB",
   "mobilisation": {
@@ -995,5 +1004,30 @@
     "selected": "selected",
     "type_to_search": "Type to search",
     "refine": "refine your search"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "SECURE TRANSFER (BlueFiles)",
+      "admin_desc": "BlueFiles account credentials for secure transfers from supervision.",
+      "login": "Login",
+      "password": "Password",
+      "server": "Server",
+      "enable": "Enable BlueFiles secure transfers in supervision messaging",
+      "test": "Test",
+      "save": "Save",
+      "modal_title": "SECURE SEND — BLUEFILES",
+      "files": "FILES TO SEND",
+      "drop_hint": "Drop your files here · or click to browse",
+      "drop_limit": "Max 200 MB per file",
+      "recipients": "RECIPIENTS",
+      "no_recipient": "No recipients — add at least one email address.",
+      "add_btn": "+ Add",
+      "comment": "COMMENT (optional)",
+      "hds_label": "Sensitive data",
+      "hds_note": "This transfer will be logged in SCRIBE. Content stays end-to-end encrypted (BlueFiles), no local copy.",
+      "sending": "Sending…",
+      "cancel": "Cancel",
+      "send_btn": "🔒 Send"
+    }
   }
 }

@@ -432,11 +432,11 @@
     </div>
 
     <div class="splash-card" onclick="document.getElementById('zip-input').click()">
-      <div class="splash-card-icon">📦</div>
-      <h3 class="splash-card-title" data-i18n="splash.card3.title">Déployer un GHT complet</h3>
-      <p class="splash-card-desc" data-i18n="splash.card3.desc">Importer un .zip contenant plusieurs établissements (export GHT complet).</p>
-      <button class="splash-card-btn" data-i18n="splash.card3.btn">Choisir un .zip</button>
-      <input type="file" id="zip-input" accept=".zip" style="display:none" onchange="onZipImport(event)">
+      <div class="splash-card-icon">💾</div>
+      <h3 class="splash-card-title">Restaurer une sauvegarde complète</h3>
+      <p class="splash-card-desc">Importer un .zip de sauvegarde SCRIBE : recrée toutes les instances et leurs données (comptes, notifs, capacités…), prêtes à l'emploi.</p>
+      <button class="splash-card-btn">Choisir la sauvegarde</button>
+      <input type="file" id="zip-input" accept=".zip" style="display:none" onchange="onBackupRestore(event)">
     </div>
 
     <div class="splash-card" onclick="quickDemo()">
@@ -1541,6 +1541,40 @@ async function onXlsxImport(event) {
   }
 }
 
+async function onBackupRestore(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const pwd = prompt("Mot de passe de la sauvegarde :");
+  if (!pwd) { event.target.value = ""; return; }
+  showLoading("Restauration de la sauvegarde\u2026");
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("password", pwd);
+    const r = await fetch('/api/master/instances/restore-full', {
+      method: 'POST', headers: authHeaders(), body: fd,
+    });
+    if (!r.ok) {
+      let txt = await r.text();
+      try { txt = JSON.parse(txt).detail || txt; } catch (e) {}
+      hideLoading();
+      toast("\u00c9chec : " + txt, 'err');
+      event.target.value = "";
+      return;
+    }
+    const j = await r.json();
+    const det = (j.restored || []).map(function (x) { return x.sigle + " (" + (x.rows || 0) + " lignes)"; }).join(", ");
+    await fetch('/api/master/onboarding/finish', { method: 'POST', headers: authHeaders() });
+    hideLoading();
+    toast("\u2713 " + j.count + " instance(s) restaur\u00e9e(s) : " + det, 'ok');
+    setTimeout(function () { window.location.href = '/api/master/ui'; }, 1800);
+  } catch (e) {
+    hideLoading();
+    toast("Erreur r\u00e9seau : " + e, 'err');
+    event.target.value = "";
+  }
+}
+
 async function onZipImport(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1638,7 +1672,7 @@ function renderStep() {
     const tzOptions = [
       ['',                  '🌐 Automatique (heure du navigateur)'],
       ['Europe/Paris',      '🇫🇷 Europe/Paris (France métropolitaine)'],
-      ['Pacific/Tahiti',    '🇵🇫 Pacific/Tahiti'],
+      ['Pacific/Tahiti',    '🇵🇫 Pacific/Tahiti (Polynésie française)'],
       ['Indian/Reunion',    '🇷🇪 Indian/Reunion (La Réunion)'],
       ['Indian/Mayotte',    '🇾🇹 Indian/Mayotte (Mayotte)'],
       ['America/Martinique','🇲🇶 America/Martinique (Martinique)'],

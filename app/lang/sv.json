@@ -770,7 +770,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Säker överföring via BlueFiles",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -999,5 +999,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "SÄKER ÖVERFÖRING (BlueFiles)",
+      "admin_desc": "BlueFiles-uppgifter för säker sändning från tillsyn.",
+      "login": "Login",
+      "password": "Lösenord",
+      "server": "Server",
+      "enable": "Aktivera säkra BlueFiles-sändningar i övervakningsmeddelanden",
+      "test": "Testa",
+      "save": "Spara",
+      "modal_title": "SÄKER SÄNDNING — BLUEFILES",
+      "files": "FILER ATT SKICKA",
+      "drop_hint": "Släpp filer här · eller klicka för att bläddra",
+      "drop_limit": "Max 200 MB per fil",
+      "recipients": "MOTTAGARE",
+      "no_recipient": "Inga mottagare — lägg till minst en e-postadress.",
+      "add_btn": "+ Lägg till",
+      "comment": "KOMMENTAR (valfritt)",
+      "hds_label": "Känsliga uppgifter",
+      "hds_note": "Denna sändning loggas i SCRIBE. Innehållet förblir end-to-end-krypterat.",
+      "sending": "Skickar…",
+      "cancel": "Avbryt",
+      "send_btn": "🔒 Skicka"
+    }
   }
 }

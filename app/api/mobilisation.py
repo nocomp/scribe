@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import ContactMobilisation, AlerteMobilisation, AlerteCible
+from app.models import ContactMobilisation, AlerteMobilisation, AlerteCible, UniteFonctionnelle, MobPreset
 
 try:
     from app.api.auth import get_current_user, require_admin
@@ -47,10 +47,13 @@ _FIELD_MAP = {
     "grade": "grade",
     "pole": "pole", "pôle": "pole",
     "site": "site",
+    "abonnement": "perimetre_abonnement", "périmètre": "perimetre_abonnement", "perimetre": "perimetre_abonnement",
+    "priorité": "priorite", "priorite": "priorite",
 }
 
 _TEMPLATE_HEADERS = ["Clé", "Nom", "Prénom", "TEL1", "TEL2",
-                     "Fonction", "Service", "Uf", "Grade", "Pole", "Site", "Mail"]
+                     "Fonction", "Service", "Uf", "Grade", "Pole", "Site", "Mail",
+                     "Abonnement", "Priorite"]
 
 
 def _norm_header(h: str) -> str:
@@ -58,6 +61,29 @@ def _norm_header(h: str) -> str:
     if ":" in h:
         h = h.split(":", 1)[0].strip()
     return h
+
+
+def _log_mc(db, user, action, detail):
+    """Journalise une action de rappel dans la main courante (best-effort)."""
+    try:
+        from app.models import MainCouranteLog
+        db.add(MainCouranteLog(
+            auteur=(getattr(user, "username", None) or "Système"),
+            auteur_role=getattr(user, "role", "système"),
+            categorie="NOTIFICATION", action=action, detail=detail, niveau="INFO",
+        ))
+        db.flush()
+    except Exception:
+        pass
+
+
+def _crit_summary(crit):
+    parts = []
+    for k in ("uf", "pole", "site", "fonction"):
+        vals = crit.get(k) or []
+        if vals:
+            parts.append(f"{k}: {', '.join(str(v) for v in vals)}")
+    return " ; ".join(parts) if parts else "tout l'annuaire"
 
 
 # ── Import Excel ─────────────────────────────────────────────────────────────
@@ -131,6 +157,14 @@ async def import_contacts(fichier: UploadFile = File(...),
         target.grade    = _cell(row, "grade")
         target.pole     = _cell(row, "pole")
         target.site     = _cell(row, "site")
+        _ab = _cell(row, "perimetre_abonnement").lower().strip()
+        target.perimetre_abonnement = _ab if _ab in ("uf", "pole", "site", "etablissement", "aucun") else "uf"
+        _pr = _cell(row, "priorite")
+        try:
+            _pri = int(float(_pr)) if _pr else 3
+        except Exception:
+            _pri = 3
+        target.priorite = _pri if _pri in (1, 2, 3, 4) else 3
         target.actif    = True
         if existing:
             nb_updated += 1
@@ -178,12 +212,20 @@ def facets(db: Session = Depends(get_db), user=Depends(get_current_user)):
     def _distinct(col):
         vals = [r[0] for r in db.query(col).filter(col.isnot(None), col != "").distinct().all()]
         return sorted({v.strip() for v in vals if v and v.strip()})
+    uf_labels = {}
+    try:
+        for u in db.query(UniteFonctionnelle).all():
+            if u.code_uf:
+                uf_labels[u.code_uf.strip()] = (u.libelle or u.code_uf).strip()
+    except Exception:
+        pass
     return {
-        "uf":       _distinct(ContactMobilisation.uf),
-        "pole":     _distinct(ContactMobilisation.pole),
-        "site":     _distinct(ContactMobilisation.site),
-        "fonction": _distinct(ContactMobilisation.fonction),
-        "total":    db.query(ContactMobilisation).filter(ContactMobilisation.actif == True).count(),
+        "uf":        _distinct(ContactMobilisation.uf),
+        "uf_labels": uf_labels,
+        "pole":      _distinct(ContactMobilisation.pole),
+        "site":      _distinct(ContactMobilisation.site),
+        "fonction":  _distinct(ContactMobilisation.fonction),
+        "total":     db.query(ContactMobilisation).filter(ContactMobilisation.actif == True).count(),
     }
 
 
@@ -262,6 +304,7 @@ class DeclenchementIn(BaseModel):
     canaux:      Optional[list] = None      # ["sms","mail"]
     contact_ids: Optional[list] = None
     incident_id: Optional[int] = None
+    escalade:    bool = False     # h93 — True = envoi par vagues (priorité)
 
 
 @router.post("/alerte")
@@ -275,46 +318,69 @@ async def declencher_alerte(body: DeclenchementIn, request: Request,
         raise HTTPException(400, "Aucun contact ne correspond aux critères")
     canaux = [c for c in (body.canaux or ["sms", "mail"]) if c in ("sms", "mail")] or ["sms", "mail"]
 
+    escalade = bool(body.escalade)
+
+    def _prio(x):
+        try:
+            p = int(getattr(x, "priorite", 3) or 3)
+        except Exception:
+            p = 3
+        return p if p in (1, 2, 3, 4) else 3
+
+    first_wave = min((_prio(c) for c in contacts), default=0) if escalade else 0
+
     alerte = AlerteMobilisation(
         titre=(body.titre or "Mobilisation").strip()[:200],
         message=(body.message or "").strip(),
         criteres=json.dumps(crit, ensure_ascii=False),
         incident_id=body.incident_id,
         cree_par=getattr(admin, "username", "admin"),
+        vague_courante=first_wave,
     )
     db.add(alerte)
     db.flush()
+    _log_mc(db, admin, "DÉCLENCHÉ",
+            f"Rappel « {alerte.titre} » : {len(contacts)} destinataire(s) — " + _crit_summary(crit)
+            + (f" (escalade : vague {first_wave})" if escalade else ""))
 
     # Backends (best-effort)
     sms_backend = _load_backend(db, "sms") if "sms" in canaux else None
     mail_backend = _load_backend(db, "mail") if "mail" in canaux else None
     base = _public_base(request)
 
-    nb_sms, nb_mail = 0, 0
+    nb_sms, nb_mail, nb_attente = 0, 0, 0
     for c in contacts:
         token = secrets.token_urlsafe(16)
         tel = (c.tel1 or c.tel2 or "").strip()
+        prio = _prio(c)
+        envoyer = (not escalade) or (prio == first_wave)
         cible = AlerteCible(
             alerte_id=alerte.id, contact_id=c.id,
             nom=((c.prenom + " " + c.nom).strip() if c.prenom else c.nom),
             fonction=c.fonction, site=c.site, tel=tel, email=c.email,
-            token=token, canaux=",".join(canaux), statut="envoye",
+            token=token, canaux=",".join(canaux),
+            statut="envoye" if envoyer else "attente",
+            vague=prio,
         )
         db.add(cible)
+        if not envoyer:
+            nb_attente += 1
+            continue
         link_rel = f"/api/v1/mobilisation/eta/{token}"
-        # SMS
+        sent_ok, attempted = False, False
         if sms_backend and tel:
-            ok = await _send_one(sms_backend, alerte, base, link_rel, tel)
-            if ok:
-                nb_sms += 1
-        # Mail
+            attempted = True
+            if await _send_one(sms_backend, alerte, base, link_rel, tel):
+                nb_sms += 1; sent_ok = True
         if mail_backend and c.email:
-            ok = await _send_one(mail_backend, alerte, base, link_rel, c.email)
-            if ok:
-                nb_mail += 1
+            attempted = True
+            if await _send_one(mail_backend, alerte, base, link_rel, c.email):
+                nb_mail += 1; sent_ok = True
+        cible.livraison = "ok" if sent_ok else ("echec" if attempted else "")
     db.commit()
     return {"ok": True, "alerte_id": alerte.id, "cibles": len(contacts),
-            "sms_envoyes": nb_sms, "mails_envoyes": nb_mail}
+            "sms_envoyes": nb_sms, "mails_envoyes": nb_mail,
+            "escalade": escalade, "vague_courante": first_wave, "en_attente": nb_attente}
 
 
 def _public_base(request: Request) -> str:
@@ -392,13 +458,26 @@ def detail_alerte(alerte_id: int, db: Session = Depends(get_db), user=Depends(ge
     if ids:
         for cm in db.query(ContactMobilisation).filter(ContactMobilisation.id.in_(ids)).all():
             uf_map[cm.id] = cm.uf or ""
+    uf_lib = {}
+    try:
+        for u in db.query(UniteFonctionnelle).all():
+            if u.code_uf:
+                uf_lib[u.code_uf.strip()] = (u.libelle or u.code_uf).strip()
+    except Exception:
+        pass
+    _attente = [int(c.vague or 0) for c in cibles if c.statut == "attente"]
+    next_vague = min(_attente) if _attente else None
     return {
         "id": a.id, "titre": a.titre, "message": a.message,
         "created_at": _iso(a.created_at),
+        "vague_courante": a.vague_courante or 0,
+        "next_vague": next_vague,
+        "en_attente": len(_attente),
         "cibles": [{
             "id": c.id, "nom": c.nom, "fonction": c.fonction, "site": c.site,
             "uf": uf_map.get(c.contact_id, ""),
-            "canaux": c.canaux, "statut": c.statut,
+            "uf_libelle": uf_lib.get((uf_map.get(c.contact_id, "") or "").strip(), uf_map.get(c.contact_id, "")),
+            "canaux": c.canaux, "statut": c.statut, "vague": c.vague or 0, "livraison": c.livraison or "",
             "eta_choice": c.eta_choice, "commentaire": c.commentaire,
             "responded_at": _iso(c.responded_at),
             "has_tel": bool(c.tel), "has_mail": bool(c.email),
@@ -414,6 +493,54 @@ def _iso(dt):
     return dt.isoformat()
 
 
+@router.post("/alerte/{alerte_id}/vague-suivante")
+async def vague_suivante(alerte_id: int, request: Request,
+                         db: Session = Depends(get_db), admin=Depends(require_admin)):
+    """h93 — Déclenche la vague suivante (priorité supérieure) d'une campagne en
+    escalade : envoie aux destinataires encore en attente du plus petit niveau de
+    priorité restant. Confirmé par la cellule (pas d'automatisme)."""
+    a = db.query(AlerteMobilisation).filter(AlerteMobilisation.id == alerte_id).first()
+    if not a:
+        raise HTTPException(404, "Alerte introuvable")
+    attente = (db.query(AlerteCible)
+                 .filter(AlerteCible.alerte_id == alerte_id,
+                         AlerteCible.statut == "attente").all())
+    if not attente:
+        return {"ok": True, "done": True, "vague_courante": a.vague_courante or 0,
+                "envoyes": 0, "sms_envoyes": 0, "mails_envoyes": 0, "reste_attente": 0}
+    next_wave = min(int(c.vague or 0) for c in attente)
+    sms_backend = _load_backend(db, "sms")
+    mail_backend = _load_backend(db, "mail")
+    base = _public_base(request)
+    nb_sms, nb_mail, nb = 0, 0, 0
+    for c in attente:
+        if int(c.vague or 0) != next_wave:
+            continue
+        c.statut = "envoye"
+        nb += 1
+        canaux = (c.canaux or "").split(",")
+        link_rel = f"/api/v1/mobilisation/eta/{c.token}"
+        _ok, _att = False, False
+        if sms_backend and c.tel and "sms" in canaux:
+            _att = True
+            if await _send_one(sms_backend, a, base, link_rel, c.tel):
+                nb_sms += 1; _ok = True
+        if mail_backend and c.email and "mail" in canaux:
+            _att = True
+            if await _send_one(mail_backend, a, base, link_rel, c.email):
+                nb_mail += 1; _ok = True
+        c.livraison = "ok" if _ok else ("echec" if _att else "")
+    a.vague_courante = next_wave
+    _log_mc(db, admin, "ESCALADE",
+            f"Rappel « {a.titre} » : vague {next_wave} déclenchée ({nb} destinataire(s))")
+    db.commit()
+    reste = (db.query(AlerteCible)
+               .filter(AlerteCible.alerte_id == alerte_id,
+                       AlerteCible.statut == "attente").count())
+    return {"ok": True, "vague_courante": next_wave, "envoyes": nb,
+            "sms_envoyes": nb_sms, "mails_envoyes": nb_mail, "reste_attente": reste}
+
+
 @router.post("/alerte/{alerte_id}/relancer")
 async def relancer_alerte(alerte_id: int, request: Request, uf: Optional[str] = None,
                           db: Session = Depends(get_db), admin=Depends(require_admin)):
@@ -424,7 +551,7 @@ async def relancer_alerte(alerte_id: int, request: Request, uf: Optional[str] = 
         raise HTTPException(404, "Alerte introuvable")
     cibles = (db.query(AlerteCible)
                 .filter(AlerteCible.alerte_id == alerte_id,
-                        AlerteCible.statut != "repondu").all())
+                        AlerteCible.statut == "envoye").all())
     if uf:
         ids = [c.contact_id for c in cibles if c.contact_id]
         uf_map = {}
@@ -441,12 +568,18 @@ async def relancer_alerte(alerte_id: int, request: Request, uf: Optional[str] = 
     for c in cibles:
         canaux = (c.canaux or "")
         link_rel = f"/api/v1/mobilisation/eta/{c.token}"
+        _ok, _att = False, False
         if sms_backend and c.tel and "sms" in canaux:
+            _att = True
             if await _send_one(sms_backend, a, base, link_rel, c.tel):
-                nb_sms += 1
+                nb_sms += 1; _ok = True
         if mail_backend and c.email and "mail" in canaux:
+            _att = True
             if await _send_one(mail_backend, a, base, link_rel, c.email):
-                nb_mail += 1
+                nb_mail += 1; _ok = True
+        c.livraison = "ok" if _ok else ("echec" if _att else c.livraison)
+    _log_mc(db, admin, "RELANCÉ", f"Relance rappel « {a.titre} »" + (f" (UF {uf})" if uf else "") + f" : {len(cibles)} sans réponse")
+    db.commit()
     return {"ok": True, "relances": len(cibles), "sms_envoyes": nb_sms, "mails_envoyes": nb_mail}
 
 
@@ -457,6 +590,7 @@ def archive_alerte(alerte_id: int, db: Session = Depends(get_db), admin=Depends(
     if not a:
         raise HTTPException(404, "Alerte introuvable")
     a.archived = 1
+    _log_mc(db, admin, "ARCHIVÉ", f"Campagne d'alerte « {a.titre} » archivée")
     try:
         db.commit()
     except Exception:
@@ -560,6 +694,19 @@ def _render_eta_page(cible, alerte, lang, done=False, choice=None):
     intro = s["eta_intro"].replace("{nom}", nom)
     ctx = s["eta_context"].replace("{fonction}", e(cible.fonction)).replace("{site}", e(cible.site))
     choice_labels = {"15": s["eta_15"], "30": s["eta_30"], "60": s["eta_60"], "indispo": s["eta_indispo"]}
+    btns = "".join(
+        f'<button type="submit" name="choix" value="{val}" class="eta-btn eta-{val}">{e(lbl)}</button>'
+        for val, lbl in [("15", s["eta_15"]), ("30", s["eta_30"]),
+                         ("60", s["eta_60"]), ("indispo", s["eta_indispo"])]
+    )
+    _cmt_val = e(getattr(cible, "commentaire", "") or "")
+    _form = (
+        f'<form method="post" class="eta-form">'
+        f'<label class="cmt-label">{e(s["eta_comment_label"])}</label>'
+        f'<textarea name="commentaire" class="cmt-input" rows="2" maxlength="500" '
+        f'placeholder="{e(s["eta_comment_ph"])}">{_cmt_val}</textarea>'
+        f'{btns}</form>'
+    )
     if done:
         body_html = (
             f'<p class="ok">✅ {e(s["eta_thanks"])}</p>'
@@ -567,20 +714,9 @@ def _render_eta_page(cible, alerte, lang, done=False, choice=None):
         )
         if getattr(cible, "commentaire", None):
             body_html += f'<p class="cmt">💬 {e(cible.commentaire)}</p>'
+        body_html += f'<p class="q" style="margin-top:18px;font-size:14px">{e(s.get("eta_modify", "Vous pouvez modifier votre réponse :"))}</p>' + _form
     else:
-        btns = "".join(
-            f'<button type="submit" name="choix" value="{val}" class="eta-btn eta-{val}">{e(lbl)}</button>'
-            for val, lbl in [("15", s["eta_15"]), ("30", s["eta_30"]),
-                             ("60", s["eta_60"]), ("indispo", s["eta_indispo"])]
-        )
-        body_html = (
-            f'<p class="q">{e(s["eta_question"])}</p>'
-            f'<form method="post" class="eta-form">'
-            f'<label class="cmt-label">{e(s["eta_comment_label"])}</label>'
-            f'<textarea name="commentaire" class="cmt-input" rows="2" maxlength="500" '
-            f'placeholder="{e(s["eta_comment_ph"])}"></textarea>'
-            f'{btns}</form>'
-        )
+        body_html = f'<p class="q">{e(s["eta_question"])}</p>' + _form
     msg = e(alerte.message) if alerte and alerte.message else ""
     title = e(alerte.titre if alerte else s["eta_title"])
     return f"""<!DOCTYPE html>
@@ -663,3 +799,58 @@ async def eta_submit(token: str, request: Request, lang: str = "fr", db: Session
             db.rollback()
     alerte = db.query(AlerteMobilisation).filter(AlerteMobilisation.id == cible.alerte_id).first()
     return HTMLResponse(_render_eta_page(cible, alerte, lang, done=True, choice=cible.eta_choice))
+
+
+# ── h95 — Pré-réglages de ciblage ────────────────────────────────────────────
+class PresetIn(BaseModel):
+    nom:         str
+    uf:          Optional[list] = None
+    pole:        Optional[list] = None
+    site:        Optional[list] = None
+    fonction:    Optional[list] = None
+    contact_ids: Optional[list] = None
+    canaux:      Optional[list] = None
+    escalade:    bool = False
+
+
+@router.get("/presets")
+def list_presets(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    out = []
+    for p in db.query(MobPreset).order_by(MobPreset.nom).all():
+        try:
+            crit = json.loads(p.criteres or "{}")
+        except Exception:
+            crit = {}
+        out.append({"id": p.id, "nom": p.nom, "criteres": crit,
+                    "canaux": (p.canaux or "").split(",") if p.canaux else [],
+                    "escalade": bool(p.escalade)})
+    return out
+
+
+@router.post("/presets")
+def save_preset(body: PresetIn, db: Session = Depends(get_db), admin=Depends(require_admin)):
+    nom = (body.nom or "").strip()
+    if not nom:
+        raise HTTPException(400, "Nom requis")
+    crit = {"uf": body.uf or [], "pole": body.pole or [], "site": body.site or [],
+            "fonction": body.fonction or [], "contact_ids": body.contact_ids or []}
+    canaux = ",".join([c for c in (body.canaux or ["sms", "mail"]) if c in ("sms", "mail")]) or "sms,mail"
+    p = db.query(MobPreset).filter(MobPreset.nom == nom).first()
+    if not p:
+        p = MobPreset(nom=nom)
+        db.add(p)
+    p.criteres = json.dumps(crit, ensure_ascii=False)
+    p.canaux = canaux
+    p.escalade = 1 if body.escalade else 0
+    p.cree_par = getattr(admin, "username", "admin")
+    db.commit()
+    return {"ok": True, "id": p.id, "nom": p.nom}
+
+
+@router.delete("/presets/{preset_id}", status_code=204)
+def delete_preset(preset_id: int, db: Session = Depends(get_db), admin=Depends(require_admin)):
+    p = db.query(MobPreset).filter(MobPreset.id == preset_id).first()
+    if p:
+        db.delete(p)
+        db.commit()
+    return

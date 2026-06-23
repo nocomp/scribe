@@ -770,7 +770,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Turvaline saatmine BlueFilesi kaudu",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -999,5 +999,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "TURVALINE ÜLEKANNE (BlueFiles)",
+      "admin_desc": "BlueFiles'i volikirjad turvaliste saatmiste jaoks järelevalvest.",
+      "login": "Login",
+      "password": "Parool",
+      "server": "Server",
+      "enable": "Luba BlueFilesi turvalised saatmised järelevalve sõnumites",
+      "test": "Testi",
+      "save": "Salvesta",
+      "modal_title": "TURVALINE SAATMINE — BLUEFILES",
+      "files": "SAADETAVAD FAILID",
+      "drop_hint": "Lohistage failid siia · või klõpsake sirvimiseks",
+      "drop_limit": "Maks. 200 MB faili kohta",
+      "recipients": "SAAJAD",
+      "no_recipient": "Saajaid pole — lisage vähemalt üks e-posti aadress.",
+      "add_btn": "+ Lisa",
+      "comment": "KOMMENTAAR (valikuline)",
+      "hds_label": "Tundlikud andmed",
+      "hds_note": "See saatmine logitakse SCRIBEsse. Sisu jääb otsast otsani krüptituks.",
+      "sending": "Saadan…",
+      "cancel": "Tühista",
+      "send_btn": "🔒 Saada"
+    }
   }
 }

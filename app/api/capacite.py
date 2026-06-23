@@ -98,6 +98,26 @@ def _statut_global(ref: CapaciteReferentiel,
     return "normal"
 
 
+def _global_impact_active(db) -> bool:
+    """h96 — Existe-t-il un incident à impact transversal actif (non résolu) ?"""
+    try:
+        from app.models import SitrepEntry
+        return db.query(SitrepEntry).filter(
+            SitrepEntry.impact_global == True,  # noqa: E712
+            SitrepEntry.resolved_at.is_(None),
+            SitrepEntry.archived == False,  # noqa: E712
+        ).first() is not None
+    except Exception:
+        return False
+
+
+def _floor_orange(statut, active):
+    """h96 — Plancher orange : au moins « tension » si impact transversal actif."""
+    if active and statut in ("normal", "inconnu", None):
+        return "tension"
+    return statut
+
+
 def _decl_to_dict(decl: CapaciteDeclaration) -> dict:
     return {
         "id":              decl.id,
@@ -168,6 +188,9 @@ def get_referentiel(db: Session = Depends(get_db), user=Depends(require_user)):
                   .order_by(CapaciteDeclaration.horodatage.desc())
                   .first())
         result.append(_ref_to_dict(ref, last))
+    if _global_impact_active(db):
+        for it in result:
+            it["statut_global"] = _floor_orange(it.get("statut_global"), True)
     return result
 
 
@@ -329,6 +352,7 @@ def get_synthese(db: Session = Depends(get_db), user=Depends(require_user)):  # 
 
     # Calcul statut global par pôle
     POIDS_MAP = {"ferme": 3, "critique": 2, "tension": 1, "normal": 0, "inconnu": -1}
+    _gi_synthese = _global_impact_active(db)
     result = {}
     for site, poles in by_site.items():
         result[site] = {}
@@ -336,6 +360,7 @@ def get_synthese(db: Session = Depends(get_db), user=Depends(require_user)):  # 
             poids_liste = [POIDS_MAP.get(s, -1) for s in data["statuts"]]
             max_p = max(poids_liste) if poids_liste else -1
             statut_pole = {3:"ferme", 2:"critique", 1:"tension", 0:"normal"}.get(max_p, "inconnu")
+            statut_pole = _floor_orange(statut_pole, _gi_synthese)
             result[site][pole] = {**data, "statut_pole": statut_pole}
 
     return result

@@ -822,13 +822,11 @@ function enableSound() {
 
 // ── Init ─────────────────────────────────────────────────────────────
 async function init() {
+  // Toujours préférer le token live de l'app parente (évite un token périmé conservé côté iframe)
+  try { const _pt = window.parent.localStorage.getItem('scribe_token'); if (_pt) tok = _pt; } catch(e) {}
   if (!tok) {
-    // Tenter via parent (si embed en iframe dans SCRIBE)
-    try { tok = window.parent.localStorage.getItem('scribe_token') || ''; } catch(e) {}
-    if (!tok) {
-      document.body.innerHTML = '<div class="card" style="color:#dc2626">Non authentifié — ouvrez SCRIBE d&#39;abord.</div>';
-      return;
-    }
+    document.body.innerHTML = '<div class="card" style="color:#dc2626">Non authentifié — ouvrez SCRIBE d&#39;abord.</div>';
+    return;
   }
   loadSilence();
   initPushStatus();

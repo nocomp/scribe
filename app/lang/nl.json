@@ -769,7 +769,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Beveiligd verzenden via BlueFiles",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -998,5 +998,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "VEILIGE OVERDRACHT (BlueFiles)",
+      "admin_desc": "BlueFiles-gegevens voor veilige verzendingen vanuit de supervisie.",
+      "login": "Login",
+      "password": "Wachtwoord",
+      "server": "Server",
+      "enable": "BlueFiles veilige verzending inschakelen in supervisieberichten",
+      "test": "Testen",
+      "save": "Opslaan",
+      "modal_title": "VEILIG VERZENDEN — BLUEFILES",
+      "files": "TE VERZENDEN BESTANDEN",
+      "drop_hint": "Sleep bestanden hier · of klik om te bladeren",
+      "drop_limit": "Max. 200 MB per bestand",
+      "recipients": "ONTVANGERS",
+      "no_recipient": "Geen ontvangers — voeg minimaal één e-mailadres toe.",
+      "add_btn": "+ Toevoegen",
+      "comment": "OPMERKING (optioneel)",
+      "hds_label": "Gevoelige gegevens",
+      "hds_note": "Deze verzending wordt geregistreerd in SCRIBE. Inhoud blijft end-to-end versleuteld.",
+      "sending": "Bezig met verzenden…",
+      "cancel": "Annuleren",
+      "send_btn": "🔒 Verzenden"
+    }
   }
 }

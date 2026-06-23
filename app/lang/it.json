@@ -766,7 +766,7 @@
     "body_label": "MESSAGGIO",
     "body_placeholder": "Scrivi il tuo messaggio…",
     "attach_local": "Allega un file",
-    "attach_bluefiles": "Allega tramite Bluefiles",
+    "attach_bluefiles": "Invio sicuro tramite BlueFiles",
     "attach_hint": "10 MB/file · 25 MB totali · max 10",
     "cancel": "Annulla",
     "save_draft": "Bozza",
@@ -995,5 +995,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "TRASFERIMENTO SICURO (BlueFiles)",
+      "admin_desc": "Credenziali BlueFiles per invii sicuri dalla supervisione.",
+      "login": "Login",
+      "password": "Password",
+      "server": "Server",
+      "enable": "Abilitare invii sicuri BlueFiles nella messaggistica di supervisione",
+      "test": "Test",
+      "save": "Salva",
+      "modal_title": "INVIO SICURO — BLUEFILES",
+      "files": "FILE DA INVIARE",
+      "drop_hint": "Trascina i file qui · o clicca per sfogliare",
+      "drop_limit": "Max 200 MB per file",
+      "recipients": "DESTINATARI",
+      "no_recipient": "Nessun destinatario — aggiungi almeno un indirizzo email.",
+      "add_btn": "+ Aggiungi",
+      "comment": "COMMENTO (opzionale)",
+      "hds_label": "Dati sensibili",
+      "hds_note": "Questo invio sarà tracciato in SCRIBE. Il contenuto rimane cifrato end-to-end.",
+      "sending": "Invio in corso…",
+      "cancel": "Annulla",
+      "send_btn": "🔒 Invia"
+    }
   }
 }

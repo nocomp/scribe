@@ -594,6 +594,7 @@ const PLUGIN_TAB_MAP = {
 let _dbInterval = null;
 
 async function loadDashboard() {
+  try{ loadRappelWidget(); }catch(e){}
   await Promise.all([
     loadDBIncidents(), loadDBCapacite(), loadDBTransferts(),
     loadDBMessages(), loadDBG7(), loadDBTasks(), loadDBMsgs()
@@ -3084,6 +3085,7 @@ async function submitIncident() {
     intervenant_nom: document.getElementById('intervenant_nom').value,
     intervenant_contact: document.getElementById('intervenant_contact').value,
     impact_fonctionnel: document.getElementById('impact_fonctionnel')?.checked || false,
+    impact_global: document.getElementById('impact_global')?.checked || false,
     // v3.4 (h34) — Exposition explicite côté personnel soignant.
     visible_soignant: document.getElementById('visible_soignant')?.checked || false,
     estimated_resolution, jalons_labels:[...jalonsList]
@@ -3646,7 +3648,7 @@ async function msgOpenComposeDirect(userId, displayName) {
 function renderAnnuaire(filter='') {
   const rawData = annuaireMode==='secours' ? ANNUAIRE_SECOURS : ANNUAIRE_NORMAL;
   // v2.4.8 : normaliser le mapping backend (service/interne/direct/mobile/site/note)
-  // → frontend (service/tel/local/note). Bug terrain : "undefined" partout.
+  // → frontend (service/tel/local/note). Bug Polynésie : "undefined" partout.
   const data = (rawData || []).map(e => {
     if (!e) return null;
     // Si l'entrée a déjà tel/local (ancien format), on garde tel quel
@@ -5152,7 +5154,7 @@ function _scenBuildBody() {
   const body = {
     titre,
     description: (document.getElementById('scen-description').value || '').trim(),
-    cible_sigle: (document.getElementById('scen-cible').value || 'DEMO').trim(),
+    cible_sigle: (document.getElementById('scen-cible').value || 'CHAG').trim(),
     anonymize: document.getElementById('scen-anonymize').checked,
     include_incidents: document.getElementById('scen-inc-incidents').checked,
     include_messages:  document.getElementById('scen-inc-messages').checked,
@@ -6077,18 +6079,24 @@ window.refreshIncidentBadges = refreshIncidentBadges;
 // ── h79 — Chaîne d'alerte (mobilisation) ─────────────────────────────────────
 async function mobInit() { await mobLoadFacets(); mobLoadAlertes(); }
 
+let _mobUfLabels = {};
 async function mobLoadFacets() {
   try {
     const r = await apiFetch('/api/v1/mobilisation/facets');
     if (!r.ok) return;
     const d = await r.json();
-    const fill = (id, vals) => {
+    _mobUfLabels = d.uf_labels || {};
+    const fill = (id, vals, labels) => {
       const box = document.getElementById(id);
-      if (box) box.innerHTML = (vals || []).map(v =>
-        '<label class="mob-check"><input type="checkbox" value="' + escapeHtmlSafe(v) + '"> <span>' + escapeHtmlSafe(v) + '</span></label>'
-      ).join('') || '<span style="color:var(--muted);font-size:12px">—</span>';
+      if (box) box.innerHTML = (vals || []).map(v => {
+        const lbl = (labels && labels[v]) ? labels[v] : v;
+        const code = (labels && labels[v] && labels[v] !== v)
+          ? ' <span style="color:var(--muted);font-size:10px">(' + escapeHtmlSafe(v) + ')</span>' : '';
+        return '<label class="mob-check"><input type="checkbox" value="' + escapeHtmlSafe(v) + '"> <span>' + escapeHtmlSafe(lbl) + code + '</span></label>';
+      }).join('') || '<span style="color:var(--muted);font-size:12px">—</span>';
     };
-    fill('mob-site', d.site); fill('mob-pole', d.pole); fill('mob-uf', d.uf);
+    fill('mob-site', d.site); fill('mob-pole', d.pole); fill('mob-uf', d.uf, d.uf_labels);
+    mobLoadPresets();
     const tot = document.getElementById('mob-total');
     if (tot) tot.textContent = t('mobilisation.total_contacts', '{n} contacts').replace('{n}', d.total || 0);
   } catch (e) {}
@@ -6154,6 +6162,55 @@ function mobFilterGroup(containerId, q) {
     row.style.display = (!ql || txt.indexOf(ql) >= 0) ? '' : 'none';
   });
 }
+
+let _mobPresets = [];
+async function mobLoadPresets() {
+  const sel = document.getElementById('mob-preset-select');
+  if (!sel) return;
+  try {
+    const r = await apiFetch('/api/v1/mobilisation/presets', { headers: authHeaders() });
+    const list = await r.json().catch(() => []);
+    _mobPresets = Array.isArray(list) ? list : [];
+    sel.innerHTML = '<option value="">' + t('mobilisation.preset_pick', '— préréglage —') + '</option>'
+      + _mobPresets.map(p => '<option value="' + p.id + '">' + escapeHtmlSafe(p.nom) + '</option>').join('');
+  } catch (e) {}
+}
+function mobApplyPreset() {
+  const sel = document.getElementById('mob-preset-select');
+  if (!sel || !sel.value) return;
+  const p = (_mobPresets || []).find(x => String(x.id) === String(sel.value));
+  if (!p) return;
+  const crit = p.criteres || {};
+  const setGroup = (id, vals) => {
+    const set = new Set((vals || []).map(String));
+    document.querySelectorAll('#' + id + ' input[type=checkbox]').forEach(i => { i.checked = set.has(String(i.value)); });
+  };
+  setGroup('mob-site', crit.site); setGroup('mob-pole', crit.pole); setGroup('mob-uf', crit.uf);
+  _mobSelectedIds = new Set(crit.contact_ids || []);
+  const canaux = p.canaux || ['sms', 'mail'];
+  const sms = document.getElementById('mob-ch-sms'); if (sms) sms.checked = canaux.indexOf('sms') >= 0;
+  const mail = document.getElementById('mob-ch-mail'); if (mail) mail.checked = canaux.indexOf('mail') >= 0;
+  const esc = document.getElementById('mob-escalade'); if (esc) esc.checked = !!p.escalade;
+  if (typeof mobRenderNames === 'function') mobRenderNames('');
+  if (typeof mobPreview === 'function') mobPreview();
+  toast(t('mobilisation.preset_loaded', 'Préréglage chargé') + ' : ' + p.nom, 'ok');
+}
+async function mobSavePreset() {
+  const nom = prompt(t('mobilisation.preset_name', 'Nom du préréglage :'));
+  if (!nom || !nom.trim()) return;
+  const canaux = [];
+  if (document.getElementById('mob-ch-sms') && document.getElementById('mob-ch-sms').checked) canaux.push('sms');
+  if (document.getElementById('mob-ch-mail') && document.getElementById('mob-ch-mail').checked) canaux.push('mail');
+  const escEl = document.getElementById('mob-escalade');
+  const body = Object.assign({ nom: nom.trim(), canaux: canaux, escalade: !!(escEl && escEl.checked) }, mobCriteres());
+  try {
+    const r = await apiFetch('/api/v1/mobilisation/presets', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.ok) { toast(t('mobilisation.preset_saved', 'Préréglage enregistré'), 'ok'); mobLoadPresets(); }
+    else toast('✗ ' + (d.detail || r.status), 'err');
+  } catch (e) { toast('Erreur : ' + e, 'err'); }
+}
+window.mobApplyPreset = mobApplyPreset; window.mobSavePreset = mobSavePreset;
 
 function mobCriteres() {
   const checked = id => Array.from(document.querySelectorAll('#' + id + ' input[type=checkbox]:checked')).map(i => i.value);
@@ -6235,7 +6292,13 @@ async function mobTrigger() {
   if (!titre.trim()) { if (msg) { msg.style.color = '#dc2626'; msg.textContent = 'Objet requis'; } return; }
   if (!canaux.length) { if (msg) { msg.style.color = '#dc2626'; msg.textContent = 'Sélectionnez au moins un canal'; } return; }
   if (msg) { msg.style.color = 'var(--muted)'; msg.textContent = '⏳ Envoi…'; }
-  const body = Object.assign({ titre: titre, message: message, canaux: canaux }, mobCriteres());
+  const escEl = document.getElementById('mob-escalade');
+  const body = Object.assign({ titre: titre, message: message, canaux: canaux, escalade: !!(escEl && escEl.checked) }, mobCriteres());
+  const _recap = t('mobilisation.confirm_send', 'Envoyer le rappel « {titre} » par {canaux}{esc} ?')
+    .replace('{titre}', titre.trim())
+    .replace('{canaux}', canaux.join(' + ').toUpperCase())
+    .replace('{esc}', (escEl && escEl.checked) ? (' — ' + t('mobilisation.escalade_short', 'escalade par vagues')) : '');
+  if (!confirm(_recap)) { if (msg) msg.textContent = ''; return; }
   try {
     const r = await apiFetch('/api/v1/mobilisation/alerte', { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({}));
@@ -6331,6 +6394,93 @@ function _vGauge(pct, label, sub) {
     + '</div>';
 }
 
+function _mobWaveBar(d) {
+  if (!d || !d.vague_courante) return '';
+  const enAtt = d.en_attente || 0;
+  const nv = d.next_vague;
+  let btn;
+  if (enAtt > 0 && nv != null) {
+    btn = '<button onclick="mobVagueSuivante(' + (d._id || d.id) + ')" style="background:#003189;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">'
+      + t('mobilisation.next_wave', 'Lancer la vague suivante') + ' (' + enAtt + ' ' + t('mobilisation.waiting', 'en attente') + ')</button>';
+  } else {
+    btn = '<span style="font-size:11px;color:var(--muted)">' + t('mobilisation.all_waves_sent', 'toutes les vagues envoyées') + '</span>';
+  }
+  return '<div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px">'
+    + '<span style="font-size:12px;font-weight:700">' + t('mobilisation.wave', 'Vague') + ' ' + d.vague_courante + '</span>' + btn + '</div>';
+}
+
+async function mobVagueSuivante(id) {
+  if (!confirm(t('mobilisation.confirm_next_wave', 'Lancer la vague suivante (priorité supérieure) ?'))) return;
+  try {
+    const r = await apiFetch('/api/v1/mobilisation/alerte/' + id + '/vague-suivante', { method: 'POST', headers: authHeaders() });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.ok) {
+      if (d.done) toast(t('mobilisation.all_waves_sent', 'Toutes les vagues sont envoyées'), 'ok');
+      else toast('✓ Vague ' + d.vague_courante + ' — ' + (d.envoyes || 0) + ' destinataire(s)', 'ok');
+      mobShowAlerte(id);
+    } else { toast('✗ ' + (d.detail || r.status), 'err'); }
+  } catch (e) { toast('Erreur : ' + e, 'err'); }
+}
+window.mobVagueSuivante = mobVagueSuivante;
+
+function _mobGapBar(d) {
+  const cibles = (d && d.cibles) || [];
+  if (!cibles.length) return '';
+  let arrivent = 0, indispo = 0, sansrep = 0, echec = 0, attente = 0;
+  cibles.forEach(c => {
+    if (c.statut === 'repondu') { if (c.eta_choice === 'indispo') indispo++; else arrivent++; }
+    else if (c.statut === 'attente') { attente++; }
+    else { sansrep++; if (c.livraison === 'echec') echec++; }
+  });
+  const manque = cibles.length - arrivent;
+  const parts = [];
+  parts.push('<b style="color:#16a34a">' + arrivent + '</b> ' + t('mobilisation.arriving', 'arrivent'));
+  if (sansrep) parts.push('<b>' + sansrep + '</b> ' + t('mobilisation.no_response', 'sans réponse'));
+  if (echec) parts.push('<b style="color:#dc2626">' + echec + '</b> ' + t('mobilisation.delivery_failed', 'échec envoi'));
+  if (indispo) parts.push('<b>' + indispo + '</b> ' + t('mobilisation.unavailable', 'indispo'));
+  if (attente) parts.push('<b>' + attente + '</b> ' + t('mobilisation.waiting', 'en attente'));
+  return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px">'
+    + '<span style="font-weight:700">' + t('mobilisation.gap', 'Manquent à l\'appel') + ' : ' + manque + '</span>'
+    + ' <span style="color:var(--muted)">(' + parts.join(' · ') + ')</span></div>';
+}
+
+async function loadRappelWidget(){
+  var body=document.getElementById('db-rappel-body'); if(!body) return;
+  try{
+    var r=await apiFetch('/api/v1/mobilisation/alertes');
+    var alertes=(r && typeof r.json==='function') ? await r.json() : r;
+    var active=(alertes||[]).filter(function(a){return !a.archived;});
+    if(!active.length){ body.innerHTML='<div style="color:var(--muted);font-size:13px;padding:6px 0">'+t('dashboard.rappel_aucun','Aucun rappel du personnel en cours.')+'</div>'; return; }
+    var a=active[0];
+    var rd=await apiFetch('/api/v1/mobilisation/alerte/'+a.id);
+    var det=(rd && typeof rd.json==='function') ? await rd.json() : rd;
+    var cibles=(det && det.cibles) || [];
+    var called=cibles.length || a.cibles || 0;
+    var responded=cibles.filter(function(c){return c.statut==='repondu';}).length;
+    var arriving=cibles.filter(function(c){return !!c.eta_choice;}).length;
+    body.innerHTML=renderRappelGauge(a.titre, called, responded, arriving);
+  }catch(e){ body.innerHTML='<div style="color:var(--muted);font-size:13px">—</div>'; }
+}
+function renderRappelGauge(titre, called, responded, arriving){
+  var frac=called>0?responded/called:0, L=251.3, dash=(frac*L).toFixed(1);
+  function chip(lbl,val,col){return '<div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;padding:1px 0"><span style="color:var(--muted)">'+lbl+'</span><span style="font-weight:700;color:'+col+'">'+val+'</span></div>';}
+  return '<div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap">'
+   +'<div style="position:relative;width:180px;height:100px;flex-shrink:0">'
+   +'<svg viewBox="0 0 200 112" width="180" height="100">'
+   +'<path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#e3e6eb" stroke-width="15" stroke-linecap="round"/>'
+   +'<path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#000091" stroke-width="15" stroke-linecap="round" stroke-dasharray="'+dash+' '+L+'"/>'
+   +'</svg>'
+   +'<div style="position:absolute;left:0;right:0;bottom:4px;text-align:center">'
+   +'<div style="font-size:26px;font-weight:700;color:#000091;line-height:1">'+responded+'<span style="font-size:15px;color:var(--muted)">/'+called+'</span></div>'
+   +'<div style="font-size:11px;color:var(--muted)">'+t('dashboard.rappel_ont_repondu','ont répondu')+'</div>'
+   +'</div></div>'
+   +'<div style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:170px">'
+   +'<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px">'+(titre||t('dashboard.rappel_en_cours','Rappel en cours'))+'</div>'
+   +chip(t('dashboard.rappel_appeles','Appelés'), called, '#374151')
+   +chip(t('dashboard.rappel_repondu','Ont répondu'), responded, '#15803d')
+   +chip(t('dashboard.rappel_arrivent','Arrivent'), arriving, '#000091')
+   +'</div></div>';
+}
 function mobRenderDashboard(filterCat) {
   const el = document.getElementById('mob-alerte-detail');
   const d = _mobDetail; if (!el || !d) return;
@@ -6355,10 +6505,11 @@ function mobRenderDashboard(filterCat) {
     const list = byUf[u]; const tt = list.length;
     const rep = list.filter(c => c.statut === 'repondu').length;
     const pct = tt ? Math.round(rep / tt * 100) : 0;
+    const ulbl = (list[0] && list[0].uf_libelle) || _mobUfLabels[u] || u;
     const relBtn = (u !== '—')
       ? '<button class="mob-uf-relance" title="' + t('mobilisation.relance', 'Relancer les non-répondants') + '" onclick="mobRelancer(' + d._id + ',\'' + encodeURIComponent(u) + '\')">↻</button>'
       : '';
-    return '<div style="display:flex;flex-direction:column;align-items:center;gap:3px">' + _vGauge(pct, 'UF ' + escapeHtmlSafe(u), rep + '/' + tt) + relBtn + '</div>';
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:3px">' + _vGauge(pct, escapeHtmlSafe(ulbl), rep + '/' + tt) + relBtn + '</div>';
   }).join('');
 
   let names = cibles;
@@ -6366,9 +6517,10 @@ function mobRenderDashboard(filterCat) {
   const nameRows = names.map(c => {
     const cat = _cibleCat(c); const col = (_ETA_CATS.find(x => x.k === cat) || {}).color || '#94a3b8';
     const cmt = c.commentaire ? ' <span title="' + escapeHtmlSafe(c.commentaire) + '" style="cursor:help">💬</span>' : '';
-    return '<tr style="border-bottom:1px solid var(--border)"><td style="padding:3px 6px">' + escapeHtmlSafe(c.nom || '') + cmt + '</td>'
+    const fail = (c.livraison === 'echec') ? ' <span title="' + t('mobilisation.delivery_failed', 'Échec envoi') + '" style="color:#dc2626;font-weight:700">⚠</span>' : '';
+    return '<tr style="border-bottom:1px solid var(--border)"><td style="padding:3px 6px">' + escapeHtmlSafe(c.nom || '') + cmt + fail + '</td>'
       + '<td style="padding:3px 6px;color:var(--muted)">' + escapeHtmlSafe(c.fonction || '') + '</td>'
-      + '<td style="padding:3px 6px;color:var(--muted)">' + escapeHtmlSafe(c.uf || '') + '</td>'
+      + '<td style="padding:3px 6px;color:var(--muted)">' + escapeHtmlSafe(c.uf_libelle || c.uf || '') + '</td>'
       + '<td style="padding:3px 6px;text-align:right;color:' + col + ';font-weight:700">' + escapeHtmlSafe(_etaCatLabel(cat)) + '</td></tr>';
   }).join('');
   const responders = cibles.filter(c => c.statut === 'repondu');
@@ -6389,7 +6541,7 @@ function mobRenderDashboard(filterCat) {
     ? escapeHtmlSafe(_etaCatLabel(filterCat)) + ' <span style="cursor:pointer;text-decoration:underline" onclick="mobRenderDashboard()">(' + t('mobilisation.clear_filter', 'tout afficher') + ')</span>'
     : t('mobilisation.all', 'TOUS');
 
-  el.innerHTML =
+  el.innerHTML = _mobWaveBar(d) + _mobGapBar(d) +
     '<div style="font-weight:700;margin-bottom:8px">' + escapeHtmlSafe(d.titre) + '</div>'
     + '<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px">'
     +   '<div style="display:flex;flex-direction:column;align-items:center;gap:4px">' + _vGauge(taux, t('mobilisation.rate', 'Taux de retour'), repondus + '/' + total)
@@ -7371,6 +7523,9 @@ function _bfTransfertLabel() {
 
 /** Ouvre le modal d'envoi Bluefiles avec un contexte métier. */
 function bfOpenModal(moduleOrigine, refId, refLabel) {
+  // Rafraîchit l'état du plugin (mode cli/dev) pour un badge à jour après une
+  // modification récente de la configuration admin.
+  try { bfLoadStatus(); } catch(e) {}
   // Reset état
   _bfFiles = [];
   _bfRecipients = [];
@@ -7379,9 +7534,6 @@ function bfOpenModal(moduleOrigine, refId, refLabel) {
   document.getElementById('bf-ref-label').value  = refLabel || '';
   document.getElementById('bf-recipient-input').value = '';
   document.getElementById('bf-comment').value    = '';
-  document.getElementById('bf-expiration').value = '15';
-  document.getElementById('bf-pwd-required').checked = true;
-  document.getElementById('bf-ar-enabled').checked   = true;
   bfRenderFiles();
   bfRenderRecipients();
   const msg = document.getElementById('bf-msg');
@@ -7547,9 +7699,9 @@ async function bfSubmit() {
   fd.append('ref_id',        document.getElementById('bf-ref-id').value || '');
   fd.append('ref_label',     document.getElementById('bf-ref-label').value || '');
   fd.append('destinataires', JSON.stringify(_bfRecipients));
-  fd.append('expiration_days',   document.getElementById('bf-expiration').value);
-  fd.append('password_required', document.getElementById('bf-pwd-required').checked ? 'true' : 'false');
-  fd.append('ar_enabled',        document.getElementById('bf-ar-enabled').checked ? 'true' : 'false');
+  fd.append('expiration_days',   '15');
+  fd.append('password_required', 'false');
+  fd.append('ar_enabled',        'false');
   fd.append('commentaire',   document.getElementById('bf-comment').value || '');
   for (const f of _bfFiles) {
     fd.append('fichiers', f, f.name);
@@ -7592,9 +7744,17 @@ function bfShowConfirmation(data) {
     const mode   = data.mode === 'dev' ? ' · 🧪 mode simulation' : '';
     summary.textContent = `${nFiles} fichier${nFiles>1?'s':''} envoyé${nFiles>1?'s':''} à ${nDest} destinataire${nDest>1?'s':''}${mode}`;
   }
+  // Envoi BlueFiles standard (sans mot de passe SCRIBE) → masquer toute la
+  // section « mots de passe à transmettre » : intro, liste et avertissement.
+  const _pwds = data.destinataires_passwords || [];
+  const _hasPwd = _pwds.some(d => d.password);
+  ['bf-confirm-pwd-intro','bf-confirm-pwd-warn','bf-confirm-passwords'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = _hasPwd ? '' : 'none';
+  });
   const c = document.getElementById('bf-confirm-passwords');
   if (c) {
-    const passwords = data.destinataires_passwords || [];
+    const passwords = _pwds;
     c.innerHTML = passwords.map(d => {
       const safeEmail = String(d.email).replace(/</g, '&lt;');
       if (d.mode_auth === 'account') {
@@ -7713,7 +7873,7 @@ async function trOpenEdit(id) {
     'tr-ipp':t.ipp,'tr-ddn':t.date_naissance,
     'tr-redacteur':currentUser?(currentUser.display_name||currentUser.username):(t.redacteur||''),
     // v2.4.8 : ETA — convertir UTC → heure locale pour l'input datetime-local
-    // (bug terrain : avant on injectait l'UTC brut, l'input l'affichait
+    // (bug Polynésie : avant on injectait l'UTC brut, l'input l'affichait
     //  comme local, et à la sauvegarde new Date(local).toISOString() re-décalait
     //  de +4h → +8h après 2 éditions)
     'tr-comment':t.commentaire,'tr-eta': t.eta ? _utcToLocalInput(t.eta) : ''
@@ -7777,7 +7937,7 @@ async function trSave() {
   const redc=document.getElementById('tr-redacteur').value.trim();
   // v2.4.6 : l'input datetime-local renvoie "YYYY-MM-DDTHH:MM" en heure LOCALE
   // du navigateur. On le convertit en ISO UTC pour que le backend stocke en UTC
-  // cohérent (terrain : 13:30 local → 23:30Z, Paris : 13:30 local → 11:30Z).
+  // cohérent (Polynésie : 13:30 local → 23:30Z, Paris : 13:30 local → 11:30Z).
   // v2.4.8 : l'input datetime-local renvoie "YYYY-MM-DDTHH:MM" en heure
   // locale (du navigateur OU de la TZ configurée). On utilise _localInputToUtc
   // qui inverse correctement la conversion appliquée par _utcToLocalInput,
@@ -8193,29 +8353,46 @@ async function loadAdminPlugins() {
     if (!r.ok) { box.innerHTML = '<div style="color:#f87171">Erreur chargement plugins</div>'; return; }
     const plugins = await r.json();
     if (!plugins.length) { box.innerHTML = '<div style="color:var(--muted);font-size:11px">Aucun plugin configuré</div>'; return; }
+    box.style.display = 'grid';
+    box.style.gridTemplateColumns = 'repeat(auto-fill, minmax(210px, 1fr))';
+    box.style.gap = '12px';
+    box.style.alignItems = 'stretch';
+    const SYS = "system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
     box.innerHTML = plugins.map(p => {
-      const stateColor = p.loaded ? '#4ade80' : (p.enabled ? '#fbbf24' : 'var(--muted)');
-      const stateLabel = p.loaded ? 'actif' : (p.enabled ? 'activé — redémarrage requis' : 'désactivé — redémarrage requis');
-      const legacyBadge = p.legacy ? '<span style="font-size:9px;color:var(--muted);margin-left:6px">[legacy]</span>' : '';
-      const trackBg = p.enabled ? '#003189' : 'var(--border2)';
+      const stateColor = p.loaded ? '#18753c' : (p.enabled ? '#b34000' : '#8a8a8a');
+      const stateLabel = p.loaded ? 'actif' : (p.enabled ? 'redémarrage requis' : 'désactivé');
+      const legacyBadge = p.legacy ? '<span style="font-size:9px;color:var(--muted);margin-left:5px">legacy</span>' : '';
+      const trackBg = p.enabled ? '#000091' : 'var(--border2)';
       const thumbLeft = p.enabled ? '18px' : '2px';
-      const checked = p.enabled ? 'checked' : '';
       // v3000h41 — Plugins disposant d'un panneau de configuration admin
       const CONFIGURABLE = { bluefiles: 'openBluefilesConfig' };
       const cfgBtn = CONFIGURABLE[p.id]
-        ? '<button class="kc-btn" title="Configurer" data-i18n-title="admin.plugin_configure" style="margin-right:4px" onclick="' + CONFIGURABLE[p.id] + '()">⚙</button>'
+        ? '<button onclick="' + CONFIGURABLE[p.id] + '()" title="Configurer" data-i18n-title="admin.plugin_configure" ' +
+            'style="margin-top:auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;' +
+            'padding:7px 10px;font-size:12px;font-weight:500;font-family:' + SYS + ';color:#000091;background:#fff;' +
+            'border:1px solid #000091;border-radius:6px;cursor:pointer;transition:background .15s" ' +
+            'onmouseover="this.style.background=\'#f0f0fb\'" onmouseout="this.style.background=\'#fff\'">' +
+            '<span style="font-size:13px">⚙</span><span data-i18n="admin.plugin_configure_label">Configurer</span></button>'
         : '';
-      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border-radius:6px;border:1px solid var(--border2)">' +
-        '<span style="font-size:14px">' + (p.icon || '🔌') + '</span>' +
-        '<div style="flex:1">' +
-          '<div style="font-family:var(--mono);font-size:10px;font-weight:700">' + p.id + legacyBadge + '</div>' +
-          '<div style="font-size:10px;color:' + stateColor + '">' + stateLabel + '</div>' +
+      return '<div style="display:flex;flex-direction:column;gap:10px;padding:14px;background:var(--surface,#fff);' +
+        'border:1px solid var(--border2);border-radius:10px;min-height:120px;transition:border-color .15s,box-shadow .15s" ' +
+        'onmouseover="this.style.borderColor=\'#000091\';this.style.boxShadow=\'0 2px 10px rgba(0,0,17,.08)\'" ' +
+        'onmouseout="this.style.borderColor=\'var(--border2)\';this.style.boxShadow=\'none\'">' +
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">' +
+          '<span style="font-size:22px;line-height:1">' + (p.icon || '🔌') + '</span>' +
+          '<div style="position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0" data-plugin-id="' + p.id + '" data-enabled="' + p.enabled + '" onclick="pluginToggleClick(this)">' +
+            '<div id="plug-track-' + p.id + '" style="position:absolute;inset:0;border-radius:10px;background:' + trackBg + ';transition:background .2s"></div>' +
+            '<div id="plug-thumb-' + p.id + '" style="position:absolute;top:2px;left:' + thumbLeft + ';width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .2s"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div>' +
+          '<div style="font-family:' + SYS + ';font-size:14px;font-weight:600;color:var(--text,#1a1a2e);text-transform:capitalize">' + p.id + legacyBadge + '</div>' +
+          '<div style="display:flex;align-items:center;gap:5px;margin-top:3px">' +
+            '<span style="width:7px;height:7px;border-radius:50%;background:' + stateColor + ';flex-shrink:0"></span>' +
+            '<span style="font-family:' + SYS + ';font-size:11px;color:' + stateColor + '">' + stateLabel + '</span>' +
+          '</div>' +
         '</div>' +
         cfgBtn +
-        '<div style="position:relative;width:36px;height:20px;cursor:pointer" data-plugin-id="' + p.id + '" data-enabled="' + p.enabled + '" onclick="pluginToggleClick(this)">' +
-          '<div id="plug-track-' + p.id + '" style="position:absolute;inset:0;border-radius:10px;background:' + trackBg + ';transition:background .2s"></div>' +
-          '<div id="plug-thumb-' + p.id + '" style="position:absolute;top:2px;left:' + thumbLeft + ';width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s"></div>' +
-        '</div>' +
       '</div>';
     }).join('');
     if (typeof applyI18nDOM === 'function') applyI18nDOM();
@@ -8238,19 +8415,17 @@ function _bfConfigModal() {
   m.innerHTML =
     '<div style="background:var(--surface,#fff);border:1px solid var(--border2,#e2e8f0);border-radius:10px;padding:20px;width:min(520px,94vw);max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.25)">' +
       '<h3 style="margin:0 0 2px;font-size:13px;color:#003189">🔒 <span data-i18n="bluefiles.cfg_title">Configuration Bluefiles</span></h3>' +
-      '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:14px" data-i18n="bluefiles.cfg_subtitle">Transfert sécurisé HDS — intégration API</div>' +
+      '<div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:14px">Connexion par identifiant + mot de passe · build v3000h141</div>' +
       '<div id="bf-cfg-mode" style="font-family:var(--mono);font-size:10px;margin-bottom:12px"></div>' +
-      '<div class="admin-field" style="margin-bottom:10px"><label data-i18n="bluefiles.cfg_api_url">URL de l\'API</label>' +
-        '<input type="text" id="bf-cfg-url" placeholder="https://api.bluefiles.com/v1" style="width:100%"></div>' +
-      '<div class="admin-field" style="margin-bottom:10px"><label data-i18n="bluefiles.cfg_account">Compte Bluefiles</label>' +
-        '<input type="text" id="bf-cfg-account" placeholder="compte / identifiant client" style="width:100%"></div>' +
-      '<div class="admin-field" style="margin-bottom:10px"><label data-i18n="bluefiles.cfg_api_key">Clé API</label>' +
-        '<input type="password" id="bf-cfg-key" autocomplete="new-password" style="width:100%">' +
-        '<div id="bf-cfg-key-state" style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:3px"></div></div>' +
-      '<div class="admin-field" style="margin-bottom:10px"><label data-i18n="bluefiles.cfg_webhook">Secret webhook (AR)</label>' +
-        '<input type="password" id="bf-cfg-webhook" autocomplete="new-password" style="width:100%">' +
-        '<div id="bf-cfg-webhook-state" style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:3px"></div></div>' +
-      '<div style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5;margin:10px 0;padding:8px;background:var(--surface2,#f1f5f9);border-radius:6px" data-i18n="bluefiles.cfg_hint">Laissez la clé / le secret vides pour conserver la valeur actuelle. Sans clé, le connecteur fonctionne en mode DEV (envois simulés, aucun appel réseau). La configuration en base prend le pas sur les variables d\'environnement SCRIBE_BLUEFILES_*.</div>' +
+      '<div class="admin-field" style="margin-bottom:10px"><label data-i18n="bluefiles.cfg_login">Identifiant API (login)</label>' +
+        '<input type="text" id="bf-cfg-login" autocomplete="off" placeholder="laisser vide pour conserver" style="width:100%">' +
+        '<div id="bf-cfg-login-state" style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:3px"></div></div>' +
+      '<div class="admin-field" style="margin-bottom:10px"><label data-i18n="bluefiles.cfg_password">Mot de passe API</label>' +
+        '<input type="password" id="bf-cfg-password" autocomplete="new-password" style="width:100%">' +
+        '<div id="bf-cfg-password-state" style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:3px"></div></div>' +
+      '<div class="admin-field" style="margin-bottom:10px"><label data-i18n="bluefiles.cfg_server">Serveur</label>' +
+        '<input type="text" id="bf-cfg-server" placeholder="api.bluefiles.com" style="width:100%"></div>' +
+      '<div style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.5;margin:10px 0;padding:8px;background:var(--surface2,#f1f5f9);border-radius:6px" data-i18n="bluefiles.cfg_hint_cli">Laissez les champs vides pour conserver les valeurs déjà enregistrées. Serveur par défaut : api.bluefiles.com. La configuration en base prend le pas sur les variables d\'environnement.</div>' +
       '<div id="bf-cfg-result" style="font-size:10px;margin:8px 0;min-height:14px"></div>' +
       '<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap">' +
         '<button class="kc-btn" onclick="testBluefilesConfig()" data-i18n="bluefiles.cfg_test">Tester la connexion</button>' +
@@ -8274,22 +8449,22 @@ async function openBluefilesConfig() {
     const r = await apiFetch('/api/v1/bluefiles/admin/config');
     if (!r.ok) { toast(t('errors.load','Erreur de chargement'), 'err'); return; }
     const c = await r.json();
-    document.getElementById('bf-cfg-url').value = c.api_url || '';
-    document.getElementById('bf-cfg-account').value = c.account || '';
-    document.getElementById('bf-cfg-key').value = '';
-    document.getElementById('bf-cfg-webhook').value = '';
+    document.getElementById('bf-cfg-login').value = '';
+    document.getElementById('bf-cfg-server').value = c.cli_server || '';
+    document.getElementById('bf-cfg-password').value = '';
     const modeEl = document.getElementById('bf-cfg-mode');
-    const live = c.mode === 'live';
-    modeEl.innerHTML = (live
-      ? '<span style="color:#16a34a">● ' + t('bluefiles.cfg_mode_live','Mode LIVE — envois réels') + '</span>'
-      : '<span style="color:#f59e0b">● ' + t('bluefiles.cfg_mode_dev','Mode DEV — envois simulés') + '</span>');
+    const ready = !!c.cli_ready;
+    modeEl.innerHTML = (ready
+      ? '<span style="color:#16a34a">● ' + t('bluefiles.cfg_mode_ready','Prêt — envois réels via api.bluefiles.com') + '</span>'
+      : '<span style="color:#f59e0b">● ' + t('bluefiles.cfg_mode_incomplete','Configuration incomplète — renseignez login et mot de passe') + '</span>');
     const srcLabel = s => s === 'db' ? t('bluefiles.cfg_src_db','(base)') : (s === 'env' ? t('bluefiles.cfg_src_env','(variable d\'env)') : '');
-    document.getElementById('bf-cfg-key-state').textContent = c.api_key_set
-      ? t('bluefiles.cfg_key_set','Clé configurée : ') + c.api_key_preview + ' ' + srcLabel(c.sources.api_key)
-      : t('bluefiles.cfg_key_none','Aucune clé configurée');
-    document.getElementById('bf-cfg-webhook-state').textContent = c.webhook_secret_set
-      ? t('bluefiles.cfg_webhook_set','Secret configuré : ') + c.webhook_secret_preview + ' ' + srcLabel(c.sources.webhook_secret)
-      : t('bluefiles.cfg_webhook_none','Aucun secret configuré');
+    const src = c.cli_sources || {};
+    document.getElementById('bf-cfg-login-state').textContent = c.cli_login_set
+      ? t('bluefiles.cfg_login_set','Identifiant configuré ') + srcLabel(src.login)
+      : t('bluefiles.cfg_login_none','Aucun identifiant configuré');
+    document.getElementById('bf-cfg-password-state').textContent = c.cli_password_set
+      ? t('bluefiles.cfg_pwd_set','Mot de passe configuré : ') + c.cli_password_preview + ' ' + srcLabel(src.password)
+      : t('bluefiles.cfg_pwd_none','Aucun mot de passe configuré');
   } catch(e) { toast('Erreur réseau', 'err'); }
 }
 
@@ -8300,17 +8475,16 @@ function closeBluefilesConfig() {
 
 async function saveBluefilesConfig() {
   const body = {
-    api_url: document.getElementById('bf-cfg-url').value.trim(),
-    account: document.getElementById('bf-cfg-account').value.trim(),
-    api_key: document.getElementById('bf-cfg-key').value,
-    webhook_secret: document.getElementById('bf-cfg-webhook').value
+    cli_login: document.getElementById('bf-cfg-login').value.trim(),
+    cli_server: document.getElementById('bf-cfg-server').value.trim(),
+    cli_password: document.getElementById('bf-cfg-password').value
   };
   const res = document.getElementById('bf-cfg-result');
   try {
     const r = await apiFetch('/api/v1/bluefiles/admin/config', { method:'POST', headers: authHeaders(), body: JSON.stringify(body) });
     if (!r.ok) { const d=await r.json().catch(()=>({})); if(res){res.style.color='#f87171';res.textContent=d.detail||'Erreur';} return; }
     const d = await r.json();
-    toast(t('common.saved','✓ Enregistré') + ' — ' + (d.mode === 'live' ? 'LIVE' : 'DEV'), 'ok');
+    toast(t('common.saved','✓ Enregistré'), 'ok');
     closeBluefilesConfig();
     if (typeof loadAdminPlugins === 'function') loadAdminPlugins();
   } catch(e) { if(res){res.style.color='#f87171';res.textContent='Erreur réseau';} }
@@ -9560,7 +9734,7 @@ function capToggleSynthese() {
 }
 
 // v2.4.7 : toggle "Lits > 0 uniquement" (persisté en localStorage)
-// v2.4.8 : "Lits > 0" coché par défaut (demande terrain).
+// v2.4.8 : "Lits > 0" coché par défaut (demande Polynésie).
 // Sauf si l'utilisateur l'a explicitement désactivé (-> localStorage = "0")
 let capFilterLitsOnly = (localStorage.getItem('cap_filter_lits') !== '0');
 function capToggleFilterLits() {
@@ -11878,7 +12052,7 @@ async function submitForcedPw() {
 }
 
 async function importComptes() {
-  // v2.4.8.2 : le bon ID était "import-users-file" pas "import-file" (bug terrain)
+  // v2.4.8.2 : le bon ID était "import-users-file" pas "import-file" (bug Polynésie)
   const fileInput = document.getElementById('import-users-file');
   const resultEl  = document.getElementById('import-result');
   if (!fileInput || !fileInput.files || !fileInput.files[0]) {
@@ -12542,6 +12716,12 @@ async function aufToggle(id, actif) {
 async function aufFieldBlur(id, field, value) {
   const current = aufData.find(u => u.id === id);
   if (!current || current[field] === value.trim()) return;  // pas de changement
+  if (field === 'code_uf') {
+    if (!confirm('Renuméroter cette UF (' + (current.code_uf || '') + ' \u2192 ' + value.trim() + ') va ré-affecter les contacts et lignes de capacité qui la référencent. Continuer ?')) {
+      aufLoad();
+      return;
+    }
+  }
   try {
     const tok = localStorage.getItem('scribe_token') || '';
     const body = {};
@@ -12555,7 +12735,13 @@ async function aufFieldBlur(id, field, value) {
     const updated = await r.json();
     const idx = aufData.findIndex(u => u.id === id);
     if (idx >= 0) aufData[idx] = updated;
-    toast('✓ Sauvegardé', 'ok');
+    const _nr = (updated.reassigned_contacts || 0) + (updated.reassigned_capacite || 0);
+    if (field === 'code_uf' && _nr > 0) {
+      toast('✓ Code mis à jour — ' + (updated.reassigned_contacts || 0) + ' contact(s), ' + (updated.reassigned_capacite || 0) + ' ligne(s) capacité ré-affecté(s)', 'ok');
+      aufRender();
+    } else {
+      toast('✓ Sauvegardé', 'ok');
+    }
   } catch (e) {
     toast('Erreur : ' + e.message, 'err');
     aufLoad();
@@ -12577,6 +12763,12 @@ async function aufDelete(id) {
       method: 'DELETE',
       headers: {'Authorization': 'Bearer ' + tok},
     });
+    if (r.status === 409) {
+      const err = await r.json().catch(() => ({}));
+      const msg = (err && err.detail) ? err.detail : 'UF référencée.';
+      if (confirm(msg + '\n\nLa désactiver à la place ?')) { await aufToggle(id, false); }
+      return;
+    }
     if (!r.ok) throw new Error('HTTP ' + r.status);
     aufData = aufData.filter(u => u.id !== id);
     aufRender();
@@ -12682,3 +12874,163 @@ async function aufBulkActivate(actif) {
     setInterval(checkAdminAndShow, 2000);
   }
 })();
+
+
+// ══ h98 — Menus barre supérieure ════════════════════════════
+function toggleScribeMenu(){
+  var m=document.getElementById('scribe-menu'); if(!m) return;
+  var open=m.style.display!=='none';
+  m.style.display=open?'none':'block';
+  var um=document.getElementById('user-menu'); if(um) um.style.display='none';
+}
+async function nouveauAvecArchivage(){
+  var m=document.getElementById('scribe-menu'); if(m) m.style.display='none';
+  if(confirm(typeof t==='function'?t('topbar.ask_archive','Archiver la situation actuelle avant de créer la nouvelle ?'):'Archiver la situation actuelle avant de créer la nouvelle ?')){
+    try{ await archiverCrise(); }catch(e){}
+    resetTableauDeBord();
+  } else if(confirm(typeof t==='function'?t('topbar.confirm_new_noarchive','Créer une nouvelle situation SANS archiver ?'):'Créer une nouvelle situation SANS archiver ?')){
+    resetTableauDeBord();
+  }
+}
+window.toggleScribeMenu=toggleScribeMenu; window.nouveauAvecArchivage=nouveauAvecArchivage;
+document.addEventListener('click',function(ev){
+  if(ev.target.closest && ev.target.closest('.hdr-menu-wrap')) return;
+  var sm=document.getElementById('scribe-menu'); if(sm) sm.style.display='none';
+  var um=document.getElementById('user-menu'); if(um) um.style.display='none';
+});
+
+/* ── h111 — Centre d'aide (bilingue FR/EN, recherchable) ─────────────────── */
+function helpLang2(){var c;try{c=(localStorage.getItem('scribe_lang_pref')||'en');}catch(e){c='en';}return String(c).slice(0,2).toLowerCase();}
+var HELP_ARTICLES = [
+ {id:'presentation', cat:{fr:'Démarrer',en:'Getting started',de:'Erste Schritte',es:'Primeros pasos',it:'Per iniziare',nl:'Aan de slag'},
+  title:{fr:'Présentation & architecture',en:'Overview & architecture',de:'Überblick & Architektur',es:'Visión general y arquitectura',it:'Panoramica e architettura',nl:'Overzicht & architectuur'},
+  kw:'scribe presentation about architecture instance supervision collecteur souverain',
+  body:{fr:'<p>SCRIBE est une plateforme open-source de gestion de crise hospitalière et de suivi capacitaire, pensée pour la coordination entre plusieurs établissements (GHT, territoire).</p><p>Elle se compose de deux briques :</p><ul><li><b>L\'instance établissement</b> : la « main courante » d\'un hôpital — incidents, capacité en lits, transferts, rappel du personnel, messagerie, cellule de crise. Chaque établissement a sa propre base de données.</li><li><b>La supervision (collecteur)</b> : un tableau de bord territorial qui agrège l\'état de toutes les instances (incidents, statuts, capacité) sans jamais recevoir de donnée nominative patient.</li></ul><p>Les instances poussent leur situation vers le collecteur toutes les 30 secondes. Le niveau territorial affiché est toujours le <b>pire</b> entre les incidents en cours et le statut déclaré par l\'établissement.</p>',
+       en:'<p>SCRIBE is an open-source hospital crisis-management and capacity-monitoring platform, designed to coordinate several establishments (hospital groups, regions).</p><p>It has two building blocks:</p><ul><li><b>The establishment instance</b>: a hospital\'s operational log — incidents, bed capacity, transfers, staff recall, messaging, crisis cell. Each establishment has its own database.</li><li><b>Supervision (collector)</b>: a territorial dashboard aggregating the state of every instance (incidents, statuses, capacity) without ever receiving patient-identifying data.</li></ul><p>Instances push their situation to the collector every 30 seconds. The territorial level shown is always the <b>worst</b> of ongoing incidents and the establishment\'s declared status.</p>'}},
+
+ {id:'install_docker', cat:{fr:'Installation',en:'Installation',de:'Installation',es:'Instalación',it:'Installazione',nl:'Installatie'},
+  title:{fr:'Installer en Docker (HTTP)',en:'Install with Docker (HTTP)',de:'Mit Docker installieren (HTTP)',es:'Instalar con Docker (HTTP)',it:'Installare con Docker (HTTP)',nl:'Installeren met Docker (HTTP)'},
+  kw:'install docker compose deploy port 8000 conteneur container',
+  body:{fr:'<p>Pour une instance unique, Docker est le plus simple :</p><ol><li>Place ta configuration d\'établissement dans le dossier de déploiement (<code>config.xml</code>).</li><li>Lance : <code>docker compose -f docker-compose.production.yml up -d</code></li><li>L\'application est servie en HTTP sur le port <b>8000</b>.</li></ol><p>Les données (base SQLite, pièces jointes) sont persistées dans un volume <code>/data</code>. Si tu vois une erreur <code>Permission denied</code> sur <code>/data</code>, c\'est que le dossier hôte monté n\'appartient pas à l\'utilisateur du conteneur : préfère un <b>volume nommé Docker</b> (<code>scribe_data:/data</code>), dont les droits sont gérés automatiquement.</p>',
+       en:'<p>For a single instance, Docker is simplest:</p><ol><li>Put your establishment configuration in the deployment folder (<code>config.xml</code>).</li><li>Run: <code>docker compose -f docker-compose.production.yml up -d</code></li><li>The app is served over HTTP on port <b>8000</b>.</li></ol><p>Data (SQLite database, attachments) persists in a <code>/data</code> volume. If you get a <code>Permission denied</code> error on <code>/data</code>, the mounted host folder isn\'t owned by the container user: prefer a <b>named Docker volume</b> (<code>scribe_data:/data</code>), whose permissions are handled automatically.</p>'}},
+
+ {id:'install_https', cat:{fr:'Installation',en:'Installation',de:'Installation',es:'Instalación',it:'Installazione',nl:'Installatie'},
+  title:{fr:'Activer le HTTPS (Caddy)',en:'Enable HTTPS (Caddy)',de:'HTTPS aktivieren (Caddy)',es:'Activar HTTPS (Caddy)',it:'Attivare HTTPS (Caddy)',nl:'HTTPS inschakelen (Caddy)'},
+  kw:'https tls ssl caddy certificat lets encrypt domaine 502',
+  body:{fr:'<p>Pour servir SCRIBE en HTTPS, place <b>Caddy</b> en frontal : il obtient et renouvelle le certificat Let\'s Encrypt automatiquement.</p><ul><li><b>Prérequis</b> : un <b>nom de domaine</b> dont l\'enregistrement A pointe vers l\'IP du serveur. Let\'s Encrypt n\'émet pas pour une IP nue.</li><li>Ouvre les ports <b>80 et 443</b> (le 80 sert au challenge de validation).</li><li>Renseigne <code>SCRIBE_DOMAIN</code> dans le fichier <code>.env</code>, puis : <code>docker compose -f docker-compose.https.yml up -d</code></li></ul><p><b>Dépannage</b> : une erreur <b>502</b> en HTTPS signifie que Caddy fonctionne mais que l\'application derrière ne répond pas (conteneur en redémarrage, souvent un souci de droits sur <code>/data</code>). Vérifie les logs : <code>docker compose -f docker-compose.https.yml logs scribe</code>.</p>',
+       en:'<p>To serve SCRIBE over HTTPS, put <b>Caddy</b> in front: it obtains and renews the Let\'s Encrypt certificate automatically.</p><ul><li><b>Requirement</b>: a <b>domain name</b> whose A record points to the server IP. Let\'s Encrypt won\'t issue for a bare IP.</li><li>Open ports <b>80 and 443</b> (80 is used for the validation challenge).</li><li>Set <code>SCRIBE_DOMAIN</code> in the <code>.env</code> file, then: <code>docker compose -f docker-compose.https.yml up -d</code></li></ul><p><b>Troubleshooting</b>: a <b>502</b> over HTTPS means Caddy works but the app behind it isn\'t answering (container restarting, often a <code>/data</code> permission issue). Check logs: <code>docker compose -f docker-compose.https.yml logs scribe</code>.</p>'}},
+
+ {id:'install_multi', cat:{fr:'Installation',en:'Installation',de:'Installation',es:'Instalación',it:'Installazione',nl:'Installatie'},
+  title:{fr:'Déploiement multi-instances',en:'Multi-instance deployment',de:'Multi-Instanz-Bereitstellung',es:'Despliegue multi-instancia',it:'Distribuzione multi-istanza',nl:'Multi-instance-implementatie'},
+  kw:'multi instance ght g7 collecteur ports scripts bash federation territoire',
+  body:{fr:'<p>Pour un territoire, on lance plusieurs instances d\'établissement plus un collecteur, chacun sur son port. Les scripts de lancement démarrent les processus directement (HTTP) :</p><ul><li>Chaque établissement écoute sur un port dédié (ex. 8000, 8001, …).</li><li>Le <b>collecteur</b> (supervision) écoute sur son propre port (ex. 9000).</li><li>Une <b>instance de démonstration</b> peut tourner en parallèle, isolée, avec son propre collecteur.</li></ul><p>Chaque instance est reliée au collecteur par un <b>token de fédération</b> déclaré dans sa configuration. Le collecteur n\'accepte que les instances pré-enrôlées (token validé). Pour exposer tout cela en HTTPS, on place un reverse proxy (Caddy ou Nginx) devant, avec un routage par chemin ou par sous-domaine.</p>',
+       en:'<p>For a territory, you run several establishment instances plus one collector, each on its own port. Launch scripts start the processes directly (HTTP):</p><ul><li>Each establishment listens on a dedicated port (e.g. 8000, 8001, …).</li><li>The <b>collector</b> (supervision) listens on its own port (e.g. 9000).</li><li>A <b>demo instance</b> can run in parallel, isolated, with its own collector.</li></ul><p>Each instance connects to the collector via a <b>federation token</b> declared in its configuration. The collector only accepts pre-enrolled instances (validated token). To expose all of this over HTTPS, put a reverse proxy (Caddy or Nginx) in front, with path-based or subdomain routing.</p>'}},
+
+ {id:'configuration', cat:{fr:'Configuration',en:'Configuration',de:'Konfiguration',es:'Configuración',it:'Configurazione',nl:'Configuratie'},
+  title:{fr:'Configurer l\'établissement',en:'Configure the establishment',de:'Einrichtung konfigurieren',es:'Configurar el establecimiento',it:'Configurare la struttura',nl:'De instelling configureren'},
+  kw:'config configuration xml uf unite fonctionnelle pole referentiel token albert',
+  body:{fr:'<p>La configuration d\'une instance se fait via un fichier XML d\'établissement et des scripts d\'initialisation qui peuplent la base. On y définit :</p><ul><li><b>L\'établissement</b> : nom, sigle, coordonnées géographiques (pour la carte).</li><li><b>Les pôles et unités fonctionnelles (UF)</b> : la structure médicale, utilisée dans les menus Incidents et Capacité.</li><li><b>Le référentiel capacitaire</b> : le nombre de lits par UF/pôle servant de base au suivi de tension.</li><li><b>La fédération</b> : l\'URL du collecteur et le token d\'enrôlement.</li><li><b>L\'IA Albert</b> : la clé d\'accès (jamais incluse dans les archives publiques).</li></ul><p>L\'administration des UF se fait aussi en direct depuis l\'interface (onglet Admin) : on peut activer/désactiver une UF. Une UF désactivée reste en base pour préserver l\'historique des incidents, mais disparaît des menus déroulants.</p>',
+       en:'<p>An instance is configured via an establishment XML file and initialisation scripts that populate the database. You define:</p><ul><li><b>The establishment</b>: name, code, geographic coordinates (for the map).</li><li><b>Units and functional units</b>: the medical structure, used in the Incidents and Capacity menus.</li><li><b>The capacity baseline</b>: the number of beds per unit, the basis for strain monitoring.</li><li><b>Federation</b>: the collector URL and enrolment token.</li><li><b>Albert AI</b>: the access key (never included in public archives).</li></ul><p>Unit administration is also done live from the interface (Admin tab): you can enable/disable a unit. A disabled unit stays in the database to preserve incident history but disappears from the dropdown menus.</p>'}},
+
+ {id:'connexion', cat:{fr:'Démarrer',en:'Getting started',de:'Erste Schritte',es:'Primeros pasos',it:'Per iniziare',nl:'Aan de slag'},
+  title:{fr:'Connexion, rôles & langue',en:'Login, roles & language',de:'Anmeldung, Rollen & Sprache',es:'Inicio de sesión, roles e idioma',it:'Accesso, ruoli e lingua',nl:'Inloggen, rollen & taal'},
+  kw:'login connexion role compte mot de passe langue admin cellule soignant',
+  body:{fr:'<p>Saisis ton identifiant et ton mot de passe sur la page d\'accueil. Le sélecteur de <b>langue</b> est en haut de l\'écran (24 langues européennes).</p><p>Les comptes ont des <b>rôles</b> qui conditionnent ce qui est visible et autorisé : direction de crise / cellule, soignant, administrateur. Les fonctions d\'administration (gestion des UF, des comptes, déclenchement de rappel) sont réservées aux rôles habilités.</p><p>La création et la gestion des comptes se font dans <b>Administration → Utilisateurs</b>. Les mots de passe sont stockés hachés (bcrypt) ; le login est protégé contre les tentatives répétées.</p>',
+       en:'<p>Enter your username and password on the home page. The <b>language</b> selector is at the top of the screen (24 European languages).</p><p>Accounts have <b>roles</b> that govern what is visible and allowed: crisis management / cell, caregiver, administrator. Administration functions (managing units, accounts, triggering recall) are restricted to authorised roles.</p><p>Account creation and management happen in <b>Administration → Users</b>. Passwords are stored hashed (bcrypt); login is protected against repeated attempts.</p>'}},
+
+ {id:'dashboard', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Le tableau de bord',en:'The dashboard',de:'Das Dashboard',es:'El panel de control',it:'La dashboard',nl:'Het dashboard'},
+  kw:'dashboard tableau de bord accueil kpi rappel widget jauge cooperation',
+  body:{fr:'<p>Le tableau de bord est la vue de synthèse de ton établissement. On y trouve :</p><ul><li>Les <b>indicateurs clés</b> : incidents actifs, incidents critiques, capacité globale, transferts en cours, messages non lus.</li><li>La <b>capacité par pôle</b> : un coup d\'œil sur les services en tension.</li><li>La <b>coopération territoriale</b> : l\'état des établissements partenaires.</li><li>Le <b>widget Rappel du personnel</b> : lors d\'un rappel actif, une jauge demi-cercle montre les personnes appelées, celles qui ont répondu et celles qui arrivent.</li></ul><p>Le tableau se rafraîchit automatiquement. C\'est l\'écran à garder ouvert pendant une crise.</p>',
+       en:'<p>The dashboard is your establishment\'s summary view. It shows:</p><ul><li><b>Key indicators</b>: active incidents, critical incidents, overall capacity, ongoing transfers, unread messages.</li><li><b>Capacity by unit</b>: an at-a-glance view of strained services.</li><li><b>Territorial cooperation</b>: the state of partner establishments.</li><li>The <b>Staff recall widget</b>: during an active recall, a half-circle gauge shows people called, those who responded, and those arriving.</li></ul><p>The dashboard refreshes automatically. It is the screen to keep open during a crisis.</p>'}},
+
+ {id:'incidents', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Déclarer et suivre un incident',en:'Declare and track an incident',de:'Vorfall melden und verfolgen',es:'Declarar y seguir un incidente',it:'Dichiarare e seguire un incidente',nl:'Een incident melden en volgen'},
+  kw:'incident declarer urgence gravite veille cyber sanitaire mixte impact transversal directeur diffusion',
+  body:{fr:'<p>L\'onglet <b>Incidents</b> est le cœur de la main courante. Pour déclarer :</p><ol><li>Choisis le <b>type</b> : cyber, sanitaire ou mixte.</li><li>Fixe le <b>niveau d\'urgence</b>, de 1 (veille / information) à 4 (critique). Un niveau ≥ 3 (grave/critique) déclenche la notification des directeurs.</li><li>Rattache l\'incident à un <b>pôle / une UF</b> et décris le fait.</li><li>Coche <b>impact transversal</b> si l\'événement touche tout l\'établissement : les services basculent alors au moins en « tension », et le statut public passe en « perturbé ».</li><li>Diffuse avec le bouton dédié.</li></ol><p>Chaque incident est horodaté et historisé. Les incidents alimentent le niveau de gravité remonté à la supervision territoriale.</p>',
+       en:'<p>The <b>Incidents</b> tab is the heart of the operational log. To declare one:</p><ol><li>Pick the <b>type</b>: cyber, health, or mixed.</li><li>Set the <b>urgency level</b>, from 1 (watch / info) to 4 (critical). A level ≥ 3 (serious/critical) triggers director notifications.</li><li>Attach the incident to a <b>unit</b> and describe the event.</li><li>Tick <b>cross-cutting impact</b> if the event affects the whole establishment: services then move at least to "strained", and the public status becomes "disrupted".</li><li>Broadcast with the dedicated button.</li></ol><p>Every incident is timestamped and archived. Incidents feed the severity level reported to territorial supervision.</p>'}},
+
+ {id:'main_courante', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Main courante & tâches (kanban)',en:'Activity log & tasks (kanban)',de:'Einsatztagebuch & Aufgaben (Kanban)',es:'Registro de actividad y tareas (kanban)',it:'Diario attività e compiti (kanban)',nl:'Logboek & taken (kanban)'},
+  kw:'main courante log journal kanban tache task action categorie filtre',
+  body:{fr:'<p>La <b>main courante</b> journalise toutes les actions de la cellule de crise : décisions, événements, communications. Chaque entrée porte un auteur, un horodatage, une catégorie et une action. Tu peux filtrer par catégorie pour retrouver rapidement une décision.</p><p>Le <b>kanban des tâches</b> permet de suivre le « qui fait quoi » : créer des tâches, les assigner, les faire avancer par colonnes (à faire / en cours / fait). C\'est l\'outil de pilotage opérationnel pendant l\'événement.</p><p>L\'ensemble est exportable lors de l\'archivage, pour le retour d\'expérience et la traçabilité.</p>',
+       en:'<p>The <b>activity log</b> records every action of the crisis cell: decisions, events, communications. Each entry has an author, timestamp, category and action. You can filter by category to quickly find a decision.</p><p>The <b>task kanban</b> tracks who-does-what: create tasks, assign them, move them across columns (to do / in progress / done). It is the operational steering tool during the event.</p><p>Everything can be exported when archiving, for after-action review and traceability.</p>'}},
+
+ {id:'capacite', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Capacité en lits',en:'Bed capacity',de:'Bettenkapazität',es:'Capacidad de camas',it:'Capacità di posti letto',nl:'Bedcapaciteit'},
+  kw:'capacite capacity lits beds tension pole service referentiel statut vert orange rouge',
+  body:{fr:'<p>L\'onglet <b>Capacité</b> suit l\'occupation des lits par pôle et par service, à partir du référentiel capacitaire configuré.</p><p>Chaque service affiche un statut à trois niveaux : <b>normal</b> (vert), <b>tension</b> (orange), <b>critique / fermé</b> (rouge). Tu déclares la situation au fil de l\'eau ; l\'historique des déclarations est conservé.</p><p>La capacité globale de l\'établissement est calculée à partir de ces statuts et remonte à la supervision. Rappel : un <b>impact transversal</b> actif force automatiquement les services à au moins « tension ».</p>',
+       en:'<p>The <b>Capacity</b> tab tracks bed occupancy by unit and service, based on the configured capacity baseline.</p><p>Each service shows a three-level status: <b>normal</b> (green), <b>strained</b> (orange), <b>critical / closed</b> (red). You declare the situation as it evolves; the declaration history is kept.</p><p>The establishment\'s overall capacity is computed from these statuses and reported to supervision. Reminder: an active <b>cross-cutting impact</b> automatically forces services to at least "strained".</p>'}},
+
+ {id:'transferts', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Transferts de patients',en:'Patient transfers',de:'Patiententransfers',es:'Traslados de pacientes',it:'Trasferimenti di pazienti',nl:'Patiëntoverplaatsingen'},
+  kw:'transfert transfer patient ambulance trajectoire osrm eta destination carte hds',
+  body:{fr:'<p>L\'onglet <b>Transferts</b> gère les transferts entre établissements. Pour chaque transfert tu renseignes l\'établissement et le site de destination ainsi que l\'heure estimée d\'arrivée.</p><p>Sur la carte (onglet Soins), un transfert en cours s\'affiche avec sa <b>trajectoire routière</b> (calculée via OSRM) et la progression de l\'ambulance selon l\'ETA. Le site de destination exact est utilisé pour positionner correctement le trajet.</p><p><b>Important</b> : aucune donnée nominative patient ne remonte à la supervision territoriale — seul l\'établissement gère ces informations (conformité HDS / RGPD).</p>',
+       en:'<p>The <b>Transfers</b> tab manages inter-establishment patient transfers. For each transfer you enter the destination establishment and site plus the estimated time of arrival.</p><p>On the map (Care tab), an ongoing transfer is shown with its <b>road route</b> (computed via OSRM) and the ambulance progress based on the ETA. The exact destination site is used to position the route correctly.</p><p><b>Important</b>: no patient-identifying data is sent to territorial supervision — only the establishment handles this information (HDS / GDPR compliance).</p>'}},
+
+ {id:'rappel', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Rappel du personnel',en:'Staff recall',de:'Personalrückruf',es:'Llamada del personal',it:'Richiamo del personale',nl:'Personeel oproepen'},
+  kw:'rappel personnel mobilisation recall sms mail vague escalade preset cible confirmation arrivee',
+  body:{fr:'<p>Le <b>rappel du personnel</b> permet de mobiliser des agents en masse pendant une crise. Le flux type :</p><ol><li><b>Cibler</b> : sélectionne le personnel par type et par lieu. Tu peux enregistrer des <b>presets</b> (cibles types) pour gagner du temps.</li><li><b>Pré-visualiser</b> les destinataires avant l\'envoi (écran de confirmation).</li><li><b>Envoyer</b> par SMS / e-mail.</li><li><b>Suivre les réponses</b> : chaque destinataire confirme son heure d\'arrivée via un lien personnel. Le tableau de bord montre en temps réel les appelés, les répondants et les arrivants, ainsi que les « manquent à l\'appel ».</li><li><b>Escalader par vagues</b> si besoin : relancer ceux qui n\'ont pas répondu, vague après vague, avec confirmation de la cellule.</li></ol><p>⚠️ Le rappel envoie de <b>vrais SMS</b> : à manipuler avec précaution, et à tester en exercice avant un usage réel.</p>',
+       en:'<p>The <b>staff recall</b> lets you mobilise staff at scale during a crisis. Typical flow:</p><ol><li><b>Target</b>: select staff by type and location. You can save <b>presets</b> (standard targets) to save time.</li><li><b>Preview</b> recipients before sending (confirmation screen).</li><li><b>Send</b> by SMS / email.</li><li><b>Track responses</b>: each recipient confirms their arrival time via a personal link. The dashboard shows, in real time, those called, responders, and arrivals, plus those still missing.</li><li><b>Escalate in waves</b> if needed: re-contact non-responders, wave after wave, with cell confirmation.</li></ol><p>⚠️ Recall sends <b>real SMS</b>: handle with care, and test it in an exercise before real use.</p>'}},
+
+ {id:'communication', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Chat, messagerie & annuaire',en:'Chat, messaging & directory',de:'Chat, Nachrichten & Verzeichnis',es:'Chat, mensajería y directorio',it:'Chat, messaggistica e rubrica',nl:'Chat, berichten & adresboek'},
+  kw:'chat messagerie messaging salon channel inbox message annuaire directory territorial mention',
+  body:{fr:'<p>SCRIBE propose trois outils de communication complémentaires :</p><ul><li><b>Chat</b> : des salons en temps réel, locaux (ton établissement) ou territoriaux (partagés entre tous les établissements du GHT), avec mentions @ et pièces jointes. Idéal pour la coordination à chaud.</li><li><b>Messagerie interne</b> : fonctionne comme une boîte mail (Reçus, Envoyés, Brouillons) pour des messages plus formels, y compris inter-établissements.</li><li><b>Annuaire</b> : les contacts utiles de l\'établissement et du territoire.</li></ul><p>⚠️ Les salons territoriaux et le canal de supervision <b>sortent de l\'établissement</b> : n\'y publie jamais de donnée nominative patient.</p>',
+       en:'<p>SCRIBE offers three complementary communication tools:</p><ul><li><b>Chat</b>: real-time rooms, local (your establishment) or territorial (shared across all establishments in the group), with @ mentions and attachments. Ideal for live coordination.</li><li><b>Internal messaging</b>: works like a mailbox (Inbox, Sent, Drafts) for more formal messages, including inter-establishment.</li><li><b>Directory</b>: useful contacts for the establishment and the territory.</li></ul><p>⚠️ Territorial rooms and the supervision channel <b>leave the establishment</b>: never post patient-identifying data there.</p>'}},
+
+ {id:'cellule', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Cellule de crise : relève, communiqués, REX',en:'Crisis cell: handover, briefings, AAR',de:'Krisenstab: Übergabe, Briefings, Nachbesprechung',es:'Célula de crisis: relevo, briefings, AAR',it:'Cellula di crisi: consegne, briefing, debriefing',nl:'Crisiscel: overdracht, briefings, evaluatie'},
+  kw:'cellule crise releve garde communique rex retour experience archivage zip',
+  body:{fr:'<p>Plusieurs outils structurent le travail de la cellule de crise dans la durée :</p><ul><li><b>Relève de garde</b> : transmettre une situation synthétique à l\'équipe suivante, pour une continuité sans perte d\'information sur des crises longues.</li><li><b>Communiqués</b> : rédiger et diffuser des messages officiels (interne, partenaires).</li><li><b>REX (retour d\'expérience)</b> : consigner ce qui a marché et ce qui doit être amélioré, à chaud puis à froid.</li></ul><p>À la fin d\'un événement, l\'<b>archivage</b> génère un ZIP téléchargeable depuis l\'interface, regroupant main courante, décisions et éléments de traçabilité — base du débriefing et des obligations réglementaires.</p>',
+       en:'<p>Several tools structure the crisis cell\'s work over time:</p><ul><li><b>Shift handover</b>: pass a concise situation to the next team, for continuity without information loss during long crises.</li><li><b>Briefings</b>: write and distribute official messages (internal, partners).</li><li><b>After-action review (AAR)</b>: record what worked and what should improve, both during and after.</li></ul><p>At the end of an event, <b>archiving</b> generates a downloadable ZIP from the interface, bundling the activity log, decisions and traceability items — the basis for debriefing and regulatory obligations.</p>'}},
+
+ {id:'albert', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Analyse par l\'IA Albert',en:'Albert AI analysis',de:'Albert-KI-Analyse',es:'Análisis con IA Albert',it:'Analisi con IA Albert',nl:'Albert AI-analyse'},
+  kw:'albert ia ai intelligence artificielle analyse souverain llm synthese',
+  body:{fr:'<p>SCRIBE intègre <b>Albert</b>, le grand modèle de langage souverain de l\'État français, pour assister la cellule sans dépendre d\'un service étranger.</p><p>Albert peut produire des <b>synthèses de situation</b> et de l\'aide à la décision à partir du contexte de crise (incidents, capacité, mobilisation : vagues, manquants, échecs d\'envoi). C\'est une aide, pas un décideur : les analyses restent à valider par la cellule.</p><p>La clé d\'accès Albert se configure côté serveur et n\'est jamais incluse dans les archives publiques, pour des raisons de sécurité.</p>',
+       en:'<p>SCRIBE integrates <b>Albert</b>, the French State\'s sovereign large language model, to assist the cell without relying on a foreign service.</p><p>Albert can produce <b>situation summaries</b> and decision support from the crisis context (incidents, capacity, mobilisation: waves, missing people, send failures). It is an aid, not a decision-maker: analyses remain for the cell to validate.</p><p>The Albert access key is configured server-side and is never included in public archives, for security reasons.</p>'}},
+
+ {id:'supervision', cat:{fr:'Coordination',en:'Coordination',de:'Koordination',es:'Coordinación',it:'Coordinamento',nl:'Coördinatie'},
+  title:{fr:'Supervision territoriale (collecteur)',en:'Territorial supervision (collector)',de:'Territoriale Aufsicht (Kollektor)',es:'Supervisión territorial (colector)',it:'Supervisione territoriale (collettore)',nl:'Territoriaal toezicht (collector)'},
+  kw:'supervision collecteur territoire niveau global statut public carte instances enrolement',
+  body:{fr:'<p>La <b>supervision</b> est le poste de pilotage du territoire. Elle agrège, en lecture seule, l\'état remonté par chaque instance :</p><ul><li>Le <b>niveau global</b> par établissement, qui est toujours le pire entre ses incidents et son statut déclaré.</li><li>Les <b>statuts publics</b> (page /status) : opérationnel, perturbé, etc.</li><li>La <b>cartographie</b> du territoire et les transferts inter-établissements.</li><li>La <b>messagerie et le chat</b> territoriaux.</li></ul><p>Une instance n\'apparaît dans la supervision qu\'après <b>enrôlement</b> : elle propose son token, l\'administrateur du collecteur l\'accepte. Aucune donnée nominative patient ne transite par le collecteur.</p>',
+       en:'<p><b>Supervision</b> is the territory\'s control desk. It aggregates, read-only, the state reported by each instance:</p><ul><li>The <b>global level</b> per establishment, always the worst of its incidents and its declared status.</li><li><b>Public statuses</b> (/status page): operational, disrupted, etc.</li><li>The territory <b>map</b> and inter-establishment transfers.</li><li>Territorial <b>messaging and chat</b>.</li></ul><p>An instance only appears in supervision after <b>enrolment</b>: it offers its token, the collector administrator accepts it. No patient-identifying data passes through the collector.</p>'}},
+
+ {id:'exercices', cat:{fr:'Coordination',en:'Coordination',de:'Koordination',es:'Coordinación',it:'Coordinamento',nl:'Coördinatie'},
+  title:{fr:'Mode exercice',en:'Exercise mode',de:'Übungsmodus',es:'Modo ejercicio',it:'Modalità esercitazione',nl:'Oefenmodus'},
+  kw:'exercice exercise scenario stimuli animateur entrainement formation isole',
+  body:{fr:'<p>Le <b>mode exercice</b> permet de s\'entraîner sans toucher à la production. Des instances dédiées tournent sur des bases isolées, pilotées par un poste <b>animateur</b> qui injecte des stimuli (événements scénarisés) vers les établissements joueurs.</p><p>Un scénario décrit les acteurs, la chronologie des stimuli et les décisions attendues. C\'est l\'outil idéal pour valider les procédures, former les équipes et tester des fonctions sensibles (comme le rappel du personnel) avant un usage réel.</p>',
+       en:'<p><b>Exercise mode</b> lets you train without touching production. Dedicated instances run on isolated databases, driven by an <b>animator</b> station that injects stimuli (scripted events) toward the playing establishments.</p><p>A scenario describes the actors, the timeline of stimuli, and the expected decisions. It is the ideal tool to validate procedures, train teams, and test sensitive functions (such as staff recall) before real use.</p>'}},
+
+ {id:'sauvegarde', cat:{fr:'Administration',en:'Administration',de:'Administration',es:'Administración',it:'Amministrazione',nl:'Beheer'},
+  title:{fr:'Sauvegarde & restauration',en:'Backup & restore',de:'Sicherung & Wiederherstellung',es:'Copia de seguridad y restauración',it:'Backup e ripristino',nl:'Back-up & herstel'},
+  kw:'sauvegarde backup restauration restore zip export import chiffre password aes ght',
+  body:{fr:'<p>Depuis la supervision, tu peux <b>exporter la configuration du territoire</b> (établissements, identifiants admin, structure UF, capacité) dans une archive <b>.zip</b>.</p><p>L\'archive peut être <b>chiffrée par mot de passe</b> (AES) : ce mot de passe sera exigé pour la restauration. C\'est la sauvegarde de référence à conserver hors-ligne.</p><p><b>Précautions</b> : l\'archive contient des identifiants — garde-la en lieu sûr, ne la publie jamais (ni sur un dépôt public, ni vers le collecteur). Teste toujours un cycle sauvegarde → restauration sur une instance vierge avant de t\'y fier.</p>',
+       en:'<p>From supervision, you can <b>export the territory configuration</b> (establishments, admin credentials, unit structure, capacity) into a <b>.zip</b> archive.</p><p>The archive can be <b>password-encrypted</b> (AES): that password will be required to restore. This is the reference backup to keep offline.</p><p><b>Precautions</b>: the archive contains credentials — keep it safe, never publish it (not on a public repository, nor to the collector). Always test a backup → restore cycle on a clean instance before relying on it.</p>'}},
+
+ {id:'securite', cat:{fr:'Administration',en:'Administration',de:'Administration',es:'Administración',it:'Amministrazione',nl:'Beheer'},
+  title:{fr:'Sécurité & conformité',en:'Security & compliance',de:'Sicherheit & Compliance',es:'Seguridad y cumplimiento',it:'Sicurezza e conformità',nl:'Beveiliging & naleving'},
+  kw:'securite security bcrypt rate limit cors headers rgpd hds donnees patient secret key',
+  body:{fr:'<p>SCRIBE applique une base de sécurité robuste :</p><ul><li><b>Mots de passe hachés</b> (bcrypt), avec limitation des tentatives de connexion.</li><li><b>En-têtes HTTP de sécurité</b> et <b>CORS restreint</b> aux origines déclarées.</li><li><b>Clé secrète</b> stockée en variable d\'environnement, jamais en clair dans le code.</li></ul><p><b>Conformité données de santé</b> : les données nominatives patients ne quittent jamais l\'établissement vers la supervision (HDS / RGPD). Avant toute diffusion publique du code, on retire systématiquement les références internes (sigles, noms de sites, URLs, clés d\'API) ; les configurations de démonstration ne contiennent jamais d\'identifiants réels.</p>',
+       en:'<p>SCRIBE enforces a robust security baseline:</p><ul><li><b>Hashed passwords</b> (bcrypt), with login rate limiting.</li><li><b>HTTP security headers</b> and <b>CORS restricted</b> to declared origins.</li><li><b>Secret key</b> stored in an environment variable, never in plaintext in the code.</li></ul><p><b>Health-data compliance</b>: patient-identifying data never leaves the establishment toward supervision (HDS / GDPR). Before any public code release, internal references (codes, site names, URLs, API keys) are systematically removed; demo configurations never contain real credentials.</p>'}}
+];
+function openHelpCenter(){ var o=document.getElementById('help-overlay'); if(!o)return; o.classList.add('open'); var L=helpLang2(); var s=document.getElementById('help-search'); if(s){s.placeholder=L==='fr'?'Rechercher dans l\'aide…':'Search help…'; s.value='';} var t=document.getElementById('help-title'); if(t)t.textContent=L==='fr'?'Centre d\'aide':'Help center'; helpRender(); if(s)setTimeout(function(){s.focus();},50); }
+function closeHelpCenter(){ var o=document.getElementById('help-overlay'); if(o)o.classList.remove('open'); }
+function helpRender(){
+  var listEl=document.getElementById('help-list'), artEl=document.getElementById('help-article'), s=document.getElementById('help-search');
+  if(!listEl)return; artEl.style.display='none'; listEl.style.display='block';
+  var L=helpLang2(), q=(s&&s.value||'').trim().toLowerCase();
+  var t=document.getElementById('help-title'); if(t)t.textContent=L==='fr'?'Centre d\'aide':'Help center';
+  if(s)s.placeholder=L==='fr'?'Rechercher dans l\'aide…':'Search help…';
+  var hits=HELP_ARTICLES.filter(function(a){ if(!q)return true; var hay=((a.title[L]||a.title.en)+' '+(a.body[L]||a.body.en)+' '+a.kw+' '+(a.cat[L]||a.cat.en)).toLowerCase(); return hay.indexOf(q)>=0; });
+  if(!hits.length){ listEl.innerHTML='<div class="help-empty">'+(L==='fr'?'Aucun résultat.':'No results.')+'</div>'; return; }
+  listEl.innerHTML=hits.map(function(a){ return '<div class="help-item" onclick="helpShowArticle(\''+a.id+'\')"><div class="help-item-cat">'+(a.cat[L]||a.cat.en)+'</div><div class="help-item-title">'+(a.title[L]||a.title.en)+'</div></div>'; }).join('');
+}
+function helpShowArticle(id){
+  var a=HELP_ARTICLES.find(function(x){return x.id===id;}); if(!a)return;
+  var L=helpLang2(), listEl=document.getElementById('help-list'), artEl=document.getElementById('help-article');
+  listEl.style.display='none'; artEl.style.display='block';
+  artEl.innerHTML='<button id="help-back" onclick="helpRender()">← '+(L==='fr'?'Retour':'Back')+'</button><h2>'+(a.title[L]||a.title.en)+'</h2>'+(a.body[L]||a.body.en);
+}

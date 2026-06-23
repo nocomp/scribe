@@ -770,7 +770,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Suojattu lähetys BlueFilesilla",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -999,5 +999,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "TURVALLINEN SIIRTO (BlueFiles)",
+      "admin_desc": "BlueFiles-tunnukset suojattuja lähetyksiä varten valvonnasta.",
+      "login": "Käyttäjätunnus",
+      "password": "Salasana",
+      "server": "Palvelin",
+      "enable": "Ota käyttöön BlueFiles-turvalliset lähetykset valvontaviesteissä",
+      "test": "Testaa",
+      "save": "Tallenna",
+      "modal_title": "TURVALLINEN LÄHETYS — BLUEFILES",
+      "files": "LÄHETETTÄVÄT TIEDOSTOT",
+      "drop_hint": "Pudota tiedostot tähän · tai napsauta selataksesi",
+      "drop_limit": "Maks. 200 Mt per tiedosto",
+      "recipients": "VASTAANOTTAJAT",
+      "no_recipient": "Ei vastaanottajia — lisää vähintään yksi sähköpostiosoite.",
+      "add_btn": "+ Lisää",
+      "comment": "KOMMENTTI (valinnainen)",
+      "hds_label": "Arkaluonteiset tiedot",
+      "hds_note": "Tämä lähetys kirjataan SCRIBEen. Sisältö pysyy salattuna päästä päähän.",
+      "sending": "Lähetetään…",
+      "cancel": "Peruuta",
+      "send_btn": "🔒 Lähetä"
+    }
   }
 }

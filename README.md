@@ -1,5 +1,3 @@
-<div align="center">
-
 ```
 ███████╗ ██████╗██████╗ ██╗██████╗ ███████╗
 ██╔════╝██╔════╝██╔══██╗██║██╔══██╗██╔════╝
@@ -9,210 +7,479 @@
 ╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝╚═════╝ ╚══════╝
 ```
 
-**Open-source hospital crisis management platform**
-**Plateforme open-source de gestion de crise hospitalière**
+**Main courante numérique de gestion de crise hospitalière**  
+**Digital Crisis Management Platform for Healthcare Facilities**
 
-[![Version](https://img.shields.io/badge/version-3.6.0--beta1-orange)](https://github.com/nocomp/scribe/tree/beta)
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL_3.0-red)](https://github.com/nocomp/scribe/blob/main/LICENSE)
+[![Version](https://img.shields.io/badge/version-3.6.0--beta-blue)](https://github.com/nocomp/scribe)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-green)](https://github.com/nocomp/scribe/blob/main/LICENSE)
 [![Stack](https://img.shields.io/badge/stack-Python%20%7C%20FastAPI%20%7C%20SQLite-orange)](https://github.com/nocomp/scribe)
-[![EU languages](https://img.shields.io/badge/languages-24%20EU%20official-FFCE00)](https://github.com/nocomp/scribe)
+[![Languages](https://img.shields.io/badge/i18n-24%20EU%20languages-purple)](https://github.com/nocomp/scribe)
 [![Branch](https://img.shields.io/badge/branch-beta-yellow)](https://github.com/nocomp/scribe/tree/beta)
 
-🇬🇧 [**English**](#-english) · 🇫🇷 [**Français**](#-français)
+---
 
-</div>
-
-> **⚠ Beta branch** — This is an active development branch. APIs and DB schema may change between beta releases. For stable use, follow the `main` branch.
+> 🇫🇷 **[Français](#-scribe--main-courante-de-crise-hospitalière)** | 🇬🇧 **[English](#-scribe--hospital-crisis-management-platform)**
 
 ---
 
-## 🇬🇧 English
+## 🇫🇷 SCRIBE — Main courante de crise hospitalière
 
-SCRIBE is an open-source platform for **hospital crisis management and capacity monitoring**. It provides a complete digital logbook, real-time capacity tracking, a multi-establishment territorial collector, a **staff alert chain (personnel recall)**, and an AI-powered decision-support and post-crisis debriefing module.
+SCRIBE est une plateforme open-source de **gestion de crise et de pilotage capacitaire hospitalier**. Elle fournit une main courante numérique complète, un suivi capacitaire en temps réel, un collecteur territorial multi-établissements, des modules de rappel du personnel et d'envoi sécurisé de fichiers, et un assistant IA de debriefing post-crise.
 
-### Dual-purpose design
+**Double usage — nominal et crise :**
 
-SCRIBE is built to be useful **both in normal operations and during a crisis**:
+- **Mode nominal** : suivi quotidien de la capacité (lits, RH, matériel), déclarations 3×/jour par les cadres, tableau de bord direction
+- **Mode crise** : main courante incidents, cellule de crise, kanban opérationnel, rappel du personnel par vagues, communiqués publics, coordination territoriale GHT
 
-- **Normal mode** — daily monitoring of service capacity (beds, HR, equipment), three-times-a-day declarations by ward managers, dashboard for medical direction and HR
-- **Crisis mode** — incident logbook, crisis cell, operational kanban, public bulletins, staff recall, inter-hospital territorial coordination
+**Conçu pour les non-techniciens** — aucun cloud, aucun LDAP, fonctionne en réseau isolé.
 
-Designed for **non-technical users** — clinical managers, directors, crisis coordinators — SCRIBE requires no cloud, no LDAP, and operates on an isolated network.
+---
 
-### 🇪🇺 Built for Europe — 24 EU languages
+### Démarrage rapide
 
-Every official language of the European Union is selectable from the login screen, before authentication:
+```bash
+# Linux / macOS
+pip install -r requirements.txt
+python setup.py          # menu interactif : démo ou config personnalisée
+# → http://localhost:8000  (login: dircrise / Scribe2026!)
+```
 
-🇫🇷 Français · 🇬🇧 English · 🇩🇪 Deutsch · 🇪🇸 Español · 🇮🇹 Italiano · 🇳🇱 Nederlands · 🇵🇹 Português · 🇵🇱 Polski · 🇷🇴 Română · 🇬🇷 Ελληνικά · 🇨🇿 Čeština · 🇸🇰 Slovenčina · 🇸🇪 Svenska · 🇩🇰 Dansk · 🇫🇮 Suomi · 🇭🇺 Magyar · 🇧🇬 Български · 🇭🇷 Hrvatski · 🇸🇮 Slovenščina · 🇪🇪 Eesti · 🇱🇹 Lietuvių · 🇱🇻 Latviešu · 🇲🇹 Malti · 🇮🇪 Gaeilge
+```bat
+REM Windows
+SETUP.bat
+```
 
-- **5 fully native UI translations**: FR, EN, DE, ES, IT
-- **19 essential native translations**: the most-used UI elements
-- **Coherent English fallback** for the rest
+```bash
+# Docker
+git clone https://github.com/nocomp/scribe
+cd scribe && git checkout beta
+docker compose up -d
+# → http://localhost:8000
+```
+
+---
+
+### Fonctionnalités v3.6.0-beta
+
+#### 🌐 VEILLE — Main courante incidents
+
+- Déclaration CYBER / SANITAIRE / MIXTE, niveaux 1 (VEILLE) à 4 (CRITIQUE)
+- Jalons de résolution prédéfinis + personnalisés, export CSV
+- Analyse IA (Albert DINUM, ou 6 autres fournisseurs)
+- Timeline interactive avec projection de retour à la normale
+- Filtres multi-critères : site, directeur, urgence, statut, type
+
+#### 🏥 SOINS — Cartographie des pôles
+
+- Vue par pôle avec statut OPÉRATIONNEL / MODE DÉGRADÉ / IMPACT CRITIQUE
+- Coloration automatique selon incidents et déclarations capacitaires
+- Carte Leaflet avec trajectoires de transferts patients (OSRM)
+
+#### 🏛️ CELLULE — Salle de crise
+
+- Registre des présences horodaté (entrée/sortie, nom, rôle)
+- Chronologie décisionnelle avec base réglementaire (Plan Blanc, NIS2, ORSAN…)
+
+#### 📋 KANBAN — Tableau opérationnel
+
+- 4 colonnes (Backlog / En cours / En attente / Terminé), drag & drop
+- Priorités, assignees, dates d'échéance, liens incidents
+
+#### 📊 REX — Retour d'expérience
+
+- Formulaire en langage opérationnel, pré-remplissage Albert, export DOCX
+
+#### 🔄 RELÈVE — Passation de consignes
+
+- Journal horodaté, accusé de réception nominatif
+
+#### 📞 ANNUAIRE — Répertoire de crise
+
+- Contacts nominaux + numéros de secours, bascule automatique en cas de crise CYBER (PABX impacté)
+
+#### 📢 COMMUNIQUÉ — Statut public multi-sites
+
+- Niveaux OPÉRATIONNEL / PERTURBÉ / DÉGRADÉ / ALERTE / CRITIQUE par service SI et prise en charge patients
+- Page `/status` publique, sans authentification
+- QR code d'accès rapide intégré
+
+#### 🚑 TRANSFERTS — Gestion des patients inter-sites
+
+- Suivi EN PRÉPARATION / EN COURS / ARRIVÉ / ANNULÉ
+- Trajectoire OSRM + progression ambulance selon ETA sur la carte
+- Données patients strictement locales — ne remontent jamais au collecteur (HDS/RGPD)
+
+#### 🛏️ CAPACITÉ — Gestion capacitaire des lits
+
+- Déclarations 3×/jour par les cadres (lits H/F/I, RH, matériel)
+- Tableau de bord temps réel direction des soins
+- Création automatique d'incident sur seuil d'alerte
+- Push vers le collecteur territorial
+
+#### 📡 INTER-GHT — Coordination territoriale
+
+- Déclarations de situation (broadcast ou ciblé)
+- Demandes inter-GHT (transfert patient, renfort RH, matériel)
+- Messagerie inter-établissements via le collecteur
+
+#### 📞 RAPPEL DU PERSONNEL *(nouveau v3.6.0)*
+
+- Mobilisation de masse par type (direction, astreinte, cadres…) et par site
+- **Presets** enregistrés pour déclencher un rappel en deux clics
+- Envoi SMS (OVH, Twilio, Free…) et/ou e-mail (SMTP)
+- **Widget jauge demi-cercle** : suivi temps réel — appelés / ont répondu / sont arrivés / manquent à l'appel
+- Escalade par **vagues** : relance auto des non-répondants, validation cellule à chaque vague
+- Bascule automatique vers numéros de secours si PABX impacté
+
+#### 🔒 ENVOI SÉCURISÉ BLUEFILES *(nouveau v3.6.0)*
+
+- Intégration native du service **BlueFiles** (Forecomm) — chiffrement bout-en-bout, hébergement HDS
+- **Depuis l'instance établissement** : bouton « Envoi sécurisé par BlueFiles » dans la messagerie — glisser-déposer, destinataires email multiples, commentaire
+- **Depuis la supervision** : bouton dédié dans la messagerie territoriale, visible uniquement si le plugin est configuré
+- Le contenu ne transite jamais par SCRIBE — chiffré côté BlueFiles
+- Chaque envoi tracé dans SCRIBE (audit HDS/RGPD)
+- Configuration : login / mot de passe (Fernet au repos) / serveur, via l'admin de chaque instance et de la supervision
+- Compatible crise inter-établissements : bilans patients, listes nominatives, documents sensibles
+
+#### ✉️ MESSAGERIE — Communication interne et inter-GHT
+
+- Messagerie interne : inbox, envoyés, brouillons, réponse/transfert, pièces jointes (10 Mo/PJ, 25 Mo total)
+- Messagerie inter-GHT via collecteur (broadcast ou ciblé par établissement)
+- Channels SMS et e-mail disponibles selon configuration
+
+#### 💬 CHAT — Coordination temps réel
+
+- Salons locaux (établissement) et territoriaux (partagés entre tous les GHTs)
+- Mentions @, pièces jointes, historique
+- Synchronisation inter-GHT via le collecteur
+
+#### 🔬 ANALYSE — Debriefing de crise
+
+- Chargement ZIP d'archive par glisser-déposer (100% hors-ligne)
+- 8 métriques automatiques : durée crise, délais, incidents, décisions, kanban, jalons, participants
+- Frise chronologique interactive (7 catégories), mode comparaison
+- Analyse Albert, export rapport DOCX
+
+#### 🎯 MODE EXERCICE
+
+- Instances dédiées sur des bases isolées (zéro impact sur la production)
+- Console animateur pour injecter des stimuli scénarisés vers les établissements joueurs
+- Scénarios JSON v2 : acteurs, stimuli chronologiques, décisions attendues
+
+#### 💾 SAUVEGARDE & RESTAURATION *(amélioré v3.6.0)*
+
+- **Image complète chiffrée AES** depuis la supervision (onglet Instances → 💾 Sauvegarde complète)
+- Capture : base SQLite de chaque instance (users, mots de passe, configs plugins, messagerie, capacité, salons chat), fichiers de configuration, secrets de plugins, pièces jointes (`uploads/`), archives de rapports (`archives/`)
+- **Restauration plug-and-play** sur une nouvelle version de SCRIBE — anti-path-traversal, purge des fichiers WAL
+- Archive non déchiffrable sans le mot de passe : à conserver hors-ligne
+
+---
 
 ### Architecture
 
-Each hospital runs an **isolated SCRIBE instance** with its own SQLite database. Personal patient data **never leaves the establishment**, and so do staff contact details used for recall. The territorial collector only receives aggregated indicators (capacity levels, incident counts) — GDPR-compliant by design.
+```
+scribe/
+├── main.py                       ← Point d'entrée FastAPI (instance établissement)
+├── config.xml                    ← Configuration établissement (à personnaliser)
+├── setup.py / SETUP.bat          ← Démarrage interactif Linux/Windows
+├── requirements.txt
+├── collecteur/                   ← Superviseur territorial (port 9000)
+│   ├── collecteur.py             ← FastAPI — supervision + BlueFiles supervision
+│   └── central_config_store.py  ← Config centrale chiffrée (IA, SMTP, SMS, BlueFiles)
+├── master/                       ← Pilotage multi-instances (onboarding, backup, restore)
+│   ├── master_routes.py
+│   └── instances_manager.py
+├── plugins/                      ← Plugins fonctionnels
+│   ├── bluefiles/                ← Envoi sécurisé BlueFiles (CLI Forecomm)
+│   ├── messagerie/               ← Messagerie interne (inbox, brouillons, PJ)
+│   ├── capacite/                 ← Gestion capacitaire
+│   ├── transferts/               ← Transferts patients
+│   ├── notifications/            ← Rappel du personnel (SMS/SMTP)
+│   ├── rapport/                  ← Archivage + export DOCX
+│   ├── exercice/                 ← Mode exercice
+│   └── ...
+└── app/
+    ├── static/index.html         ← SPA complète
+    └── lang/                     ← i18n 24 langues UE
+```
 
-### Stack
+---
 
-| Component | Technology |
+### Configuration (`config.xml`)
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<scribe>
+  <etablissement>
+    <nom>Centre Hospitalier de Valmont</nom>
+    <sigle>CHV</sigle>
+  </etablissement>
+
+  <admin>
+    <login>dircrise</login>
+    <password>MotDePasse!</password>
+  </admin>
+
+  <!-- Langue interface : fr en de es it nl pl pt (+ 16 autres EU) -->
+  <langue>fr</langue>
+
+  <ia>
+    <!-- albert | openai | anthropic | gemini | mistral | ollama | openai_compat -->
+    <fournisseur>albert</fournisseur>
+    <cle_api>sk-...</cle_api>
+    <modele>mistralai/Ministral-3-8B-Instruct-2512</modele>
+    <url_base>https://albert.api.etalab.gouv.fr/v1/chat/completions</url_base>
+  </ia>
+
+  <federation>
+    <enabled>true</enabled>
+    <collecteur_url>http://IP-COLLECTEUR:9000/api/push</collecteur_url>
+    <token>TOKEN_16_CHARS_MIN</token>
+    <intervalle_secondes>30</intervalle_secondes>
+  </federation>
+</scribe>
+```
+
+---
+
+### IA — 7 fournisseurs supportés
+
+| Fournisseur | `<fournisseur>` | Notes |
+|---|---|---|
+| **Albert (DINUM)** | `albert` | ✅ Recommandé ES publics français — souverain |
+| **Ollama** | `ollama` | 100% local, hors-ligne |
+| OpenAI | `openai` | GPT-4 |
+| Anthropic | `anthropic` | Claude |
+| Mistral | `mistral` | api.mistral.ai |
+| Gemini | `gemini` | Google |
+| Compatible OpenAI | `openai_compat` | LM Studio, vLLM, Jan |
+
+---
+
+### Collecteur territorial (supervision)
+
+Application indépendante (port 9000) agrégeant les remontées de plusieurs établissements.
+
+```bash
+cd collecteur/
+pip install -r collecteur_requirements.txt
+python collecteur.py
+# → http://localhost:9000
+```
+
+Routes principales :
+
+| Route | Usage |
 |---|---|
-| Backend | FastAPI (Python 3.11+) |
-| ORM | SQLAlchemy |
-| Database | SQLite (one per instance) |
-| Frontend | Vanilla JS SPA |
-| Mapping | Leaflet.js + OSRM |
-| AI (optional) | Albert (French government LLM) |
-| Design system | DSFR (French government) |
-| Notifications | SMS, email (configurable gateways) |
-
-### Key features
-
-- 🚨 **Incident management** — typology (cyber / health / mixed), urgency levels, escalation
-- 🔔 **Incident subscription** — subscribe to an incident to be notified by email on every status change *(new)*
-- 🏥 **Capacity declarations** — per service / functional unit, with tension thresholds
-- 📣 **Staff alert chain / recall** — import a directory, target by **site / unit (UF) / pole / name**, multi-channel **SMS + email** recall; each person declares their **ETA** via a link; real-time dashboard with response rate, per-UF gauges, reminders to non-responders and individual reply *(new)*
-- 🤝 **Crisis cell** — roster, roles, meeting log
-- 📋 **Kanban** — operational task tracking with priorities and assignment
-- 🚑 **Patient transfers** — inter-hospital with destination, ETA, OSRM routing
-- 🚒 **Porter service** — internal transport vouchers
-- 📣 **Public bulletins** — situation page accessible at `/status`
-- 💬 **Internal chat & messaging** — real-time channels and DMs
-- 🔄 **Shift handover** — formal handover notes between teams
-- 📊 **Post-crisis AAR** — automatic generation, decision analysis, lessons learned
-- 🗺️ **Territorial supervision** — multi-hospital aggregated dashboard
-- 🎓 **Exercise mode** — isolated drill instances with animator console
-- 🤖 **AI decision support** — situational analysis via Albert; **now cross-references the competencies arriving (from the staff recall) with open incidents** to support the decision (it *proposes and observes* — the crisis cell decides) *(new)*
-- 🌐 **Self-hosted** — no cloud, no telemetry, full sovereignty
-
-### What's new in 3.6.0-beta1
-
-- ✨ **Staff alert chain / personnel recall** — directory import (Excel), multi-criteria **and** by-name targeting, SMS + email dispatch, ETA responses via a tokenized link, real-time dashboard with per-UF gauges, reminders to non-responders, and individual reply by email/SMS
-- ✨ **Incident subscription** — email notifications on status changes, to the right people, without flooding everyone
-- ✨ **AI decision support** — the assistant crosses the arriving competencies with open incidents (e.g. *"2 technicians within 30 min: wait for their assessment before calling an external provider"*); only **anonymized aggregates** are sent to the AI, never personal identifiers
-- ✨ **Scales to large directories** — search-driven targeting and previews built for thousands of staff
-- ✨ **UI refresh** aligned with the French State design system (DSFR)
-- 🔒 **Data minimization** — staff contact details stay local to the establishment
-
-### Installation
-
-```bash
-git clone -b beta https://github.com/nocomp/scribe.git
-cd scribe
-pip install -r requirements.txt
-python3 main.py
-```
-
-Open `http://localhost:8000` and follow the wizard at `http://localhost:9000` (master) to create your first instance.
-
-Default credentials are shown on first connection. **Change them immediately.**
-
-### Documentation
-
-- [Security model](SECURITY.md)
-- [Contributing](CONTRIBUTING.md)
-- Installation guide *(coming)*
-- Architecture overview *(coming)*
-
-### Why open source?
-
-Hospital crisis management software is too critical to be proprietary. When a CISO, a crisis director, or a clinical manager needs to coordinate a response, they need a tool they can **inspect, modify, and trust**. They need to know what data leaves their walls. They need to be able to fix bugs themselves if a vendor disappears.
-
-SCRIBE is AGPL-3.0 — any modification or hosting must remain open-source. Forks welcome.
-
-### License
-
-[GNU Affero General Public License v3.0](LICENSE)
-
-### Author
-
-Designed and developed by **[Hervé Pellarin](https://www.linkedin.com/in/%D0%BD%D0%BE-%D0%BA%D0%BE%D0%BC%D0%BF/)** — Information Security Officer, healthcare sector.
-
-This is a **personal open-source project**, independent of any employer.
+| `POST /api/push` | État de crise (incidents, KPIs, statuts) |
+| `POST /api/push-capacite` | État capacitaire (lits, RH, matériel) |
+| `POST /api/push-status` | Statut public (communiqué) |
+| `GET /api/summary` | Agrégation de tous les établissements |
+| `GET /api/admin/bluefiles/status` | État plugin BlueFiles supervision |
+| `POST /api/admin/bluefiles/send` | Envoi sécurisé depuis supervision |
 
 ---
 
-## 🇫🇷 Français
-
-SCRIBE est une plateforme open-source de **gestion de crise et de pilotage capacitaire hospitalier**. Elle fournit une main courante numérique complète, un suivi capacitaire en temps réel, un collecteur territorial multi-établissements, une **chaîne d'alerte (rappel du personnel)** et un module d'aide à la décision et de débriefing post-crise alimenté par l'IA.
-
-### Double usage
-
-SCRIBE est conçu pour être utile **aussi bien en mode nominal qu'en crise** :
-
-- **Mode nominal** — suivi quotidien de la capacité des services (lits, RH, matériel), déclarations 3 fois/jour par les cadres, tableau de bord pour la direction des soins et la DRH
-- **Mode crise** — main courante incidents, cellule de crise, kanban opérationnel, communiqués publics, rappel du personnel, coordination territoriale
-
-Conçu pour les **non-techniciens** — cadres soignants, directeurs, gestionnaires de crise — SCRIBE ne nécessite aucun cloud, aucun LDAP et fonctionne en réseau isolé.
-
-### 🇪🇺 Conçu pour l'Europe — 24 langues UE
-
-Toutes les langues officielles de l'Union européenne sont sélectionnables dès la mire de connexion, avant authentification.
-
-- **5 traductions UI complètement natives** : FR, EN, DE, ES, IT
-- **19 traductions natives essentielles** : les éléments UI les plus utilisés
-- **Fallback anglais cohérent** pour le reste
-
-### Architecture
-
-Chaque hôpital fait tourner une **instance SCRIBE isolée** avec sa propre base SQLite. **Aucune donnée patient nominative ne sort de l'établissement** — pas plus que les coordonnées du personnel utilisées pour le rappel. Le collecteur territorial ne reçoit que des indicateurs agrégés (niveaux de capacité, comptages d'incidents) — RGPD-compliant by design.
-
-### Fonctionnalités principales
-
-- 🚨 **Gestion d'incidents** — typologie (cyber / sanitaire / mixte), niveaux d'urgence, escalade
-- 🔔 **Abonnement aux incidents** — s'abonner à un incident pour être notifié par e-mail à chaque changement de statut *(nouveau)*
-- 🏥 **Déclarations capacitaires** — par service / UF, avec seuils de tension
-- 📣 **Chaîne d'alerte / rappel du personnel** — import d'un annuaire, ciblage par **site / pôle / UF / nom**, envoi **multicanal SMS + e-mail** ; chaque personne déclare son **délai d'arrivée** via un lien ; tableau de bord temps réel avec taux de retour, jauges par UF, relance des non-répondants et réponse individuelle *(nouveau)*
-- 🤝 **Cellule de crise** — présence, rôles, journal de réunion
-- 📋 **Kanban** — suivi opérationnel des tâches avec priorités et assignation
-- 🚑 **Transferts patients** — inter-établissements avec destination, ETA, routing OSRM
-- 🚒 **Brancardage** — bons de transport intra-hospitaliers
-- 📣 **Communiqués publics** — page situation accessible sur `/status`
-- 💬 **Chat & messagerie interne** — salons temps réel et messages directs
-- 🔄 **Relève de garde** — notes formelles entre équipes
-- 📊 **REX post-crise** — génération automatique, analyse des décisions
-- 🗺️ **Supervision territoriale** — dashboard agrégé multi-établissements
-- 🎓 **Mode Exercice** — instances de simulation isolées avec console animateur
-- 🤖 **Aide à la décision par IA** — analyse situationnelle via Albert ; **croise désormais les compétences qui arrivent (issues du rappel du personnel) avec les incidents en cours** pour éclairer la décision (il *propose et observe* — la cellule décide) *(nouveau)*
-- 🌐 **Auto-hébergé** — pas de cloud, pas de télémétrie, souveraineté complète
-
-### Nouveautés 3.6.0-beta1
-
-- ✨ **Chaîne d'alerte / rappel du personnel** — import d'annuaire (Excel), ciblage multi-critères **et** par nom, envoi SMS + e-mail, réponses ETA via un lien tokenisé, tableau de bord temps réel avec jauges par UF, relance des non-répondants et réponse individuelle par e-mail/SMS
-- ✨ **Abonnement aux incidents** — notifications e-mail sur les changements de statut, à la bonne personne, sans saturer tout le monde
-- ✨ **Aide à la décision par IA** — l'assistant croise les compétences qui arrivent avec les incidents ouverts (ex. *« 2 techniciens sous 30 min : attendre leur constat avant d'engager un prestataire »*) ; seuls des **agrégats anonymisés** sont transmis à l'IA, jamais de nominatif
-- ✨ **Tient à l'échelle des grands annuaires** — ciblage et aperçu pensés pour des milliers d'agents (recherche)
-- ✨ **Refonte UI** alignée sur le système de design de l'État (DSFR)
-- 🔒 **Minimisation des données** — les coordonnées du personnel restent locales à l'établissement
-
-### Installation
+### Déploiement multi-établissements
 
 ```bash
-git clone -b beta https://github.com/nocomp/scribe.git
-cd scribe
-pip install -r requirements.txt
-python3 main.py
+# 1. Démarrer le collecteur
+cd collecteur && python collecteur.py &   # → http://localhost:9000
+
+# 2. Configurer chaque établissement (config.xml avec token unique)
+# <collecteur_url>http://localhost:9000/api/push</collecteur_url>
+# <token>TOKEN_UNIQUE_ETABLISSEMENT</token>
+
+# 3. Démarrer chaque instance
+SCRIBE_PORT=8001 DATABASE_URL=sqlite:///site1.db python main.py &
+SCRIBE_PORT=8002 DATABASE_URL=sqlite:///site2.db python main.py &
+
+# 4. Accepter chaque établissement
+# → http://localhost:9000 → ⏳ EN ATTENTE → ✓ ACCEPTER
 ```
-
-Ouvrir `http://localhost:8000` et suivre le wizard sur `http://localhost:9000` (master) pour créer la première instance.
-
-Les identifiants par défaut sont affichés à la première connexion. **Changez-les immédiatement.**
-
-### Licence
-
-agpl v3
-
-### Auteur
-
-Conçu et développé par **[Hervé Pellarin](https://www.linkedin.com/in/%D0%BD%D0%BE-%D0%BA%D0%BE%D0%BC%D0%BF/)** — Responsable de la Sécurité des Systèmes d'Information, secteur santé.
-
-C'est un **projet open-source personnel**, indépendant de tout employeur.
 
 ---
 
-<div align="center">
+### Conformité réglementaire
 
-**SCRIBE** · github.com/nocomp/scribe · AGPL-3.0
-*Designed by Hervé Pellarin · Built for Europe*
+| Référentiel | Couverture |
+|---|---|
+| **NIS2** | Traçabilité décisions, jalons CERT Santé, chronologie, archivage |
+| **Plan Blanc** | Activation cellule, registre présences, diffusion communiqués, rappel du personnel |
+| **CERT Santé** | Jalon dédié, signalement intégré dans l'annuaire secours |
+| **HDS / RGPD** | Déploiement local, données patients jamais transmises au collecteur, envoi sécurisé BlueFiles sans copie locale |
+| **ORSAN** | Base réglementaire des décisions cellule |
 
-</div>
+---
+
+## 🇬🇧 SCRIBE — Hospital Crisis Management Platform
+
+SCRIBE is an open-source **hospital crisis management and bed capacity monitoring platform**. It provides a complete digital crisis log, real-time capacity tracking, a multi-facility territorial collector, staff recall, secure file transfer (BlueFiles), and an AI-powered post-crisis debriefing module.
+
+**Dual use** — both in normal operations and during crises.  
+**Designed for non-technical staff** — no cloud, no LDAP, fully offline capable.
+
+---
+
+### Quick Start
+
+```bash
+# Linux / macOS
+pip install -r requirements.txt
+python setup.py       # interactive menu: demo / custom config
+# → http://localhost:8000  (login: dircrise / Scribe2026!)
+```
+
+```bat
+REM Windows
+SETUP.bat
+```
+
+```bash
+# Docker
+git clone https://github.com/nocomp/scribe && cd scribe && git checkout beta
+docker compose up -d
+# → http://localhost:8000
+```
+
+---
+
+### Features v3.6.0-beta
+
+#### 🌐 WATCH — Incident Log
+Incident declaration (CYBER / HEALTH / MIXED, levels 1–4), predefined milestones, AI analysis (Albert DINUM), interactive timeline, CSV export.
+
+#### 🏥 CARE — Clinical Map
+Pole cards with automatic status coloring driven by incidents and capacity alerts. Leaflet map with OSRM patient transfer routes.
+
+#### 🏛️ CELL — Crisis Room
+Timestamped attendance register, decision log with regulatory basis (White Plan, NIS2, ORSAN…).
+
+#### 📋 KANBAN — Operational Board
+4-column board with drag & drop, priorities, assignees, due dates, incident links.
+
+#### 📊 REX — After-Action Review
+Plain-language form, Albert auto-fill, DOCX export.
+
+#### 🔄 HANDOVER — Shift Handover
+Timestamped log with named acknowledgement.
+
+#### 📞 DIRECTORY — Crisis Directory
+Standard and emergency contacts, automatic telephony failover when PBX is impacted.
+
+#### 📢 BULLETIN — Public Status
+Multi-site independent management. `/status` page without authentication. Built-in QR code.
+
+#### 🚑 TRANSFERS — Patient Management
+Transfer tracking across sites. Patient data stays strictly local, never reaching the collector (HDS/GDPR).
+
+#### 🛏️ CAPACITY — Bed Capacity Management
+3×/day nurse manager declarations, real-time director dashboard, automatic incident creation on alert threshold, push to collector.
+
+#### 📡 INTER-GHT — Territorial Coordination
+Situation declarations, inter-GHT requests (patient transfers, HR reinforcements), inter-establishment messaging.
+
+#### 📞 STAFF RECALL *(new v3.6.0)*
+
+- Mass mobilisation by type (management, on-call, nursing leads…) and site
+- **Presets** — trigger a recall in two clicks
+- SMS (OVH, Twilio, Free…) and/or email (SMTP)
+- **Half-circle gauge widget**: real-time — called / responded / arrived / missing
+- **Wave escalation**: auto re-contact non-responders, cell confirmation required per wave
+- Automatic telephony failover to emergency numbers when PBX is impacted
+
+#### 🔒 SECURE BLUEFILES TRANSFER *(new v3.6.0)*
+
+- Native integration of **BlueFiles** (Forecomm) — end-to-end encrypted, HDS hosting
+- **From an establishment instance**: "Secure send via BlueFiles" button in the messaging tab — drag-and-drop files, multiple email recipients, comment
+- **From supervision**: dedicated button in the territorial messaging bar, visible only if the plugin is configured
+- File content never transits through SCRIBE — encrypted on the BlueFiles side
+- Every transfer logged in SCRIBE (HDS/GDPR audit trail)
+- Configuration: login / password (Fernet at rest) / server, via admin of each instance and supervision
+- Ideal for crisis inter-establishment use: patient summaries, staff lists, sensitive documents
+
+#### ✉️ MESSAGING — Internal & Inter-GHT
+Internal inbox (drafts, reply, forward, attachments up to 10 MB/file). Inter-GHT messaging via collector (broadcast or targeted).
+
+#### 💬 CHAT — Real-Time Coordination
+Local and territorial rooms, @ mentions, attachments, inter-GHT sync.
+
+#### 🔬 ANALYSIS — Crisis Debrief
+Offline ZIP archive upload, 8 automatic metrics, interactive timeline (7 categories), comparison mode, Albert analysis, DOCX export.
+
+#### 🎯 EXERCISE MODE
+Dedicated isolated instances, animator console for scripted stimulus injection.
+
+#### 💾 BACKUP & RESTORE *(improved v3.6.0)*
+
+- **Full AES-encrypted image** from supervision (Instances tab → 💾 Full backup)
+- Captures: SQLite database (users, passwords, plugin configs, messaging, capacity, chat), config files, plugin secrets, attachments (`uploads/`), report archives (`archives/`)
+- **Plug-and-play restore** on a fresh SCRIBE version — anti-path-traversal, WAL purge
+- Archive unreadable without the password: keep offline
+
+---
+
+### Regulatory Compliance
+
+| Framework | Coverage |
+|---|---|
+| **NIS2** | Decision traceability, CERT Santé milestones, timeline, archiving |
+| **White Plan** | Cell activation, attendance register, staff recall with wave escalation |
+| **CERT Santé** | Dedicated milestone, integrated emergency reporting |
+| **HDS / GDPR** | Local deployment, patient data never leaves the establishment, BlueFiles secure transfer with no local copy |
+| **ORSAN** | Regulatory basis for crisis room decisions |
+
+---
+
+## Changelog
+
+### v3.6.0-beta (June 2026)
+
+- **NEW: Staff recall module** — mass mobilisation with presets, SMS/SMTP delivery, real-time response tracking (half-circle gauge widget), wave escalation, telephony failover
+- **NEW: BlueFiles secure transfer** — native integration for end-to-end encrypted file sharing from both establishment messaging and territorial supervision; HDS-compatible, audit trail in SCRIBE
+- **NEW: Full backup / restore** — AES-encrypted complete image of all instances including attachments, plugin secrets and report archives; plug-and-play restore on fresh install
+- **NEW: BlueFiles in supervision messaging** — dedicated send button in territorial supervision messaging bar, enabled/disabled from admin panel
+- **IMPROVED: Supervision UI** — DSFR Suite numérique alignment (menu bar, left column, status cards, detail panel)
+- **IMPROVED: Detail panel (supervision)** — DSFR typography, clickable "Open public status page ↗" button
+- **IMPROVED: i18n** — 24 EU languages now covering all new UI strings (staff recall, BlueFiles, supervision)
+- **IMPROVED: Help center** — updated Staff Recall article (presets, gauge widget, wave escalation, telephony failover) + new BlueFiles article (setup, traceability, HDS compliance)
+
+### v1.5.0-beta (March 2026)
+
+- NEW: INTER-GHT tab — situation declarations, inter-GHT requests, collector messages
+- NEW: TRANSFERS tab — patient transfer management, OSRM routing
+- NEW: Unified inter-GHT messaging
+- NEW: `setup.py` interactive menu (Linux/macOS)
+- FIX: `federation.py` double router, logout, user menu, race conditions
+
+### v1.3.0
+
+- NEW: CAPACITY tab — bed capacity with nurse manager declarations, alert thresholds, automatic incident creation
+- NEW: Albert capacity analysis, territorial collector capacity route
+
+### v1.2.0
+
+- ANALYSIS tab: offline ZIP debrief, 8 metrics, interactive timeline, comparison mode, DOCX export
+
+### v1.1.0
+
+- Internationalisation: 8 European languages
+- Named acknowledgement in HANDOVER
+- Collector login/password protection
+
+---
+
+## Contributors
+
+- [@nocomp](https://github.com/nocomp) — project lead
+
+---
+
+## License
+
+AGPL-3.0 — Free to use, modify and distribute (copyleft).  
+Developed by and for public healthcare facilities.
+
+**Repository**: https://github.com/nocomp/scribe  
+**Branch**: `beta`  
+**Version**: 3.6.0-beta — June 2026

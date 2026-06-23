@@ -140,7 +140,7 @@ ADMIN_TOKEN = _load_or_create_admin_token()
 
 def load_tokens():
     global tokens
-    tokens = dict(DEMO_TOKENS)
+    tokens = dict(ARC_ALPIN_TOKENS)
     if Path(TOKENS_FILE).exists():
         try:
             saved = json.loads(Path(TOKENS_FILE).read_text())
@@ -447,17 +447,17 @@ async def accept_pending(token_prefix: str, body: dict = {}):
     logger.info(f"Établissement accepté : {sigle} (token: {token[:12]}...)")
     return {"ok": True, "sigle": sigle, "message": f"{sigle} enrôlé avec succès"}
 
-@app.post("/api/admin/tokens/demo", dependencies=[Depends(require_admin)])
-async def register_demo_tokens():
-    """Enregistre des tokens de démonstration — utile si l'auto-register a échoué."""
+@app.post("/api/admin/tokens/arc-alpin", dependencies=[Depends(require_admin)])
+async def register_arc_alpin_tokens():
+    """Enregistre les 4 tokens Arc Alpin démo — utile si l'auto-register a échoué."""
     added = []
-    for tok, sigle in DEMO_TOKENS.items():
+    for tok, sigle in ARC_ALPIN_TOKENS.items():
         if tok not in tokens:
             tokens[tok] = sigle
             added.append(sigle)
     if added:
         save_tokens()
-        logger.info(f"Tokens de démonstration enregistrés manuellement : {added}")
+        logger.info(f"Tokens Arc Alpin enregistrés manuellement : {added}")
     return {"ok": True, "added": added, "total": len(tokens),
             "message": f"{len(added)} token(s) ajouté(s), {len(tokens)} token(s) total"}
 
@@ -1234,7 +1234,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <title>SCRIBE — Supervision Territoriale</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<!-- polices terminal retirées v3000h146 — police système Suite, aucune dépendance externe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -1242,7 +1242,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
   --bg:#060608;--s1:#0d0d12;--s2:#111118;--s3:#18181f;
   --border:#1f1f2e;--border2:#2a2a3d;
   --text:#dde4f0;--muted:#4a5070;--muted2:#6b7494;
-  --mono:'Share Tech Mono',monospace;--head:'Barlow Condensed',sans-serif;--body:'Barlow',sans-serif;
+  --mono:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;--head:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;--body:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --green:#00e5a0;--yellow:#f5c518;--orange:#ff7b2c;--red:#ff2d55;
   --blue:#3d9eff;--purple:#a855f7;--cyan:#00cfff;
 }
@@ -1253,7 +1253,7 @@ body.light{
   --green:#059669;--yellow:#d97706;--orange:#ea580c;--red:#dc2626;
   --blue:#2563eb;--purple:#7c3aed;--cyan:#0891b2;
 }
-body.light #kpi-bar{background:#003189;border-bottom:3px solid #e1000f}
+body.light #kpi-bar{background:#eef0f3;border-bottom:1px solid #dfe3e8}
 body.light #header{background:#ffffff;border-bottom:1px solid #e2e8f0}
 body.light .tab-btn{color:#161616}
 body.light .tab-btn.active{color:#003189;background:rgba(0,49,137,.08);border-color:rgba(0,49,137,.3)}
@@ -1264,7 +1264,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--b
 #app{display:flex;flex-direction:column;height:100vh}
 
 /* KPI BAR */
-#kpi-bar{display:flex;align-items:center;gap:0;background:#003189;border-bottom:3px solid #e1000f;flex-shrink:0;height:36px}
+#kpi-bar{display:flex;align-items:center;gap:0;background:#eef0f3;border-bottom:1px solid #dfe3e8;flex-shrink:0;height:44px}
 .kpi-cell{display:flex;align-items:center;gap:7px;padding:0 16px;border-right:1px solid var(--border);height:100%}
 .kpi-clickable{transition:background .15s}
 .kpi-clickable:hover{background:rgba(255,255,255,.07)}
@@ -1343,18 +1343,18 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--b
 .kpi-modal-empty{
   text-align:center;padding:40px;color:var(--muted);font-size:12px;font-style:italic;font-family:var(--mono);
 }
-.kpi-label{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:rgba(255,255,255,.7);text-transform:uppercase}
-.kpi-val{font-family:var(--mono);font-size:14px;font-weight:700;color:#ffffff}
+.kpi-label{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:10px;font-weight:600;letter-spacing:.5px;color:#6b7280;text-transform:uppercase}
+.kpi-val{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:16px;font-weight:700;color:#1a1a2e}
 .kpi-val.ok{color:var(--green)}.kpi-val.warn{color:var(--yellow)}.kpi-val.crit{color:var(--red)}
-#kpi-title{font-family:var(--head);font-size:13px;font-weight:700;letter-spacing:2px;color:#ffffff;padding:0 16px;margin-right:auto}
-#kpi-clock{font-family:var(--mono);font-size:11px;color:var(--muted);padding:0 14px}
-#kpi-refresh{font-family:var(--mono);font-size:9px;color:var(--muted);padding:0 10px;display:flex;align-items:center;gap:5px}
+#kpi-title{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:16px;font-weight:800;letter-spacing:1px;color:#000091;padding:0 16px;margin-right:auto}
+#kpi-clock{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:13px;font-weight:600;color:#374151;padding:0 14px}
+#kpi-refresh{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:12px;color:#6b7280;padding:0 10px;display:flex;align-items:center;gap:5px}
 .refresh-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 1s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 
 /* HEADER TABS */
-#header{display:flex;align-items:center;background:var(--s2);border-bottom:1px solid var(--border);flex-shrink:0;padding:0 8px;height:38px;gap:2px;color:var(--text)}
-.tab-btn{font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:4px 12px;background:transparent;color:var(--text);border:1px solid transparent;border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap}
+#header{display:flex;align-items:center;background:var(--s2);border-bottom:1px solid var(--border);flex-shrink:0;padding:0 8px;height:46px;gap:2px;color:var(--text)}
+.tab-btn{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:13px;font-weight:600;letter-spacing:.2px;padding:7px 14px;background:transparent;color:var(--text);border:1px solid transparent;border-radius:7px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .tab-btn:hover{color:#003189;border-color:#003189}
 .tab-btn.active{color:#003189;background:rgba(0,49,137,.08);border-color:rgba(0,49,137,.3);font-weight:700}
 .tab-spacer{flex:1}
@@ -1427,11 +1427,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--b
 
 /* ── STATUTS PUBLICS ── */
 #pane-statuts{flex-direction:column;background:var(--bg);overflow-y:auto;padding:16px}
-.sp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
-.sp-card{background:var(--s1);border:1px solid var(--border2);border-radius:8px;overflow:hidden}
-.sp-card-hdr{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
-.sp-card-body{padding:12px 14px}
-.sp-svc-row{display:flex;align-items:center;gap:6px;padding:3px 0;font-family:var(--mono);font-size:8px}
+.sp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.sp-card{background:var(--s1);border:1px solid var(--border2);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.sp-card-hdr{padding:16px 18px;display:flex;align-items:flex-start;gap:12px}
+.sp-card-body{padding:0 18px 16px}
+.sp-svc-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px}
 .svc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 
 /* MODALS */
@@ -1461,6 +1461,74 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--b
 /* Leaflet dark */
 .leaflet-container{background:#060608}
 .leaflet-tile-pane{filter:none}
+/* h111 — Centre d'aide */
+#help-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:99990;align-items:center;justify-content:center;padding:20px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+#help-overlay.open{display:flex}
+#help-box{background:#fff;border-radius:14px;width:760px;max-width:96vw;height:80vh;max-height:680px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 60px rgba(0,0,0,.28)}
+#help-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e7e9ee}
+#help-title{font-size:16px;font-weight:700;color:#000091}
+.help-lang-btn{font-size:12px;font-weight:600;padding:4px 9px;border:1px solid #d7dae0;background:#fff;color:#5b6573;border-radius:6px;cursor:pointer}
+.help-lang-btn.active{background:#000091;color:#fff;border-color:#000091}
+#help-close{background:none;border:none;font-size:18px;color:#8a909c;cursor:pointer;line-height:1;padding:2px 6px}
+#help-search-wrap{padding:14px 20px 8px}
+#help-search{width:100%;box-sizing:border-box;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:14px;padding:10px 13px;border:1px solid #d1d5db;border-radius:9px;outline:none}
+#help-search:focus{border-color:#000091;box-shadow:0 0 0 3px rgba(0,0,145,.12)}
+#help-body{flex:1;overflow-y:auto;padding:8px 20px 20px}
+.help-item{padding:12px 14px;border:1px solid #eceef2;border-radius:10px;margin-bottom:8px;cursor:pointer;transition:background .12s,border-color .12s}
+.help-item:hover{background:#f5f6fb;border-color:#000091}
+.help-item-cat{font-size:11px;font-weight:600;letter-spacing:.3px;color:#8a909c;text-transform:uppercase}
+.help-item-title{font-size:14px;font-weight:600;color:#1a1a2e;margin-top:2px}
+.help-empty{color:#8a909c;font-size:14px;padding:20px;text-align:center}
+#help-article h2{font-size:18px;color:#000091;margin:0 0 12px}
+#help-article p{font-size:14px;line-height:1.6;color:#374151;margin:0 0 10px}
+#help-article ul{font-size:14px;line-height:1.6;color:#374151;margin:0 0 10px;padding-left:20px}
+#help-article code{background:#f1f3f7;padding:1px 6px;border-radius:4px;font-size:13px}
+#help-back{background:none;border:none;color:#000091;font-size:13px;font-weight:600;cursor:pointer;padding:0;margin-bottom:14px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+
+/* ════════════════════════════════════════════════════════════════════
+   h142 — Alignement charte Suite numérique (DSFR)
+   Surcharges scopées body.light (mode prod). Bleu France #000091.
+   ════════════════════════════════════════════════════════════════════ */
+/* ── Barre de menu : onglets soulignés DSFR (au lieu de pastilles) ── */
+body.light #header{background:#ffffff;border-bottom:1px solid #dddddd;padding:0 12px;height:48px;gap:0}
+body.light .tab-btn{font-size:14px;font-weight:500;letter-spacing:0;color:#3a3a3a;background:transparent;border:none;border-bottom:2px solid transparent;border-radius:0;padding:14px 14px;margin:0}
+body.light .tab-btn:hover{color:#000091;background:#f5f5fe;border-color:transparent}
+body.light .tab-btn.active{color:#000091;font-weight:700;background:transparent;border-bottom:2px solid #000091}
+/* L'onglet Assistant force un style inline color:#003189 → réaligner */
+body.light .tab-btn[onclick*="assistant"]{color:#3a3a3a}
+body.light .tab-btn[onclick*="assistant"].active{color:#000091}
+body.light .tab-btn[onclick*="exercice"]{border-left:1px solid #e5e5e5;margin-left:6px;padding-left:16px}
+
+/* ── Colonne gauche : établissements enrôlés (DSFR) ── */
+body.light #etab-left{width:252px;background:#ffffff;border-right:1px solid #dddddd}
+body.light #etab-left-header{padding:16px 16px 10px;border-bottom:1px solid #ededed}
+body.light #etab-left-header .lh-title{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:13px;font-weight:700;letter-spacing:.2px;color:#000091;text-transform:none;margin-bottom:0}
+body.light .etab-card{padding:12px 16px;border-bottom:1px solid #ededed;gap:10px}
+body.light .etab-card:hover{background:#f5f5fe}
+body.light .etab-card.selected{background:#f5f5fe;border-left:3px solid #000091}
+body.light .etab-dot{width:9px;height:9px}
+body.light .etab-sigle{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:14px;font-weight:700;letter-spacing:0;color:#161616}
+body.light .etab-nom{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:12px;letter-spacing:0;color:#666666}
+body.light .etab-age{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:11px;letter-spacing:0;color:#929292}
+/* Sections sync / relais / pending : libellés en Bleu France, neutres */
+body.light #etab-left .lh-sub,
+body.light #pending-header{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:11px;letter-spacing:.2px;color:#000091}
+body.light .lh-btn{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif !important;font-size:11px !important;font-weight:500;padding:3px 10px !important;background:#ffffff !important;border:1px solid #000091 !important;border-radius:4px !important;color:#000091 !important;letter-spacing:0 !important}
+body.light .lh-btn:hover{background:#f5f5fe !important}
+body.light .lh-note{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif !important;font-size:11px !important;color:#666666 !important;letter-spacing:0 !important;line-height:1.4}
+
+/* Pastilles de statut établissement (palette sémantique DSFR) */
+body.light .etab-dot.NOMINAL,body.light .etab-dot.VEILLE,body.light .etab-dot.OPERATIONNEL{background:#18753c}
+body.light .etab-dot.ALERTE,body.light .etab-dot.PERTURBE{background:#b34000}
+body.light .etab-dot.MAINTENANCE{background:#0063cb}
+body.light .etab-dot.CRISE,body.light .etab-dot.INCIDENT_MAJEUR{background:#ce0500;box-shadow:none}
+body.light .etab-dot.CRITIQUE{background:#ce0500}
+
+/* ── Statuts publics : cartes DSFR ── */
+body.light #pane-statuts{background:#f5f5fe}
+body.light .sp-card{background:#ffffff;border:1px solid #dddddd;border-radius:8px;box-shadow:none}
+body.light .sp-card:hover{border-color:#000091}
+
 </style>
 </head>
 <body>
@@ -1519,7 +1587,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--b
     <span data-mi18n="login.password">Mot de passe</span> : <code style="background:rgba(0,0,145,.1);padding:1px 4px;border-radius:2px">Scribe2026!</code><br>
     <span data-mi18n="login.first_time_hint" style="font-size:9px;opacity:.7">À changer après le premier login (onglet Comptes).</span>
   </div>
-  <!-- v3.4 (h38m) — Footer crédite l'auteur (projet personnel).
+  <!-- v3.4 (h38m) — Footer crédite Hervé PELLARIN (projet personnel, pas CHAG).
        Liens hypertextes : nom → profil LinkedIn, "SCRIBE Crisis OS" → GitHub repo. -->
   <div style="font-family:monospace;font-size:9px;color:#94a3b8;text-align:center;margin-top:8px;line-height:1.6">
     <span data-mi18n="login.designed_by">Designed by</span> <a href="https://www.linkedin.com/in/%D0%BD%D0%BE-%D0%BA%D0%BE%D0%BC%D0%BF/" target="_blank" rel="noopener noreferrer" style="color:#003189;text-decoration:none;border-bottom:1px dotted #003189">Hervé PELLARIN</a><br>
@@ -1790,7 +1858,7 @@ async function submitMasterForcedPw() {
 
   <!-- KPI BAR -->
   <div id="kpi-bar">
-    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.6.0-beta1</div>
+    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.6.0-alpha112</div>
     <div class="kpi-cell"><span class="kpi-label">GHT</span><span class="kpi-val" id="k-ght">—</span></div>
     <div class="kpi-cell" style="cursor:pointer" title="Délai avant masquage incidents résolus (clic pour modifier)">
       <span class="kpi-label">RÉSOLU → masqué</span>
@@ -1805,7 +1873,7 @@ async function submitMasterForcedPw() {
     <div id="kpi-refresh" style="display:flex;align-items:center;gap:6px">
       <div class="refresh-dot"></div>
       <span id="refresh-countdown">30s</span>
-      <button onclick="fetchAll()" title="Actualiser maintenant" style="font-family:var(--mono);font-size:9px;padding:2px 8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:4px;color:inherit;cursor:pointer">&#8635; ACTUALISER</button>
+      <button onclick="fetchAll()" title="Actualiser maintenant" style="font-family:var(--mono);font-size:12px;padding:5px 11px;background:#fff;border:1px solid #c7cdd6;border-radius:5px;color:#000091;font-weight:700;cursor:pointer">&#8635; ACTUALISER</button><button onclick="openHelpCenter()" title="Centre d'aide" style="font-family:var(--mono);font-size:12px;padding:5px 11px;margin-left:6px;background:#000091;border:1px solid #000091;border-radius:5px;color:#fff;font-weight:700;cursor:pointer">? AIDE</button>
     </div>
   </div>
 
@@ -1837,27 +1905,27 @@ async function submitMasterForcedPw() {
         <div id="pending-section" style="display:none">
           <div id="pending-header" style="display:flex;align-items:center;justify-content:space-between">
             <span>⏳ EN ATTENTE <span id="pending-count">0</span></span>
-            <button onclick="acceptAll()" id="btn-accept-all" style="display:none;font-family:var(--mono);font-size:7px;padding:2px 8px;background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.4);border-radius:3px;color:#4ade80;cursor:pointer">✓ Tout accepter</button>
+            <button onclick="acceptAll()" id="btn-accept-all" class="lh-btn" style="display:none;cursor:pointer">✓ Tout accepter</button>
           </div>
           <div id="pending-list"></div>
         </div>
         <!-- Relay section -->
         <!-- Fix tokens section -->
         <div style="border-bottom:1px solid var(--border);padding:6px 12px;background:rgba(249,115,22,.04)">
-          <div style="font-family:var(--mono);font-size:8px;color:var(--muted2);margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
+          <div class="lh-sub" style="margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
             <span>🔧 INSTANCES SYNCHRONISÉES</span>
-            <button onclick="registerDemoTokens()" style="font-family:var(--mono);font-size:7px;padding:2px 8px;background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.4);border-radius:3px;color:#f97316;cursor:pointer">
+            <button onclick="registerArcAlpinTokens()" class="lh-btn" style="cursor:pointer">
               ⚡ Enregistrer
             </button>
           </div>
-          <div style="font-family:var(--mono);font-size:7px;color:var(--muted)">Si la supervision est vide → cliquer pour forcer l'enregistrement des tokens des instances connues</div>
+          <div class="lh-note">Si la supervision est vide → cliquer pour forcer l'enregistrement des tokens des instances connues</div>
         </div>
         <div id="relay-section" style="border-bottom:1px solid var(--border);padding:8px 12px">
-          <div style="font-family:var(--mono);font-size:8px;letter-spacing:1px;color:var(--muted2);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
+          <div class="lh-sub" style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
             <span>⇪ RELAIS UPSTREAM</span>
-            <button onclick="openAddRelay()" style="font-family:var(--mono);font-size:7px;padding:2px 7px;background:rgba(0,207,255,.1);border:1px solid rgba(0,207,255,.3);border-radius:3px;color:var(--cyan);cursor:pointer">+ Ajouter</button>
+            <button onclick="openAddRelay()" class="lh-btn" style="cursor:pointer">+ Ajouter</button>
           </div>
-          <div id="relay-list"><span style="font-family:var(--mono);font-size:8px;color:var(--muted)">Aucun relais configuré</span></div>
+          <div id="relay-list"><span class="lh-note">Aucun relais configuré</span></div>
         </div>
         <!-- Enrolled list -->
         <div id="etab-list"></div>
@@ -1946,15 +2014,20 @@ async function submitMasterForcedPw() {
       </div>
 
       <div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:16px;max-width:780px">
-        <div style="font-family:var(--mono);font-size:11px;font-weight:700;margin-bottom:12px;color:var(--blue)">🔐 TRANSFERT SÉCURISÉ (Bluefiles)</div>
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;margin-bottom:4px;color:var(--blue)">🔐 <span data-i18n="supervision.bluefiles.admin_title">TRANSFERT SÉCURISÉ (BlueFiles)</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px" data-i18n="supervision.bluefiles.admin_desc">Identifiants du compte BlueFiles pour les envois sécurisés depuis la supervision.</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <label style="font-size:10px;color:var(--muted)">Clé API<input id="adm-bf-key" type="password" autocomplete="off" placeholder="(laisser vide pour conserver)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
-          <label style="font-size:10px;color:var(--muted)">URL API<input id="adm-bf-url" placeholder="https://api.bluefiles.com/v1" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
-          <label style="font-size:10px;color:var(--muted)">Compte<input id="adm-bf-account" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
-          <label style="font-size:10px;color:var(--muted)">Mode<select id="adm-bf-mode" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"><option value="LIVE">LIVE</option><option value="DEV">DEV</option></select></label>
+          <label style="font-size:10px;color:var(--muted)" data-i18n="supervision.bluefiles.login">Login<input id="adm-bf-login" type="text" autocomplete="off" placeholder="login@exemple.fr" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)" data-i18n="supervision.bluefiles.password">Mot de passe<input id="adm-bf-pwd" type="password" autocomplete="off" placeholder="(laisser vide pour conserver)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
+          <label style="font-size:10px;color:var(--muted)" data-i18n="supervision.bluefiles.server">Serveur<input id="adm-bf-server" placeholder="api.bluefiles.com" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
         </div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:12px;cursor:pointer"><input type="checkbox" id="adm-bf-enabled"> Diffuser cette config Bluefiles aux instances</label>
-        <div style="display:flex;align-items:center;gap:12px;margin-top:12px"><span id="adm-bf-state" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span><button onclick="adminSave('bluefiles')" style="margin-left:auto;font-family:var(--mono);font-size:11px;padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700">Enregistrer</button></div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:12px;cursor:pointer"><input type="checkbox" id="adm-bf-enabled"> <span data-i18n="supervision.bluefiles.enable">Activer les envois sécurisés BlueFiles dans la messagerie supervision</span></label>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+          <span id="adm-bf-state" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span>
+          <button onclick="bfTestColl()" style="font-family:var(--mono);font-size:11px;padding:8px 14px;background:#f5f5fe;color:#000091;border:1px solid #000091;border-radius:5px;cursor:pointer" data-i18n="supervision.bluefiles.test">Tester</button>
+          <button onclick="adminSave('bluefiles')" style="margin-left:auto;font-family:var(--mono);font-size:11px;padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700" data-i18n="supervision.bluefiles.save">Enregistrer</button>
+        </div>
+        <div id="adm-bf-test-result" style="display:none;margin-top:10px;font-size:12px;padding:8px 12px;border-radius:5px"></div>
       </div>
 
       <div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:16px;max-width:780px">
@@ -2134,6 +2207,67 @@ async function submitMasterForcedPw() {
   </div>
 </div>
 
+<!-- h145 — Modal BlueFiles supervision ─────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-bf-send">
+  <div class="modal-box" style="max-width:560px;width:96vw">
+    <div class="modal-hdr">
+      <span class="modal-hdr-title">🔒 <span data-i18n="supervision.bluefiles.modal_title">ENVOI SÉCURISÉ — BLUEFILES</span></span>
+      <button class="modal-close" onclick="closeModal('modal-bf-send')">✕</button>
+    </div>
+    <div class="modal-body" style="gap:14px">
+
+      <!-- Zone de dépôt fichier(s) -->
+      <div>
+        <div class="form-label" data-i18n="supervision.bluefiles.files">FICHIERS À ENVOYER</div>
+        <div id="bf-drop-zone" onclick="document.getElementById('bf-file-input').click()"
+          style="border:2px dashed #c7cdd6;border-radius:8px;padding:28px 16px;text-align:center;cursor:pointer;background:#f8fafc;transition:border-color .15s"
+          ondragover="event.preventDefault();this.style.borderColor='#000091'"
+          ondragleave="this.style.borderColor='#c7cdd6'"
+          ondrop="bfDropFiles(event)">
+          <div style="font-size:32px;margin-bottom:8px">📁</div>
+          <div style="font-size:13px;color:#3a3a3a" data-i18n="supervision.bluefiles.drop_hint">Déposez vos fichiers ici · ou cliquez pour parcourir</div>
+          <div style="font-size:11px;color:#929292;margin-top:4px" data-i18n="supervision.bluefiles.drop_limit">Maximum 200 Mo par fichier</div>
+        </div>
+        <input type="file" id="bf-file-input" multiple style="display:none" onchange="bfAddFiles(this.files)">
+        <div id="bf-file-list" style="display:none;margin-top:10px;display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+
+      <!-- Destinataires -->
+      <div>
+        <div class="form-label" data-i18n="supervision.bluefiles.recipients">DESTINATAIRES</div>
+        <div id="bf-recipients-list" style="margin-bottom:8px;font-size:12px;color:#929292;font-style:italic" data-i18n="supervision.bluefiles.no_recipient">Aucun destinataire — ajoutez au moins une adresse email.</div>
+        <div style="display:flex;gap:8px">
+          <input id="bf-email-input" type="email" class="form-input" placeholder="email@destinataire.fr"
+            style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();bfAddRecipient();}">
+          <button onclick="bfAddRecipient()" class="btn-primary" style="white-space:nowrap" data-i18n="supervision.bluefiles.add_btn">+ Ajouter</button>
+        </div>
+      </div>
+
+      <!-- Commentaire -->
+      <div>
+        <div class="form-label" data-i18n="supervision.bluefiles.comment">COMMENTAIRE (optionnel)</div>
+        <textarea id="bf-message" class="form-textarea" rows="3"
+          placeholder="Contexte de l\'envoi (lu par le destinataire)..."></textarea>
+      </div>
+
+      <!-- Bandeau info -->
+      <div style="background:#fff8f8;border:1px solid #f0c0c0;border-radius:6px;padding:10px 12px;font-size:12px;color:#5a0000">
+        ⚠ <strong data-i18n="supervision.bluefiles.hds_label">Données sensibles</strong> — <span data-i18n="supervision.bluefiles.hds_note">Cet envoi sera tracé dans SCRIBE. Le contenu reste chiffré bout-en-bout (BlueFiles), aucune copie en local.</span>
+      </div>
+
+      <div id="bf-send-err" style="display:none;color:#ce0500;font-size:12px"></div>
+      <div id="bf-send-progress" style="display:none">
+        <div style="font-size:12px;color:#666;margin-bottom:6px" id="bf-send-label" data-i18n="supervision.bluefiles.sending">Envoi en cours…</div>
+        <div style="height:6px;background:#eee;border-radius:4px;overflow:hidden"><div id="bf-send-bar" style="height:100%;width:30%;background:#000091;transition:width .3s"></div></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('modal-bf-send')" data-i18n="supervision.bluefiles.cancel">Annuler</button>
+      <button id="bf-send-btn" class="btn-primary" onclick="bfDoSend()" data-i18n="supervision.bluefiles.send_btn">🔒 Envoyer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Accept pending -->
 <div class="modal-overlay" id="modal-accept">
   <div class="modal-box">
@@ -2163,6 +2297,29 @@ const ADMIN_TOKEN = 'PLACEHOLDER_ADMIN_TOKEN';  // remplacé côté serveur
 let allData = [];
 let pendingList = [];
 let selectedSigle = null;
+// h142 — map sigle → port (pour ouvrir la page /status publique dans un onglet)
+let INSTANCE_PORTS = {};
+async function loadInstancePorts() {
+  try {
+    const r = await fetch('/api/master/instances', {headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if (!r.ok) return;
+    const d = await r.json();
+    const map = {};
+    (d.instances || []).forEach(it => {
+      const c = it.config || {};
+      if (c.sigle && c.port) map[c.sigle] = c.port;
+    });
+    INSTANCE_PORTS = map;
+  } catch(e) {}
+}
+function statusUrlFor(sigle) {
+  const p = INSTANCE_PORTS[sigle];
+  return p ? (location.protocol + '//' + location.hostname + ':' + p + '/status') : null;
+}
+function openStatusPage(sigle) {
+  const u = statusUrlFor(sigle);
+  if (u) window.open(u, '_blank', 'noopener');
+}
 let refreshInterval = 30;
 let countdown = 30;
 let map = null;
@@ -2281,6 +2438,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('k-hide-delay');
   if (el) el.textContent = resolvedHideMinutes + 'min';
 
+  loadInstancePorts();
   // Auto-redirect vers le wizard d'onboarding si aucune instance configurée.
   // L'utilisateur vient de se connecter à la supervision : si le master est
   // vide, on bascule directement sur l'onglet Instances qui chargera le wizard.
@@ -2318,6 +2476,7 @@ async function fetchAll() {
     if (sumRes.ok) allData = await sumRes.json();
     if (pendRes.ok) pendingList = await pendRes.json();
   } catch(e) {}
+  if (Object.keys(INSTANCE_PORTS).length === 0) loadInstancePorts();
   renderKPIs();
   renderEtabList();
   renderPending();
@@ -2446,23 +2605,31 @@ function selectEtab(sigle) {
 function renderDetail(e) {
   const el = document.getElementById('detail-panel');
   if (!e) {
-    el.innerHTML = '<div class="dp-empty"><div class="dp-empty-icon">⬡</div><span style="font-family:var(--mono);font-size:10px;letter-spacing:1px">Sélectionnez un établissement</span></div>';
+    el.innerHTML = '<div class="dp-empty"><div class="dp-empty-icon">⬡</div><span style="font-size:13px">Sélectionnez un établissement</span></div>';
     return;
   }
-  const col = LEVEL_COLOR[e.niveau_global] || LEVEL_COLOR.INCONNU;
+  const DSFR_LVL = {
+    NOMINAL:'#18753c', VEILLE:'#18753c', OPERATIONNEL:'#18753c',
+    ALERTE:'#b34000', PERTURBE:'#b34000', MAINTENANCE:'#0063cb',
+    CRISE:'#ce0500', INCIDENT_MAJEUR:'#ce0500', CRITIQUE:'#ce0500',
+    INCONNU:'#666666'
+  };
+  const lvlCol = s => DSFR_LVL[s] || '#666666';
+  const col = lvlCol(e.niveau_global);
   const kpis = e.kpis || {};
   const sites = e.sites || [];
   const incs  = e.incidents || [];
+  const SECLBL = 'font-size:12px;font-weight:700;letter-spacing:.3px;color:#000091;margin-bottom:10px;text-transform:uppercase';
 
   let sitesHtml = '';
   if (sites.length) {
-    sitesHtml = `<div style="margin-bottom:16px">
-      <div style="font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px">SITES</div>
+    sitesHtml = `<div style="margin-bottom:20px">
+      <div style="${SECLBL}">Sites</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         ${sites.map(s => {
-          const sc = LEVEL_COLOR[s.niveau] || LEVEL_COLOR.INCONNU;
-          return `<div style="padding:6px 10px;background:var(--s2);border:1px solid ${sc}33;border-radius:5px;font-family:var(--mono);font-size:9px">
-            <span style="color:${sc}">●</span> ${s.nom} <span style="color:var(--muted)">${s.nb_incidents||0} inc.</span>
+          const sc = lvlCol(s.niveau);
+          return `<div style="padding:8px 12px;background:#fff;border:1px solid #ddd;border-radius:6px;font-size:13px;color:#161616">
+            <span style="color:${sc}">●</span> ${s.nom} <span style="color:#666">${s.nb_incidents||0} inc.</span>
           </div>`;
         }).join('')}
       </div>
@@ -2471,94 +2638,102 @@ function renderDetail(e) {
 
   let incsHtml = '';
   if (incs.length) {
-    const urgColor = {1:'#3d9eff',2:'#f5c518',3:'#ff7b2c',4:'#ff2d55'};
-    incsHtml = `<div>
-      <div style="font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px">INCIDENTS EN COURS</div>
-      ${incs.filter(i => {
-          if (i.status === 'ARCHIVÉ') return false;
-          if (i.status === 'RÉSOLU' && resolvedHideMinutes > 0) {
-            const ts = i.timestamp ? new Date(i.timestamp) : null;
-            if (ts && (Date.now() - ts.getTime()) > resolvedHideMinutes * 60000) return false;
-          }
-          return true;
-        }).slice(0, 8).map(i=>`
-        <div style="padding:8px 10px;background:var(--s2);border-left:2px solid ${urgColor[i.urgency]||'#4a5070'};border-radius:0 5px 5px 0;margin-bottom:6px">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-            <span style="font-family:var(--mono);font-size:8px;color:${urgColor[i.urgency]||'var(--muted)'};font-weight:700">U${i.urgency||'?'}</span>
-            <span style="font-family:var(--mono);font-size:8px;color:var(--muted2)">${i.type_crise||''}</span>
+    const urgColor = {1:'#0063cb',2:'#b34000',3:'#e4794a',4:'#ce0500'};
+    const rows = incs.filter(i => {
+        if (i.status === 'ARCHIVÉ') return false;
+        if (i.status === 'RÉSOLU' && resolvedHideMinutes > 0) {
+          const ts = i.timestamp ? new Date(i.timestamp) : null;
+          if (ts && (Date.now() - ts.getTime()) > resolvedHideMinutes * 60000) return false;
+        }
+        return true;
+      }).slice(0, 8);
+    if (rows.length) incsHtml = `<div style="margin-bottom:20px">
+      <div style="${SECLBL}">Incidents en cours</div>
+      ${rows.map(i=>`
+        <div style="padding:10px 12px;background:#fff;border:1px solid #ddd;border-left:3px solid ${urgColor[i.urgency]||'#929292'};border-radius:0 6px 6px 0;margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:12px;color:${urgColor[i.urgency]||'#666'};font-weight:700">U${i.urgency||'?'}</span>
+            <span style="font-size:12px;color:#666">${i.type_crise||''}</span>
           </div>
-          <div style="font-family:var(--mono);font-size:9px;color:var(--text)">${(i.fait_resume||'').substring(0,90)}</div>
-          <div style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-top:2px">${i.site_id||''}</div>
+          <div style="font-size:14px;color:#161616;line-height:1.4">${(i.fait_resume||'').substring(0,120)}</div>
+          ${i.site_id?`<div style="font-size:12px;color:#929292;margin-top:3px">${i.site_id}</div>`:''}
         </div>`).join('')}
     </div>`;
   }
 
-  // Renforts mode dégradé (depuis données capacité)
   const capData = e.capacite || {};
   const renforts = (capData.services_renfort || []);
-  // Transferts actifs
   const tActifs = e.transferts_actifs || [];
-  const transfertsHtml = tActifs.length ? `<div style="margin-top:14px">
-    <div style="font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:#60a5fa;margin-bottom:8px">🚑 TRANSFERTS ACTIFS (${tActifs.length})</div>
-    ${tActifs.map(t=>`<div style="padding:5px 10px;background:var(--s2);border-left:2px solid ${t.statut==='EN_COURS'?'#60a5fa':'#fbbf24'};border-radius:0 4px 4px 0;margin-bottom:4px;font-family:var(--mono);font-size:9px">
+  const transfertsHtml = tActifs.length ? `<div style="margin-bottom:20px">
+    <div style="${SECLBL};color:#0063cb">🚑 Transferts actifs (${tActifs.length})</div>
+    ${tActifs.map(t=>`<div style="padding:8px 12px;background:#fff;border:1px solid #ddd;border-left:3px solid ${t.statut==='EN_COURS'?'#0063cb':'#b34000'};border-radius:0 6px 6px 0;margin-bottom:6px;font-size:13px;color:#161616">
       ${t.statut==='EN_COURS'?'🚑':'⏳'} ${t.unite_origine} → ${t.unite_destination}
-      ${t.etablissement_destination!==e.sigle?`<span style="color:var(--muted)"> (${t.etablissement_destination})</span>`:''}
+      ${t.etablissement_destination!==e.sigle?`<span style="color:#666"> (${t.etablissement_destination})</span>`:''}
     </div>`).join('')}
   </div>` : '';
 
-  el.innerHTML = `
-    <div style="max-width:700px">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
-        <div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;box-shadow:0 0 8px ${col}"></div>
-        <div>
-          <div style="font-family:var(--head);font-size:22px;font-weight:700;color:var(--text);letter-spacing:1px">${e.nom||e.sigle}</div>
-          <div style="font-family:var(--mono);font-size:9px;color:var(--muted)">${e.sigle} · Dernière mise à jour : ${fmtDate(e.received_at)}</div>
-        </div>
-        <div style="margin-left:auto;padding:5px 14px;border-radius:5px;background:${col}18;border:1px solid ${col}44;font-family:var(--mono);font-size:11px;font-weight:700;color:${col}">${e.niveau_global||'—'}</div>
+  const spHtml = (() => {
+    const sp = e._status_page;
+    if (!sp) return '';
+    const faqVisible = (sp.faq||[]).filter(f => f.visible && f.reponse);
+    const spSvcs = (sp.services_si||[]).filter(s => s.statut && s.statut.toLowerCase() !== 'ok');
+    const spPec = (sp.prise_en_charge||[]).filter(s => s.statut && s.statut.toLowerCase() !== 'ok');
+    const impacted = [...spSvcs, ...spPec];
+    if (!faqVisible.length && !impacted.length && !sp.message_public) return '';
+    const url = statusUrlFor(e.sigle);
+    const openBtn = url
+      ? `<button onclick="openStatusPage('${e.sigle}')" title="Ouvrir la page de statut publique dans un nouvel onglet" style="font-size:12px;font-weight:600;padding:6px 14px;background:#000091;color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap">Ouvrir la page ↗</button>`
+      : '';
+    return `<div style="margin-bottom:20px;padding:16px;background:#fff;border:1px solid #ddd;border-radius:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+        <div style="${SECLBL};margin-bottom:0">📋 Statut public</div>
+        ${openBtn}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
+      ${sp.message_public ? `<div style="font-size:14px;color:#161616;margin-bottom:12px;line-height:1.5">${sp.message_public}</div>` : ''}
+      ${impacted.length ? `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:${faqVisible.length?'14px':'0'}">${impacted.map(s => {
+        const isDeg = ['hs','hors_service','hors service'].includes((s.statut||'').toLowerCase());
+        const c = isDeg ? '#ce0500' : '#b34000';
+        return `<div style="font-size:14px;color:#161616"><span style="color:${c}">●</span> ${s.label||s.id||''} — <span style="color:${c};font-weight:600">${isDeg?'Hors service':'Perturbé'}</span></div>`;
+      }).join('')}</div>` : ''}
+      ${faqVisible.length ? `<div style="border-top:1px solid #ededed;padding-top:12px;display:flex;flex-direction:column;gap:10px">${faqVisible.map(f =>
+        `<div style="font-size:14px;line-height:1.4"><div style="color:#161616;font-weight:600">${f.question}</div><div style="color:#3a3a3a;margin-top:2px">${f.reponse}</div></div>`
+      ).join('')}</div>` : ''}
+    </div>`;
+  })();
+
+  el.innerHTML = `
+    <div style="max-width:760px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px">
+        <div style="width:12px;height:12px;border-radius:50%;background:${col};flex-shrink:0"></div>
+        <div>
+          <div style="font-size:24px;font-weight:700;color:#161616;letter-spacing:0">${e.nom||e.sigle}</div>
+          <div style="font-size:12px;color:#666;margin-top:2px">${e.sigle} · Dernière mise à jour : ${fmtDate(e.received_at)}</div>
+        </div>
+        <div style="margin-left:auto;padding:6px 14px;border-radius:5px;background:${col}14;border:1px solid ${col}55;font-size:12px;font-weight:700;color:${col}">${e.niveau_global||'—'}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px">
         ${[
-          ['Incidents ouverts', kpis.incidents_ouverts||0, kpis.incidents_ouverts>0?'warn':'ok'],
-          ['Critiques', kpis.incidents_critiques||0, kpis.incidents_critiques>0?'crit':'ok'],
-          ['Cyber', kpis.cyber||0, ''],
-          ['Sanitaire', kpis.sanitaire||0, '']
-        ].map(([l,v,cls])=>`<div style="padding:10px;background:var(--s2);border:1px solid var(--border2);border-radius:6px;text-align:center">
-          <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:${cls==='crit'?'var(--red)':cls==='warn'?'var(--yellow)':'var(--text)'}">${v}</div>
-          <div style="font-family:var(--mono);font-size:7px;letter-spacing:1px;color:var(--muted);margin-top:3px">${l}</div>
+          ['Incidents ouverts', kpis.incidents_ouverts||0, kpis.incidents_ouverts>0?'#b34000':'#161616'],
+          ['Critiques', kpis.incidents_critiques||0, kpis.incidents_critiques>0?'#ce0500':'#161616'],
+          ['Cyber', kpis.cyber||0, '#161616'],
+          ['Sanitaire', kpis.sanitaire||0, '#161616']
+        ].map(([l,v,c])=>`<div style="padding:14px 10px;background:#fff;border:1px solid #ddd;border-radius:8px;text-align:center">
+          <div style="font-size:24px;font-weight:700;color:${c}">${v}</div>
+          <div style="font-size:11px;color:#666;margin-top:4px">${l}</div>
         </div>`).join('')}
       </div>
       ${sitesHtml}
       ${incsHtml}
-      ${renforts.length ? `<div style="margin-top:14px">
-        <div style="font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:#f97316;margin-bottom:8px">⚙ MODE DÉGRADÉ — RH</div>
-        ${renforts.map(r=>`<div style="padding:6px 10px;background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.25);border-radius:5px;margin-bottom:5px;font-family:var(--mono);font-size:9px">
+      ${renforts.length ? `<div style="margin-bottom:20px">
+        <div style="${SECLBL};color:#b34000">⚙ Mode dégradé — RH</div>
+        ${renforts.map(r=>`<div style="padding:10px 12px;background:#fff;border:1px solid #ddd;border-left:3px solid #b34000;border-radius:0 6px 6px 0;margin-bottom:6px;font-size:13px;color:#161616">
           <b>${r.service}</b> · ${r.site}
-          ${r.besoin_renfort>0?`<span style="color:#f97316;margin-left:8px">⚠ Renfort : ${r.besoin_renfort}</span>`:''}
-          ${r.peut_preter>0?`<span style="color:#4ade80;margin-left:8px">🤝 Prête : ${r.peut_preter}</span>`:''}
+          ${r.besoin_renfort>0?`<span style="color:#b34000;margin-left:8px">⚠ Renfort : ${r.besoin_renfort}</span>`:''}
+          ${r.peut_preter>0?`<span style="color:#18753c;margin-left:8px">🤝 Prête : ${r.peut_preter}</span>`:''}
         </div>`).join('')}
       </div>` : ''}
       ${transfertsHtml}
-      ${(() => {
-        const sp = e._status_page;
-        if (!sp) return '';
-        const faqVisible = (sp.faq||[]).filter(f => f.visible && f.reponse);
-        const spSvcs = (sp.services_si||[]).filter(s => s.statut && s.statut.toLowerCase() !== 'ok');
-        const spPec = (sp.prise_en_charge||[]).filter(s => s.statut && s.statut.toLowerCase() !== 'ok');
-        const impacted = [...spSvcs, ...spPec];
-        if (!faqVisible.length && !impacted.length && !sp.message_public) return '';
-        return '<div style="margin-top:14px;padding:10px 12px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.2);border-radius:6px">' +
-          '<div style="font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:#a5b4fc;margin-bottom:8px">📋 STATUT PUBLIC</div>' +
-          (sp.message_public ? '<div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-bottom:8px;line-height:1.5">' + sp.message_public + '</div>' : '') +
-          (impacted.length ? impacted.map(s => {
-            const isDeg = ['hs','hors_service','hors service'].includes((s.statut||'').toLowerCase());
-            const col = isDeg ? 'var(--red)' : 'var(--yellow)';
-            return '<div style="font-family:var(--mono);font-size:9px;margin-bottom:3px"><span style="color:' + col + '">●</span> ' + (s.label||s.id||'') + ' — <span style="color:' + col + '">' + (isDeg?'Hors service':'Perturbé') + '</span></div>';
-          }).join('') : '') +
-          (faqVisible.length ? '<div style="margin-top:6px">' + faqVisible.map(f =>
-            '<div style="font-family:var(--mono);font-size:9px;margin-bottom:4px"><span style="color:var(--muted)">Q: </span>' + f.question + '<br><span style="color:var(--cyan)">R: </span>' + f.reponse + '</div>'
-          ).join('') + '</div>' : '') +
-          '</div>';
-      })()}
+      ${spHtml}
     </div>`;
 }
 
@@ -2658,14 +2833,14 @@ function renderStatuts(data) {
     sites.forEach(ss => { if (ss.published) cards.push({e, sp: ss, isSite: true}); });
   });
   if (!cards.length) {
-    el.innerHTML = '<div style="padding:40px;text-align:center;font-family:var(--mono);font-size:9px;color:var(--muted)">Aucun établissement n\'a publié de point de situation</div>';
+    el.innerHTML = '<div style="padding:48px;text-align:center;font-size:15px;color:var(--muted)">Aucun établissement n\'a publié de point de situation</div>';
     return;
   }
   const niveauCol = {
-    operationnel:'#00e5a0', OPERATIONNEL:'#00e5a0',
-    perturbe:'#f5c518',     PERTURBE:'#f5c518',
-    incident_majeur:'#ff2d55', INCIDENT_MAJEUR:'#ff2d55',
-    maintenance:'#4a5070',  MAINTENANCE:'#4a5070'
+    operationnel:'#18753c', OPERATIONNEL:'#18753c',
+    perturbe:'#b34000',     PERTURBE:'#b34000',
+    incident_majeur:'#ce0500', INCIDENT_MAJEUR:'#ce0500',
+    maintenance:'#0063cb',  MAINTENANCE:'#0063cb'
   };
   const niveauLabel = {
     operationnel:'✅ Opérationnel', OPERATIONNEL:'✅ Opérationnel',
@@ -2681,24 +2856,24 @@ function renderStatuts(data) {
     const titre  = e.sigle + (sp.site_nom ? ' — ' + sp.site_nom : '');
     const impacted = [...spSvcs, ...spPec];
     return '<div class="sp-card">' +
-      '<div class="sp-card-hdr" style="border-left:3px solid ' + nc + '">' +
-        '<div style="flex:1">' +
-          '<div style="font-family:var(--mono);font-size:10px;font-weight:700;color:var(--text)">' + titre + '</div>' +
-          '<div style="font-family:var(--mono);font-size:8px;color:' + nc + ';margin-top:2px">' + (niveauLabel[sp.niveau_global] || sp.niveau_global || '—') + '</div>' +
+      '<div class="sp-card-hdr" style="border-left:4px solid ' + nc + '">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:16px;font-weight:700;color:var(--text);line-height:1.3">' + titre + '</div>' +
+          '<div style="margin-top:6px;font-size:13px;font-weight:600;color:' + nc + '">' + (niveauLabel[sp.niveau_global] || sp.niveau_global || '—') + '</div>' +
         '</div>' +
-        '<div style="font-family:var(--mono);font-size:8px;color:var(--muted)">' + fmtDate(sp.updated_at || e.received_at) + '</div>' +
+        '<div style="font-size:12px;color:var(--muted);white-space:nowrap">' + fmtDate(sp.updated_at || e.received_at) + '</div>' +
       '</div>' +
       '<div class="sp-card-body">' +
-        (msgOff ? '<div style="font-family:var(--mono);font-size:9px;color:var(--muted2);margin-bottom:8px;line-height:1.5">' + msgOff + '</div>' : '') +
+        (msgOff ? '<div style="font-size:14px;color:var(--text);margin-bottom:12px;line-height:1.55">' + msgOff + '</div>' : '') +
         (impacted.length > 0
-          ? '<div style="font-family:var(--mono);font-size:8px;letter-spacing:1px;color:var(--muted);margin-bottom:4px">SERVICES IMPACTÉS</div>' +
+          ? '<div style="font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin:4px 0 6px">Services impactés</div>' +
             impacted.map(s => {
               const isDeg = ['hs','hors_service','hors service'].includes((s.statut||'').toLowerCase());
-              const col = isDeg ? 'var(--red)' : 'var(--yellow)';
-              return '<div class="sp-svc-row"><div class="svc-dot" style="background:' + col + '"></div>' +
-                (s.label || s.id || '').replace(/_/g,' ') + ' — <span style="color:' + col + '">' + (isDeg ? 'Hors service' : 'Perturbé') + '</span></div>';
+              const col = isDeg ? '#ce0500' : '#b34000';
+              return '<div class="sp-svc-row"><div class="svc-dot" style="width:9px;height:9px;background:' + col + '"></div>' +
+                (s.label || s.id || '').replace(/_/g,' ') + ' — <span style="color:' + col + ';font-weight:600">' + (isDeg ? 'Hors service' : 'Perturbé') + '</span></div>';
             }).join('')
-          : '<div style="font-family:var(--mono);font-size:8px;color:var(--green)">Tous les services opérationnels</div>') +
+          : '<div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#18753c;font-weight:500"><span style="width:9px;height:9px;border-radius:50%;background:#18753c;display:inline-block"></span>Tous les services opérationnels</div>') +
       '</div>' +
     '</div>';
   }).join('') + '</div>';
@@ -2722,13 +2897,12 @@ async function adminLoad() {
     document.getElementById('adm-ia-key').placeholder = ia.has_api_key ? '•••• clé configurée (vide = conserver)' : 'aucune clé';
     document.getElementById('adm-ia-state').textContent = ia.has_api_key ? '🔑 clé configurée' : '— pas de clé';
     const bf = c.bluefiles || {};
-    document.getElementById('adm-bf-url').value = bf.api_url || '';
-    document.getElementById('adm-bf-account').value = bf.account || '';
-    document.getElementById('adm-bf-mode').value = bf.mode || 'LIVE';
+    document.getElementById('adm-bf-login').value = bf.login || '';
+    document.getElementById('adm-bf-server').value = bf.server || 'api.bluefiles.com';
     document.getElementById('adm-bf-enabled').checked = !!bf.enabled;
-    document.getElementById('adm-bf-key').value = '';
-    document.getElementById('adm-bf-key').placeholder = bf.has_api_key ? '•••• clé configurée (vide = conserver)' : 'aucune clé';
-    document.getElementById('adm-bf-state').textContent = bf.has_api_key ? '🔑 clé configurée' : '— pas de clé';
+    document.getElementById('adm-bf-pwd').value = '';
+    document.getElementById('adm-bf-pwd').placeholder = bf.has_password ? '•••• configuré (vide = conserver)' : '(aucun)';
+    document.getElementById('adm-bf-state').textContent = bf.has_password ? '🔑 configuré' : '— non configuré';
     const sm = c.smtp || {};
     document.getElementById('adm-smtp-host').value = sm.smtp_host || '';
     document.getElementById('adm-smtp-port').value = sm.smtp_port || 587;
@@ -2773,12 +2947,11 @@ async function adminSave(domain) {
     const k = document.getElementById('adm-ia-key').value; if (k) fields.api_key = k;
   } else if (domain === 'bluefiles') {
     fields = {
-      api_url: document.getElementById('adm-bf-url').value.trim(),
-      account: document.getElementById('adm-bf-account').value.trim(),
-      mode:    document.getElementById('adm-bf-mode').value,
+      login:   document.getElementById('adm-bf-login').value.trim(),
+      server:  document.getElementById('adm-bf-server').value.trim() || 'api.bluefiles.com',
       enabled: document.getElementById('adm-bf-enabled').checked
     };
-    const k = document.getElementById('adm-bf-key').value; if (k) fields.api_key = k;
+    const bfpwd = document.getElementById('adm-bf-pwd').value; if (bfpwd) fields.password = bfpwd;
   } else if (domain === 'smtp') {
     fields = {
       smtp_host: document.getElementById('adm-smtp-host').value.trim(),
@@ -2810,6 +2983,168 @@ async function adminSave(domain) {
     else toast('Échec enregistrement', 'err');
   } catch(e) { toast('Erreur réseau', 'err'); }
 }
+
+// ── h145 — BlueFiles supervision ─────────────────────────────────────────────
+let _bfFiles = [];        // fichiers en attente d'envoi
+let _bfRecipients = [];   // destinataires (email)
+let _bfReady = false;     // BlueFiles disponible côté serveur
+
+async function bfCheckReady() {
+  try {
+    const r = await fetch('/api/admin/bluefiles/status', {headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if (!r.ok) { _bfReady = false; return; }
+    const d = await r.json();
+    _bfReady = !!d.ready;
+    // Afficher ou masquer le bouton dans la messagerie iframe selon dispo
+    // (bouton géré directement dans la messagerie collecteur via window.postMessage)
+  } catch(e) { _bfReady = false; }
+}
+
+function openBfModal() {
+  if (!_bfReady) {
+    toast('BlueFiles non configuré — configurez les identifiants dans Admin → BlueFiles', 'err');
+    return;
+  }
+  _bfFiles = []; _bfRecipients = [];
+  document.getElementById('bf-send-err').style.display = 'none';
+  document.getElementById('bf-send-progress').style.display = 'none';
+  const sendBtn = document.getElementById('bf-send-btn');
+  if (sendBtn) sendBtn.disabled = false;
+  bfRenderFiles(); bfRenderRecipients();
+  document.getElementById('bf-message').value = '';
+  document.getElementById('bf-email-input').value = '';
+  document.getElementById('modal-bf-send').classList.add('open');
+  setTimeout(() => { try { document.getElementById('bf-email-input').focus(); } catch(e){} }, 50);
+}
+
+function bfAddFiles(fileList) {
+  Array.from(fileList || []).forEach(f => { _bfFiles.push(f); });
+  bfRenderFiles();
+}
+
+function bfDropFiles(event) {
+  event.preventDefault();
+  document.getElementById('bf-drop-zone').style.borderColor = '#c7cdd6';
+  bfAddFiles(event.dataTransfer.files);
+}
+
+function bfRemoveFile(idx) {
+  _bfFiles.splice(idx, 1);
+  bfRenderFiles();
+}
+
+function bfRenderFiles() {
+  const el = document.getElementById('bf-file-list');
+  if (!el) return;
+  if (!_bfFiles.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'flex';
+  el.innerHTML = _bfFiles.map((f,i) => {
+    const sz = f.size > 1048576 ? (f.size/1048576).toFixed(1)+' Mo' : Math.round(f.size/1024)+' Ko';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f5f5fe;border:1px solid #ddd;border-radius:6px;font-size:13px">' +
+      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 '+f.name+'</span>' +
+      '<span style="color:#929292;font-size:11px">'+sz+'</span>' +
+      '<button onclick="bfRemoveFile('+i+')" style="background:none;border:none;cursor:pointer;color:#ce0500;font-size:16px;padding:0 2px">×</button>' +
+      '</div>';
+  }).join('');
+}
+
+function bfAddRecipient() {
+  const inp = document.getElementById('bf-email-input');
+  const email = (inp ? inp.value.trim() : '');
+  if (!email || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
+    document.getElementById('bf-send-err').textContent = 'Adresse email invalide';
+    document.getElementById('bf-send-err').style.display = 'block'; return;
+  }
+  if (_bfRecipients.includes(email)) { if (inp) inp.value = ''; return; }
+  _bfRecipients.push(email);
+  if (inp) inp.value = '';
+  document.getElementById('bf-send-err').style.display = 'none';
+  bfRenderRecipients();
+}
+
+function bfRemoveRecipient(idx) {
+  _bfRecipients.splice(idx, 1);
+  bfRenderRecipients();
+}
+
+function bfRenderRecipients() {
+  const el = document.getElementById('bf-recipients-list');
+  if (!el) return;
+  if (!_bfRecipients.length) {
+    el.style.fontStyle = 'italic'; el.style.color = '#929292';
+    el.setAttribute('data-i18n','supervision.bluefiles.no_recipient');
+    // Forcer le texte via la clé i18n active
+    el.textContent = 'Aucun destinataire — ajoutez au moins une adresse email.';
+    return;
+  }
+  el.style.fontStyle = 'normal'; el.style.color = '#161616';
+  el.innerHTML = _bfRecipients.map((e,i) =>
+    '<span style="display:inline-flex;align-items:center;gap:4px;background:#f5f5fe;border:1px solid #000091;border-radius:20px;padding:3px 10px;font-size:12px;margin:2px">' +
+    e + '<button onclick="bfRemoveRecipient('+i+')" style="background:none;border:none;cursor:pointer;color:#929292;font-size:14px;padding:0 2px">×</button></span>'
+  ).join('');
+}
+
+async function bfDoSend() {
+  const errEl = document.getElementById('bf-send-err');
+  errEl.style.display = 'none';
+  if (!_bfFiles.length) { errEl.textContent = 'Ajoutez au moins un fichier.'; errEl.style.display='block'; return; }
+  if (!_bfRecipients.length) { errEl.textContent = 'Ajoutez au moins un destinataire.'; errEl.style.display='block'; return; }
+  const btn = document.getElementById('bf-send-btn');
+  if (btn) btn.disabled = true;
+  document.getElementById('bf-send-progress').style.display = 'block';
+  document.getElementById('bf-send-bar').style.width = '30%';
+  const fd = new FormData();
+  _bfFiles.forEach(f => fd.append('file', f));
+  fd.append('recipients', JSON.stringify(_bfRecipients.map(e => ({email:e, acknowledge:false}))));
+  fd.append('object', 'Document sécurisé — SCRIBE Supervision');
+  fd.append('message', document.getElementById('bf-message').value || '');
+  try {
+    const r = await fetch('/api/admin/bluefiles/send', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer '+ADMIN_TOKEN},
+      body: fd
+    });
+    document.getElementById('bf-send-bar').style.width = '90%';
+    if (!r.ok) {
+      const d = await r.json().catch(()=>({}));
+      errEl.textContent = d.detail || 'Erreur envoi BlueFiles';
+      errEl.style.display = 'block';
+      if (btn) btn.disabled = false;
+      return;
+    }
+    document.getElementById('bf-send-bar').style.width = '100%';
+    const d = await r.json();
+    toast('✓ Envoi BlueFiles réussi → '+d.recipients.join(', '), 'ok');
+    setTimeout(() => {
+      closeModal('modal-bf-send');
+      document.getElementById('bf-send-progress').style.display = 'none';
+      document.getElementById('bf-send-bar').style.width = '30%';
+    }, 1200);
+  } catch(e) {
+    errEl.textContent = 'Erreur réseau : '+e;
+    errEl.style.display = 'block';
+    if (btn) btn.disabled = false;
+  }
+}
+
+// Vérifier la dispo BlueFiles au chargement
+bfCheckReady();
+// Ajouter le bouton BlueFiles dans la barre messagerie si disponible
+(function() {
+  const toolbar = document.getElementById('msg-toolbar');
+  if (!toolbar) return;
+  const btn = document.createElement('button');
+  btn.id = 'btn-bf-send-coll';
+  btn.textContent = '🔒 Envoi sécurisé BlueFiles';
+  btn.style.cssText = 'display:none;font-family:var(--mono);font-size:8px;padding:4px 12px;background:#000091;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700;margin-left:6px';
+  btn.onclick = function() { openBfModal(); };
+  toolbar.appendChild(btn);
+  // Révéler après vérification dispo
+  setTimeout(async function() {
+    await bfCheckReady();
+    if (_bfReady) btn.style.display = 'inline-block';
+  }, 800);
+})();
 
 async function fetchMsgBadge() {
   try {
@@ -2946,8 +3281,8 @@ function renderRelays(relays) {
     <button onclick="deleteRelay(${i})" style="font-family:var(--mono);font-size:7px;padding:2px 5px;background:transparent;border:1px solid rgba(255,45,85,.3);border-radius:3px;color:var(--red);cursor:pointer">✕</button>
   </div>`).join('');
 }
-async function registerDemoTokens() {
-  const r = await fetch('/api/admin/tokens/demo', {
+async function registerArcAlpinTokens() {
+  const r = await fetch('/api/admin/tokens/arc-alpin', {
     method: 'POST',
     headers: {'Authorization': 'Bearer ' + ADMIN_TOKEN}
   });
@@ -3461,6 +3796,167 @@ function renderKpiIncidents(data, body, count, critiquesOnly) {
 }
 
 </script>
+<div id="help-overlay" onclick="if(event.target===this)closeHelpCenter()">
+  <div id="help-box">
+    <div id="help-hdr">
+      <span id="help-title">Centre d'aide</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        
+        
+        <button id="help-close" onclick="closeHelpCenter()" aria-label="Fermer">✕</button>
+      </div>
+    </div>
+    <div id="help-search-wrap"><input type="text" id="help-search" oninput="helpRender()" autocomplete="off"></div>
+    <div id="help-body">
+      <div id="help-list"></div>
+      <div id="help-article" style="display:none"></div>
+    </div>
+  </div>
+</div>
+<script>
+/* ── h111 — Centre d'aide (bilingue FR/EN, recherchable) ─────────────────── */
+function helpLang2(){var c;try{c=(localStorage.getItem('scribe_lang_pref')||'en');}catch(e){c='en';}return String(c).slice(0,2).toLowerCase();}
+var HELP_ARTICLES = [
+ {id:'presentation', cat:{fr:'Démarrer',en:'Getting started',de:'Erste Schritte',es:'Primeros pasos',it:'Per iniziare',nl:'Aan de slag'},
+  title:{fr:'Présentation & architecture',en:'Overview & architecture',de:'Überblick & Architektur',es:'Visión general y arquitectura',it:'Panoramica e architettura',nl:'Overzicht & architectuur'},
+  kw:'scribe presentation about architecture instance supervision collecteur souverain',
+  body:{fr:'<p>SCRIBE est une plateforme open-source de gestion de crise hospitalière et de suivi capacitaire, pensée pour la coordination entre plusieurs établissements (GHT, territoire).</p><p>Elle se compose de deux briques :</p><ul><li><b>L\'instance établissement</b> : la « main courante » d\'un hôpital — incidents, capacité en lits, transferts, rappel du personnel, messagerie, cellule de crise. Chaque établissement a sa propre base de données.</li><li><b>La supervision (collecteur)</b> : un tableau de bord territorial qui agrège l\'état de toutes les instances (incidents, statuts, capacité) sans jamais recevoir de donnée nominative patient.</li></ul><p>Les instances poussent leur situation vers le collecteur toutes les 30 secondes. Le niveau territorial affiché est toujours le <b>pire</b> entre les incidents en cours et le statut déclaré par l\'établissement.</p>',
+       en:'<p>SCRIBE is an open-source hospital crisis-management and capacity-monitoring platform, designed to coordinate several establishments (hospital groups, regions).</p><p>It has two building blocks:</p><ul><li><b>The establishment instance</b>: a hospital\'s operational log — incidents, bed capacity, transfers, staff recall, messaging, crisis cell. Each establishment has its own database.</li><li><b>Supervision (collector)</b>: a territorial dashboard aggregating the state of every instance (incidents, statuses, capacity) without ever receiving patient-identifying data.</li></ul><p>Instances push their situation to the collector every 30 seconds. The territorial level shown is always the <b>worst</b> of ongoing incidents and the establishment\'s declared status.</p>'}},
+
+ {id:'install_docker', cat:{fr:'Installation',en:'Installation',de:'Installation',es:'Instalación',it:'Installazione',nl:'Installatie'},
+  title:{fr:'Installer en Docker (HTTP)',en:'Install with Docker (HTTP)',de:'Mit Docker installieren (HTTP)',es:'Instalar con Docker (HTTP)',it:'Installare con Docker (HTTP)',nl:'Installeren met Docker (HTTP)'},
+  kw:'install docker compose deploy port 8000 conteneur container',
+  body:{fr:'<p>Pour une instance unique, Docker est le plus simple :</p><ol><li>Place ta configuration d\'établissement dans le dossier de déploiement (<code>config.xml</code>).</li><li>Lance : <code>docker compose -f docker-compose.production.yml up -d</code></li><li>L\'application est servie en HTTP sur le port <b>8000</b>.</li></ol><p>Les données (base SQLite, pièces jointes) sont persistées dans un volume <code>/data</code>. Si tu vois une erreur <code>Permission denied</code> sur <code>/data</code>, c\'est que le dossier hôte monté n\'appartient pas à l\'utilisateur du conteneur : préfère un <b>volume nommé Docker</b> (<code>scribe_data:/data</code>), dont les droits sont gérés automatiquement.</p>',
+       en:'<p>For a single instance, Docker is simplest:</p><ol><li>Put your establishment configuration in the deployment folder (<code>config.xml</code>).</li><li>Run: <code>docker compose -f docker-compose.production.yml up -d</code></li><li>The app is served over HTTP on port <b>8000</b>.</li></ol><p>Data (SQLite database, attachments) persists in a <code>/data</code> volume. If you get a <code>Permission denied</code> error on <code>/data</code>, the mounted host folder isn\'t owned by the container user: prefer a <b>named Docker volume</b> (<code>scribe_data:/data</code>), whose permissions are handled automatically.</p>'}},
+
+ {id:'install_https', cat:{fr:'Installation',en:'Installation',de:'Installation',es:'Instalación',it:'Installazione',nl:'Installatie'},
+  title:{fr:'Activer le HTTPS (Caddy)',en:'Enable HTTPS (Caddy)',de:'HTTPS aktivieren (Caddy)',es:'Activar HTTPS (Caddy)',it:'Attivare HTTPS (Caddy)',nl:'HTTPS inschakelen (Caddy)'},
+  kw:'https tls ssl caddy certificat lets encrypt domaine 502',
+  body:{fr:'<p>Pour servir SCRIBE en HTTPS, place <b>Caddy</b> en frontal : il obtient et renouvelle le certificat Let\'s Encrypt automatiquement.</p><ul><li><b>Prérequis</b> : un <b>nom de domaine</b> dont l\'enregistrement A pointe vers l\'IP du serveur. Let\'s Encrypt n\'émet pas pour une IP nue.</li><li>Ouvre les ports <b>80 et 443</b> (le 80 sert au challenge de validation).</li><li>Renseigne <code>SCRIBE_DOMAIN</code> dans le fichier <code>.env</code>, puis : <code>docker compose -f docker-compose.https.yml up -d</code></li></ul><p><b>Dépannage</b> : une erreur <b>502</b> en HTTPS signifie que Caddy fonctionne mais que l\'application derrière ne répond pas (conteneur en redémarrage, souvent un souci de droits sur <code>/data</code>). Vérifie les logs : <code>docker compose -f docker-compose.https.yml logs scribe</code>.</p>',
+       en:'<p>To serve SCRIBE over HTTPS, put <b>Caddy</b> in front: it obtains and renews the Let\'s Encrypt certificate automatically.</p><ul><li><b>Requirement</b>: a <b>domain name</b> whose A record points to the server IP. Let\'s Encrypt won\'t issue for a bare IP.</li><li>Open ports <b>80 and 443</b> (80 is used for the validation challenge).</li><li>Set <code>SCRIBE_DOMAIN</code> in the <code>.env</code> file, then: <code>docker compose -f docker-compose.https.yml up -d</code></li></ul><p><b>Troubleshooting</b>: a <b>502</b> over HTTPS means Caddy works but the app behind it isn\'t answering (container restarting, often a <code>/data</code> permission issue). Check logs: <code>docker compose -f docker-compose.https.yml logs scribe</code>.</p>'}},
+
+ {id:'install_multi', cat:{fr:'Installation',en:'Installation',de:'Installation',es:'Instalación',it:'Installazione',nl:'Installatie'},
+  title:{fr:'Déploiement multi-instances',en:'Multi-instance deployment',de:'Multi-Instanz-Bereitstellung',es:'Despliegue multi-instancia',it:'Distribuzione multi-istanza',nl:'Multi-instance-implementatie'},
+  kw:'multi instance ght g7 collecteur ports scripts bash federation territoire',
+  body:{fr:'<p>Pour un territoire, on lance plusieurs instances d\'établissement plus un collecteur, chacun sur son port. Les scripts de lancement démarrent les processus directement (HTTP) :</p><ul><li>Chaque établissement écoute sur un port dédié (ex. 8000, 8001, …).</li><li>Le <b>collecteur</b> (supervision) écoute sur son propre port (ex. 9000).</li><li>Une <b>instance de démonstration</b> peut tourner en parallèle, isolée, avec son propre collecteur.</li></ul><p>Chaque instance est reliée au collecteur par un <b>token de fédération</b> déclaré dans sa configuration. Le collecteur n\'accepte que les instances pré-enrôlées (token validé). Pour exposer tout cela en HTTPS, on place un reverse proxy (Caddy ou Nginx) devant, avec un routage par chemin ou par sous-domaine.</p>',
+       en:'<p>For a territory, you run several establishment instances plus one collector, each on its own port. Launch scripts start the processes directly (HTTP):</p><ul><li>Each establishment listens on a dedicated port (e.g. 8000, 8001, …).</li><li>The <b>collector</b> (supervision) listens on its own port (e.g. 9000).</li><li>A <b>demo instance</b> can run in parallel, isolated, with its own collector.</li></ul><p>Each instance connects to the collector via a <b>federation token</b> declared in its configuration. The collector only accepts pre-enrolled instances (validated token). To expose all of this over HTTPS, put a reverse proxy (Caddy or Nginx) in front, with path-based or subdomain routing.</p>'}},
+
+ {id:'configuration', cat:{fr:'Configuration',en:'Configuration',de:'Konfiguration',es:'Configuración',it:'Configurazione',nl:'Configuratie'},
+  title:{fr:'Configurer l\'établissement',en:'Configure the establishment',de:'Einrichtung konfigurieren',es:'Configurar el establecimiento',it:'Configurare la struttura',nl:'De instelling configureren'},
+  kw:'config configuration xml uf unite fonctionnelle pole referentiel token albert',
+  body:{fr:'<p>La configuration d\'une instance se fait via un fichier XML d\'établissement et des scripts d\'initialisation qui peuplent la base. On y définit :</p><ul><li><b>L\'établissement</b> : nom, sigle, coordonnées géographiques (pour la carte).</li><li><b>Les pôles et unités fonctionnelles (UF)</b> : la structure médicale, utilisée dans les menus Incidents et Capacité.</li><li><b>Le référentiel capacitaire</b> : le nombre de lits par UF/pôle servant de base au suivi de tension.</li><li><b>La fédération</b> : l\'URL du collecteur et le token d\'enrôlement.</li><li><b>L\'IA Albert</b> : la clé d\'accès (jamais incluse dans les archives publiques).</li></ul><p>L\'administration des UF se fait aussi en direct depuis l\'interface (onglet Admin) : on peut activer/désactiver une UF. Une UF désactivée reste en base pour préserver l\'historique des incidents, mais disparaît des menus déroulants.</p>',
+       en:'<p>An instance is configured via an establishment XML file and initialisation scripts that populate the database. You define:</p><ul><li><b>The establishment</b>: name, code, geographic coordinates (for the map).</li><li><b>Units and functional units</b>: the medical structure, used in the Incidents and Capacity menus.</li><li><b>The capacity baseline</b>: the number of beds per unit, the basis for strain monitoring.</li><li><b>Federation</b>: the collector URL and enrolment token.</li><li><b>Albert AI</b>: the access key (never included in public archives).</li></ul><p>Unit administration is also done live from the interface (Admin tab): you can enable/disable a unit. A disabled unit stays in the database to preserve incident history but disappears from the dropdown menus.</p>'}},
+
+ {id:'connexion', cat:{fr:'Démarrer',en:'Getting started',de:'Erste Schritte',es:'Primeros pasos',it:'Per iniziare',nl:'Aan de slag'},
+  title:{fr:'Connexion, rôles & langue',en:'Login, roles & language',de:'Anmeldung, Rollen & Sprache',es:'Inicio de sesión, roles e idioma',it:'Accesso, ruoli e lingua',nl:'Inloggen, rollen & taal'},
+  kw:'login connexion role compte mot de passe langue admin cellule soignant',
+  body:{fr:'<p>Saisis ton identifiant et ton mot de passe sur la page d\'accueil. Le sélecteur de <b>langue</b> est en haut de l\'écran (24 langues européennes).</p><p>Les comptes ont des <b>rôles</b> qui conditionnent ce qui est visible et autorisé : direction de crise / cellule, soignant, administrateur. Les fonctions d\'administration (gestion des UF, des comptes, déclenchement de rappel) sont réservées aux rôles habilités.</p><p>La création et la gestion des comptes se font dans <b>Administration → Utilisateurs</b>. Les mots de passe sont stockés hachés (bcrypt) ; le login est protégé contre les tentatives répétées.</p>',
+       en:'<p>Enter your username and password on the home page. The <b>language</b> selector is at the top of the screen (24 European languages).</p><p>Accounts have <b>roles</b> that govern what is visible and allowed: crisis management / cell, caregiver, administrator. Administration functions (managing units, accounts, triggering recall) are restricted to authorised roles.</p><p>Account creation and management happen in <b>Administration → Users</b>. Passwords are stored hashed (bcrypt); login is protected against repeated attempts.</p>'}},
+
+ {id:'dashboard', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Le tableau de bord',en:'The dashboard',de:'Das Dashboard',es:'El panel de control',it:'La dashboard',nl:'Het dashboard'},
+  kw:'dashboard tableau de bord accueil kpi rappel widget jauge cooperation',
+  body:{fr:'<p>Le tableau de bord est la vue de synthèse de ton établissement. On y trouve :</p><ul><li>Les <b>indicateurs clés</b> : incidents actifs, incidents critiques, capacité globale, transferts en cours, messages non lus.</li><li>La <b>capacité par pôle</b> : un coup d\'œil sur les services en tension.</li><li>La <b>coopération territoriale</b> : l\'état des établissements partenaires.</li><li>Le <b>widget Rappel du personnel</b> : lors d\'un rappel actif, une jauge demi-cercle montre les personnes appelées, celles qui ont répondu et celles qui arrivent.</li></ul><p>Le tableau se rafraîchit automatiquement. C\'est l\'écran à garder ouvert pendant une crise.</p>',
+       en:'<p>The dashboard is your establishment\'s summary view. It shows:</p><ul><li><b>Key indicators</b>: active incidents, critical incidents, overall capacity, ongoing transfers, unread messages.</li><li><b>Capacity by unit</b>: an at-a-glance view of strained services.</li><li><b>Territorial cooperation</b>: the state of partner establishments.</li><li>The <b>Staff recall widget</b>: during an active recall, a half-circle gauge shows people called, those who responded, and those arriving.</li></ul><p>The dashboard refreshes automatically. It is the screen to keep open during a crisis.</p>'}},
+
+ {id:'incidents', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Déclarer et suivre un incident',en:'Declare and track an incident',de:'Vorfall melden und verfolgen',es:'Declarar y seguir un incidente',it:'Dichiarare e seguire un incidente',nl:'Een incident melden en volgen'},
+  kw:'incident declarer urgence gravite veille cyber sanitaire mixte impact transversal directeur diffusion',
+  body:{fr:'<p>L\'onglet <b>Incidents</b> est le cœur de la main courante. Pour déclarer :</p><ol><li>Choisis le <b>type</b> : cyber, sanitaire ou mixte.</li><li>Fixe le <b>niveau d\'urgence</b>, de 1 (veille / information) à 4 (critique). Un niveau ≥ 3 (grave/critique) déclenche la notification des directeurs.</li><li>Rattache l\'incident à un <b>pôle / une UF</b> et décris le fait.</li><li>Coche <b>impact transversal</b> si l\'événement touche tout l\'établissement : les services basculent alors au moins en « tension », et le statut public passe en « perturbé ».</li><li>Diffuse avec le bouton dédié.</li></ol><p>Chaque incident est horodaté et historisé. Les incidents alimentent le niveau de gravité remonté à la supervision territoriale.</p>',
+       en:'<p>The <b>Incidents</b> tab is the heart of the operational log. To declare one:</p><ol><li>Pick the <b>type</b>: cyber, health, or mixed.</li><li>Set the <b>urgency level</b>, from 1 (watch / info) to 4 (critical). A level ≥ 3 (serious/critical) triggers director notifications.</li><li>Attach the incident to a <b>unit</b> and describe the event.</li><li>Tick <b>cross-cutting impact</b> if the event affects the whole establishment: services then move at least to "strained", and the public status becomes "disrupted".</li><li>Broadcast with the dedicated button.</li></ol><p>Every incident is timestamped and archived. Incidents feed the severity level reported to territorial supervision.</p>'}},
+
+ {id:'main_courante', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Main courante & tâches (kanban)',en:'Activity log & tasks (kanban)',de:'Einsatztagebuch & Aufgaben (Kanban)',es:'Registro de actividad y tareas (kanban)',it:'Diario attività e compiti (kanban)',nl:'Logboek & taken (kanban)'},
+  kw:'main courante log journal kanban tache task action categorie filtre',
+  body:{fr:'<p>La <b>main courante</b> journalise toutes les actions de la cellule de crise : décisions, événements, communications. Chaque entrée porte un auteur, un horodatage, une catégorie et une action. Tu peux filtrer par catégorie pour retrouver rapidement une décision.</p><p>Le <b>kanban des tâches</b> permet de suivre le « qui fait quoi » : créer des tâches, les assigner, les faire avancer par colonnes (à faire / en cours / fait). C\'est l\'outil de pilotage opérationnel pendant l\'événement.</p><p>L\'ensemble est exportable lors de l\'archivage, pour le retour d\'expérience et la traçabilité.</p>',
+       en:'<p>The <b>activity log</b> records every action of the crisis cell: decisions, events, communications. Each entry has an author, timestamp, category and action. You can filter by category to quickly find a decision.</p><p>The <b>task kanban</b> tracks who-does-what: create tasks, assign them, move them across columns (to do / in progress / done). It is the operational steering tool during the event.</p><p>Everything can be exported when archiving, for after-action review and traceability.</p>'}},
+
+ {id:'capacite', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Capacité en lits',en:'Bed capacity',de:'Bettenkapazität',es:'Capacidad de camas',it:'Capacità di posti letto',nl:'Bedcapaciteit'},
+  kw:'capacite capacity lits beds tension pole service referentiel statut vert orange rouge',
+  body:{fr:'<p>L\'onglet <b>Capacité</b> suit l\'occupation des lits par pôle et par service, à partir du référentiel capacitaire configuré.</p><p>Chaque service affiche un statut à trois niveaux : <b>normal</b> (vert), <b>tension</b> (orange), <b>critique / fermé</b> (rouge). Tu déclares la situation au fil de l\'eau ; l\'historique des déclarations est conservé.</p><p>La capacité globale de l\'établissement est calculée à partir de ces statuts et remonte à la supervision. Rappel : un <b>impact transversal</b> actif force automatiquement les services à au moins « tension ».</p>',
+       en:'<p>The <b>Capacity</b> tab tracks bed occupancy by unit and service, based on the configured capacity baseline.</p><p>Each service shows a three-level status: <b>normal</b> (green), <b>strained</b> (orange), <b>critical / closed</b> (red). You declare the situation as it evolves; the declaration history is kept.</p><p>The establishment\'s overall capacity is computed from these statuses and reported to supervision. Reminder: an active <b>cross-cutting impact</b> automatically forces services to at least "strained".</p>'}},
+
+ {id:'transferts', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Transferts de patients',en:'Patient transfers',de:'Patiententransfers',es:'Traslados de pacientes',it:'Trasferimenti di pazienti',nl:'Patiëntoverplaatsingen'},
+  kw:'transfert transfer patient ambulance trajectoire osrm eta destination carte hds',
+  body:{fr:'<p>L\'onglet <b>Transferts</b> gère les transferts entre établissements. Pour chaque transfert tu renseignes l\'établissement et le site de destination ainsi que l\'heure estimée d\'arrivée.</p><p>Sur la carte (onglet Soins), un transfert en cours s\'affiche avec sa <b>trajectoire routière</b> (calculée via OSRM) et la progression de l\'ambulance selon l\'ETA. Le site de destination exact est utilisé pour positionner correctement le trajet.</p><p><b>Important</b> : aucune donnée nominative patient ne remonte à la supervision territoriale — seul l\'établissement gère ces informations (conformité HDS / RGPD).</p>',
+       en:'<p>The <b>Transfers</b> tab manages inter-establishment patient transfers. For each transfer you enter the destination establishment and site plus the estimated time of arrival.</p><p>On the map (Care tab), an ongoing transfer is shown with its <b>road route</b> (computed via OSRM) and the ambulance progress based on the ETA. The exact destination site is used to position the route correctly.</p><p><b>Important</b>: no patient-identifying data is sent to territorial supervision — only the establishment handles this information (HDS / GDPR compliance).</p>'}},
+
+ {id:'rappel', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Rappel du personnel',en:'Staff recall',de:'Personalrückruf',es:'Llamada del personal',it:'Richiamo del personale',nl:'Personeel oproepen'},
+  kw:'rappel personnel mobilisation recall sms mail vague escalade preset cible confirmation arrivee jauge widget telephonie bascule',
+  body:{fr:'<p>Le <b>rappel du personnel</b> permet de mobiliser les agents de garde ou d\'astreinte en masse pendant une crise, via SMS et/ou e-mail.</p><h2>Flux type</h2><ol><li><b>Cibler</b> : sélectionne le personnel par type (astreinte direction, astreinte technique, cadres de santé…) et par lieu (site, service). Enregistre des <b>presets</b> (listes types) pour déclencher un rappel en deux clics.</li><li><b>Pré-visualiser</b> : avant l\'envoi, un écran de confirmation liste les destinataires, leurs contacts et les canaux retenus.</li><li><b>Envoyer</b> : SMS via la passerelle configurée (OVH, Twilio, Free…) et/ou e-mail via SMTP. Chaque message contient un lien individuel sécurisé.</li><li><b>Suivre les réponses</b> : chaque destinataire clique sur son lien et confirme son heure d\'arrivée estimée. Le <b>widget jauge demi-cercle</b> sur le tableau de bord affiche en temps réel : appelés / ont répondu / sont arrivés / manquent à l\'appel.</li><li><b>Escalader par vagues</b> : si une première vague est insuffisante, relance automatique des non-répondants. Chaque vague nécessite la validation de la cellule.</li></ol><h2>Bascule téléphonie</h2><p>En cas de crise CYBER, si le PABX/IPBX est impacté, SCRIBE bascule automatiquement l\'affichage de l\'annuaire vers les <b>numéros de secours</b> configurés. Les agents contactés via le lien de rappel voient aussi ces numéros alternatifs.</p><p>⚠️ Le rappel envoie de <b>vrais SMS à des vrais numéros</b> : toujours tester en exercice (instances exercice isolées) avant un usage réel. La configuration SMS/SMTP se fait dans <b>Admin → Notifications</b>.</p>',
+       en:'<p>The <b>staff recall</b> mobilises on-call or on-duty staff at scale during a crisis, via SMS and/or email.</p><h2>Typical flow</h2><ol><li><b>Target</b>: select staff by type (management on-call, technical on-call, nursing leads…) and location (site, service). Save <b>presets</b> (standard lists) to trigger a recall in two clicks.</li><li><b>Preview</b>: a confirmation screen lists recipients, their contacts and selected channels before sending.</li><li><b>Send</b>: SMS via the configured gateway (OVH, Twilio, Free…) and/or email via SMTP. Each message contains a secure personal link.</li><li><b>Track responses</b>: each recipient clicks their link and confirms their estimated arrival time. The <b>half-circle gauge widget</b> on the dashboard shows in real time: called / responded / arrived / missing.</li><li><b>Escalate in waves</b>: if a first wave is insufficient, automatically re-contact non-responders. Each wave requires cell confirmation.</li></ol><h2>Telephony failover</h2><p>During a CYBER crisis, if the PBX/IPBX is impacted, SCRIBE automatically switches the directory display to configured <b>emergency numbers</b>. Staff contacted via the recall link also see these fallback numbers.</p><p>⚠️ Recall sends <b>real SMS to real numbers</b>: always test in an exercise (isolated exercise instances) before real use. SMS/SMTP configuration is in <b>Admin → Notifications</b>.</p>'}},
+
+ {id:'communication', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Chat, messagerie & annuaire',en:'Chat, messaging & directory',de:'Chat, Nachrichten & Verzeichnis',es:'Chat, mensajería y directorio',it:'Chat, messaggistica e rubrica',nl:'Chat, berichten & adresboek'},
+  kw:'chat messagerie messaging salon channel inbox message annuaire directory territorial mention',
+  body:{fr:'<p>SCRIBE propose trois outils de communication complémentaires :</p><ul><li><b>Chat</b> : des salons en temps réel, locaux (ton établissement) ou territoriaux (partagés entre tous les établissements du GHT), avec mentions @ et pièces jointes. Idéal pour la coordination à chaud.</li><li><b>Messagerie interne</b> : fonctionne comme une boîte mail (Reçus, Envoyés, Brouillons) pour des messages plus formels, y compris inter-établissements.</li><li><b>Annuaire</b> : les contacts utiles de l\'établissement et du territoire.</li></ul><p>⚠️ Les salons territoriaux et le canal de supervision <b>sortent de l\'établissement</b> : n\'y publie jamais de donnée nominative patient.</p>',
+       en:'<p>SCRIBE offers three complementary communication tools:</p><ul><li><b>Chat</b>: real-time rooms, local (your establishment) or territorial (shared across all establishments in the group), with @ mentions and attachments. Ideal for live coordination.</li><li><b>Internal messaging</b>: works like a mailbox (Inbox, Sent, Drafts) for more formal messages, including inter-establishment.</li><li><b>Directory</b>: useful contacts for the establishment and the territory.</li></ul><p>⚠️ Territorial rooms and the supervision channel <b>leave the establishment</b>: never post patient-identifying data there.</p>'}},
+
+ {id:'cellule', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Cellule de crise : relève, communiqués, REX',en:'Crisis cell: handover, briefings, AAR',de:'Krisenstab: Übergabe, Briefings, Nachbesprechung',es:'Célula de crisis: relevo, briefings, AAR',it:'Cellula di crisi: consegne, briefing, debriefing',nl:'Crisiscel: overdracht, briefings, evaluatie'},
+  kw:'cellule crise releve garde communique rex retour experience archivage zip',
+  body:{fr:'<p>Plusieurs outils structurent le travail de la cellule de crise dans la durée :</p><ul><li><b>Relève de garde</b> : transmettre une situation synthétique à l\'équipe suivante, pour une continuité sans perte d\'information sur des crises longues.</li><li><b>Communiqués</b> : rédiger et diffuser des messages officiels (interne, partenaires).</li><li><b>REX (retour d\'expérience)</b> : consigner ce qui a marché et ce qui doit être amélioré, à chaud puis à froid.</li></ul><p>À la fin d\'un événement, l\'<b>archivage</b> génère un ZIP téléchargeable depuis l\'interface, regroupant main courante, décisions et éléments de traçabilité — base du débriefing et des obligations réglementaires.</p>',
+       en:'<p>Several tools structure the crisis cell\'s work over time:</p><ul><li><b>Shift handover</b>: pass a concise situation to the next team, for continuity without information loss during long crises.</li><li><b>Briefings</b>: write and distribute official messages (internal, partners).</li><li><b>After-action review (AAR)</b>: record what worked and what should improve, both during and after.</li></ul><p>At the end of an event, <b>archiving</b> generates a downloadable ZIP from the interface, bundling the activity log, decisions and traceability items — the basis for debriefing and regulatory obligations.</p>'}},
+
+ {id:'albert', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Analyse par l\'IA Albert',en:'Albert AI analysis',de:'Albert-KI-Analyse',es:'Análisis con IA Albert',it:'Analisi con IA Albert',nl:'Albert AI-analyse'},
+  kw:'albert ia ai intelligence artificielle analyse souverain llm synthese',
+  body:{fr:'<p>SCRIBE intègre <b>Albert</b>, le grand modèle de langage souverain de l\'État français, pour assister la cellule sans dépendre d\'un service étranger.</p><p>Albert peut produire des <b>synthèses de situation</b> et de l\'aide à la décision à partir du contexte de crise (incidents, capacité, mobilisation : vagues, manquants, échecs d\'envoi). C\'est une aide, pas un décideur : les analyses restent à valider par la cellule.</p><p>La clé d\'accès Albert se configure côté serveur et n\'est jamais incluse dans les archives publiques, pour des raisons de sécurité.</p>',
+       en:'<p>SCRIBE integrates <b>Albert</b>, the French State\'s sovereign large language model, to assist the cell without relying on a foreign service.</p><p>Albert can produce <b>situation summaries</b> and decision support from the crisis context (incidents, capacity, mobilisation: waves, missing people, send failures). It is an aid, not a decision-maker: analyses remain for the cell to validate.</p><p>The Albert access key is configured server-side and is never included in public archives, for security reasons.</p>'}},
+
+ {id:'supervision', cat:{fr:'Coordination',en:'Coordination',de:'Koordination',es:'Coordinación',it:'Coordinamento',nl:'Coördinatie'},
+  title:{fr:'Supervision territoriale (collecteur)',en:'Territorial supervision (collector)',de:'Territoriale Aufsicht (Kollektor)',es:'Supervisión territorial (colector)',it:'Supervisione territoriale (collettore)',nl:'Territoriaal toezicht (collector)'},
+  kw:'supervision collecteur territoire niveau global statut public carte instances enrolement',
+  body:{fr:'<p>La <b>supervision</b> est le poste de pilotage du territoire. Elle agrège, en lecture seule, l\'état remonté par chaque instance :</p><ul><li>Le <b>niveau global</b> par établissement, qui est toujours le pire entre ses incidents et son statut déclaré.</li><li>Les <b>statuts publics</b> (page /status) : opérationnel, perturbé, etc.</li><li>La <b>cartographie</b> du territoire et les transferts inter-établissements.</li><li>La <b>messagerie et le chat</b> territoriaux.</li></ul><p>Une instance n\'apparaît dans la supervision qu\'après <b>enrôlement</b> : elle propose son token, l\'administrateur du collecteur l\'accepte. Aucune donnée nominative patient ne transite par le collecteur.</p>',
+       en:'<p><b>Supervision</b> is the territory\'s control desk. It aggregates, read-only, the state reported by each instance:</p><ul><li>The <b>global level</b> per establishment, always the worst of its incidents and its declared status.</li><li><b>Public statuses</b> (/status page): operational, disrupted, etc.</li><li>The territory <b>map</b> and inter-establishment transfers.</li><li>Territorial <b>messaging and chat</b>.</li></ul><p>An instance only appears in supervision after <b>enrolment</b>: it offers its token, the collector administrator accepts it. No patient-identifying data passes through the collector.</p>'}},
+
+ {id:'exercices', cat:{fr:'Coordination',en:'Coordination',de:'Koordination',es:'Coordinación',it:'Coordinamento',nl:'Coördinatie'},
+  title:{fr:'Mode exercice',en:'Exercise mode',de:'Übungsmodus',es:'Modo ejercicio',it:'Modalità esercitazione',nl:'Oefenmodus'},
+  kw:'exercice exercise scenario stimuli animateur entrainement formation isole',
+  body:{fr:'<p>Le <b>mode exercice</b> permet de s\'entraîner sans toucher à la production. Des instances dédiées tournent sur des bases isolées, pilotées par un poste <b>animateur</b> qui injecte des stimuli (événements scénarisés) vers les établissements joueurs.</p><p>Un scénario décrit les acteurs, la chronologie des stimuli et les décisions attendues. C\'est l\'outil idéal pour valider les procédures, former les équipes et tester des fonctions sensibles (comme le rappel du personnel) avant un usage réel.</p>',
+       en:'<p><b>Exercise mode</b> lets you train without touching production. Dedicated instances run on isolated databases, driven by an <b>animator</b> station that injects stimuli (scripted events) toward the playing establishments.</p><p>A scenario describes the actors, the timeline of stimuli, and the expected decisions. It is the ideal tool to validate procedures, train teams, and test sensitive functions (such as staff recall) before real use.</p>'}},
+
+ {id:'sauvegarde', cat:{fr:'Administration',en:'Administration',de:'Administration',es:'Administración',it:'Amministrazione',nl:'Beheer'},
+  title:{fr:'Sauvegarde & restauration',en:'Backup & restore',de:'Sicherung & Wiederherstellung',es:'Copia de seguridad y restauración',it:'Backup e ripristino',nl:'Back-up & herstel'},
+  kw:'sauvegarde backup restauration restore zip export import chiffre password aes ght',
+  body:{fr:'<p>Depuis la supervision, tu peux <b>exporter la configuration du territoire</b> (établissements, identifiants admin, structure UF, capacité) dans une archive <b>.zip</b>.</p><p>L\'archive peut être <b>chiffrée par mot de passe</b> (AES) : ce mot de passe sera exigé pour la restauration. C\'est la sauvegarde de référence à conserver hors-ligne.</p><p><b>Précautions</b> : l\'archive contient des identifiants — garde-la en lieu sûr, ne la publie jamais (ni sur un dépôt public, ni vers le collecteur). Teste toujours un cycle sauvegarde → restauration sur une instance vierge avant de t\'y fier.</p>',
+       en:'<p>From supervision, you can <b>export the territory configuration</b> (establishments, admin credentials, unit structure, capacity) into a <b>.zip</b> archive.</p><p>The archive can be <b>password-encrypted</b> (AES): that password will be required to restore. This is the reference backup to keep offline.</p><p><b>Precautions</b>: the archive contains credentials — keep it safe, never publish it (not on a public repository, nor to the collector). Always test a backup → restore cycle on a clean instance before relying on it.</p>'}},
+
+ {id:'securite', cat:{fr:'Administration',en:'Administration',de:'Administration',es:'Administración',it:'Amministrazione',nl:'Beheer'},
+  title:{fr:'Sécurité & conformité',en:'Security & compliance',de:'Sicherheit & Compliance',es:'Seguridad y cumplimiento',it:'Sicurezza e conformità',nl:'Beveiliging & naleving'},
+  kw:'securite security bcrypt rate limit cors headers rgpd hds donnees patient secret key',
+  body:{fr:'<p>SCRIBE applique une base de sécurité robuste :</p><ul><li><b>Mots de passe hachés</b> (bcrypt), avec limitation des tentatives de connexion.</li><li><b>En-têtes HTTP de sécurité</b> et <b>CORS restreint</b> aux origines déclarées.</li><li><b>Clé secrète</b> stockée en variable d\'environnement, jamais en clair dans le code.</li></ul><p><b>Conformité données de santé</b> : les données nominatives patients ne quittent jamais l\'établissement vers la supervision (HDS / RGPD). Avant toute diffusion publique du code, on retire systématiquement les références internes (sigles, noms de sites, URLs, clés d\'API) ; les configurations de démonstration ne contiennent jamais d\'identifiants réels.</p>',
+       en:'<p>SCRIBE enforces a robust security baseline:</p><ul><li><b>Hashed passwords</b> (bcrypt), with login rate limiting.</li><li><b>HTTP security headers</b> and <b>CORS restricted</b> to declared origins.</li><li><b>Secret key</b> stored in an environment variable, never in plaintext in the code.</li></ul><p><b>Health-data compliance</b>: patient-identifying data never leaves the establishment toward supervision (HDS / GDPR). Before any public code release, internal references (codes, site names, URLs, API keys) are systematically removed; demo configurations never contain real credentials.</p>'}}
+];
+function openHelpCenter(){ var o=document.getElementById('help-overlay'); if(!o)return; o.classList.add('open'); var L=helpLang2(); var s=document.getElementById('help-search'); if(s){s.placeholder=L==='fr'?'Rechercher dans l\'aide…':'Search help…'; s.value='';} var t=document.getElementById('help-title'); if(t)t.textContent=L==='fr'?'Centre d\'aide':'Help center'; helpRender(); if(s)setTimeout(function(){s.focus();},50); }
+function closeHelpCenter(){ var o=document.getElementById('help-overlay'); if(o)o.classList.remove('open'); }
+function helpRender(){
+  var listEl=document.getElementById('help-list'), artEl=document.getElementById('help-article'), s=document.getElementById('help-search');
+  if(!listEl)return; artEl.style.display='none'; listEl.style.display='block';
+  var L=helpLang2(), q=(s&&s.value||'').trim().toLowerCase();
+  var t=document.getElementById('help-title'); if(t)t.textContent=L==='fr'?'Centre d\'aide':'Help center';
+  if(s)s.placeholder=L==='fr'?'Rechercher dans l\'aide…':'Search help…';
+  var hits=HELP_ARTICLES.filter(function(a){ if(!q)return true; var hay=((a.title[L]||a.title.en)+' '+(a.body[L]||a.body.en)+' '+a.kw+' '+(a.cat[L]||a.cat.en)).toLowerCase(); return hay.indexOf(q)>=0; });
+  if(!hits.length){ listEl.innerHTML='<div class="help-empty">'+(L==='fr'?'Aucun résultat.':'No results.')+'</div>'; return; }
+  listEl.innerHTML=hits.map(function(a){ return '<div class="help-item" onclick="helpShowArticle(\''+a.id+'\')"><div class="help-item-cat">'+(a.cat[L]||a.cat.en)+'</div><div class="help-item-title">'+(a.title[L]||a.title.en)+'</div></div>'; }).join('');
+}
+function helpShowArticle(id){
+  var a=HELP_ARTICLES.find(function(x){return x.id===id;}); if(!a)return;
+  var L=helpLang2(), listEl=document.getElementById('help-list'), artEl=document.getElementById('help-article');
+  listEl.style.display='none'; artEl.style.display='block';
+  artEl.innerHTML='<button id="help-back" onclick="helpRender()">← '+(L==='fr'?'Retour':'Back')+'</button><h2>'+(a.title[L]||a.title.en)+'</h2>'+(a.body[L]||a.body.en);
+}
+
+ {id:'bluefiles', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
+  title:{fr:'Envoi sécurisé BlueFiles',en:'Secure BlueFiles transfer',de:'Sicherer BlueFiles-Versand',es:'Envío seguro BlueFiles',it:'Invio sicuro BlueFiles',nl:'Veilige BlueFiles-verzending'},
+  kw:'bluefiles securise hds chiffrement bout en bout transfert fichier patient donnees sensibles supervision messagerie envoi configuration admin',
+  body:{fr:'<p>SCRIBE intègre nativement <b>BlueFiles</b> (Forecomm), service d\'envoi sécurisé chiffré bout-en-bout, hébergé HDS. Il est disponible à deux niveaux :</p><ul><li><b>Depuis une instance établissement</b> : dans la messagerie (onglet MESSAGERIE), le bouton <b>« Envoi sécurisé par BlueFiles »</b> ouvre un panneau dédié (fichiers par glisser-déposer, destinataires email, commentaire). L\'envoi est un <b>transfert indépendant</b> — le contenu ne transite jamais par SCRIBE, il est chiffré côté BlueFiles.</li><li><b>Depuis la supervision</b> : dans l\'onglet MESSAGES, le bouton <b>« 🔒 Envoi sécurisé BlueFiles »</b> apparaît si le plugin est activé. Il permet d\'envoyer des fichiers sensibles depuis le poste de supervision territoriale.</li></ul><h2>Configuration (établissement)</h2><p>Dans <b>Admin → Plugins → BlueFiles</b> : renseigne le login, le mot de passe (chiffré Fernet au repos), et le serveur (défaut : <code>api.bluefiles.com</code>). Un bouton <b>Tester</b> vérifie la connexion sans envoyer de fichier.</p><h2>Configuration (supervision)</h2><p>Dans <b>Admin → Transfert sécurisé (BlueFiles)</b> : mêmes champs (login, mot de passe, serveur), case « Activer ». Bouton Tester disponible. Après activation, le bouton apparaît automatiquement dans la messagerie de supervision.</p><h2>Traçabilité & conformité</h2><ul><li>Chaque envoi est <b>tracé</b> dans SCRIBE (journal de bord interne).</li><li>Le contenu des fichiers ne touche jamais les serveurs SCRIBE — il est chiffré bout-en-bout chez BlueFiles.</li><li>Aucune copie locale des fichiers envoyés n\'est conservée sur SCRIBE.</li><li>Compatible HDS — idéal pour les données de santé sensibles (bilans patients, listes nominatives) à partager entre établissements en situation de crise.</li></ul><p>⚠️ Ce n\'est pas une pièce jointe à un message SCRIBE : c\'est un <b>envoi sécurisé indépendant</b>. Le destinataire reçoit un email BlueFiles avec un lien de téléchargement sécurisé.</p>',
+       en:'<p>SCRIBE natively integrates <b>BlueFiles</b> (Forecomm), an end-to-end encrypted secure file transfer service with HDS hosting. It is available at two levels:</p><ul><li><b>From an establishment instance</b>: in the messaging module (MESSAGING tab), the <b>"Secure send via BlueFiles"</b> button opens a dedicated panel (drag-and-drop files, email recipients, comment). The send is an <b>independent transfer</b> — content never transits through SCRIBE, it is encrypted on the BlueFiles side.</li><li><b>From supervision</b>: in the MESSAGES tab, the <b>"🔒 Secure BlueFiles send"</b> button appears if the plugin is enabled. It allows sending sensitive files from the territorial supervision desk.</li></ul><h2>Setup (establishment)</h2><p>In <b>Admin → Plugins → BlueFiles</b>: enter the login, password (Fernet-encrypted at rest), and server (default: <code>api.bluefiles.com</code>). A <b>Test</b> button verifies the connection without sending a file.</p><h2>Setup (supervision)</h2><p>In <b>Admin → Secure transfer (BlueFiles)</b>: same fields (login, password, server), with an Enable checkbox. Test button available. Once enabled, the button appears automatically in the supervision messaging bar.</p><h2>Traceability & compliance</h2><ul><li>Every transfer is <b>logged</b> in SCRIBE (internal audit trail).</li><li>File content never touches SCRIBE servers — it is end-to-end encrypted at BlueFiles.</li><li>No local copy of sent files is retained on SCRIBE.</li><li>HDS-compatible — ideal for sensitive health data (patient summaries, staff lists) to share between establishments during a crisis.</li></ul><p>⚠️ This is not a SCRIBE message attachment: it is an <b>independent secure transfer</b>. The recipient receives a BlueFiles email with a secure download link.</p>'}},
+
+</script>
 </body>
 </html>"""
 
@@ -3612,8 +4108,8 @@ async def coll_msg_to_instance(
             port = _p
             break
     if port is None:
-        PORT_MAP = {"DEMO": "8000", "HOSPITAL-B": "8001", "HOSPITAL-C": "8002", "HOSPITAL-D": "8003",
-                    "HOSPITAL-C": "8002", "HOSPITAL-D": "8003", "HOSPITAL-E": "8004", "HOSPITAL-F": "8005", "HOSPITAL-G": "8006"}
+        PORT_MAP = {"CHAG": "8000", "GHTLMB": "8001", "GHTSAV": "8002", "GHTAD38": "8003",
+                    "CHRUMILLY": "8002", "HDLEMAN": "8003", "HPMB": "8004", "CHB": "8005", "CHPG": "8006"}
         port = PORT_MAP.get(_want, "8000")
     url = f"http://127.0.0.1:{port}/api/v1/messagerie/ingest"
 
@@ -3723,6 +4219,162 @@ async def central_config_pull(credentials=Depends(security)):
     from datetime import datetime, timezone
     last_config_pull[sigle] = datetime.now(timezone.utc).isoformat()
     return {"ok": True, "config": _ccs.for_instance()}
+
+
+# ── h145 — BlueFiles supervision : status + envoi ────────────────────────────
+
+def _coll_bf_binary():
+    """Chemin du binaire BlueFilesTransfer accessible depuis la supervision.
+    Cherche d'abord dans plugins/bluefiles/tools/ (build privé G7),
+    puis dans le dossier collecteur/ si copié manuellement."""
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    candidates = [
+        root / "plugins" / "bluefiles" / "tools" / "BlueFilesTransfer",
+        pathlib.Path(__file__).resolve().parent / "BlueFilesTransfer",
+    ]
+    for c in candidates:
+        if c.exists() and os.access(str(c), os.X_OK):
+            return str(c)
+    return None
+
+
+def _coll_bf_config():
+    """Config BlueFiles collecteur (login/password/server) en clair."""
+    if not _ccs:
+        return None
+    cfg = _ccs.load_clear().get("bluefiles", {})
+    if not cfg.get("enabled") or not cfg.get("login") or not cfg.get("password"):
+        return None
+    return cfg
+
+
+@app.get("/api/admin/bluefiles/status", dependencies=[Depends(require_admin)])
+async def coll_bf_status():
+    """État du plugin BlueFiles côté supervision."""
+    binary = _coll_bf_binary()
+    cfg = _coll_bf_config()
+    return {
+        "binary_present": bool(binary),
+        "binary_path":    binary or "",
+        "configured":     bool(cfg),
+        "has_login":      bool((cfg or {}).get("login")),
+        "has_password":   bool((cfg or {}).get("password")),
+        "server":         (cfg or {}).get("server", "api.bluefiles.com"),
+        "ready":          bool(binary and cfg),
+    }
+
+
+@app.post("/api/admin/bluefiles/send", dependencies=[Depends(require_admin)])
+async def coll_bf_send(request: Request):
+    """Envoi BlueFiles depuis la supervision.
+    Multipart : file(s) + recipients (JSON) + object + message."""
+    import tempfile, stat, subprocess
+    binary = _coll_bf_binary()
+    if not binary:
+        raise HTTPException(400, "Binaire BlueFilesTransfer introuvable.")
+    cfg = _coll_bf_config()
+    if not cfg:
+        raise HTTPException(400, "BlueFiles non configuré ou désactivé dans l'administration.")
+
+    form = await request.form()
+    recipients_raw = form.get("recipients", "[]")
+    obj     = form.get("object", "Document sécurisé — SCRIBE Supervision")
+    message = form.get("message", "")
+
+    try:
+        recipients = json.loads(recipients_raw) if isinstance(recipients_raw, str) else []
+    except Exception:
+        recipients = []
+    if not recipients:
+        raise HTTPException(400, "Au moins un destinataire requis.")
+
+    # Sauvegarder les fichiers uploadés dans un répertoire temporaire
+    tmp_dir = tempfile.mkdtemp(prefix="scribe_bf_")
+    file_paths = []
+    try:
+        # Taille max par fichier : 200 Mo
+        MAX_SIZE = 200 * 1024 * 1024
+        total_size = 0
+        file_items = form.getlist("file")
+        if not file_items:
+            raise HTTPException(400, "Au moins un fichier requis.")
+        for upload in file_items:
+            if not hasattr(upload, "filename"):
+                continue
+            safe_name = os.path.basename(upload.filename or "fichier")
+            dest = os.path.join(tmp_dir, safe_name)
+            content = await upload.read()
+            if len(content) > MAX_SIZE:
+                raise HTTPException(413, f"Fichier trop volumineux : {safe_name}")
+            total_size += len(content)
+            if total_size > 4 * 1024 * 1024 * 1024:
+                raise HTTPException(413, "Volume total > 4 Go")
+            with open(dest, "wb") as fh:
+                fh.write(content)
+            file_paths.append(dest)
+        if not file_paths:
+            raise HTTPException(400, "Aucun fichier valide reçu.")
+
+        # Config JSON éphémère
+        recs = [{"email": r.get("email", "").strip(),
+                  "acknowledge": bool(r.get("acknowledge", False))}
+                for r in recipients if r.get("email")]
+        if not recs:
+            raise HTTPException(400, "Aucun destinataire email valide.")
+
+        import tempfile as _tf, stat as _st
+        lf = _tf.NamedTemporaryFile(prefix="bf_log_", suffix=".log", delete=False)
+        log_path = lf.name; lf.close()
+
+        cli_cfg = {
+            "login":              cfg["login"],
+            "password":           cfg["password"],
+            "server":             cfg.get("server", "api.bluefiles.com"),
+            "object":             obj,
+            "message":            message,
+            "note":               "",
+            "files":              [{"path": p, "name": os.path.basename(p)} for p in file_paths],
+            "recipients":         recs,
+            "bluepass_mandatory": True,
+            "allow_reply":        True,
+            "verbose":            False,
+            "log_file":           log_path,
+        }
+        fd, cfg_path = _tf.mkstemp(prefix="bf_cfg_", suffix=".json")
+        os.write(fd, json.dumps(cli_cfg, ensure_ascii=False).encode("utf-8"))
+        os.close(fd)
+        os.chmod(cfg_path, _st.S_IRUSR | _st.S_IWUSR)
+
+        try:
+            proc = subprocess.run(
+                [binary, "-json", cfg_path],
+                capture_output=True, text=True, timeout=1800,
+                cwd=os.path.dirname(binary),
+            )
+            ok = proc.returncode == 0
+            # Scrubbing : supprimer login/password de toute sortie
+            def _scrub(t):
+                import re as _re
+                t = _re.sub(re.escape(cfg["login"]), "***", t or "")
+                t = _re.sub(re.escape(cfg["password"]), "***", t or "")
+                return t
+            raw_out = _scrub(proc.stdout or "")
+        finally:
+            for tmp in (cfg_path, log_path):
+                try: os.unlink(tmp)
+                except Exception: pass
+
+        logger.info(f"[bluefiles-supervision] envoi {'OK' if ok else 'ERREUR'} → {[r['email'] for r in recs]}")
+        if not ok:
+            raise HTTPException(502, f"Erreur BlueFiles (code {proc.returncode}). Vérifiez les identifiants.")
+        return {"ok": True, "recipients": [r["email"] for r in recs],
+                "files": [os.path.basename(p) for p in file_paths]}
+    finally:
+        # Nettoyage : supprimer les fichiers temporaires
+        import shutil
+        try: shutil.rmtree(tmp_dir, ignore_errors=True)
+        except Exception: pass
 
 
 @app.get("/api/coll/me")
@@ -3914,13 +4566,13 @@ async def get_territorial_debug():
     return debug
 
 
-# v3000h25 — Assistant territorial (vue agrégée territorial)
+# v3000h25 — Assistant territorial (vue agrégée Arc Alpin)
 @app.get("/api/territorial-assistant")
 async def get_territorial_assistant():
     """v3000h25 — Assistant de supervision territoriale.
 
     Évalue les 5 règles territoriales (RT1-RT5) sur la vue agrégée des
-    établissements territorial et retourne les alertes + un résumé d'état.
+    établissements Arc Alpin et retourne les alertes + un résumé d'état.
 
     Sans auth pour faciliter la supervision (la vue agrégée n'expose
     pas de données patients nominatives). Si on veut auth plus tard,
@@ -4291,10 +4943,8 @@ def verify_session(credentials=Depends(security)):
 
 # ── Démarrage ──────────────────────────────────────────────────────────────
 
-# ── Tokens territorial démo — enregistrés automatiquement si tokens vides ─────
-# Pré-enrôlement de tokens de démonstration (vide par défaut).
-# Renseigner si besoin : { "token_secret": "SIGLE_ETABLISSEMENT", ... }
-DEMO_TOKENS = {}
+# ── Tokens Arc Alpin démo — enregistrés automatiquement si tokens vides ─────
+ARC_ALPIN_TOKENS = {}  # tokens internes retirés du build public
 
 if __name__ == "__main__":
     load_tokens()
@@ -4326,6 +4976,9 @@ if __name__ == "__main__":
         print("  ► Aucun établissement enregistré.")
         print("  → Les GHT qui poussent arrivent en section ⏳ EN ATTENTE")
         print("  → Ouvrir http://localhost:9000 et cliquer ✓ ACCEPTER\n")
+        print("  Tokens Arc Alpin démo :")
+        print("    GHTSAV  : token_ghtsav_demo_2026")
+        print("    GHTAD38 : token_ghtad38_demo_2026\n")
     else:
         etabs = list(set(tokens.values()))
         print(f"  ► Etablissements actifs : {', '.join(etabs)}")

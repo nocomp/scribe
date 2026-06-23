@@ -38,8 +38,11 @@ logger = logging.getLogger("scribe.master")
 
 # Répertoire racine du projet (parent de master/)
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent
-DATA_DIR = PROJECT_ROOT / "data" / "instances"
-STATE_FILE = PROJECT_ROOT / "master" / "master_instances.json"
+# h127 — chemins surchargeables par variable d'environnement, pour que les
+# donnees d'instances et l'etat du master SURVIVENT aux changements de build
+# (sinon, deployer un nouveau dossier de version repart sur des donnees vides).
+DATA_DIR = pathlib.Path(os.environ.get("SCRIBE_DATA_DIR") or (PROJECT_ROOT / "data" / "instances"))
+STATE_FILE = pathlib.Path(os.environ.get("SCRIBE_STATE_FILE") or (PROJECT_ROOT / "master" / "master_instances.json"))
 PROFIL_BASE_XLSX = PROJECT_ROOT / "master" / "profil_base.xlsx"
 
 
@@ -312,6 +315,13 @@ class InstanceManager:
                 if k in {"sigle", "nom", "admin_login"} and isinstance(v, str) and not v.strip():
                     continue
                 setattr(state.config, k, v)
+        # Reset explicite du mot de passe admin demande (regenerate / edition panneau) :
+        # marque l'instance pour que _create_admin reapplique le mdp au prochain start.
+        if fields.get("admin_password"):
+            try:
+                state.pending_admin_reset = True
+            except Exception:
+                pass
         self._save_state()
         return state
 
@@ -808,7 +818,7 @@ class InstanceManager:
             else:
                 hospital_principal = Hospital(
                     nom=hospital_nom,
-                    latitude=state.config.latitude or 48.8566,    # coordonnée par défaut
+                    latitude=state.config.latitude or 45.8992,    # Annecy par défaut
                     longitude=state.config.longitude or 6.1294,
                 )
                 sess.add(hospital_principal)
@@ -839,7 +849,7 @@ class InstanceManager:
                 logger.warning(f"  Profil xlsx absent : {PROFIL_BASE_XLSX}")
 
             # 4. Créer le compte admin
-            self._create_admin(sess, state)
+            self._create_admin(sess, state, preserve=preserve_mode)
 
             # 5. v2.4.7 : pré-créer les services transverses depuis le xlsx
             # (sinon fallback hardcodé dans cartographie.py au 1er hit API)
@@ -1112,7 +1122,7 @@ class InstanceManager:
             })
         return services
 
-    def _create_admin(self, sess, state: InstanceState) -> None:
+    def _create_admin(self, sess, state: InstanceState, preserve: bool = False) -> None:
         """Crée ou met à jour le compte admin de l'instance."""
         from app.models import User
 
@@ -1140,9 +1150,18 @@ class InstanceManager:
         # Détection sans import circulaire via le nom de la dataclass de config.
         _is_exo = type(state.config).__name__ == "ExerciceInstanceConfig"
         if existing:
-            existing.hashed_password = _hash(state.config.admin_password)
             existing.role = "admin"
             existing.active = True
+            # h120 — Ne reecrire le mot de passe QUE sur premiere init (base non
+            # preservee) ou reset explicite (panneau). Une simple relance preserve
+            # le mdp choisi par l'utilisateur a sa premiere connexion.
+            _reset_pwd = (not preserve) or getattr(state, "pending_admin_reset", False)
+            if _reset_pwd:
+                existing.hashed_password = _hash(state.config.admin_password)
+                try:
+                    state.pending_admin_reset = False
+                except Exception:
+                    pass
             # v3.4 (h38g) — Aussi mettre à jour le display_name si défini
             # par le wizard. Évite que le legacy "Directeur de Crise"
             # créé par bootstrap_admin reste figé alors que l'utilisateur
@@ -1153,11 +1172,12 @@ class InstanceManager:
             # première connexion (sauf si déjà déclaré non-nécessaire).
             # Le mdp initial étant généré par le wizard et potentiellement
             # transmis par email/chat, l'utilisateur doit le changer.
-            try:
-                existing.must_change_password = not _is_exo
-            except Exception:
-                pass
-            logger.info(f"  Compte admin mis à jour : {state.config.admin_login} (display='{existing.display_name}')")
+            if _reset_pwd:
+                try:
+                    existing.must_change_password = not _is_exo
+                except Exception:
+                    pass
+            logger.info(f"  Compte admin {'reinitialise' if _reset_pwd else 'preserve'} : {state.config.admin_login}")
         else:
             new_admin = User(
                 username=state.config.admin_login,

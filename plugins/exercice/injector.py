@@ -172,7 +172,7 @@ async def _run(scenario: dict, session_uid: str, token: str, base_urls: dict):
 
 async def _inject_stimulus(stimulus: dict, token: str, base_urls: dict, manuel: bool = False) -> dict:
     """Injecte un stimulus sur l'instance cible."""
-    sigle = stimulus.get("cible", "DEMO")
+    sigle = stimulus.get("cible", "CHAG")
     base_url = base_urls.get(sigle)
     if not base_url:
         logger.error(f"URL inconnue pour {sigle}")

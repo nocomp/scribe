@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from app.database import get_db
-from app.models import UniteFonctionnelle, Hospital
+from app.models import UniteFonctionnelle, Hospital, CapaciteReferentiel, ContactMobilisation
 from app.api.auth import require_admin
 
 router = APIRouter(prefix="/api/v1/admin/uf", tags=["admin-uf"])
@@ -33,6 +33,8 @@ class UfOut(BaseModel):
     hospital_id: int
     hospital_nom: Optional[str] = None
     actif: bool
+    reassigned_contacts: int = 0
+    reassigned_capacite: int = 0
 
 
 class UfUpdate(BaseModel):
@@ -87,8 +89,27 @@ def update_uf(
     uf = db.query(UniteFonctionnelle).filter(UniteFonctionnelle.id == uf_id).first()
     if not uf:
         raise HTTPException(404, "UF introuvable")
-    if body.code_uf is not None:
-        uf.code_uf = body.code_uf.strip()
+    reassigned_contacts = 0
+    reassigned_capacite = 0
+    if body.code_uf is not None and body.code_uf.strip() and body.code_uf.strip() != (uf.code_uf or ""):
+        old_code = uf.code_uf or ""
+        new_code = body.code_uf.strip()
+        dup = db.query(UniteFonctionnelle).filter(
+            UniteFonctionnelle.hospital_id == uf.hospital_id,
+            UniteFonctionnelle.code_uf == new_code,
+            UniteFonctionnelle.id != uf.id,
+        ).first()
+        if dup:
+            raise HTTPException(409, f"Code UF '{new_code}' déjà existant pour cet établissement.")
+        uf.code_uf = new_code
+        # Cascade : ré-affecter les références qui stockent le code UF.
+        if old_code:
+            reassigned_capacite = db.query(CapaciteReferentiel).filter(
+                CapaciteReferentiel.uf_code == old_code
+            ).update({CapaciteReferentiel.uf_code: new_code}, synchronize_session=False)
+            reassigned_contacts = db.query(ContactMobilisation).filter(
+                ContactMobilisation.uf == old_code
+            ).update({ContactMobilisation.uf: new_code}, synchronize_session=False)
     if body.libelle is not None:
         uf.libelle = body.libelle.strip()
     if body.pole is not None:
@@ -102,6 +123,8 @@ def update_uf(
         pole=uf.pole, hospital_id=uf.hospital_id,
         hospital_nom=h.nom if h else None,
         actif=bool(uf.actif if uf.actif is not None else True),
+        reassigned_contacts=reassigned_contacts,
+        reassigned_capacite=reassigned_capacite,
     )
 
 
@@ -152,6 +175,14 @@ def delete_uf(
     uf = db.query(UniteFonctionnelle).filter(UniteFonctionnelle.id == uf_id).first()
     if not uf:
         raise HTTPException(404, "UF introuvable")
+    code = uf.code_uf or ""
+    if code:
+        nb_capa = db.query(CapaciteReferentiel).filter(CapaciteReferentiel.uf_code == code).count()
+        nb_contacts = db.query(ContactMobilisation).filter(ContactMobilisation.uf == code).count()
+        if nb_capa or nb_contacts:
+            raise HTTPException(409,
+                f"UF référencée ({nb_capa} ligne(s) capacité, {nb_contacts} contact(s)). "
+                "Désactivez-la plutôt que de la supprimer, ou ré-affectez d'abord ces références.")
     db.delete(uf); db.commit()
     return None
 

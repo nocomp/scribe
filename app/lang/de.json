@@ -335,7 +335,7 @@
     "err_creds": "Ungültige Zugangsdaten"
   },
   "analyse": {
-    "title": "KRISENANALYSE — NAHOSPITAL-FESPRECHUNG",
+    "title": "KRISENANALYSE — NACHBESPRECHUNG",
     "archive_a": "ARCHIVE A — CRISE À ANALYSER",
     "archive_b": "ARCHIVE B — COMPARAISON (optionnel)",
     "drop_a": "ZIP hier ablegen oder klicken",
@@ -766,7 +766,7 @@
     "body_label": "NACHRICHT",
     "body_placeholder": "Nachricht verfassen…",
     "attach_local": "Datei anhängen",
-    "attach_bluefiles": "Über Bluefiles anhängen",
+    "attach_bluefiles": "Sicherer Versand über BlueFiles",
     "attach_hint": "10 MB/Datei · 25 MB gesamt · max. 10",
     "cancel": "Abbrechen",
     "save_draft": "Entwurf",
@@ -995,5 +995,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "SICHERER TRANSFER (BlueFiles)",
+      "admin_desc": "BlueFiles-Zugangsdaten für sichere Übertragungen.",
+      "login": "Login",
+      "password": "Passwort",
+      "server": "Server",
+      "enable": "BlueFiles-Transfer in der Supervision-Nachricht aktivieren",
+      "test": "Testen",
+      "save": "Speichern",
+      "modal_title": "SICHERER VERSAND — BLUEFILES",
+      "files": "DATEIEN SENDEN",
+      "drop_hint": "Dateien hier ablegen · oder zum Durchsuchen klicken",
+      "drop_limit": "Max. 200 MB pro Datei",
+      "recipients": "EMPFÄNGER",
+      "no_recipient": "Keine Empfänger — mindestens eine E-Mail hinzufügen.",
+      "add_btn": "+ Hinzufügen",
+      "comment": "KOMMENTAR (optional)",
+      "hds_label": "Sensible Daten",
+      "hds_note": "Dieser Versand wird in SCRIBE protokolliert. Inhalt bleibt Ende-zu-Ende verschlüsselt.",
+      "sending": "Wird gesendet…",
+      "cancel": "Abbrechen",
+      "send_btn": "🔒 Senden"
+    }
   }
 }

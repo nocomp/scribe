@@ -770,7 +770,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Droša sūtīšana, izmantojot BlueFiles",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -999,5 +999,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "DROŠS PĀRSŪTĪJUMS (BlueFiles)",
+      "admin_desc": "BlueFiles akreditācijas dati drošai nosūtīšanai no uzraudzības.",
+      "login": "Login",
+      "password": "Parole",
+      "server": "Serveris",
+      "enable": "Iespējot drošus BlueFiles sūtījumus uzraudzības ziņapmaiņā",
+      "test": "Pārbaudīt",
+      "save": "Saglabāt",
+      "modal_title": "DROŠA SŪTĪŠANA — BLUEFILES",
+      "files": "SŪTĀMIE FAILI",
+      "drop_hint": "Nometiet failus šeit · vai noklikšķiniet, lai pārlūkotu",
+      "drop_limit": "Maks. 200 MB failam",
+      "recipients": "SAŅĒMĒJI",
+      "no_recipient": "Nav saņēmēju — pievienojiet vismaz vienu e-pasta adresi.",
+      "add_btn": "+ Pievienot",
+      "comment": "KOMENTĀRS (neobligāts)",
+      "hds_label": "Sensitīvi dati",
+      "hds_note": "Šī sūtīšana tiks reģistrēta SCRIBE. Saturs paliek šifrēts no gala līdz galam.",
+      "sending": "Sūta…",
+      "cancel": "Atcelt",
+      "send_btn": "🔒 Sūtīt"
+    }
   }
 }

@@ -107,43 +107,41 @@
   .field-pwd input { flex: 1; min-width: 0; }
   /* Actions : push le bouton LANCER en bas pour qu'il flotte au pied de la carte */
   .actions { align-self: end; }
-  button {
+  button,
+  .btn-primary, .btn-secondary, .btn-danger, .btn-success, .btn-warning,
+  .btn-icon, .btn-start, .btn-stop {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 8px 14px;
-    border: none;
-    border-radius: 4px;
+    border: 1px solid transparent;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 0.9em;
-    font-weight: 500;
+    font-weight: 600;
+    font-family: system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-decoration: none;
+    box-sizing: border-box;
     transition: 0.15s;
   }
   button:hover { transform: translateY(-1px); }
+  .btn-secondary:hover, .btn-icon:hover { background: #f3f5fb; border-color: #000091; }
   button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-  .btn-primary { background: var(--bleu-france); color: white; }
+  .btn-primary { background: #000091; color: #fff; }
   .btn-success { background: var(--vert); color: white; }
   .btn-warning { background: var(--orange); color: white; }
   .btn-danger { background: var(--rouge-marianne); color: white; }
-  .btn-secondary { background: var(--gris-clair); color: var(--texte); }
+  .btn-secondary { background: #fff; color: #000091; border: 1px solid #c7cdd6; }
   /* Boutons d'action principale instance — gros et explicites */
-  .btn-start {
-    background: var(--vert);
-    color: white;
-    font-size: 1em;
-    padding: 10px 18px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-  }
-  .btn-stop {
-    background: var(--rouge-marianne);
-    color: white;
-    font-size: 1em;
-    padding: 10px 18px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-  }
+  .btn-start { background: var(--vert); color: white; font-weight: 700; }
+  .btn-stop { background: var(--rouge-marianne); color: white; font-weight: 700; }
   .btn-icon {
-    padding: 6px 8px;
-    background: var(--gris-clair);
-    color: var(--texte);
+    padding: 6px 9px;
+    background: #fff;
+    color: #000091;
+    border: 1px solid #d7dae0;
   }
   /* ─── Mode (Synchronisé / Solo / [futur Exercice]) ─────────────────────
      Pattern radio button dans une carte cliquable, à la DSFR.
@@ -223,6 +221,7 @@
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
   }
   .meta {
@@ -348,7 +347,8 @@
         <button class="btn-secondary" onclick="relaunchWizard()" title="Relancer l'assistant de configuration">🎯 Wizard</button>
         <button class="btn-secondary" onclick="window.open('/api/master/hostname-page','_blank')" title="Configurer le hostname public utilisé pour les liens entre instances et collecteurs">🌐 Hostname</button>
         <button class="btn-secondary" onclick="freeAllPorts()" title="Libère les ports SCRIBE occupés par d'anciens process orphelins (ne touche jamais aux process tiers)">🔓 Libérer ports</button>
-        <button class="btn-secondary" onclick="exportAllGhtZip()" title="Exporter toutes les instances configurées en un .zip (1 xlsx par instance)">📦 Exporter GHT (.zip)</button>
+        <button class="btn-secondary" onclick="openBackupWizard()" title="Sauvegarde complète chiffrée de toutes les instances — restauration plug-and-play">💾 Sauvegarde complète</button>
+        <button class="btn-secondary" onclick="openRestoreWizard()" title="Restaurer une sauvegarde (.zip chiffré) — instances arrêtées">↩️ Restaurer</button>
         <button class="btn-secondary" onclick="refreshInstances()">🔄 Rafraîchir</button>
       </div>
     </div>
@@ -373,7 +373,7 @@
         </div>
         <div class="field">
           <label data-i18n-label="master.field_address">Adresse</label>
-          <input type="text" id="custom-adresse" placeholder="Rue de l'hôpital, Ville">
+          <input type="text" id="custom-adresse" placeholder="Rue de l'hôpital, Annecy">
           <div class="meta">(géolocalisation après création)</div>
         </div>
         <div class="field">
@@ -689,7 +689,7 @@ function renderInstances() {
           : isStopping
             ? `<button class="btn-secondary" disabled style="opacity:.6">⏳ Arrêt…</button>`
             : isActive
-              ? `<button class="btn-secondary" onclick="showCreds(${cfg.port})" title="Voir les identifiants admin"><span style="font-style:italic;font-weight:700;font-family:Georgia,serif">i</span></button>
+              ? `<button class="btn-secondary" onclick="showCreds(${cfg.port})" title="Voir les identifiants admin">ⓘ</button>
                  <a class="btn-secondary" href="http://${window.location.hostname}:${cfg.port}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block" title="Ouvrir l'instance dans un nouvel onglet">↗ Ouvrir</a>
                  <button class="btn-secondary" onclick="exportInstanceXlsx(${cfg.port})" title="Exporter cette config en .xlsx">💾</button>
                  <button class="btn-stop" onclick="stopInst(${cfg.port})">⏸ ARRÊTER</button>`
@@ -870,7 +870,7 @@ async function geocode(port) {
   } catch (e) {
     let msg = e.message;
     if (msg.includes("Aucun résultat")) {
-      msg += "\n\nSuggestions :\n• Format : 'numéro rue, ville' (avec virgule)\n• Exemple : '1 avenue de l'hôpital, Ville'\n• Ou simplement : 'Ville, France'";
+      msg += "\n\nSuggestions :\n• Format : 'numéro rue, ville' (avec virgule)\n• Exemple : '1 avenue de l'hôpital, Metz-Tessy'\n• Ou simplement : 'Annecy, France'";
     } else if (msg.includes("502") || msg.includes("indisponible")) {
       msg = "Service de géocodage indisponible. Vous pouvez saisir lat/lon manuellement.";
     }
@@ -1154,12 +1154,30 @@ async function exportAllGhtZip() {
     "  • OK     : export complet (fichier sensible)\n" +
     "  • Annuler : export sécurisé (mot de passe HASHÉ, clé API vidée)"
   );
+  const pwd = prompt(
+    "Mot de passe pour CHIFFRER l'archive (AES) ?\n\n" +
+    "  • Laissez VIDE = archive non chiffrée (comportement actuel).\n" +
+    "  • Sinon, ce mot de passe sera EXIGÉ pour restaurer le backup. Notez-le."
+  );
   try {
+    const today = new Date().toISOString().slice(0, 10);
+    if (pwd && pwd.trim()) {
+      // Archive chiffrée → POST (mot de passe jamais dans l'URL)
+      const r = await fetch('/api/master/instances/export-all-zip-encrypted', {
+        method: 'POST',
+        headers: Object.assign({'Content-Type': 'application/json'}, authHeaders()),
+        body: JSON.stringify({password: pwd.trim(), include_secrets: includeSecrets})
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'HTTP ' + r.status); }
+      const blob = await r.blob();
+      triggerDownload(blob, 'scribe_ght_backup_' + today + '.zip');
+      toast('🔒 Backup GHT chiffré (.zip)', 'ok');
+      return;
+    }
     const url = '/api/master/instances/export-all-zip?include_secrets=' + (includeSecrets ? 'true' : 'false');
     const r = await fetch(url, {headers: authHeaders()});
     if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'HTTP ' + r.status); }
     const blob = await r.blob();
-    const today = new Date().toISOString().slice(0, 10);
     triggerDownload(blob, 'scribe_ght_export_' + today + '.zip');
     toast('✓ GHT exporté en .zip', 'ok');
   } catch (e) {
@@ -1288,7 +1306,93 @@ async function freeAllPorts() {
     alert("Erreur libération ports : " + e.message);
   }
 }
+
+function openBackupWizard(){ var o=document.getElementById("bk-overlay"); if(!o)return; document.getElementById("bk-pwd").value=""; document.getElementById("bk-err").style.display="none"; document.getElementById("bk-progress").style.display="none"; document.getElementById("bk-go").disabled=false; o.style.display="flex"; setTimeout(function(){document.getElementById("bk-pwd").focus();},50); }
+function bkClose(){ var o=document.getElementById("bk-overlay"); if(o)o.style.display="none"; }
+function bkErr(m){ var e=document.getElementById("bk-err"); e.textContent=m; e.style.display="block"; }
+async function bkRun(){
+  var pwd=document.getElementById("bk-pwd").value||"";
+  if(pwd.length<4){ bkErr("Mot de passe trop court (4 caractères minimum)."); return; }
+  document.getElementById("bk-err").style.display="none";
+  document.getElementById("bk-go").disabled=true;
+  document.getElementById("bk-progress").style.display="block";
+  var bar=document.getElementById("bk-bar"), lab=document.getElementById("bk-progress-label");
+  lab.textContent="Collecte et chiffrement…"; bar.style.width="35%";
+  try{
+    var r=await fetch("/api/master/instances/backup-full",{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify({password:pwd})});
+    bar.style.width="80%";
+    if(!r.ok){ var t=await r.text(); bkErr("Échec : "+t.slice(0,200)); document.getElementById("bk-go").disabled=false; return; }
+    var blob=await r.blob(); bar.style.width="100%";
+    var sum=r.headers.get("X-Scribe-Backup-Summary")||"";
+    lab.textContent=sum?("Contenu sauvegardé — "+sum+" (sigle:lignes)"):"Téléchargement…";
+    var today=new Date().toISOString().slice(0,10);
+    triggerDownload(blob,"scribe_backup_complet_"+today+".zip");
+    setTimeout(bkClose,1800);
+  }catch(e){ bkErr("Erreur réseau : "+e); document.getElementById("bk-go").disabled=false; }
+}
+
+function openRestoreWizard(){ var o=document.getElementById("rs-overlay"); if(!o)return; document.getElementById("rs-file").value=""; document.getElementById("rs-pwd").value=""; document.getElementById("rs-err").style.display="none"; document.getElementById("rs-ok").style.display="none"; document.getElementById("rs-progress").style.display="none"; document.getElementById("rs-go").disabled=false; o.style.display="flex"; }
+function rsClose(){ var o=document.getElementById("rs-overlay"); if(o)o.style.display="none"; }
+function rsErr(m){ var e=document.getElementById("rs-err"); e.textContent=m; e.style.display="block"; }
+async function rsRun(){
+  var f=document.getElementById("rs-file").files[0];
+  var pwd=document.getElementById("rs-pwd").value||"";
+  document.getElementById("rs-err").style.display="none";
+  if(!f){ rsErr("Choisissez une archive .zip."); return; }
+  if(pwd.length<4){ rsErr("Mot de passe requis (4 caractères minimum)."); return; }
+  document.getElementById("rs-go").disabled=true;
+  document.getElementById("rs-progress").style.display="block";
+  var bar=document.getElementById("rs-bar"), lab=document.getElementById("rs-progress-label");
+  lab.textContent="Déchiffrement et restauration…"; bar.style.width="40%";
+  var fd=new FormData(); fd.append("file",f); fd.append("password",pwd);
+  try{
+    var r=await fetch("/api/master/instances/restore-full",{method:"POST",headers:authHeaders(),body:fd});
+    bar.style.width="85%";
+    if(!r.ok){ var t=await r.text(); try{t=JSON.parse(t).detail||t;}catch(e){} rsErr("Échec : "+t); document.getElementById("rs-go").disabled=false; return; }
+    var j=await r.json(); bar.style.width="100%";
+    var det=(j.restored||[]).map(function(x){return x.sigle+" ("+(x.rows||0)+" lignes"+(x.files?", "+x.files+" fichiers":"")+")";}).join(", ");
+    if(j.server_channels){det+=" + "+j.server_channels+" canal(aux) notif";}
+    if(j.server_files){det+=" + "+j.server_files+" fichiers serveur";}
+    if(j.server_trees){var tt=Object.keys(j.server_trees).map(function(k){return j.server_trees[k]+" "+k;}).join(", "); if(tt)det+=" + "+tt;}
+    var ok=document.getElementById("rs-ok"); ok.textContent="✓ "+j.count+" instance(s) : "+det+". Rechargement…"; ok.style.display="block";
+    setTimeout(function(){ location.reload(); }, 2400);
+  }catch(e){ rsErr("Erreur réseau : "+e); document.getElementById("rs-go").disabled=false; }
+}
 </script>
 
+<div id="bk-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9999;align-items:center;justify-content:center" onclick="if(event.target===this)bkClose()">
+  <div style="background:#fff;border-radius:14px;width:470px;max-width:94vw;padding:24px;font-family:system-ui,-apple-system,sans-serif;box-shadow:0 18px 60px rgba(0,0,0,.3)">
+    <h3 style="margin:0 0 4px;color:#000091;font-size:18px">Sauvegarde complète</h3>
+    <p style="margin:0 0 16px;color:#6b7280;font-size:13px;line-height:1.5">Image complète et chiffrée de <b>toutes les instances</b> : bases complètes (comptes, mots de passe, UF, capacité, configs de plugins, salons…), fichiers de config, <b>secrets de plugins</b>, ainsi que les <b>pièces jointes</b> et <b>archives de rapports</b>. Restaurable telle quelle sur une version neuve.</p>
+    <label style="display:block;font-size:13px;font-weight:600;color:#1a1a2e;margin-bottom:5px">Mot de passe de chiffrement</label>
+    <input id="bk-pwd" type="password" autocomplete="new-password" placeholder="Min. 4 caractères — exigé pour restaurer" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:9px;font-size:14px;outline:none">
+    <div id="bk-progress" style="display:none;margin-top:16px">
+      <div id="bk-progress-label" style="font-size:12px;color:#6b7280;margin-bottom:6px">Préparation…</div>
+      <div style="height:8px;background:#eef0f3;border-radius:6px;overflow:hidden"><div id="bk-bar" style="height:100%;width:10%;background:#000091;transition:width .3s"></div></div>
+    </div>
+    <div id="bk-err" style="display:none;margin-top:12px;color:#dc2626;font-size:13px"></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px">
+      <button onclick="bkClose()" style="padding:9px 16px;border:1px solid #d7dae0;background:#fff;color:#5b6573;border-radius:8px;font-size:14px;cursor:pointer">Annuler</button>
+      <button id="bk-go" onclick="bkRun()" style="padding:9px 16px;border:none;background:#000091;color:#fff;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Sauvegarder & télécharger</button>
+    </div>
+  </div>
+</div>
+<div id="rs-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:9999;align-items:center;justify-content:center" onclick="if(event.target===this)rsClose()">
+  <div style="background:#fff;border-radius:14px;width:480px;max-width:94vw;padding:24px;font-family:system-ui,-apple-system,sans-serif;box-shadow:0 18px 60px rgba(0,0,0,.3)">
+    <h3 style="margin:0 0 4px;color:#000091;font-size:18px">Restaurer une sauvegarde</h3>
+    <p style="margin:0 0 14px;color:#6b7280;font-size:13px;line-height:1.5">Recrée chaque instance depuis l'archive chiffrée (config + base complète + fichiers). Les instances cibles doivent être <b>arrêtées</b>.</p>
+    <label style="display:block;font-size:13px;font-weight:600;color:#1a1a2e;margin-bottom:5px">Archive (.zip chiffré)</label>
+    <input id="rs-file" type="file" accept=".zip" style="width:100%;box-sizing:border-box;margin-bottom:14px;font-size:13px">
+    <label style="display:block;font-size:13px;font-weight:600;color:#1a1a2e;margin-bottom:5px">Mot de passe</label>
+    <input id="rs-pwd" type="password" autocomplete="off" placeholder="Mot de passe de l'archive" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:9px;font-size:14px;outline:none">
+    <div id="rs-progress" style="display:none;margin-top:16px"><div id="rs-progress-label" style="font-size:12px;color:#6b7280;margin-bottom:6px">Déchiffrement…</div><div style="height:8px;background:#eef0f3;border-radius:6px;overflow:hidden"><div id="rs-bar" style="height:100%;width:10%;background:#000091;transition:width .3s"></div></div></div>
+    <div id="rs-err" style="display:none;margin-top:12px;color:#dc2626;font-size:13px"></div>
+    <div id="rs-ok" style="display:none;margin-top:12px;color:#059669;font-size:13px;font-weight:600"></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px">
+      <button onclick="rsClose()" style="padding:9px 16px;border:1px solid #d7dae0;background:#fff;color:#5b6573;border-radius:8px;font-size:14px;cursor:pointer">Annuler</button>
+      <button id="rs-go" onclick="rsRun()" style="padding:9px 16px;border:none;background:#000091;color:#fff;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Restaurer</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

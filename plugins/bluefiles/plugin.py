@@ -45,7 +45,49 @@ def register(app: FastAPI) -> None:
     from app.database import engine
     BfBase.metadata.create_all(bind=engine, checkfirst=True)
 
+    # v3000h135 — Migration douce : ajoute les colonnes CLI si la table existait
+    # déjà sans elles (create_all n'altère pas une table existante).
+    try:
+        from sqlalchemy import text as _sql_text
+        _cli_cols = {
+            "cli_login":       "VARCHAR(200)",
+            "cli_password":    "VARCHAR(300)",
+            "cli_server":      "VARCHAR(200)",
+            "cli_impersonate": "VARCHAR(200)",
+        }
+        with engine.begin() as conn:
+            existing = {row[1] for row in conn.exec_driver_sql(
+                "PRAGMA table_info(plugin_bluefiles_config)").fetchall()}
+            for col, typ in _cli_cols.items():
+                if col not in existing:
+                    conn.exec_driver_sql(
+                        f"ALTER TABLE plugin_bluefiles_config ADD COLUMN {col} {typ}")
+    except Exception:
+        import logging
+        logging.getLogger("scribe.plugins.bluefiles").warning(
+            "Migration colonnes CLI bluefiles non appliquée", exc_info=True)
+
     from plugins.bluefiles.routes import router
     from plugins.bluefiles.ui import ui_router
     app.include_router(router,    prefix="/api/v1/bluefiles", tags=["BLUEFILES"])
     app.include_router(ui_router, prefix="/api/v1/bluefiles", tags=["BLUEFILES UI"])
+
+    # v3000h136 (audit cyber) — Purge des fichiers résiduels dans data/ : en
+    # fonctionnement normal ils sont supprimés après chaque envoi, mais un crash
+    # entre l'écriture et la purge pourrait laisser des données patient sur
+    # disque (HDS/RGPD). On supprime tout fichier de plus d'une heure au boot.
+    try:
+        import time as _time
+        from plugins.bluefiles.cli_sender import DATA_DIR as _DD
+        if _DD.exists():
+            now = _time.time()
+            for f in _DD.iterdir():
+                if f.name == ".gitkeep" or not f.is_file():
+                    continue
+                try:
+                    if now - f.stat().st_mtime > 3600:
+                        f.unlink()
+                except Exception:
+                    pass
+    except Exception:
+        pass

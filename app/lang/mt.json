@@ -770,7 +770,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Bgħat sigur permezz ta' BlueFiles",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -999,5 +999,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "TRASFERIMENT SIGUR (BlueFiles)",
+      "admin_desc": "Kredenzjali BlueFiles għal inviji siguri mis-sorveljanza.",
+      "login": "Login",
+      "password": "Password",
+      "server": "Server",
+      "enable": "Attiva inviji siguri BlueFiles fil-messaġġerija ta' sorveljanza",
+      "test": "Ittestja",
+      "save": "Salva",
+      "modal_title": "BGĦAT SIGUR — BLUEFILES",
+      "files": "FAJLS BIEX TIBGĦAT",
+      "drop_hint": "Agħfas il-fajls hawn · jew ikklikkja biex tifħah",
+      "drop_limit": "Maks. 200 MB kull fajl",
+      "recipients": "RIĊEVITURI",
+      "no_recipient": "L-ebda riċevitur — żid mill-inqas indirizz wieħed.",
+      "add_btn": "+ Żid",
+      "comment": "KUMMENT (mhux obbligatorju)",
+      "hds_label": "Data sensittiva",
+      "hds_note": "Dan il-bgħit se jiġi rreġistrat f'SCRIBE. Il-kontenut jibqa' encrypted end-to-end.",
+      "sending": "Qiegħed jintbagħat…",
+      "cancel": "Ikkanċella",
+      "send_btn": "🔒 Ibgħat"
+    }
   }
 }

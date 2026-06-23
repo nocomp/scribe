@@ -81,6 +81,16 @@ def _mobilisation_context(db) -> str:
             ligne += f" Compétences arrivant sous 30 min : {comp}."
         else:
             ligne += " Aucune compétence confirmée sous 30 min pour l'instant."
+        en_attente = sum(1 for c in cibles if c.statut == "attente")
+        echecs = sum(1 for c in cibles if getattr(c, "livraison", "") == "echec")
+        if getattr(a, "vague_courante", 0):
+            ligne += f" Escalade : vague {a.vague_courante} en cours"
+            if en_attente:
+                next_w = min((c.vague for c in cibles if c.statut == "attente"), default=None)
+                ligne += f" ; {en_attente} destinataire(s) en attente (vague suivante : {next_w})"
+            ligne += "."
+        if echecs:
+            ligne += f" {echecs} echec(s) d'envoi (a relancer)."
         blocs.append(ligne)
     return ("MOBILISATION EN COURS (chaîne d'alerte / rappel du personnel) — "
             "données agrégées par compétence et délai, sans nominatif :\n" + "\n".join(blocs))
@@ -110,6 +120,7 @@ AIDE À LA DÉCISION — MOBILISATION :
 - Tu peux RECOMMANDER d'attendre un renfort interne plutôt que d'engager un prestataire externe quand une compétence pertinente arrive sous peu (ex. « 2 techniciens < 30 min : attendre leur constat avant d'engager un prestataire »).
 - Tu peux PROPOSER d'organiser un rappel d'un type de personnel quand un incident le justifie (ex. perte d'Active Directory un week-end → proposer un rappel de techniciens DSI).
 - Sépare toujours le FAIT (ce que disent les retours) de la RECOMMANDATION. Une réponse « j'arrive » est une déclaration, pas une garantie ; une compétence présente ne garantit pas la résolution.
+- Si une campagne est EN ESCALADE et que la couverture reste insuffisante alors que des destinataires d'une vague suivante sont en attente, tu peux PROPOSER de lancer la vague suivante (priorité supérieure) — la cellule confirme.
 - Tu PROPOSES et tu OBSERVES, tu ne déclenches JAMAIS d'alerte ni d'action toi-même : la cellule décide et valide.
 Réponds en français."""
 

@@ -90,6 +90,7 @@ class SitrepEntry(Base):
     # Permet au rôle `soignant` de voir ces incidents (par défaut il ne voit
     # que ceux qui sont liés à ses missions/tâches assignées).
     visible_soignant    = Column(Boolean, default=False, nullable=False)
+    impact_global       = Column(Boolean, default=False, nullable=False)  # h96 — impact transversal (tous services de soins)
     attachments = relationship("Attachment", back_populates="entry", cascade="all, delete-orphan")
     tasks       = relationship("Task", back_populates="incident", cascade="all, delete-orphan")
 
@@ -237,7 +238,7 @@ class CapaciteReferentiel(Base):
     service_nom     = Column(String, nullable=False, index=True)
     uf_code         = Column(String, nullable=True)
     pole            = Column(String, nullable=True)
-    site            = Column(String, nullable=True)       # ex. Site A / Site B / Site C
+    site            = Column(String, nullable=True)       # Annecy / Saint-Julien / Rumilly / USLD
     capacite_totale = Column(Integer, default=0)          # capacité nominale totale
     tension_1       = Column(Integer, default=0)          # lits ouverts en tension niveau 1
     tension_2       = Column(Integer, default=0)          # lits ouverts en tension niveau 2
@@ -440,6 +441,8 @@ class ContactMobilisation(Base):
     grade      = Column(String)
     pole       = Column(String, index=True)
     site       = Column(String, index=True)
+    perimetre_abonnement = Column(String, default="uf")    # uf|pole|site|etablissement|aucun
+    priorite             = Column(Integer, default=3)       # 1 = alerté en premier … 4
     actif      = Column(Boolean, default=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -454,6 +457,7 @@ class AlerteMobilisation(Base):
     incident_id = Column(Integer, nullable=True)
     cree_par    = Column(String)
     archived    = Column(Integer, default=0)   # h82 — campagne archivée (terminée)
+    vague_courante = Column(Integer, default=0)  # h93 — 0 = à plat ; sinon priorité de la vague en cours
     created_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -474,4 +478,18 @@ class AlerteCible(Base):
     eta_choice   = Column(String, nullable=True)        # 15 / 30 / 60 / indispo
     commentaire  = Column(Text, nullable=True)          # h82 — note libre du répondant
     responded_at = Column(DateTime, nullable=True)
+    vague        = Column(Integer, default=0)            # h93 — = priorité du contact (groupe de vague)
+    livraison    = Column(String, default="")            # h94 — "" / ok / echec (remise SMS+mail)
+
+
+class MobPreset(Base):
+    """h95 — Pré-réglage de ciblage réutilisable (ex. « Plan blanc », « Rappel bloc »)."""
+    __tablename__ = "mob_presets"
+    id         = Column(Integer, primary_key=True)
+    nom        = Column(String, index=True)
+    criteres   = Column(Text, default="{}")   # JSON: {uf:[],pole:[],site:[],fonction:[],contact_ids:[]}
+    canaux     = Column(String, default="sms,mail")
+    escalade   = Column(Integer, default=0)
+    cree_par   = Column(String)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     created_at   = Column(DateTime, default=lambda: datetime.now(timezone.utc))

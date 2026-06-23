@@ -770,7 +770,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Biztonságos küldés a BlueFiles-on keresztül",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -999,5 +999,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "BIZTONSÁGOS ÁTVITEL (BlueFiles)",
+      "admin_desc": "BlueFiles-hitelesítő adatok biztonságos küldésekhez a felügyeletből.",
+      "login": "Login",
+      "password": "Jelszó",
+      "server": "Szerver",
+      "enable": "BlueFiles biztonságos küldés engedélyezése a felügyeleti üzenetküldésben",
+      "test": "Tesztelés",
+      "save": "Mentés",
+      "modal_title": "BIZTONSÁGOS KÜLDÉS — BLUEFILES",
+      "files": "KÜLDENDŐ FÁJLOK",
+      "drop_hint": "Húzza ide a fájlokat · vagy kattintson a tallózáshoz",
+      "drop_limit": "Max. 200 MB fájlonként",
+      "recipients": "CÍMZETTEK",
+      "no_recipient": "Nincs címzett — adjon hozzá legalább egy e-mail-címet.",
+      "add_btn": "+ Hozzáadás",
+      "comment": "MEGJEGYZÉS (opcionális)",
+      "hds_label": "Érzékeny adatok",
+      "hds_note": "Ez a küldés rögzítésre kerül a SCRIBE-ban. A tartalom végponttól végpontig titkosított marad.",
+      "sending": "Küldés folyamatban…",
+      "cancel": "Mégse",
+      "send_btn": "🔒 Küldés"
+    }
   }
 }

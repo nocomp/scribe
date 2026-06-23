@@ -41,11 +41,15 @@ def plugin_status(user: User = Depends(get_current_user)):
     """
     if not user:
         raise HTTPException(status_code=401, detail="Non authentifié")
+    from plugins.bluefiles import cli_sender
+    cli_ready = cli_sender.cli_available()
+    mode = "cli" if cli_ready else current_mode()
     return {
-        "enabled":  True,
-        "mode":     current_mode(),   # "live" | "dev"
-        "ready":    True,
-        "version":  "3.5.0-alpha1",
+        "enabled":   True,
+        "mode":      mode,             # "cli" | "live" | "dev"
+        "ready":     True,
+        "cli_ready": cli_ready,        # bool seul — aucun chemin serveur exposé
+        "version":   "3.6.0-alpha112",
     }
 
 
@@ -107,8 +111,9 @@ async def send_secure(
     if not fichiers:
         raise HTTPException(status_code=400, detail="Au moins 1 fichier requis")
 
-    if module not in ("transfert", "communique", "cellule", "rex", "test"):
-        raise HTTPException(status_code=400, detail=f"Module inconnu : {module}")
+    import re as _re
+    if not module or not _re.match(r"^[A-Za-z0-9_-]{1,40}$", module):
+        raise HTTPException(status_code=400, detail=f"Module invalide : {module}")
 
     # Limites taille (v1 : max 4 Go par envoi, 50 fichiers max)
     MAX_TOTAL_SIZE = 4 * 1024 * 1024 * 1024
@@ -141,6 +146,62 @@ async def send_secure(
         })
         # On rewind le stream pour l'upload qui suit (en mode live)
         await f.seek(0)
+
+    # ── 3bis. Chemin RÉEL via le binaire CLI BlueFiles ─────────────────────
+    # Si tools/BlueFilesTransfer est présent ET les identifiants
+    # (SCRIBE_BLUEFILES_LOGIN/_PASSWORD/_SERVER) sont configurés, on réalise un
+    # envoi réel : les fichiers sont stockés dans plugins/bluefiles/data/,
+    # transmis en un seul appel, puis purgés (HDS/RGPD : aucune rémanence).
+    from plugins.bluefiles import cli_sender
+    if cli_sender.cli_available():
+        import os as _os, secrets as _secrets
+        from plugins.bluefiles.client import generate_recipient_password
+        cli_sender.ensure_dirs()
+        saved_paths = []
+        try:
+            for f in fichiers:
+                await f.seek(0)
+                safe = (f.filename or "fichier").replace("/", "_").replace("\\", "_")
+                dest = cli_sender.DATA_DIR / f"{_secrets.token_hex(6)}_{safe}"
+                with open(dest, "wb") as out:
+                    while True:
+                        chunk = await f.read(65536)
+                        if not chunk:
+                            break
+                        out.write(chunk)
+                saved_paths.append(dest)
+            tpwd = generate_recipient_password() if password_required else None
+            res = cli_sender.send_files_cli(
+                [str(p) for p in saved_paths],
+                [{"email": d["email"], "acknowledge": ar_enabled} for d in dest_list],
+                object=(ref_label or f"SCRIBE — {module}"),
+                message=commentaire,
+                note=(ref_label or ""),
+                transfer_password=tpwd,
+                bluepass_mandatory=(not password_required),
+                ar_default=ar_enabled,
+            )
+        finally:
+            # Purge systématique des fichiers data/ (pas de rémanence patient)
+            for p in saved_paths:
+                try:
+                    _os.remove(p)
+                except Exception:
+                    pass
+        if not res.get("ok"):
+            raise HTTPException(status_code=502,
+                                detail=f"BlueFiles : {res.get('error', 'échec envoi')}")
+        return {
+            "ok":         True,
+            "mode":       "cli",
+            "uuid":       res.get("uuid", ""),
+            "short_link": res.get("short_link", ""),
+            "expires_at": (datetime.now(timezone.utc)
+                           + timedelta(days=expiration_days)).isoformat(),
+            "transfer_password": tpwd,
+            "destinataires": [{"email": d["email"]} for d in dest_list],
+            "statut":     "delivered",
+        }
 
     # ── 3. Création de l'envoi côté Bluefiles ──────────────────────────────
     client = BluefilesClient()
@@ -437,12 +498,10 @@ from plugins.bluefiles.models import BluefilesConfig
 
 
 def _mask_secret(val: str) -> str:
-    """Aperçu masqué : '••••••1a2b' (4 derniers car.) ou '' si vide."""
+    """Aperçu masqué : uniquement des points, AUCUN caractère réel révélé."""
     if not val:
         return ""
-    if len(val) <= 4:
-        return "•" * len(val)
-    return "•" * 6 + val[-4:]
+    return "•" * min(len(val), 12)
 
 
 def _source_of(field: str, row) -> str:
@@ -455,6 +514,37 @@ def _source_of(field: str, row) -> str:
     return "none"
 
 
+def _cli_config_public(row) -> dict:
+    """Config CLI effective pour l'admin, SANS exposer le mot de passe."""
+    from plugins.bluefiles import cli_sender
+    eff = cli_sender.get_cli_config()
+    diag = cli_sender.cli_diagnostic()
+
+    def _src(col: str, env_names: tuple) -> str:
+        if row and (getattr(row, col, "") or "").strip():
+            return "db"
+        import os as _os
+        if any((_os.getenv(e) or "").strip() for e in env_names):
+            return "env"
+        return "none"
+
+    return {
+        "cli_login_set":        bool(eff["login"]),
+        "cli_login_preview":    _mask_secret(eff["login"]),
+        "cli_server":           eff["server"],
+        "cli_password_set":     bool(eff["password"]),
+        "cli_password_preview": _mask_secret(eff["password"]),
+        "cli_ready":            diag["ready"],
+        "cli_binary_present":   diag["binary_present"],
+        "cli_binary_exec":      diag["binary_exec"],
+        "cli_sources": {
+            "login":       _src("cli_login",       ("SCRIBE_BLUEFILES_LOGIN", "BLUEFILES_LOGIN")),
+            "password":    _src("cli_password",    ("SCRIBE_BLUEFILES_PASSWORD", "BLUEFILES_PASSWORD")),
+            "server":      _src("cli_server",      ("SCRIBE_BLUEFILES_SERVER", "BLUEFILES_SERVER")),
+        },
+    }
+
+
 class BluefilesConfigIn(_BaseModel):
     api_url:            Optional[str] = None
     account:            Optional[str] = None
@@ -462,6 +552,13 @@ class BluefilesConfigIn(_BaseModel):
     webhook_secret:    Optional[str] = None    # non vide => remplace
     clear_api_key:      Optional[bool] = False
     clear_webhook_secret: Optional[bool] = False
+    # v3000h146 — champs de l'utilitaire CLI BlueFiles
+    cli_login:          Optional[str] = None
+    cli_server:         Optional[str] = None
+    cli_impersonate:    Optional[str] = None
+    cli_password:       Optional[str] = None   # non vide => remplace
+    clear_cli_password: Optional[bool] = False
+    clear_cli_login:    Optional[bool] = False
 
 
 @router.get("/admin/config")
@@ -486,6 +583,8 @@ def get_bluefiles_config(admin: User = Depends(require_admin),
         },
         "updated_at": row.updated_at.isoformat() if (row and row.updated_at) else None,
         "updated_by": row.updated_by if row else None,
+        # v3000h146 — Voie réelle d'envoi : utilitaire CLI BlueFiles
+        **_cli_config_public(row),
     }
 
 
@@ -517,6 +616,21 @@ def save_bluefiles_config(body: BluefilesConfigIn,
     elif body.webhook_secret and body.webhook_secret.strip():
         row.webhook_secret = body.webhook_secret.strip()
 
+    # v3000h146 — login : blanc = conserver la valeur existante ; émetteur
+    # rattaché retiré de l'UI → toujours vidé (le compte API est l'émetteur).
+    if body.cli_login and body.cli_login.strip():
+        row.cli_login = body.cli_login.strip()
+    elif getattr(body, "clear_cli_login", False):
+        row.cli_login = ""
+    if body.cli_server is not None:
+        row.cli_server = body.cli_server.strip()
+    row.cli_impersonate = ""
+    if body.clear_cli_password:
+        row.cli_password = ""
+    elif body.cli_password and body.cli_password.strip():
+        from plugins.bluefiles import crypto as _bfcrypto
+        row.cli_password = _bfcrypto.enc(body.cli_password.strip())
+
     row.updated_by = admin.username
     db.commit()
 
@@ -538,21 +652,44 @@ def test_bluefiles_config(admin: User = Depends(require_admin)):
     connecteur fonctionnera en simulation. En mode LIVE, tente un GET de santé
     sur l'API (best-effort, sans exposer de secret).
     """
-    cfg = get_config()
-    if not (cfg["api_key"] and cfg["api_url"] and cfg["account"]):
-        return {"ok": True, "mode": "dev",
-                "detail": "Mode DEV : aucune clé configurée, envois simulés (aucun appel réseau)."}
-    import httpx
+    from plugins.bluefiles import cli_sender
+    import subprocess
+    diag = cli_sender.cli_diagnostic()
+    cfg = cli_sender.get_cli_config()
+
+    if not diag["binary_present"]:
+        return {"ok": False, "mode": "cli",
+                "detail": f"Binaire absent : {diag['binary_path']}"}
+    if not diag["binary_exec"]:
+        return {"ok": False, "mode": "cli",
+                "detail": "Binaire présent mais non exécutable (chmod +x requis)."}
+
+    # Démarrage du binaire sans argument : il réclame un fichier de config et
+    # sort — preuve qu'il s'exécute (libxerces-c3.2 chargée). Un défaut de lib
+    # produirait « error while loading shared libraries ».
     try:
-        with httpx.Client(timeout=10.0) as cli:
-            r = cli.get(f"{cfg['api_url'].rstrip('/')}/health",
-                        headers={"Authorization": f"Bearer {cfg['api_key']}",
-                                 "X-Account": cfg["account"],
-                                 "Accept": "application/json"})
-        reachable = r.status_code < 500
-        return {"ok": reachable, "mode": "live", "status_code": r.status_code,
-                "detail": ("API joignable." if reachable
-                           else f"API en erreur (HTTP {r.status_code}).")}
+        proc = subprocess.run([diag["binary_path"]], capture_output=True,
+                              text=True, timeout=15)
+        out = ((proc.stdout or "") + (proc.stderr or "")).lower()
+        if "error while loading shared" in out or "libxerces" in out:
+            return {"ok": False, "mode": "cli",
+                    "detail": "Dépendance manquante : libxerces-c3.2 "
+                              "(sudo apt install -y libxerces-c3.2)."}
+    except FileNotFoundError:
+        return {"ok": False, "mode": "cli",
+                "detail": "Dépendance manquante : libxerces-c3.2 "
+                          "(sudo apt install -y libxerces-c3.2)."}
     except Exception as e:
-        return {"ok": False, "mode": "live",
-                "detail": f"Connexion impossible : {type(e).__name__}."}
+        return {"ok": False, "mode": "cli",
+                "detail": f"Binaire inutilisable : {type(e).__name__}."}
+
+    missing = [n for n, v in (("login", cfg["login"]),
+                              ("mot de passe", cfg["password"]),
+                              ("serveur", cfg["server"])) if not v]
+    if missing:
+        return {"ok": False, "mode": "cli",
+                "detail": "Identifiants incomplets : " + ", ".join(missing) + "."}
+
+    return {"ok": True, "mode": "cli",
+            "detail": f"Binaire opérationnel · identifiants présents · "
+                      f"serveur {cfg['server']} · prêt à envoyer."}

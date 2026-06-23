@@ -770,7 +770,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Zabezpečené odoslanie cez BlueFiles",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -999,5 +999,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "BEZPEČNÝ PRENOS (BlueFiles)",
+      "admin_desc": "Prihlasovacie údaje BlueFiles pre bezpečné odosielanie.",
+      "login": "Login",
+      "password": "Heslo",
+      "server": "Server",
+      "enable": "Aktivovať bezpečné odosielanie BlueFiles",
+      "test": "Testovať",
+      "save": "Uložiť",
+      "modal_title": "BEZPEČNÉ ODOSLANIE — BLUEFILES",
+      "files": "SÚBORY NA ODOSLANIE",
+      "drop_hint": "Presuňte súbory sem · alebo kliknite na prehľadávanie",
+      "drop_limit": "Max. 200 MB na súbor",
+      "recipients": "PRÍJEMCOVIA",
+      "no_recipient": "Žiadni príjemcovia — pridajte aspoň jeden email.",
+      "add_btn": "+ Pridať",
+      "comment": "KOMENTÁR (voliteľné)",
+      "hds_label": "Citlivé údaje",
+      "hds_note": "Toto odoslanie bude zaznamenané v SCRIBE. Obsah zostáva end-to-end šifrovaný.",
+      "sending": "Odosielam…",
+      "cancel": "Zrušiť",
+      "send_btn": "🔒 Odoslať"
+    }
   }
 }

@@ -770,7 +770,7 @@
     "body_label": "MESSAGE",
     "body_placeholder": "Write your message…",
     "attach_local": "Attach a file",
-    "attach_bluefiles": "Attach via Bluefiles",
+    "attach_bluefiles": "Sikker afsendelse via BlueFiles",
     "attach_hint": "10 MB/file · 25 MB total · 10 max",
     "cancel": "Cancel",
     "save_draft": "Draft",
@@ -999,5 +999,30 @@
     "selected": "sélectionné(s)",
     "type_to_search": "Tapez pour rechercher",
     "refine": "affinez la recherche"
+  },
+  "supervision": {
+    "bluefiles": {
+      "admin_title": "SIKKER OVERFØRSEL (BlueFiles)",
+      "admin_desc": "BlueFiles-legitimationsoplysninger for sikre afsendelser fra tilsyn.",
+      "login": "Login",
+      "password": "Adgangskode",
+      "server": "Server",
+      "enable": "Aktiver sikre BlueFiles-afsendelser i overvågningsbeskeder",
+      "test": "Test",
+      "save": "Gem",
+      "modal_title": "SIKKER AFSENDELSE — BLUEFILES",
+      "files": "FILER AT SENDE",
+      "drop_hint": "Slip filer her · eller klik for at gennemse",
+      "drop_limit": "Maks. 200 MB pr. fil",
+      "recipients": "MODTAGERE",
+      "no_recipient": "Ingen modtagere — tilføj mindst én e-mail.",
+      "add_btn": "+ Tilføj",
+      "comment": "KOMMENTAR (valgfrit)",
+      "hds_label": "Følsomme data",
+      "hds_note": "Denne afsendelse logges i SCRIBE. Indholdet forbliver end-to-end-krypteret.",
+      "sending": "Sender…",
+      "cancel": "Annuller",
+      "send_btn": "🔒 Send"
+    }
   }
 }

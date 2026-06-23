@@ -22,7 +22,7 @@ DOMAINS = ("ia", "bluefiles", "smtp", "sms")
 
 _DEFAULT = {
     "ia":        {"provider": "albert", "api_key": "", "base_url": "", "model": "", "enabled": False},
-    "bluefiles": {"api_key": "", "api_url": "", "account": "", "mode": "LIVE", "enabled": False},
+    "bluefiles": {"login": "", "password": "", "server": "api.bluefiles.com", "enabled": False},
     "smtp":      {"smtp_host": "", "smtp_port": 587, "smtp_user": "", "smtp_pass": "",
                   "from_addr": "", "use_tls": True, "use_ssl": False, "enabled": False},
     "sms":       {"provider": "ovh", "sender": "SCRIBE", "api_key": "", "api_secret": "",
@@ -35,7 +35,7 @@ _ENC_PREFIX = "enc:"
 # Champs secrets (chiffrés au repos, masqués en UI)
 SECRET_FIELDS = {
     "ia":        ["api_key"],
-    "bluefiles": ["api_key"],
+    "bluefiles": ["password"],
     "smtp":      ["smtp_pass"],
     "sms":       ["api_key", "api_secret"],
 }

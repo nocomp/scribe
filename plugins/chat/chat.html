@@ -18,36 +18,37 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,sans-serif;backgroun
 
 /* ── Colonne salons ── */
 #col-salons{
-  width:240px;flex-shrink:0;background:#1e2a3a;color:#e2e8f0;
+  width:240px;flex-shrink:0;background:#f7f8fa;color:#1a1a2e;
+  font-family:system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;border-right:1px solid #e3e6eb;
   display:flex;flex-direction:column;overflow:hidden;
   transition:width .2s;
 }
 #col-salons.collapsed{width:0;overflow:hidden}
 #salon-header{
-  padding:14px 12px 10px;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0;
+  padding:14px 12px 10px;border-bottom:1px solid #e3e6eb;flex-shrink:0;
   display:flex;align-items:center;justify-content:space-between;
 }
-#salon-header h2{font-family:var(--mo);font-size:11px;font-weight:700;letter-spacing:1px;opacity:.7}
+#salon-header h2{font-size:13px;font-weight:600;letter-spacing:0;color:#42474e}
 #btn-new-salon, #btn-new-dm{
-  width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.15);
-  border:none;color:#fff;cursor:pointer;font-size:13px;line-height:1;
+  width:24px;height:24px;border-radius:50%;background:#e6e9ef;
+  border:none;color:#000091;cursor:pointer;font-size:13px;line-height:1;
   display:flex;align-items:center;justify-content:center;
 }
 #btn-new-salon{font-size:16px}
-#btn-new-salon:hover, #btn-new-dm:hover{background:rgba(255,255,255,.25)}
+#btn-new-salon:hover, #btn-new-dm:hover{background:#d7dce6}
 #salon-list{flex:1;overflow-y:auto;padding:8px 0}
 .salon-section-title{
-  font-family:var(--mo);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.4);
-  padding:10px 12px 4px;text-transform:uppercase;
+  font-size:11px;letter-spacing:.5px;color:#8a909c;font-weight:600;
+  padding:12px 12px 4px;text-transform:uppercase;
 }
 .salon-item{
   display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;
   border-radius:5px;margin:1px 6px;transition:background .1s;
 }
-.salon-item:hover{background:rgba(255,255,255,.08)}
-.salon-item.active{background:rgba(255,255,255,.15)}
+.salon-item:hover{background:#ececf0}
+.salon-item.active{background:#e6ebf7;color:#000091}
 .salon-icon{font-size:14px;flex-shrink:0;width:20px;text-align:center}
-.salon-name{font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.salon-name{font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .salon-badge{
   background:#e1000f;color:#fff;font-family:var(--mo);font-size:9px;
   padding:1px 5px;border-radius:10px;min-width:18px;text-align:center;
