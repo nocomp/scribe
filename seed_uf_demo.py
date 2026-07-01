@@ -1,7 +1,7 @@
 """
 seed_uf_demo.py — Unités Fonctionnelles démo pour tous les sites Arc Alpin
 Crée des UF réalistes par pôle pour chaque site enregistré en DB.
-Pour DEMO1 : synchronise aussi depuis CapaciteReferentiel (données BedManager réelles).
+Pour CHAG : synchronise aussi depuis CapaciteReferentiel (données BedManager réelles).
 Usage: python3 seed_uf_demo.py
 """
 import os, sys, sqlite3
@@ -70,7 +70,7 @@ def seed_for_db_direct(db_path: str, label: str):
 
     created = 0
 
-    # Pour DEMO1 : synchroniser depuis capacite_referentiel si disponible
+    # Pour CHAG : synchroniser depuis capacite_referentiel si disponible
     try:
         cap_refs = c.execute(
             "SELECT DISTINCT service_nom, pole, site FROM capacite_referentiel"
@@ -132,10 +132,10 @@ def seed_for_db_direct(db_path: str, label: str):
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 instances = [
-    (os.path.join(BASE, "scribe_chag.db"),  "DEMO1"),
-    (os.path.join(BASE, "scribe_ght2.db"),  "DEMO2"),
-    (os.path.join(BASE, "scribe_ght3.db"),  "DEMO3"),
-    (os.path.join(BASE, "scribe_ght4.db"),  "DEMO4"),
+    (os.path.join(BASE, "scribe_chag.db"),  "CHAG"),
+    (os.path.join(BASE, "scribe_ght2.db"),  "GHTLMB"),
+    (os.path.join(BASE, "scribe_ght3.db"),  "GHTSAV"),
+    (os.path.join(BASE, "scribe_ght4.db"),  "GHTAD38"),
 ]
 
 # Si DATABASE_URL est défini (lancement depuis subshell instance), n'opérer que sur cette DB

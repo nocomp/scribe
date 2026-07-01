@@ -443,7 +443,7 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
     <div style="font-family:var(--mo);font-size:9px;color:var(--mu);font-weight:700;letter-spacing:.5px;margin-bottom:6px;border-bottom:1px solid var(--bd);padding-bottom:6px">PARAMÈTRES DE GÉNÉRATION IA</div>
     <div class="form-row">
       <label>Sujet / contexte clinique *</label>
-      <textarea id="ia-sujet" placeholder="Ex: Femme enceinte hémorragie au bloc + prématuré. Saturation maternité CHANGE. Coordination SAMU et transfert vers DEMO2 nécessaires."></textarea>
+      <textarea id="ia-sujet" placeholder="Ex: Femme enceinte hémorragie au bloc + prématuré. Saturation maternité CHANGE. Coordination SAMU et transfert vers GHTLMB nécessaires."></textarea>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
       <div class="form-row"><label>Durée exercice</label>
@@ -691,7 +691,8 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu);display:block;margin-bottom:3px">Type</label>
           <select id="adhoc-type" onchange="adhocOnTypeChange()" style="width:100%;padding:5px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
-            <option value="message">💬 Message chat (canal général-local)</option>
+            <option value="message">📨 Message (messagerie — acteur externe SAMU/ARS)</option>
+            <option value="chat">💬 Message chat (canal général-local)</option>
             <option value="incident">🚨 Incident</option>
             <option value="transfert">🚑 Transfert patient</option>
             <option value="decision">📋 Décision à prendre</option>
@@ -774,7 +775,7 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
           </div>
           <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Établissement destination</label>
             <select id="adhoc-tr-dest" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
-              <option value="DEMO1">CHANGE</option><option value="DEMO2">DEMO2</option><option value="DEMO5">DEMO5</option><option value="DEMO6">DEMO6</option><option value="DEMO7">DEMO7</option><option value="DEMO5">DEMO5</option><option value="DEMO6">DEMO6</option>
+              <option value="CHAG">CHANGE</option><option value="GHTLMB">GHTLMB</option><option value="CHRUMILLY">CHRUMILLY</option><option value="HDLEMAN">HDLEMAN</option><option value="HPMB">HPMB</option><option value="CHB">CHB</option><option value="CHPG">CHPG</option>
             </select>
           </div>
         </div>
@@ -1804,7 +1805,7 @@ function submitGenIA(){
   document.getElementById('ia-loading').style.display='block';
   document.getElementById('btn-gen').disabled=true;
   api('/api/exercice/generate',{method:'POST',body:JSON.stringify({
-    sujet:sujet,nb_sites:sites.length||1,sites:sites.length?sites:['DEMO1'],
+    sujet:sujet,nb_sites:sites.length||1,sites:sites.length?sites:['CHAG'],
     duree_exercice_min:parseInt(document.getElementById('ia-duree').value)||60,
     duree_reel_min:parseInt(document.getElementById('ia-duree-reel').value)||240,
     type_crise:document.getElementById('ia-type').value,
@@ -1929,6 +1930,17 @@ function refreshStatus(){
     updateStats(d);
     renderStimuli(d.stimuli||[]);
     _exoRunning=d.running;
+    // h68 — Resynchroniser l'état des boutons sur l'état réel de l'exercice.
+    // Sans ça, après un rechargement de page pendant un exercice en cours, le
+    // bouton ARRÊTER restait grisé (état HTML initial = disabled) → impossible
+    // d'arrêter l'exercice.
+    var _bStart=document.getElementById('btn-start');
+    var _bPause=document.getElementById('btn-pause');
+    var _bStop =document.getElementById('btn-stop');
+    if(_bStart) _bStart.disabled = !!d.running;
+    if(_bPause) _bPause.disabled = !d.running;
+    if(_bStop)  _bStop.disabled  = !d.running;
+    if(_bPause && d.running) _bPause.textContent = d.paused ? '▶ REPRENDRE' : '⏸ PAUSE';
     if(d.sites_actifs&&d.sites_actifs.length){
       document.getElementById('tokens-status').textContent='Instances connectées : '+d.sites_actifs.join(', ');
     }
@@ -2236,7 +2248,7 @@ function openAdhocModal(){
   } catch(e){}
   if(!sites.length){
     // Fallback : lister toutes les instances G7 (le backend rejettera si non connectée)
-    sites=['DEMO1','DEMO2','DEMO5','DEMO6','DEMO7','DEMO5','DEMO6'];
+    sites=['CHAG','GHTLMB','CHRUMILLY','HDLEMAN','HPMB','CHB','CHPG'];
   }
   sites.forEach(function(s){
     var opt=document.createElement('option');
@@ -2266,7 +2278,9 @@ function closeAdhocModal(){
 function adhocOnTypeChange(){
   var t=document.getElementById('adhoc-type').value;
   document.querySelectorAll('.adhoc-fields').forEach(function(el){ el.style.display='none'; });
-  var target=document.getElementById('adhoc-fields-'+t);
+  // h68 — Le type "chat" réutilise le même champ de contenu que "message".
+  var fieldsKey = (t === 'chat') ? 'message' : t;
+  var target=document.getElementById('adhoc-fields-'+fieldsKey);
   if(target) target.style.display='block';
   // v2309-hotfix — Charger les unités du référentiel capacité de la
   // cible sélectionnée quand on passe en mode "capacité". Permet la
@@ -2493,7 +2507,7 @@ function submitAdhoc(){
   var descAnim=document.getElementById('adhoc-desc-anim').value.trim();
 
   var payload={};
-  if(type==='message'){
+  if(type==='message' || type==='chat'){
     var c=document.getElementById('adhoc-msg-contenu').value.trim();
     if(!c){ toast('Contenu du message requis','err'); return; }
     payload.contenu=c;

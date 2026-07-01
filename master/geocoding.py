@@ -98,7 +98,11 @@ def geocode(query: str, *, country: str = "", timeout: float = 8.0) -> GeocodeRe
         # h72 — Sélection par CODE POSTAL. Nominatim trie par pertinence, mais
         # pour une rue très commune (« rue de la République ») il peut classer
         # une grande ville (Paris) avant la bonne commune malgré le code postal
+<<<<<<< HEAD
         # saisi (74200 Rivemont → Paris). Si la requête contient un code
+=======
+        # saisi (74200 Thonon-les-Bains → Paris). Si la requête contient un code
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         # postal (4 à 5 chiffres), on privilégie le résultat dont le code postal
         # — ou le display_name — correspond. Sinon comportement inchangé (data[0]),
         # ce qui préserve les adresses internationales sans code postal explicite.

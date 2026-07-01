@@ -494,6 +494,7 @@ function applyRoleVisibility() {
   // action qui renverrait 403.
   const smsIncBtn = document.getElementById('btn-sms-incident');
   if (smsIncBtn) smsIncBtn.style.display = (role === 'admin') ? '' : 'none';
+<<<<<<< HEAD
   // h149 — Masquer le widget KPI capacité dans le dashboard pour les rôles sans accès
   const capKpi = document.getElementById('db-kpi-capacite');
   if (capKpi) {
@@ -501,6 +502,8 @@ function applyRoleVisibility() {
     const capAllowed = capBtn && capBtn.style.display !== 'none';
     capKpi.style.display = capAllowed ? '' : 'none';
   }
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 }
 
 function openTab(id, btn) {
@@ -5228,7 +5231,11 @@ function _scenBuildBody() {
   const body = {
     titre,
     description: (document.getElementById('scen-description').value || '').trim(),
+<<<<<<< HEAD
     cible_sigle: (document.getElementById('scen-cible').value || 'CHV').trim(),
+=======
+    cible_sigle: (document.getElementById('scen-cible').value || 'CHAG').trim(),
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     anonymize: document.getElementById('scen-anonymize').checked,
     include_incidents: document.getElementById('scen-inc-incidents').checked,
     include_messages:  document.getElementById('scen-inc-messages').checked,
@@ -8647,7 +8654,11 @@ async function loadAdminPlugins() {
       const trackBg = p.enabled ? '#000091' : 'var(--border2)';
       const thumbLeft = p.enabled ? '18px' : '2px';
       // v3000h41 — Plugins disposant d'un panneau de configuration admin
+<<<<<<< HEAD
       const CONFIGURABLE = { bluefiles: 'openBluefilesConfig', messagerie: 'openMessagerieConfig', fichiers: 'openFichiersConfig' };
+=======
+      const CONFIGURABLE = { bluefiles: 'openBluefilesConfig' };
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       const cfgBtn = CONFIGURABLE[p.id]
         ? '<button onclick="' + CONFIGURABLE[p.id] + '()" title="Configurer" data-i18n-title="admin.plugin_configure" ' +
             'style="margin-top:auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;' +
@@ -8782,6 +8793,7 @@ async function testBluefilesConfig() {
   } catch(e) { if(res){res.style.color='#f87171';res.textContent='Erreur réseau';} }
 }
 
+<<<<<<< HEAD
 // ── Config upload des plugins messagerie / fichiers (carte ⚙) ───────────────
 function openMessagerieConfig(){ openPluginUploadConfig('messagerie', '✉️ Messagerie', true); }
 function openFichiersConfig(){ openPluginUploadConfig('fichiers', '📁 Fichiers (drive)', false); }
@@ -8853,6 +8865,8 @@ window.openFichiersConfig = openFichiersConfig;
 window.openPluginUploadConfig = openPluginUploadConfig;
 window.savePluginUploadConfig = savePluginUploadConfig;
 
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 function pluginToggleClick(el) {
   const pluginId = el.dataset.pluginId;
   const currentEnabled = el.dataset.enabled === 'true';
@@ -9414,9 +9428,12 @@ function renderCommPreview() {
     <div class="preview-hdr">
       <div class="preview-title">${etab.nom||t('common.etablissement_upper','Établissement de santé')}</div>
       <div class="preview-sub">${t('communique.message_officiel','État du système d’information — Point de situation')}</div>
+<<<<<<< HEAD
       ${lignesRep.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
         ${lignesRep.map(l=>`<span style="font-size:11px;background:var(--surface2,#f1f5f9);border:1px solid var(--border);border-radius:14px;padding:3px 10px">📞 <b>${escapeHtmlSafe(l.libelle)}</b> · <span style="font-family:monospace">${escapeHtmlSafe(l.numero)}</span></span>`).join('')}
       </div>`:''}
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     </div>
     <div class="preview-banner" style="background:${col.bg}22;border-color:${col.border}44">
       <div class="preview-banner-dot" style="background:${col.dot}"></div>
@@ -10916,15 +10933,23 @@ async function msgLoadList() {
     const data = await r.json();
     if (!data.messages || !data.messages.length) {
       const emptyMsg = _msgGetEmptyLabel();
+<<<<<<< HEAD
       listEl.innerHTML = _msgListBar() + `<div style="font-family:var(--font-ui);font-size:13px;color:var(--muted);padding:40px;text-align:center;opacity:.7">${emptyMsg}</div>`;
       return;
     }
     listEl.innerHTML = _msgListBar() + data.messages.map(m => _msgRenderListItem(m)).join('');
+=======
+      listEl.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:var(--muted);padding:40px;text-align:center;opacity:.6">${emptyMsg}</div>`;
+      return;
+    }
+    listEl.innerHTML = data.messages.map(m => _msgRenderListItem(m)).join('');
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
   } catch(e) {
     listEl.innerHTML = `<div style="font-family:var(--mono);font-size:10px;color:#ef4444;padding:24px">${e.message}</div>`;
   }
 }
 
+<<<<<<< HEAD
 // Barre « Tous · Trier par » en tête de liste (présentation webmail)
 function _msgListBar() {
   return `<div style="position:sticky;top:0;display:flex;gap:16px;padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted);background:var(--surface2);font-family:var(--font-ui);z-index:1">
@@ -10933,6 +10958,8 @@ function _msgListBar() {
   </div>`;
 }
 
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 function _msgGetEmptyLabel() {
   const labels = {
     inbox:     t('messagerie.empty_inbox',     'Aucun message dans la boîte'),
@@ -10948,7 +10975,15 @@ function _msgGetEmptyLabel() {
 function _msgRenderListItem(m) {
   const isUnread = !m.lu && m.is_inbox;
   const isActive = (m.id === _msgState.currentId);
+<<<<<<< HEAD
 
+=======
+  const cls = ['msg-list-item'];
+  if (isUnread) cls.push('unread');
+  if (isActive) cls.push('active');
+
+  // Pour Envoyés/Brouillons : afficher le destinataire ; sinon l'expéditeur
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
   let fromOrTo = '—';
   if (_msgState.box === 'sent' || _msgState.box === 'drafts') {
     const destNames = (m.destinataires || []).map(d => d.display || d.value).join(', ');
@@ -10957,6 +10992,7 @@ function _msgRenderListItem(m) {
     fromOrTo = m.expediteur_nom || m.expediteur_addr || '—';
   }
 
+<<<<<<< HEAD
   const dateStr = m.created_at ? parseUTC(m.created_at).toLocaleString(t('locale','fr-FR'),
     {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
   const safeFrom    = String(fromOrTo).replace(/</g, '&lt;');
@@ -10985,6 +11021,27 @@ function _msgRenderListItem(m) {
       <div style="font-size:12px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safePreview}</div>
     </div>
     ${clip}
+=======
+  // v3000h42 — parseUTC() : les dates serveur sont en UTC sans 'Z'. new Date()
+  // les interprétait en heure locale → décalage H-2 (CEST). parseUTC corrige.
+  const dateStr = m.created_at ? parseUTC(m.created_at).toLocaleString(t('locale','fr-FR'), 
+    {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+  const safeFrom    = String(fromOrTo).replace(/</g, '&lt;');
+  const safeSubject = String(m.sujet || '(sans objet)').replace(/</g, '&lt;');
+  const safePreview = String(m.preview || '').replace(/</g, '&lt;');
+
+  let flags = '';
+  if (m.flag_important) flags += '⭐';
+  if (m.attachments_count > 0) flags += '📎';
+
+  return `<div class="${cls.join(' ')}" onclick="msgOpenDetail(${m.id})">
+    <div class="msg-list-from">
+      <span>${safeFrom}</span>
+      <span class="msg-list-date">${dateStr}</span>
+    </div>
+    <div class="msg-list-subject">${safeSubject} <span class="msg-list-flags">${flags}</span></div>
+    <div class="msg-list-preview">${safePreview}</div>
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
   </div>`;
 }
 
@@ -11026,6 +11083,7 @@ async function msgOpenDetail(msgId) {
 }
 
 function _msgRenderDetail(m) {
+<<<<<<< HEAD
   const dateStr = m.created_at ? parseUTC(m.created_at).toLocaleString(t('locale','fr-FR')) : '';
   const fromName = m.expediteur_nom || m.expediteur_addr || '—';
   const safeFrom = String(fromName).replace(/</g, '&lt;');
@@ -11064,10 +11122,75 @@ function _msgRenderDetail(m) {
       `<button onclick="msgToggleImportant(${m.id}, ${!m.flag_important})" class="msg-wm-btn ghost" title="${t('messagerie.important','Important')}">${m.flag_important ? '★' : '☆'}</button>` +
       `<button onclick="msgClassify(${m.id})" class="msg-wm-btn ghost" title="${t('messagerie.classify','Classer')}">📁</button>` +
       `<button onclick="msgSoftDelete(${m.id})" class="msg-wm-btn ghost danger" title="${t('messagerie.delete','Supprimer')}">🗑</button>`;
+=======
+  // v3000h42 — parseUTC() pour corriger le décalage H-2 (cf. _msgRenderListItem)
+  const dateStr = m.created_at ? parseUTC(m.created_at).toLocaleString(t('locale','fr-FR')) : '';
+  const safeFrom = String(m.expediteur_nom || '—').replace(/</g, '&lt;');
+  const safeSubject = String(m.sujet || '(sans objet)').replace(/</g, '&lt;');
+  // Destinataires
+  const destHtml = (m.destinataires || []).map(d => {
+    const display = String(d.display || d.value || '').replace(/</g, '&lt;');
+    return `<span style="background:rgba(0,49,137,.08);padding:2px 8px;border-radius:3px;font-size:10px">${display}</span>`;
+  }).join(' ');
+
+  // Contenu (préserver les retours à la ligne, échapper HTML)
+  const safeBody = String(m.contenu || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // Pièces jointes
+  let attachmentsHtml = '';
+  if (m.attachments && m.attachments.length) {
+    attachmentsHtml = `<div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">
+        📎 ${t('messagerie.attachments_label','PIÈCES JOINTES')} (${m.attachments.length})
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+      ${m.attachments.map(a => {
+        const safeName = String(a.nom).replace(/</g, '&lt;');
+        const size = _msgFormatSize(a.taille || 0);
+        if (a.kind === 'bluefiles' && a.bluefiles_short_link) {
+          return `<a href="${a.bluefiles_short_link}" target="_blank" rel="noopener" 
+              style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(0,49,137,.08);border:1px solid rgba(0,49,137,.2);border-radius:4px;font-family:var(--mono);font-size:10px;text-decoration:none;color:#003189">
+              🔒 <span style="flex:1">${safeName}</span><span style="font-size:9px">Bluefiles · ${size}</span></a>`;
+        }
+        return `<a href="/api/v1/messagerie/attachments/${a.id}" target="_blank" rel="noopener"
+            style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:10px;text-decoration:none;color:var(--text)">
+            📎 <span style="flex:1">${safeName}</span><span style="font-size:9px;color:var(--muted)">${size}</span></a>`;
+      }).join('')}
+      </div></div>`;
+  }
+
+  // Barre d'actions
+  const isInTrash = !!m.deleted_at;
+  let actionsHtml;
+  if (isInTrash) {
+    actionsHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button onclick="msgRestore(${m.id})" class="msg-action-btn" style="background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:#22c55e">
+        ↩ <span data-i18n="messagerie.restore">Restaurer</span>
+      </button>
+      <button onclick="msgPermanentDelete(${m.id})" class="msg-action-btn" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#ef4444">
+        🗑 <span data-i18n="messagerie.permanent_delete">Supprimer définitivement</span>
+      </button>
+    </div>`;
+  } else {
+    actionsHtml = `<div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button onclick="msgReply(${m.id})" class="msg-action-btn">↩ <span data-i18n="messagerie.reply">Répondre</span></button>
+      <button onclick="msgReplyAll(${m.id})" class="msg-action-btn">↩↩ <span data-i18n="messagerie.reply_all">Répondre à tous</span></button>
+      <button onclick="msgForward(${m.id})" class="msg-action-btn">↪ <span data-i18n="messagerie.forward">Transférer</span></button>
+      <button onclick="msgToggleImportant(${m.id}, ${!m.flag_important})" class="msg-action-btn">
+        ${m.flag_important ? '★' : '☆'} <span data-i18n="messagerie.important">Important</span>
+      </button>
+      <button onclick="msgClassify(${m.id})" class="msg-action-btn">📁 <span data-i18n="messagerie.classify">Classer</span></button>
+      <button onclick="msgSoftDelete(${m.id})" class="msg-action-btn" style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.2);color:#ef4444">
+        🗑 <span data-i18n="messagerie.delete">Supprimer</span>
+      </button>
+    </div>`;
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
   }
 
   return `
     <style>
+<<<<<<< HEAD
       .msg-wm-btn{font-family:var(--font-ui);font-size:12px;padding:6px 12px;background:var(--surface2);
         border:1px solid var(--border2,var(--border));border-radius:6px;color:var(--text);cursor:pointer;
         display:inline-flex;align-items:center;gap:5px}
@@ -11093,6 +11216,34 @@ function _msgRenderDetail(m) {
       </div>
       ${attHtml}
       <div style="font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-wrap:break-word">${safeBody}</div>
+=======
+      .msg-action-btn { font-family: var(--mono); font-size: 9px; padding: 5px 10px;
+        background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px;
+        color: var(--text); cursor: pointer; }
+      .msg-action-btn:hover { background: var(--surface); }
+    </style>
+    <div style="max-width:800px">
+      <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">
+        ${safeSubject} ${m.flag_important ? '<span style="color:#f59e0b">★</span>' : ''}
+      </div>
+      <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px">
+        <div style="flex:1">
+          <div style="color:var(--muted);font-size:9px;letter-spacing:1px;margin-bottom:3px" data-i18n="messagerie.from">DE</div>
+          <div style="color:var(--text);font-weight:700">${safeFrom}</div>
+        </div>
+        <div style="flex:2">
+          <div style="color:var(--muted);font-size:9px;letter-spacing:1px;margin-bottom:3px" data-i18n="messagerie.to">À</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px">${destHtml || '<span style="color:var(--muted)">—</span>'}</div>
+        </div>
+        <div>
+          <div style="color:var(--muted);font-size:9px;letter-spacing:1px;margin-bottom:3px" data-i18n="messagerie.date">DATE</div>
+          <div style="color:var(--text)">${dateStr}</div>
+        </div>
+      </div>
+      <div style="padding:20px 0;font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-wrap:break-word">${safeBody}</div>
+      ${attachmentsHtml}
+      <div style="margin-top:24px;padding-top:14px;border-top:1px solid var(--border)">${actionsHtml}</div>
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     </div>
   `;
 }
@@ -13283,7 +13434,11 @@ document.addEventListener('click',function(ev){
 });
 
 /* ── h111 — Centre d'aide (bilingue FR/EN, recherchable) ─────────────────── */
+<<<<<<< HEAD
 function helpLang2(){try{return String((typeof LANG_CODE!=="undefined"&&LANG_CODE)||localStorage.getItem('scribe_lang_pref')||'fr').slice(0,2).toLowerCase();}catch(e){return 'fr';}}
+=======
+function helpLang2(){var c;try{c=(localStorage.getItem('scribe_lang_pref')||'en');}catch(e){c='en';}return String(c).slice(0,2).toLowerCase();}
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 var HELP_ARTICLES = [
  {id:'presentation', cat:{fr:'Démarrer',en:'Getting started',de:'Erste Schritte',es:'Primeros pasos',it:'Per iniziare',nl:'Aan de slag'},
   title:{fr:'Présentation & architecture',en:'Overview & architecture',de:'Überblick & Architektur',es:'Visión general y arquitectura',it:'Panoramica e architettura',nl:'Overzicht & architectuur'},

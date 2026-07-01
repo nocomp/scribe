@@ -48,13 +48,18 @@ def _load_cache():
 
 
 def get_domain(domain: str) -> dict:
+<<<<<<< HEAD
     """Config centrale (cache) pour un domaine : 'ia' | 'bluefiles' | 'smtp' | 'sms' | 'uploads'."""
+=======
+    """Config centrale (cache) pour un domaine : 'ia' | 'bluefiles' | 'smtp' | 'sms'."""
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     _ensure_started()
     d = _load_cache()
     val = d.get(domain) if isinstance(d, dict) else None
     return val if isinstance(val, dict) else {}
 
 
+<<<<<<< HEAD
 def get_upload_policy() -> dict:
     """Politique d'upload depuis la config centrale (domaine 'uploads') :
         {max_size_mb: <nombre>, allowed_extensions: [".pdf", ".png", ...] | "pdf,png"}
@@ -96,6 +101,8 @@ def enforce_upload_policy(filename: str, default_max_bytes: int) -> int:
     return pol.get("max_bytes") or default_max_bytes
 
 
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 def pull_now(timeout: float = 8.0) -> bool:
     url, tok = _read_federation()
     if not url or not tok:
@@ -114,6 +121,7 @@ def pull_now(timeout: float = 8.0) -> bool:
             os.replace(tmp, _CACHE_PATH)
             globals()["_data"] = cfg
         logger.info("[central] config tirée depuis %s", endpoint)
+<<<<<<< HEAD
         # Matérialiser les canaux mail/SMS à partir de la config diffusée :
         # sans cela, l'instance « tire » la config mais n'a aucun canal créé
         # → « pas de canal configuré » au test. Best-effort, jamais bloquant.
@@ -122,6 +130,8 @@ def pull_now(timeout: float = 8.0) -> bool:
             materialize_central_channels()
         except Exception:
             pass
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         return True
     except Exception as e:
         logger.warning("[central] pull KO (%s) — cache local conservé : %s", endpoint, e)

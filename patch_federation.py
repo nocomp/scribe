@@ -105,5 +105,9 @@ final_lines = clean_content.count('\n') + 1
 print(f"✓ Corrigé: {final_lines} lignes (était {len(lines)})")
 print()
 print("Redémarrer les instances SCRIBE:")
+<<<<<<< HEAD
 print("  bash lancer_scribe.sh")
+=======
+print("  bash lancer_instances.sh")
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 print("  (sans --reset pour préserver les données)")

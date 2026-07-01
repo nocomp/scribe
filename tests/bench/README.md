@@ -23,7 +23,7 @@ Cinq scénarios critiques sont exécutés contre **1 collecteur + 2 instances SC
 | 01  | `health`                  | Les 3 services répondent sur `/health`                         |
 | 02  | `auth`                    | Login admin fonctionne sur chaque instance SCRIBE              |
 | 03  | `incident_local`          | Créer un incident puis le relire via l'API                     |
-| 04  | `transfert_federe`        | Transfert DEMO1 → DEMO2 via collecteur (flow qui a bugué en 2182/2184) |
+| 04  | `transfert_federe`        | Transfert CHAG → GHTLMB via collecteur (flow qui a bugué en 2182/2184) |
 | 05  | `rapport_html`            | Le collecteur génère un rapport HTML valide avec Chart.js      |
 
 **Objectif** : à chaque nouveau build SCRIBE, lancer ce bench avant déploiement pour détecter les régressions.
@@ -74,7 +74,7 @@ Dans `bench.py`, ajouter une fonction `sc_06_xxx()` qui retourne un `Scenario` p
 def sc_06_mon_test() -> Scenario:
     s = Scenario("06_mon_test", "Description courte")
     # Login + actions + vérifications
-    code, body = http("POST", f"{DEMO1_URL}/api/v1/auth/login", ...)
+    code, body = http("POST", f"{CHAG_URL}/api/v1/auth/login", ...)
     s.add("nom de l'étape", success_bool, "détail pour debug")
     return s
 ```

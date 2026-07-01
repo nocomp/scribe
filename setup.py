@@ -127,16 +127,26 @@ def supervision():
     print(f"  {dim('→')} Site 3 (8002)   : http://localhost:8002")
     print(f"  {dim('→')} Site 4 (8003)   : http://localhost:8003")
     print()
+<<<<<<< HEAD
     script = os.path.join(BASE_DIR, "lancer_scribe.sh")
     if not os.path.exists(script):
         err("lancer_scribe.sh introuvable.")
+=======
+    script = os.path.join(BASE_DIR, "lancer_instances.sh")
+    if not os.path.exists(script):
+        err("lancer_instances.sh introuvable.")
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         warn("Ce script est fourni dans la version de déploiement multi-GHT.")
         input("\n  Appuyez sur Entrée pour revenir au menu...")
         return
     reset = input("  Réinitialiser les bases de données ? (o/N) : ").strip().lower()
     print()
     flag = "--reset" if reset in ("o", "oui", "y", "yes") else ""
+<<<<<<< HEAD
     run(f"bash lancer_scribe.sh {flag}")
+=======
+    run(f"bash lancer_instances.sh {flag}")
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
 def from_xml(xml_file=None):
     banner("[MON ÉTABLISSEMENT] Initialisation depuis config.xml")

@@ -1,4 +1,3 @@
-import os
 #!/usr/bin/env python3
 """
 tests/debug_albert.py — Diagnostic de la génération IA
@@ -18,22 +17,22 @@ from datetime import datetime
 
 ALBERT_URL   = "https://albert.api.etalab.gouv.fr/v1/chat/completions"
 ALBERT_MODEL = "mistralai/Ministral-3-8B-Instruct-2512"
-ALBERT_KEY   = os.getenv("ALBERT_API_KEY", "")  # Set via env var
+ALBERT_KEY   = "sk-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5ODA1LCJ0b2tlbl9pZCI6MjAzNTUsImV4cGlyZXMiOjE4MDY1MzA0MDB9.nUl4-G3ygETP11uooQ7u8HYGRYY_cAmcHSUCcy7IN9g"
 
 SYSTEM_EXO = """Tu es expert en gestion de crise hospitalière française. Tu génères des scénarios d'exercice réalistes pour équipes GHT. Tu réponds UNIQUEMENT en JSON valide, sans texte autour."""
 
 def build_prompt_full(nb_stimuli=8, complexite="MOYEN", type_crise="SANITAIRE",
-                     sujet="Femme enceinte hémorragie au bloc + prématuré, saturation maternité DEMO1",
+                     sujet="Femme enceinte hémorragie au bloc + prématuré, saturation maternité CHAG",
                      duree_min=60, duree_reel=240, ratio=4.0,
                      sites=None, nb_joueurs=4,
                      stimuli_externes="none", valeurs=None, services=None,
                      perturbations=""):
     """Prompt identique à celui de SCRIBE 2187/2192."""
-    if sites is None: sites = ["DEMO1"]
+    if sites is None: sites = ["CHAG"]
     if valeurs is None: valeurs = []
     if services is None: services = []
     sid = datetime.now().strftime('%Y%m%d_%H%M')
-    ports = {"DEMO1":8660,"DEMO2":8661,"DEMO5":8662,"DEMO6":8663,"DEMO7":8664,"DEMO5":8665,"DEMO6":8666}
+    ports = {"CHAG":8660,"GHTLMB":8661,"CHRUMILLY":8662,"HDLEMAN":8663,"HPMB":8664,"CHB":8665,"CHPG":8666}
     type_ctx = {
         "SANITAIRE":"Crise sanitaire hospitalière (hémorragie, accident, pandémie...)",
         "CYBER":"Crise cyber hospitalière. SIH, DPI, PACS potentiellement touchés. Inclure stimuli CERT Santé, isolation réseaux, continuité sans outils numériques.",
@@ -63,7 +62,7 @@ Retourne UNIQUEMENT ce JSON valide (rien d'autre, pas de texte avant ou après):
 RÈGLES STRICTES:
 - EXACTEMENT {nb_stimuli} stimuli, espacés progressivement (T+0, T+5, T+10...)
 - Types stimuli disponibles: incident, message, transfert, chat, decision
-- Ports fixes: DEMO1=8660 DEMO2=8661 DEMO5=8662 DEMO6=8663 DEMO7=8664 DEMO5=8665 DEMO6=8666
+- Ports fixes: CHAG=8660 GHTLMB=8661 CHRUMILLY=8662 HDLEMAN=8663 HPMB=8664 CHB=8665 CHPG=8666
 - EXACTEMENT {nb_joueurs} joueurs répartis sur les sites
 - JSON VALIDE UNIQUEMENT — pas de backtick, pas de commentaire, pas de texte hors JSON"""
 
@@ -147,7 +146,7 @@ async def main():
 
     # Test 1 : prompt minimal (peu de stimuli, sujet simple)
     p = build_prompt_full(nb_stimuli=5, complexite="FACILE",
-                          sujet="Incendie cuisine centrale DEMO1")
+                          sujet="Incendie cuisine centrale CHAG")
     ok, _, err = await call_albert(p, temperature=0.7,
                                     label="1. Simple (5 stimuli, FACILE)")
     results.append(("simple_5stimuli", ok, err))
@@ -161,7 +160,7 @@ async def main():
     p = build_prompt_full(nb_stimuli=10, complexite="DIFFICILE",
                           type_crise="CYBER",
                           sujet="Phishing cyber visant DPI, transferts patients multi-sites",
-                          sites=["DEMO1", "DEMO2"], nb_joueurs=6,
+                          sites=["CHAG", "GHTLMB"], nb_joueurs=6,
                           stimuli_externes="samu,prefecture,cert_sante",
                           valeurs=["coordination","decision","cyber_response"],
                           services=["dsi","imagerie","labo","pharmacie"],
@@ -179,7 +178,7 @@ async def main():
     p = build_prompt_full(nb_stimuli=15, complexite="EXPERT",
                           type_crise="MIXTE",
                           sujet="Ransomware + afflux blessés + panne ascenseurs + grève infirmières",
-                          sites=["DEMO1","DEMO2","DEMO5"], nb_joueurs=8,
+                          sites=["CHAG","GHTLMB","CHRUMILLY"], nb_joueurs=8,
                           stimuli_externes="samu,prefecture,medias,famille,cert_sante,ght_voisin",
                           valeurs=["coordination","communication","decision","transfert","capacite","continuite","cyber_response","rh","ethique"],
                           services=["imagerie","labo","pharmacie","bloc","sterilisation","dsi","biomed","securite","restauration","transport","lingerie","dechets"],

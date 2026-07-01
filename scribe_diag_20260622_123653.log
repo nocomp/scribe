@@ -1,0 +1,45 @@
+
+==============================================================================
+CONTEXTE
+==============================================================================
+Racine projet      : /home/claude/scribe_v3000h130
+SCRIBE_DATA_DIR    : (non défini)
+SCRIBE_STATE_FILE  : (non défini)
+Dossier données    : /home/claude/scribe_v3000h130/data/instances  (existe=False)
+Fichier état master: /home/claude/scribe_v3000h130/master/master_instances.json  (existe=False)
+Dossier collecteur : /home/claude/scribe_v3000h130/collecteur  (existe=True)
+Horodatage         : 2026-06-22T12:36:53.969763
+
+==============================================================================
+1. TOUTES LES BASES SQLite TROUVÉES (où qu'elles soient)
+==============================================================================
+  Aucune base scribe.db trouvée.
+
+==============================================================================
+2. ÉTAT DU MASTER (master_instances.json)
+==============================================================================
+  ERREUR lecture /home/claude/scribe_v3000h130/master/master_instances.json : [Errno 2] No such file or directory: '/home/claude/scribe_v3000h130/master/master_instances.json'
+
+==============================================================================
+3. COMPTES SUPERVISION (collecteur_ui_auth.json)
+==============================================================================
+  (fichier absent)
+
+==============================================================================
+4. CONFIG NOTIF SERVEUR (collecteur_central_config.json)
+==============================================================================
+  (ABSENT — aucune notif enregistrée côté serveur, ou jamais 'Enregistré')
+
+==============================================================================
+5. SIMULATION DU BACKUP — ce que l'archive contiendrait MAINTENANT
+==============================================================================
+  Simulation impossible : /home/claude/scribe_v3000h130/master/master_instances.json absent — aucune instance enregistrée côté master
+
+==============================================================================
+CONCLUSION RAPIDE (à me coller)
+==============================================================================
+  Cherche dans le bloc 1 / 2 où apparaît 'rssi' :
+   - dans un scribe.db  -> user d'INSTANCE (le backup doit le prendre)
+   - dans collecteur_ui_auth.json -> compte SUPERVISION (hors backup actuel)
+   - nulle part -> la création n'a pas persisté
+  Bloc 4 : notif présente côté serveur ? (sinon 'Enregistrer' n'a rien fait)

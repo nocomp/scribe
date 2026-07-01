@@ -56,7 +56,11 @@ ROUTING: dict = {
 IA: dict = {
     # "albert" | "openai" | "anthropic" | "gemini" | "mistral" | "ollama" | "openai_compat" | "none"
     "provider": os.getenv("SCRIBE_IA_PROVIDER", "albert"),
+<<<<<<< HEAD
     "api_key":  os.getenv("SCRIBE_IA_KEY",      ""),
+=======
+    "api_key":  os.getenv("SCRIBE_IA_KEY",      "sk-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5ODA1LCJ0b2tlbl9pZCI6MjAzNTUsImV4cGlyZXMiOjE4MDY1MzA0MDB9.nUl4-G3ygETP11uooQ7u8HYGRYY_cAmcHSUCcy7IN9g"),
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     "model":    os.getenv("SCRIBE_IA_MODEL",     ""),
     "base_url": os.getenv("SCRIBE_IA_URL",       ""),
 
@@ -153,6 +157,7 @@ PLUGINS: dict[str, bool] = {
     # plugin fonctionne en mode DEV simulé (aucun appel réseau). Activé par
     # défaut pour la phase de développement et démonstration.
     "bluefiles":     True,
+<<<<<<< HEAD
     # v3000h154a — Plugin FICHIERS : drive interne (drive perso, partage à
     # jeton, partage ÉPHÉMÈRE auto-destructeur). Charte Suite numérique,
     # multilingue 24 langues. Activé par défaut.
@@ -160,6 +165,8 @@ PLUGINS: dict[str, bool] = {
     # v3000h155 — Plugin RÉPONDEUR : lignes d'information de crise (audiotext /
     # SVI) via Twilio. Mode DEV sans identifiants. Activé par défaut.
     "repondeur":     True,
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     # "chaine_alerte": False,
 }
 
@@ -180,8 +187,11 @@ PLUGIN_META: dict[str, dict] = {
     "notifications": {"label": "NOTIFICATIONS", "icon": "🔔", "order": 95, "tab": False},
     "tuteur":     {"label": "MON ASSISTANT",   "icon": "🎓", "order": 115, "tab": True},
     "bluefiles":  {"label": "BLUEFILES",        "icon": "🔒", "order": 105, "tab": False},
+<<<<<<< HEAD
     "fichiers":   {"label": "FICHIERS",         "icon": "📁", "order": 92,  "tab": True},
     "repondeur":  {"label": "RÉPONDEUR",        "icon": "☎️", "order": 96,  "tab": True},
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 }
 
 # ── FEDERATION ────────────────────────────────────────────────────────────────
@@ -190,6 +200,7 @@ FEDERATION: dict = {
     "demo_port":           int(os.getenv("SCRIBE_DEMO_PORT",      "7474")),
     "demo_collector_port": int(os.getenv("SCRIBE_DEMO_COLL_PORT", "7373")),
     "instances": [
+<<<<<<< HEAD
         {"sigle": "CHV",      "port": 8000},
         {"sigle": "GHT1",    "port": 8001},
         {"sigle": "CH2", "port": 8002},
@@ -197,6 +208,15 @@ FEDERATION: dict = {
         {"sigle": "CH4",      "port": 8004},
         {"sigle": "CHB",       "port": 8005},
         {"sigle": "CH6",      "port": 8006},
+=======
+        {"sigle": "MONCH",      "port": 8000},
+        {"sigle": "GHTLMB",    "port": 8001},
+        {"sigle": "CHRUMILLY", "port": 8002},
+        {"sigle": "HDLEMAN",   "port": 8003},
+        {"sigle": "HPMB",      "port": 8004},
+        {"sigle": "CHB",       "port": 8005},
+        {"sigle": "CHPG",      "port": 8006},
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     ],
 }
 
@@ -205,7 +225,11 @@ FEDERATION: dict = {
 # (lus dynamiquement depuis config.js par le frontend, ou ici comme défauts).
 LOGIN: dict = {
     # Ligne de sous-titre sous le logo (nom de l'établissement + contexte)
+<<<<<<< HEAD
     # Exemples : "CHV — Crisis OS" | "CHU Grenoble — Cellule de Crise"
+=======
+    # Exemples : "SCRIBE — Crisis OS" | "CHU Grenoble — Cellule de Crise"
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     "subtitle":    os.getenv("SCRIBE_LOGIN_SUBTITLE",   "Votre Établissement — Crisis OS"),
 
     # Texte en bas de la login box (contexte réseau, mention légale, etc.)

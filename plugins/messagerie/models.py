@@ -120,7 +120,10 @@ class Message(Base):
             "expediteur_id":   self.expediteur_id,
             "expediteur_nom":  self.expediteur_nom,
             "expediteur_addr": self.expediteur_addr,
+<<<<<<< HEAD
             "expediteur_sigle": self.expediteur_addr or "",  # sigle de l'étab expéditeur (inter-GHT)
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
             "destinataires":   self.destinataires or [],
             "destinataires_cc":  self.destinataires_cc or [],
             "destinataires_bcc": self.destinataires_bcc or [],

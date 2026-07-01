@@ -1382,6 +1382,7 @@ def _collect_instance_files(inst_dir):
     return out
 
 
+<<<<<<< HEAD
 def _fichiers_blobs_dir():
     """Répertoire des blobs du plugin fichiers — MÊME logique que
     plugins/fichiers/storage.py (SCRIBE_DATA_DIR/fichiers, sinon <racine>/data/fichiers).
@@ -1395,6 +1396,10 @@ def _fichiers_blobs_dir():
 
 def _collect_server_trees():
     """Arborescences serveur partagees (uploads, archives, blobs fichiers) -> {dir: {rel: b64}}.
+=======
+def _collect_server_trees():
+    """Arborescences serveur partagees (uploads, archives) -> {dir: {rel: b64}}.
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     Honore SCRIBE_UPLOADS_DIR si defini hors racine projet."""
     import os
     trees = {}
@@ -1413,6 +1418,7 @@ def _collect_server_trees():
             tree = _collect_dir_tree(abs_up)
             if tree:
                 trees["uploads"] = {**trees.get("uploads", {}), **tree}
+<<<<<<< HEAD
     # blobs du plugin fichiers (hors dossiers d'instance) — sinon contenu perdu
     abs_b = os.path.abspath(_fichiers_blobs_dir())
     if abs_b not in seen:
@@ -1420,6 +1426,8 @@ def _collect_server_trees():
         if tree:
             trees["fichiers_blobs"] = tree
             seen.add(abs_b)
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     return trees
 
 
@@ -1428,11 +1436,14 @@ def _restore_server_trees(trees):
     import os
     res = {}
     for d, tree in (trees or {}).items():
+<<<<<<< HEAD
         # Blobs du plugin fichiers : restaurés vers leur répertoire réel
         # (SCRIBE_DATA_DIR/fichiers), hors racine projet.
         if d == "fichiers_blobs":
             res[d] = _restore_dir_tree(_fichiers_blobs_dir(), tree)
             continue
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         # On restaure uniquement vers les dossiers connus, sous la racine projet
         if d not in _SERVER_TREE_DIRS:
             logger.warning(f"Arborescence serveur inconnue ignoree : {d}")
@@ -1633,12 +1644,15 @@ async def restore_full(request: Request, file: UploadFile = File(...), password:
             n_inst_files = _restore_dir_tree(str(inst_dir), inst.get("instance_files") or {})
         except Exception as e:
             logger.warning(f"Restauration fichiers instance {sigle} : {e}")
+<<<<<<< HEAD
         # h147 — flag one-shot pour signaler à ensure_admin que c'est un
         # demarrage post-restore : ne pas forcer must_change_password.
         try:
             (inst_dir / ".scribe_restored").write_text("1")
         except Exception:
             pass
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         restored.append({"sigle": cfg.sigle, "port": port, "rows": applied_rows,
                          "files": n_inst_files})
     n_channels = _save_central_config(payload.get("server_config") or {})

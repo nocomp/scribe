@@ -2,7 +2,7 @@
 """
 tests/bench/bench.py — SCRIBE benchmark de validation bout-en-bout.
 
-Lance en local 1 collecteur d'exercice + 2 instances SCRIBE (DEMO1/DEMO2),
+Lance en local 1 collecteur d'exercice + 2 instances SCRIBE (MONCH/GHTLMB),
 exécute 5 scénarios critiques, produit un rapport console et un exit code
 cohérent avec l'état des tests.
 
@@ -38,12 +38,12 @@ from typing import Any, Optional
 # SCRIBE habituelle (8000, 8660-8666, 8565) pour éviter tout conflit
 # avec une instance déjà en cours.
 COLLECTEUR_PORT = 17900
-DEMO1_PORT       = 17901
-DEMO2_PORT     = 17902
+MONCH_PORT       = 17901
+GHTLMB_PORT     = 17902
 
 COLLECTEUR_URL = f"http://127.0.0.1:{COLLECTEUR_PORT}"
-DEMO1_URL       = f"http://127.0.0.1:{DEMO1_PORT}"
-DEMO2_URL     = f"http://127.0.0.1:{DEMO2_PORT}"
+MONCH_URL       = f"http://127.0.0.1:{MONCH_PORT}"
+GHTLMB_URL     = f"http://127.0.0.1:{GHTLMB_PORT}"
 
 BENCH_DIR   = Path(tempfile.mkdtemp(prefix="scribe_bench_"))
 SCRIBE_ROOT = Path(__file__).resolve().parent.parent.parent  # racine scribe/
@@ -313,7 +313,7 @@ class Scenario:
 def sc_01_health() -> Scenario:
     """Les 3 services répondent sur /health."""
     s = Scenario("01_health", "Les 3 services répondent sur /health")
-    for label, url in [("collecteur", COLLECTEUR_URL), ("chag", DEMO1_URL), ("ghtlmb", DEMO2_URL)]:
+    for label, url in [("collecteur", COLLECTEUR_URL), ("chag", MONCH_URL), ("ghtlmb", GHTLMB_URL)]:
         code, body = http("GET", f"{url}/health")
         s.add(f"GET {label}/health",
               code == 200,
@@ -323,8 +323,8 @@ def sc_01_health() -> Scenario:
 
 def sc_02_auth() -> Scenario:
     """Login fonctionne sur chaque instance."""
-    s = Scenario("02_auth", "Login admin sur DEMO1 et DEMO2")
-    for label, url in [("chag", DEMO1_URL), ("ghtlmb", DEMO2_URL)]:
+    s = Scenario("02_auth", "Login admin sur MONCH et GHTLMB")
+    for label, url in [("chag", MONCH_URL), ("ghtlmb", GHTLMB_URL)]:
         code, body = http("POST", f"{url}/api/v1/auth/login",
                          json_body={"username": "benchadmin", "password": "BenchPass2026!"})
         tok = body.get("token") if isinstance(body, dict) else None
@@ -336,9 +336,9 @@ def sc_02_auth() -> Scenario:
 
 def sc_03_incident_local() -> Scenario:
     """Créer un incident via API, vérifier qu'il est listé."""
-    s = Scenario("03_incident_local", "Incident DEMO1 : create + relecture")
+    s = Scenario("03_incident_local", "Incident MONCH : create + relecture")
     # Login
-    code, body = http("POST", f"{DEMO1_URL}/api/v1/auth/login",
+    code, body = http("POST", f"{MONCH_URL}/api/v1/auth/login",
                      json_body={"username": "benchadmin", "password": "BenchPass2026!"})
     tok = body.get("token") if isinstance(body, dict) else None
     if not s.add("login chag", bool(tok),
@@ -354,9 +354,9 @@ def sc_03_incident_local() -> Scenario:
         "status":     "SIGNALÉ",
         "declarant_nom":   "Bench",
         "declarant_fonction": "Auto",
-        "site_id":    "DEMO1",  # string libre, pas de FK
+        "site_id":    "MONCH",  # string libre, pas de FK
     }
-    code, body = http("POST", f"{DEMO1_URL}/api/v1/sitrep/post",
+    code, body = http("POST", f"{MONCH_URL}/api/v1/sitrep/post",
                      token=tok, json_body=incident_payload)
     new_id = body.get("id") if isinstance(body, dict) else None
     if not s.add("POST /api/v1/sitrep/post", code < 300 and bool(new_id),
@@ -364,7 +364,7 @@ def sc_03_incident_local() -> Scenario:
         return s
 
     # Le relire
-    code, body = http("GET", f"{DEMO1_URL}/api/v1/sitrep/history", token=tok)
+    code, body = http("GET", f"{MONCH_URL}/api/v1/sitrep/history", token=tok)
     found = isinstance(body, list) and any(
         i.get("id") == new_id and i.get("fait") == incident_payload["fait"]
         for i in body
@@ -376,23 +376,23 @@ def sc_03_incident_local() -> Scenario:
 
 
 def sc_04_transfert_federe() -> Scenario:
-    """Transfert DEMO1 → DEMO2 via fédération collecteur.
+    """Transfert MONCH → GHTLMB via fédération collecteur.
     C'est le flow qui a bugué en 2182 et 2184, donc test-clef."""
-    s = Scenario("04_transfert_federe", "Transfert DEMO1 → DEMO2 via collecteur")
+    s = Scenario("04_transfert_federe", "Transfert MONCH → GHTLMB via collecteur")
 
-    code, body = http("POST", f"{DEMO1_URL}/api/v1/auth/login",
+    code, body = http("POST", f"{MONCH_URL}/api/v1/auth/login",
                      json_body={"username": "benchadmin", "password": "BenchPass2026!"})
     tok_chag = body.get("token") if isinstance(body, dict) else None
-    if not s.add("login DEMO1", bool(tok_chag), f"HTTP {code}"):
+    if not s.add("login MONCH", bool(tok_chag), f"HTTP {code}"):
         return s
 
-    # Créer un transfert côté DEMO1
+    # Créer un transfert côté MONCH
     transfert = {
         "unite_origine":            "Maternité Bench",
-        "etablissement_origine":    "DEMO1",
+        "etablissement_origine":    "MONCH",
         "unite_destination":        "Réanimation Bench",
-        "etablissement_destination":"DEMO2",
-        "site_destination":         "DEMO2",
+        "etablissement_destination":"GHTLMB",
+        "site_destination":         "GHTLMB",
         "redacteur":                "Benchmark auto",
         "statut":                   "EN_COURS",
         "nom":                      "BenchPatient",
@@ -401,19 +401,19 @@ def sc_04_transfert_federe() -> Scenario:
         "mode_transport":           "SMUR",
         "urgence":                  "IMMEDIAT",
     }
-    code, body = http("POST", f"{DEMO1_URL}/api/v1/transferts",
+    code, body = http("POST", f"{MONCH_URL}/api/v1/transferts",
                      token=tok_chag, json_body=transfert)
     tid = body.get("id") if isinstance(body, dict) else None
-    if not s.add("POST transfert côté DEMO1", code < 300 and bool(tid),
+    if not s.add("POST transfert côté MONCH", code < 300 and bool(tid),
                  f"HTTP {code}, id={tid} — {str(body)[:400] if not tid else 'OK'}"):
         return s
 
-    # Vérifier côté DEMO1
-    code, body = http("GET", f"{DEMO1_URL}/api/v1/transferts", token=tok_chag)
+    # Vérifier côté MONCH
+    code, body = http("GET", f"{MONCH_URL}/api/v1/transferts", token=tok_chag)
     found_local = isinstance(body, list) and any(
         t.get("id") == tid for t in body
     )
-    s.add("DEMO1 liste le transfert local",
+    s.add("MONCH liste le transfert local",
           code == 200 and found_local,
           f"HTTP {code}, {len(body) if isinstance(body,list) else '?'} transferts")
 
@@ -421,22 +421,22 @@ def sc_04_transfert_federe() -> Scenario:
     # (intervalle 10s dans la config ; on force une push direct pour accélérer)
     push_payload = dict(transfert)
     push_payload["id_local"] = tid
-    push_payload["ght_emetteur_nom"] = "DEMO1"
-    push_payload["ght_destinataire"] = "DEMO2"
+    push_payload["ght_emetteur_nom"] = "MONCH"
+    push_payload["ght_destinataire"] = "GHTLMB"
     code, body = http("POST", f"{COLLECTEUR_URL}/api/push-transfert",
-                     token="token_exo_demo1_2026", json_body=push_payload)
+                     token="token_exo_chag_2026", json_body=push_payload)
     s.add("Push manuel du transfert vers le collecteur",
           code < 300 and isinstance(body, dict) and body.get("ok"),
           f"HTTP {code} — {str(body)[:200]}")
 
-    # Vérifier côté DEMO2
+    # Vérifier côté GHTLMB
     code, body = http("GET",
-                     f"{COLLECTEUR_URL}/api/transferts-en-cours?destinataire=DEMO2",
-                     token="token_exo_demo2_2026")
+                     f"{COLLECTEUR_URL}/api/transferts-en-cours?destinataire=GHTLMB",
+                     token="token_exo_ghtlmb_2026")
     found_dest = isinstance(body, list) and any(
         t.get("id_local") == tid for t in body
     )
-    s.add("DEMO2 voit le transfert entrant (via collecteur)",
+    s.add("GHTLMB voit le transfert entrant (via collecteur)",
           code == 200 and found_dest,
           f"HTTP {code}, {len(body) if isinstance(body,list) else '?'} entrants, "
           f"trouvé={found_dest}")
@@ -504,7 +504,7 @@ def run_all(verbose: bool = False) -> int:
     print()
     log("Vérification des ports", "step")
     all_free = True
-    for port in (COLLECTEUR_PORT, DEMO1_PORT, DEMO2_PORT):
+    for port in (COLLECTEUR_PORT, MONCH_PORT, GHTLMB_PORT):
         if port_free(port):
             log(f"port {port} libre", "ok")
         else:
@@ -516,8 +516,8 @@ def run_all(verbose: bool = False) -> int:
     # ── Écrire les configs ──
     print()
     log("Génération des configs", "step")
-    write_config("DEMO1",   "740000001", DEMO1_PORT,   "token_chag_bench")
-    write_config("DEMO2", "740000002", DEMO2_PORT, "token_ghtlmb_bench")
+    write_config("MONCH",   "740000001", MONCH_PORT,   "token_monch_bench")
+    write_config("GHTLMB", "740000002", GHTLMB_PORT, "token_ghtlmb_bench")
     log(f"2 configs XML dans {BENCH_DIR}", "ok")
 
     # ── Démarrer le collecteur ──
@@ -535,7 +535,7 @@ def run_all(verbose: bool = False) -> int:
         return 3
 
     # ── Démarrer les instances ──
-    for sigle, port in [("DEMO1", DEMO1_PORT), ("DEMO2", DEMO2_PORT)]:
+    for sigle, port in [("MONCH", MONCH_PORT), ("GHTLMB", GHTLMB_PORT)]:
         print()
         log(f"Démarrage instance {sigle} (port {port})", "step")
         try:
@@ -624,8 +624,8 @@ def main():
             print()
             log(f"--keep-running : instances toujours actives", "warn")
             log(f"  Collecteur : {COLLECTEUR_URL}", "info")
-            log(f"  DEMO1       : {DEMO1_URL}", "info")
-            log(f"  DEMO2     : {DEMO2_URL}", "info")
+            log(f"  MONCH       : {MONCH_URL}", "info")
+            log(f"  GHTLMB     : {GHTLMB_URL}", "info")
             log(f"  Workspace  : {BENCH_DIR}", "info")
             log("Kill manuel : pkill -f 'main.py|collecteur_exercice'", "info")
         else:

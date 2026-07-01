@@ -303,6 +303,7 @@ def ensure_admin(db: Session):
         if not existing.hashed_password.startswith("$2"):
             existing.hashed_password = _hash(ADMIN_PASS)
             db.commit()
+<<<<<<< HEAD
         # h147 — Rétrofit must_change_password : uniquement si le compte
         # utilise ENCORE le mot de passe par défaut (ADMIN_PASS env) ET
         # que must_change_password n'a jamais été acquitté (valeur False en DB).
@@ -327,6 +328,21 @@ def ensure_admin(db: Session):
             try:
                 existing.must_change_password = True
                 db.commit()
+=======
+        # v3.4 (h38d) — Rétrofit : si un admin existant utilise encore le
+        # mdp par défaut (Scribe2026!), forcer `must_change_password=True`
+        # au prochain login. Hors mode exercice.
+        # Ce code s'applique UNE FOIS : dès que l'admin a changé son mdp,
+        # `verify_password(ADMIN_PASS, hash)` est False → on ne touche
+        # plus à `must_change_password` (l'utilisateur reste libre).
+        is_exercice = os.getenv("SCRIBE_EXERCICE_MODE", "0") == "1"
+        if (os.getenv("SCRIBE_ADMIN_MUST_CHANGE", "1") != "0") and not is_exercice \
+                and ADMIN_PASS and verify_password(ADMIN_PASS, existing.hashed_password):
+            try:
+                if not getattr(existing, "must_change_password", False):
+                    existing.must_change_password = True
+                    db.commit()
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
             except Exception:
                 pass
         # v3.0.0 — En MODE EXERCICE uniquement : forcer la resynchronisation du

@@ -44,8 +44,13 @@ class ChatMessage(Base):
     id          = Column(Integer, primary_key=True)
     salon_id    = Column(Integer, nullable=False)
     auteur_id   = Column(Integer, nullable=True)         # None = message système ou inter-GHT
+<<<<<<< HEAD
     auteur_nom  = Column(String(200), nullable=False)    # "Directeur de Crise [CHV]"
     auteur_sigle= Column(String(20),  nullable=True)     # "CHV"
+=======
+    auteur_nom  = Column(String(200), nullable=False)    # "Directeur de Crise [CHAG]"
+    auteur_sigle= Column(String(20),  nullable=True)     # "CHAG"
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     contenu     = Column(Text,  nullable=False)
     mentions    = Column(Text,  default="[]")            # JSON list de mentions
     reply_to_id = Column(Integer, nullable=True)         # citation

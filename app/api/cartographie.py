@@ -191,7 +191,11 @@ def get_ufs_by_site(site: str = "", db: Session = Depends(get_db)):
     """Retourne les services/UF d'un site depuis le référentiel capacitaire."""
     from app.models import CapaciteReferentiel, UniteFonctionnelle, Hospital
     
+<<<<<<< HEAD
     # D'abord essayer CapaciteReferentiel (source principale CHV)
+=======
+    # D'abord essayer CapaciteReferentiel
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     q = db.query(CapaciteReferentiel)
     if site:
         q = q.filter(CapaciteReferentiel.site == site)

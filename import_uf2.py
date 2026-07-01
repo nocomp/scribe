@@ -30,8 +30,13 @@ from app.models import Hospital, UniteFonctionnelle
 #
 # Exemples pour le modèle générique (uf_modele.xlsx) :
 SITE_MAPPING = {
+<<<<<<< HEAD
     # Mapping FICOM CHV → noms EXACTS des sites tels que dans config.xml CHV
     # Valeurs colonne 'Site' dans uf.xlsx CHV : Valmont, BI SITE, ST JULIEN
+=======
+    # Mapping FICOM CHAG → noms EXACTS des sites tels que dans config.xml CHAG
+    # Valeurs colonne 'Site' dans uf.xlsx CHAG : ANNECY, BI SITE, ST JULIEN
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     # Les noms ici doivent correspondre aux <nom> dans config.xml <sites>
     "Valmont":       ["Site hospitalier principal Valmont"],
     "BI SITE":      ["Site hospitalier principal Valmont", "Hopital Saint-Aubin"],
@@ -138,8 +143,13 @@ def import_uf(file_path: str):
                             break
                 if not hospital:
                     # Fallback 2 : mot-clé géographique dans le nom du site
+<<<<<<< HEAD
                     # ex: "Valmont" matche "Site hospitalier principal Valmont"
                     # et aussi "Site Principal — Valmont" si config CHV le nomme ainsi
+=======
+                    # ex: "Annecy" matche "Site hospitalier principal Annecy"
+                    # et aussi "Site Principal — Valmont" si config CHAG le nomme ainsi
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
                     mots_cles = [m for m in nom_hosp.lower().split() if len(m) > 3]
                     for nom_db, h in hospitals_cache.items():
                         nom_db_lower = nom_db.lower()

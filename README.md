@@ -172,6 +172,7 @@ docker compose up -d
 - Capture : base SQLite de chaque instance (users, mots de passe, configs plugins, messagerie, capacité, salons chat), fichiers de configuration, secrets de plugins, pièces jointes (`uploads/`), archives de rapports (`archives/`)
 - **Restauration plug-and-play** sur une nouvelle version de SCRIBE — anti-path-traversal, purge des fichiers WAL
 - Archive non déchiffrable sans le mot de passe : à conserver hors-ligne
+<<<<<<< HEAD
 
 #### ☎️ RÉPONDEUR DE CRISE *(nouveau)*
 
@@ -183,6 +184,8 @@ docker compose up -d
 - **Statistiques d'appels en direct** (appels du jour, détail par appel) via l'API OVH ; découverte automatique du compte de facturation
 - Rédaction du message assistée par Albert ; import depuis le plugin Fichiers
 - Les lignes actives s'affichent sur la **page de statut publique** et dans la supervision territoriale
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
 ---
 
@@ -427,6 +430,7 @@ Dedicated isolated instances, animator console for scripted stimulus injection.
 - Captures: SQLite database (users, passwords, plugin configs, messaging, capacity, chat), config files, plugin secrets, attachments (`uploads/`), report archives (`archives/`)
 - **Plug-and-play restore** on a fresh SCRIBE version — anti-path-traversal, WAL purge
 - Archive unreadable without the password: keep offline
+<<<<<<< HEAD
 
 #### ☎️ CRISIS HOTLINE *(new)*
 
@@ -438,6 +442,8 @@ Dedicated isolated instances, animator console for scripted stimulus injection.
 - **Live call statistics** (today's calls, per-call detail) via the OVH API; automatic billing-account discovery
 - Albert-assisted drafting; import from the Files plugin
 - Active lines appear on the **public status page** and in territorial supervision
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
 ---
 
@@ -455,6 +461,7 @@ Dedicated isolated instances, animator console for scripted stimulus injection.
 
 ## Changelog
 
+<<<<<<< HEAD
 ### v3.6.0-beta (July 2026)
 
 - **NEW: Crisis hotline (Répondeur)** — dedicated multilingual phone information lines, two providers (Twilio live TwiML + OVH Télécom IVR)
@@ -467,6 +474,10 @@ Dedicated isolated instances, animator console for scripted stimulus injection.
 
 ### v3.6.0-beta (June 2026)
 
+=======
+### v3.6.0-beta (June 2026)
+
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 - **NEW: Staff recall module** — mass mobilisation with presets, SMS/SMTP delivery, real-time response tracking (half-circle gauge widget), wave escalation, telephony failover
 - **NEW: BlueFiles secure transfer** — native integration for end-to-end encrypted file sharing from both establishment messaging and territorial supervision; HDS-compatible, audit trail in SCRIBE
 - **NEW: Full backup / restore** — AES-encrypted complete image of all instances including attachments, plugin secrets and report archives; plug-and-play restore on fresh install

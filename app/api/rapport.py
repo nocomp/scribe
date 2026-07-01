@@ -570,7 +570,11 @@ def archiver_crise(
                         f"Permet de rejouer la crise pour valider les mesures de "
                         f"remédiation mises en place."
                     ),
+<<<<<<< HEAD
                     cible_sigle="CHV",
+=======
+                    cible_sigle="MONCH",
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
                     anonymize=anonymiser,
                     type_crise="MIXTE",
                     complexite="MOYEN",

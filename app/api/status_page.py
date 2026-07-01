@@ -129,6 +129,7 @@ def _get_or_create(db: Session, site_id: int = 0, site_nom: str = "") -> StatusP
     return row
 
 
+<<<<<<< HEAD
 def _lignes_repondeur_publiques(db) -> list:
     """Lignes du répondeur ACTIVES (libellé + numéro), non-nominatif.
 
@@ -154,6 +155,8 @@ def _lignes_repondeur_publiques(db) -> list:
         return []
 
 
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 def _global_impact_active(db) -> bool:
     """h96 — Incident à impact transversal actif (non résolu) ?"""
     try:

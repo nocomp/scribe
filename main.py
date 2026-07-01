@@ -18,9 +18,13 @@ import app.api.status_page  # noqa — enregistre les tables StatusPage
 from app.api import status_page  # v2.4.8.3 — explicitement pour include_router
 
 from app.api import sitrep, cartographie, attachments, i18n, mobilisation
+<<<<<<< HEAD
 from app.api import auth
 from app.api.auth import get_current_user, require_user
 from app.api import tasks
+=======
+from app.api import auth, tasks
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 from app.api import v140
 from app.api import scenario_export  # v2.4.8.3 — Générateur scénario depuis crise
 from app.api import lang_admin  # v2.4.8.3 — Admin sélection langue
@@ -157,7 +161,7 @@ app = FastAPI(
 )
 
 # CORS — restreint aux origines configurées (jamais wildcard en prod)
-_VPS = "http://localhost"
+_VPS = "http://vps-389073b7.vps.ovh.net"
 _ALL_PORTS = list(range(8000, 8010)) + list(range(6560, 6568)) + [9000, 7474, 7373]
 _allowed_origins = os.getenv(
     "SCRIBE_ALLOWED_ORIGINS",
@@ -328,7 +332,11 @@ def get_all_plugins_public():
 
 
 @app.get("/api/v1/_debug/plugins")
+<<<<<<< HEAD
 def debug_plugins_status(user=Depends(get_current_user)):
+=======
+def debug_plugins_status():
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     """v3.6.0-alpha3 — Diagnostic plugins : retourne les chargés et les erreurs.
     Pas d'auth ici (info non sensible : juste savoir si un plugin a planté au boot)."""
     from core.plugin_loader import _loaded_plugins, get_plugin_errors
@@ -599,7 +607,11 @@ async def public_status():
 
 @app.get("/health")
 def health():
+<<<<<<< HEAD
     return {"status": "ok", "version": "3.6.0-beta", "build": "v3000h165"}
+=======
+    return {"status": "ok", "version": "3.6.0-alpha112", "build": "v3000h146"}
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
 
 @app.get("/api/push-test")

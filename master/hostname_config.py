@@ -4,7 +4,7 @@ master/hostname_config.py — v3.2.0 / h17
 Source de vérité unique pour le hostname externe de SCRIBE.
 
 Problème résolu :
-  Quand SCRIBE est installé sur un VPS (localhost) ou un
+  Quand SCRIBE est installé sur un VPS (vps-389073b7.vps.ovh.net) ou un
   serveur LAN (192.168.x.x), les liens entre composants ne doivent PAS
   utiliser 'localhost' car les utilisateurs distants reçoivent des URLs
   inaccessibles.

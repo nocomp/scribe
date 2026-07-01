@@ -47,7 +47,11 @@ class ExoSession(Base):
     stopped_at      = Column(DateTime, nullable=True)
     t_elapsed_s     = Column(Integer, default=0)   # secondes écoulées dans le scénario
     ratio_compression = Column(Float, default=4.0)
+<<<<<<< HEAD
     sites_actifs    = Column(Text, nullable=True)  # JSON: ["CHV","GHT1",...]
+=======
+    sites_actifs    = Column(Text, nullable=True)  # JSON: ["CHAG","GHTLMB",...]
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     animateur       = Column(String(100), nullable=True)
     notes_animateur = Column(Text, nullable=True)
     bilan_ia        = Column(Text, nullable=True)  # JSON bilan post-exercice
@@ -84,7 +88,11 @@ class ExoJoueur(Base):
     session_uid  = Column(String(50), index=True)
     username     = Column(String(100), nullable=False)
     display_name = Column(String(200), nullable=False)
+<<<<<<< HEAD
     role_exercice = Column(String(100), nullable=False)   # ex: "Directeur de crise CHV"
+=======
+    role_exercice = Column(String(100), nullable=False)   # ex: "Directeur de crise CHAG"
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     sigle_site   = Column(String(30), nullable=False)     # instance assignée
     port_site    = Column(Integer, nullable=False)
     password_tmp = Column(String(100), nullable=True)     # mot de passe temporaire exercice

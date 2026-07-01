@@ -44,6 +44,7 @@ DATA_DIR   = PLUGIN_DIR / "data"
 BINARY     = TOOLS_DIR / "BlueFilesTransfer"
 
 
+<<<<<<< HEAD
 def ensure_binary_exec() -> None:
     """Restaure le bit exécutable du binaire CLI s'il a été perdu (extraction de
     ZIP, copie sans préservation des droits…). Idempotent et silencieux."""
@@ -59,6 +60,8 @@ def ensure_binary_exec() -> None:
 ensure_binary_exec()
 
 
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 # ── Configuration (environnement uniquement) ─────────────────────────────────
 def _env(*names: str, default: str = "") -> str:
     """Première variable d'environnement non vide parmi `names`."""
@@ -85,6 +88,7 @@ def get_cli_config() -> dict:
                             default="api.bluefiles.com"),
         "impersonate": _env("SCRIBE_BLUEFILES_IMPERSONATE", "BLUEFILES_IMPERSONATE"),
     }
+<<<<<<< HEAD
     # Couche CENTRALE (supervision) — si le domaine bluefiles est diffusé (enabled).
     # Précédence finale : DB locale (ci-dessous) > centrale > env/défaut. Sans ce
     # palier, une config BlueFiles posée dans la supervision n'atteignait jamais
@@ -101,6 +105,8 @@ def get_cli_config() -> dict:
                 cfg["server"] = cc["server"].strip()
     except Exception:
         pass
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     # Surcharge DB (prioritaire) — ne jamais échouer si table/colonnes absentes
     try:
         from app.database import SessionLocal
@@ -127,7 +133,10 @@ def get_cli_config() -> dict:
 
 def cli_available() -> bool:
     """True si le binaire est présent + exécutable ET les identifiants présents."""
+<<<<<<< HEAD
     ensure_binary_exec()
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     c = get_cli_config()
     return (
         BINARY.exists()
@@ -148,11 +157,15 @@ def cli_diagnostic() -> dict:
         "has_server":     bool(c["server"]),
         "impersonate":    bool(c["impersonate"]),
         "data_dir":       str(DATA_DIR),
+<<<<<<< HEAD
         "password_unreadable": password_unreadable(),
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         "ready":          cli_available(),
     }
 
 
+<<<<<<< HEAD
 def password_unreadable() -> bool:
     """True si un mot de passe CHIFFRÉ est stocké en DB mais ne se déchiffre pas.
 
@@ -200,6 +213,8 @@ def unavailable_reason() -> str:
     return "configuration BlueFiles incomplète (voir le diagnostic dans l'administration)"
 
 
+=======
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 def ensure_dirs() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     TOOLS_DIR.mkdir(parents=True, exist_ok=True)

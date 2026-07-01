@@ -32,8 +32,13 @@ router = APIRouter()
 def _get_base_urls(session: ExoSession) -> dict:
     """Construit le dict {sigle: url} depuis les sites actifs de la session."""
     EXO_PORTS = {
+<<<<<<< HEAD
         "CHV": 8660, "GHT1": 8661, "CH2": 8662,
         "CH3": 8663, "CH4": 8664, "CHB": 8665, "CH6": 8666,
+=======
+        "CHAG": 8660, "GHTLMB": 8661, "CHRUMILLY": 8662,
+        "HDLEMAN": 8663, "HPMB": 8664, "CHB": 8665, "CHPG": 8666,
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     }
     host = os.getenv("SCRIBE_EXO_HOST", "http://localhost")
     sites = json.loads(session.sites_actifs or "[]")
@@ -65,7 +70,11 @@ class ScenarioCreate(BaseModel):
 class ScenarioGenerate(BaseModel):
     sujet: str
     nb_sites: int = 1
+<<<<<<< HEAD
     sites: List[str] = ["CHV"]
+=======
+    sites: List[str] = ["CHAG"]
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     duree_exercice_min: int = 60
     duree_reel_min: int = 240
     complexite: str = "MOYEN"
@@ -521,7 +530,11 @@ def log_action(body: ActionLogCreate, db: Session = Depends(get_db),
     if session and session.started_at:
         t_elapsed = int((datetime.now(timezone.utc) - session.started_at.replace(tzinfo=timezone.utc)).total_seconds())
 
+<<<<<<< HEAD
     sigle = os.getenv("SCRIBE_EXO_SIGLE", "CHV")
+=======
+    sigle = os.getenv("SCRIBE_EXO_SIGLE", "CHAG")
+>>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     a = ExoActionLog(
         session_uid=body.session_uid,
         t_exercice_s=t_elapsed,
