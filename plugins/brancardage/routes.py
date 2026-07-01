@@ -33,7 +33,7 @@ router = APIRouter()
 # pas un besoin légitime au sens RGPD de voir les flux patient nominatifs.
 # Pour ouvrir l'accès à la cellule de crise, ajouter "cellule_crise" dans
 # require_role(...) — à valider avec la DPO.
-_require_branc = require_role("soignant")
+_require_branc = require_role("soignant", "cadre_sante")
 
 STATUTS = ["EN_ATTENTE", "EN_COURS", "TERMINE", "ANNULE"]
 STATUT_LABELS = {"EN_ATTENTE": "En attente", "EN_COURS": "En cours",

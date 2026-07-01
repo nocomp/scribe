@@ -129,6 +129,44 @@ def _get_or_create(db: Session, site_id: int = 0, site_nom: str = "") -> StatusP
     return row
 
 
+def _lignes_repondeur_publiques(db) -> list:
+    """Lignes du répondeur ACTIVES (libellé + numéro), non-nominatif.
+
+    Défensif : le plugin Répondeur peut être absent ou sa table inexistante.
+    Renvoie [] au moindre problème — n'impacte jamais la page de statut.
+    """
+    try:
+        from plugins.repondeur.models import RepondeurLigne
+        rows = (db.query(RepondeurLigne)
+                .filter_by(actif=True)
+                .order_by(RepondeurLigne.ordre, RepondeurLigne.id).all())
+        out = []
+        for l in rows:
+            if not l.numero:
+                continue
+            try:
+                langues = l.langues_list()
+            except Exception:
+                langues = []
+            out.append({"libelle": l.libelle, "numero": l.numero, "langues": langues})
+        return out
+    except Exception:
+        return []
+
+
+def _global_impact_active(db) -> bool:
+    """h96 — Incident à impact transversal actif (non résolu) ?"""
+    try:
+        from app.models import SitrepEntry
+        return db.query(SitrepEntry).filter(
+            SitrepEntry.impact_global == True,  # noqa: E712
+            SitrepEntry.resolved_at.is_(None),
+            SitrepEntry.archived == False,  # noqa: E712
+        ).first() is not None
+    except Exception:
+        return False
+
+
 def _row_to_dict(row: StatusPage, chrons: list) -> dict:
     return {
         "site_id":         row.site_id,
@@ -146,19 +184,51 @@ def _row_to_dict(row: StatusPage, chrons: list) -> dict:
 
 
 def _load_etablissement() -> dict:
-    """Lit nom/sigle depuis config.js."""
+    """Nom/sigle de l'établissement. config.js d'abord (extraction par
+    équilibrage d'accolades, tolérante au format), puis REPLI sur config.xml
+    (que l'instance possède toujours) — évite le fallback générique."""
+    # 1) config.js
     config_js = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
         "app", "static", "config.js"
     )
     try:
-        raw   = open(config_js, encoding="utf-8").read()
-        start = raw.find("const SCRIBE_CONFIG = ") + len("const SCRIBE_CONFIG = ")
-        end   = raw.rfind(";")
-        cfg   = json.loads(raw[start:end])
-        return cfg.get("etablissement", {})
+        raw = open(config_js, encoding="utf-8").read()
+        i = raw.find("SCRIBE_CONFIG")
+        if i != -1:
+            b = raw.find("{", i)
+            if b != -1:
+                depth, end = 0, -1
+                for j in range(b, len(raw)):
+                    c = raw[j]
+                    if c == "{":
+                        depth += 1
+                    elif c == "}":
+                        depth -= 1
+                        if depth == 0:
+                            end = j + 1
+                            break
+                if end != -1:
+                    cfg = json.loads(raw[b:end])
+                    etab = cfg.get("etablissement", {}) or {}
+                    if etab.get("nom"):
+                        return etab
     except Exception:
-        return {}
+        pass
+    # 2) Repli config.xml
+    try:
+        import xml.etree.ElementTree as ET
+        path = os.environ.get("SCRIBE_CONFIG_FILE", "config.xml")
+        root = ET.parse(path).getroot()
+        e = root.find("etablissement")
+        if e is not None:
+            nom = (e.findtext("nom") or "").strip()
+            sigle = (e.findtext("sigle") or "").strip()
+            if nom or sigle:
+                return {"nom": nom, "sigle": sigle}
+    except Exception:
+        pass
+    return {}
 
 
 # ── Schémas Pydantic ───────────────────────────────────────────────────────
@@ -192,6 +262,7 @@ def get_current(site_id: int = 0, site_nom: str = "", db: Session = Depends(get_
     ]
     data = _row_to_dict(row, chrons_list)
     data["site_id"] = site_id
+    data["lignes_repondeur"] = _lignes_repondeur_publiques(db)
     return data
 
 
@@ -263,9 +334,13 @@ def get_public(site_id: int = 0, db: Session = Depends(get_db)):
         for c in chrons
     ]
     data = _row_to_dict(row, chrons_list)
+    if data.get("niveau_global") == "OPERATIONNEL" and _global_impact_active(db):
+        data["niveau_global"] = "PERTURBE"
+        data["impact_global_actif"] = True
     data["etablissement"] = etab
     data["site_id"] = site_id
     data["faq"] = [f for f in data["faq"] if f.get("visible") and f.get("reponse")]
+    data["lignes_repondeur"] = _lignes_repondeur_publiques(db)
     return data
 
 @router.get("/all-published")

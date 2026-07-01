@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SCRIBE Messagerie — Supervision</title>
+<style>
+:root{
+  --blue:#003189;--dark:#000091;--red:#ce0500;--ok:#18753c;--warn:#b34000;
+  --bg:#f8fafc;--s:#fff;--s2:#f1f5f9;--bd:#e2e8f0;--tx:#0f172a;--mu:#64748b;--mo:monospace;
+  --border:var(--bd);--border2:#c1c7cf;--muted:var(--mu);--muted2:#475569;
+  --surface:var(--s);--surface2:var(--s2);--text:var(--tx)
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--tx)}
+#root{display:flex;height:100%;overflow:hidden}
+
+/* ── Colonne dossiers ── */
+#col-folders{width:210px;flex-shrink:0;background:var(--s);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow-y:auto}
+.fold-sec{font-family:var(--mo);font-size:8px;letter-spacing:1.5px;color:var(--mu);padding:14px 14px 4px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.fold{display:flex;align-items:center;gap:9px;padding:8px 14px;cursor:pointer;font-size:13px;border-left:3px solid transparent;transition:background .12s}
+.fold:hover{background:var(--s2)}
+.fold.active{background:#eef2ff;border-left-color:var(--blue);color:var(--blue);font-weight:600}
+.fold .fi{font-size:14px;width:18px;text-align:center}
+.fold .fn{flex:1}
+.fold .fb{font-family:var(--mo);font-size:9px;background:var(--blue);color:#fff;border-radius:9px;padding:0 6px;min-width:16px;text-align:center}
+.fold.disabled{opacity:.45;cursor:not-allowed}
+.fold-note{font-size:9px;color:var(--mu);padding:0 14px 8px 45px;font-style:italic;line-height:1.4}
+
+/* ── Colonne liste ── */
+#col-list{width:340px;flex-shrink:0;background:var(--s);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+#list-top{padding:10px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
+#list-title{font-family:var(--mo);font-size:10px;font-weight:700;letter-spacing:1px;color:var(--mu);flex:1}
+#list-pane{flex:1;overflow-y:auto}
+.msg-item{padding:11px 14px;border-bottom:1px solid var(--bd);cursor:pointer;transition:background .1s}
+.msg-item:hover{background:var(--s2)}
+.msg-item.unread .msg-subj{font-weight:700;color:var(--blue)}
+.msg-item.unread{border-left:3px solid var(--blue)}
+.msg-meta{font-family:var(--mo);font-size:9px;color:var(--mu);display:flex;justify-content:space-between;margin-bottom:2px}
+.msg-subj{font-size:12px;margin-bottom:2px;color:var(--tx)}
+.msg-prev{font-size:11px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── Colonne détail ── */
+#col-detail{flex:1;overflow-y:auto;background:var(--bg)}
+.d-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--mu)}
+
+/* ── Boutons toolbar ── */
+.btn-action{font-family:var(--mo);font-size:9px;padding:6px 12px;border-radius:5px;cursor:pointer;font-weight:700;border:none;white-space:nowrap}
+.btn-primary{background:var(--dark);color:#fff}
+.btn-primary:hover{opacity:.9}
+.btn-bf{background:rgba(0,0,145,.1);color:var(--dark);border:1px solid rgba(0,0,145,.35)!important;display:none}
+.btn-bf:hover{background:rgba(0,0,145,.18)}
+.btn-secondary{background:var(--s2);color:var(--tx);border:1px solid var(--bd)!important}
+.btn-danger{background:rgba(206,5,0,.07);color:var(--red);border:1px solid rgba(206,5,0,.3)!important}
+.msg-wm-btn{font-family:system-ui,-apple-system,sans-serif;font-size:12px;padding:6px 12px;background:var(--s2);border:1px solid var(--bd);border-radius:6px;color:var(--tx);cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.msg-wm-btn:hover{background:#eef2ff}
+.msg-wm-btn.danger{color:var(--red)}
+
+/* ── Modal compose — ISO avec interface instance ── */
+#cmodal,#fmodal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+#cmodal.open,#fmodal.open{display:flex}
+.cbox{background:var(--s);border-radius:10px;width:min(640px,98vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,.25)}
+.chdr{padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;flex-shrink:0;background:var(--s)}
+.chdr h3{font-family:var(--mo);font-size:11px;font-weight:700;flex:1;letter-spacing:1px}
+.cx{background:none;border:none;font-size:18px;cursor:pointer;color:var(--mu);padding:2px 6px;line-height:1;border-radius:4px}
+.cx:hover{background:var(--s2)}
+.cbody{padding:18px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.cf label{display:block;font-family:var(--mo);font-size:9px;letter-spacing:1px;color:var(--mu);text-transform:uppercase;margin-bottom:4px}
+.cf input,.cf select,.cf textarea{font-family:var(--mo);font-size:11px;padding:7px 9px;background:var(--s2);border:1px solid var(--border2);border-radius:5px;color:var(--tx);width:100%}
+.cf textarea{resize:vertical}
+.cerr{display:none;font-family:var(--mo);font-size:10px;color:#dc2626;background:#fef2f2;border:1px solid #fca5a5;padding:7px 10px;border-radius:5px;margin-top:2px}
+.cpj{display:flex;align-items:center;gap:6px;font-family:var(--mo);font-size:10px;padding:4px 8px;background:var(--s2);border-radius:4px;border:1px solid var(--bd);margin-top:3px}
+.cpj button{background:none;border:none;cursor:pointer;color:var(--mu);font-size:13px;padding:0 2px;line-height:1}
+.cfoot{padding:12px 18px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;background:var(--s2)}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:16px;right:16px;font-family:var(--mo);font-size:11px;padding:10px 16px;border-radius:6px;display:none;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+#toast.ok{background:#dcfce7;color:#15803d;border:1px solid #86efac}
+#toast.err{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}
+</style>
+</head>
+<body>
+<div id="root">
+  <!-- Colonne dossiers -->
+  <div id="col-folders">
+    <div class="fold-sec">📬 Dossiers</div>
+    <div class="fold active" data-box="inbox" onclick="selBox('inbox',this)">
+      <span class="fi">📥</span><span class="fn">Reçus</span>
+      <span class="fb" id="fb-inbox" style="display:none">0</span>
+    </div>
+    <div class="fold" data-box="important" onclick="selBox('important',this)">
+      <span class="fi">⭐</span><span class="fn">Importants</span>
+    </div>
+    <div class="fold" data-box="sent" onclick="selBox('sent',this)">
+      <span class="fi">📤</span><span class="fn">Envoyés</span>
+    </div>
+    <div class="fold" data-box="drafts" onclick="selBox('drafts',this)">
+      <span class="fi">📝</span><span class="fn">Brouillons</span>
+    </div>
+  </div>
+
+  <!-- Colonne liste -->
+  <div id="col-list">
+    <div id="list-top">
+      <span id="list-title">REÇUS</span>
+      <button class="btn-action btn-primary" onclick="openCompose()">✏️ Nouveau message</button>
+      <button class="btn-action btn-bf" id="btn-bf-toolbar" onclick="openBfModal()">🔒 Envoi BlueFiles</button>
+      <button class="btn-action btn-secondary" id="btn-fiche-toolbar" onclick="openFicheModal()">📋 Fiche réflexe</button>
+    </div>
+    <div id="list-pane">
+      <div style="padding:30px;text-align:center;font-family:monospace;font-size:10px;color:var(--mu)">Chargement…</div>
+    </div>
+  </div>
+
+  <!-- Colonne détail -->
+  <div id="col-detail">
+    <div class="d-empty">
+      <div style="font-size:40px;opacity:.25">✉️</div>
+      <div style="font-family:monospace;font-size:11px;color:var(--mu)">Sélectionnez un message</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal compose — ISO interface messagerie instance -->
+<div id="cmodal">
+  <div class="cbox">
+    <div class="chdr">
+      <span style="font-size:15px">✏️</span>
+      <h3 id="ctitle">NOUVEAU MESSAGE</h3>
+      <button class="cx" onclick="closeCompose()">✕</button>
+    </div>
+    <div class="cbody">
+      <div class="cf">
+        <label>Destinataire (instance)</label>
+        <select id="c-dest" onchange="onDestChange()">
+          <option value="">— Sélectionner une instance —</option>
+        </select>
+      </div>
+      <div class="cf">
+        <label>Destinataire (personne) — optionnel</label>
+        <select id="c-dest-user">
+          <option value="">— Toute la cellule de crise —</option>
+        </select>
+      </div>
+      <div class="cf">
+        <label>Objet</label>
+        <input type="text" id="c-subj" placeholder="Objet du message">
+      </div>
+      <div class="cf">
+        <label>Message</label>
+        <textarea id="c-body" rows="5" placeholder="Rédigez votre message…"></textarea>
+      </div>
+      <!-- Pièces jointes — ISO avec messagerie instance -->
+      <div class="cf">
+        <label>Pièces jointes</label>
+        <div id="cpj-list" style="margin-bottom:6px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button type="button" class="btn-action btn-secondary"
+                  onclick="document.getElementById('c-file').click()">
+            📎 Joindre un fichier
+          </button>
+          <button type="button" class="btn-action btn-bf" id="c-bf-btn"
+                  onclick="openBfModal()">
+            🔒 Envoi sécurisé par BlueFiles
+          </button>
+          <input type="file" id="c-file" multiple style="display:none" onchange="addPJ(this)">
+          <span style="font-family:monospace;font-size:8px;color:var(--mu)">10 Mo/PJ · 25 Mo total · 10 max</span>
+        </div>
+      </div>
+      <div class="cerr" id="c-err"></div>
+    </div>
+    <div class="cfoot">
+      <button class="btn-action btn-secondary" onclick="closeCompose()">Annuler</button>
+      <button class="btn-action btn-primary" onclick="sendCompose()">📤 Envoyer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal fiche réflexe -->
+<div id="fmodal">
+  <div class="cbox">
+    <div class="chdr">
+      <span style="font-size:15px">📋</span>
+      <h3>DIFFUSER UNE FICHE RÉFLEXE</h3>
+      <button class="cx" onclick="closeFicheModal()">✕</button>
+    </div>
+    <div class="cbody">
+      <div class="cf">
+        <label>Destinataire (instance)</label>
+        <select id="f-dest">
+          <option value="*">📢 Toutes les instances</option>
+        </select>
+      </div>
+      <div class="cf">
+        <label>Fichier (fiche réflexe, procédure…)</label>
+        <div id="f-file-name" style="font-size:12px;color:var(--mu);margin-bottom:6px">Aucun fichier sélectionné</div>
+        <button type="button" class="btn-action btn-secondary"
+                onclick="document.getElementById('f-file').click()">📎 Choisir un fichier</button>
+        <input type="file" id="f-file" style="display:none" onchange="onFicheFile(this)">
+      </div>
+      <div class="cf">
+        <label>Note (optionnel)</label>
+        <textarea id="f-note" rows="3" placeholder="Contexte ou consigne accompagnant la fiche…"></textarea>
+      </div>
+      <div id="f-err" style="display:none;color:var(--red,#e1000f);font-size:12px;margin-top:4px"></div>
+    </div>
+    <div class="cfoot">
+      <button class="btn-action btn-secondary" onclick="closeFicheModal()">Annuler</button>
+      <button class="btn-action btn-primary" onclick="sendFiche()">📤 Diffuser</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ── Init token ── */
+var P = new URLSearchParams(location.search);
+var tok = P.get('token') || '';
+try { if (!tok) { var _pt = window.parent.localStorage.getItem('scribe_token'); if (_pt) tok = _pt; } } catch(e) {}
+
+/* ── État ── */
+var BOX = 'inbox';
+var MSGS = [];
+var CPJ = [];
+var INSTANCES = [];
+var ANNUAIRE = {};
+
+/* ── Utilitaires ── */
+function _esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function _hdrs(extra){return Object.assign({'Authorization':'Bearer '+tok,'Content-Type':'application/json'},extra||{});}
+function _api(url,opts){
+  opts=opts||{};
+  var hdrs={'Authorization':'Bearer '+tok};
+  if(opts.body&&!(opts.body instanceof FormData)) hdrs['Content-Type']='application/json';
+  opts.headers=Object.assign(hdrs,opts.headers||{});
+  return fetch(url,opts);
+}
+function toast(msg,type){
+  var el=document.getElementById('toast');
+  el.textContent=msg;el.className=type||'ok';el.style.display='block';
+  clearTimeout(el._t);el._t=setTimeout(function(){el.style.display='none';},3200);
+}
+
+/* ── Dossiers ── */
+function selBox(box,el){
+  BOX=box;
+  document.querySelectorAll('.fold[data-box]').forEach(function(f){f.classList.remove('active');});
+  if(el) el.classList.add('active');
+  var titles={inbox:'REÇUS',important:'IMPORTANTS',sent:'ENVOYÉS',drafts:'BROUILLONS'};
+  document.getElementById('list-title').textContent=titles[box]||box.toUpperCase();
+  loadList();
+  document.getElementById('col-detail').innerHTML='<div class="d-empty"><div style="font-size:40px;opacity:.25">✉️</div><div style="font-family:monospace;font-size:11px;color:var(--mu)">Sélectionnez un message</div></div>';
+}
+
+/* ── Badge non-lus ── */
+function loadBadge(){
+  _api('/api/v1/messagerie/non-lus').then(function(r){return r.ok?r.json():null;})
+  .then(function(d){
+    if(!d) return;
+    var fb=document.getElementById('fb-inbox');
+    if(fb){fb.textContent=d.count;fb.style.display=d.count>0?'inline':'none';}
+  }).catch(function(){});
+}
+
+/* ── Liste messages ── */
+function loadList(){
+  var pane=document.getElementById('list-pane');
+  pane.innerHTML='<div style="padding:30px;text-align:center;font-family:monospace;font-size:10px;color:var(--mu)">Chargement…</div>';
+  _api('/api/v1/messagerie/messages?canal=interne&box='+BOX)
+  .then(function(r){return r.ok?r.json():null;})
+  .then(function(d){
+    MSGS=(d&&d.messages)||[];
+    renderList();
+    loadBadge();
+  }).catch(function(){
+    pane.innerHTML='<div style="padding:24px;text-align:center;font-family:monospace;font-size:10px;color:#ce0500">Erreur de chargement</div>';
+  });
+}
+
+function renderList(){
+  var el=document.getElementById('list-pane');
+  var bar='<div style="position:sticky;top:0;display:flex;gap:16px;padding:9px 14px;border-bottom:1px solid var(--bd);font-size:12px;color:var(--mu);background:var(--s);z-index:1"><span>Tous ▾</span><span>Trier par ▾</span></div>';
+  if(!MSGS.length){
+    el.innerHTML=bar+'<div style="padding:34px;text-align:center;font-size:13px;color:var(--mu)">Aucun message</div>';
+    return;
+  }
+  el.innerHTML=bar+MSGS.map(function(m){
+    var unread=!m.lu;
+    var from=_esc(m.expediteur_nom||m.expediteur_addr||'Instance');
+    var date=m.created_at?new Date(m.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    var dot=unread?'#003189':'transparent';
+    var fw=unread?'600':'400';
+    var fc=unread?'var(--tx)':'var(--mu)';
+    var clip=(m.attachments_count>0)?'<span style="font-size:13px;color:var(--mu);margin-top:2px;flex-shrink:0">📎</span>':'';
+    return '<div class="msg-item" onclick="openMsg('+m.id+')" style="display:flex;gap:9px;padding:10px 14px;border-bottom:1px solid var(--bd);cursor:pointer">'+
+      '<span style="width:7px;height:7px;border-radius:50%;background:'+dot+';margin-top:5px;flex-shrink:0"></span>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="display:flex;justify-content:space-between;gap:6px"><span style="font-size:13px;font-weight:'+fw+';color:'+fc+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+from+'</span><span style="font-size:11px;color:var(--mu);flex-shrink:0">'+_esc(date)+'</span></div>'+
+        '<div style="font-size:12px;font-weight:'+(unread?'500':'400')+';color:var(--tx);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc(m.sujet||'(sans objet)')+'</div>'+
+        '<div style="font-size:12px;color:var(--mu);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_esc((m.contenu||'').substring(0,90))+'</div>'+
+      '</div>'+clip+
+    '</div>';
+  }).join('');
+}
+
+/* ── Ouverture message ── */
+function openMsg(id){
+  var m=MSGS.find(function(x){return x.id===id;});
+  if(!m) return;
+  _api('/api/v1/messagerie/'+id+'/lire',{method:'PUT'}).catch(function(){});
+  m.lu=true; renderList();
+
+  var pjHtml=(m.attachments||[]).map(function(a){
+    return '<a href="/api/v1/messagerie/attachments/'+a.id+'?token='+encodeURIComponent(tok)+'" target="_blank" rel="noopener" '+
+      'style="display:inline-flex;align-items:center;gap:8px;border:1px solid var(--bd);background:var(--s2);'+
+      'border-radius:6px;padding:7px 11px;width:fit-content;font-size:12px;text-decoration:none;color:var(--tx)">'+
+      '📎 <span>'+_esc(a.nom||'fichier')+'</span><span style="color:var(--mu);font-size:11px">'+Math.round((a.taille||0)/1024)+' Ko</span> <span style="color:#003189">⬇</span></a>';
+  }).join('');
+
+  var from=_esc(m.expediteur_nom||m.expediteur_addr||'Instance');
+  var date=m.created_at?new Date(m.created_at).toLocaleString('fr-FR'):'';
+  var initials=(String(m.expediteur_nom||m.expediteur_addr||'?').match(/[A-Za-zÀ-ÿ0-9]/g)||['?']).slice(0,2).join('').toUpperCase();
+
+  document.getElementById('col-detail').innerHTML=
+    '<div style="padding:24px 30px;max-width:760px">' +
+      '<div style="font-size:17px;font-weight:600;color:var(--tx);margin-bottom:12px">'+_esc(m.sujet||'(sans objet)')+'</div>' +
+      '<div style="display:flex;align-items:center;gap:11px;padding-bottom:14px;border-bottom:1px solid var(--bd)">' +
+        '<div style="width:36px;height:36px;border-radius:50%;background:rgba(0,49,137,.1);color:#003189;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0">'+initials+'</div>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+from+'</div>' +
+        '<div style="font-size:12px;color:var(--mu)">À : Supervision</div></div>' +
+        '<span style="font-size:12px;color:var(--mu);flex-shrink:0">'+_esc(date)+'</span>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:14px 0">' +
+        '<button onclick="replyMsg('+m.id+')" class="msg-wm-btn">↩ Répondre</button>' +
+        '<span style="flex:1;min-width:8px"></span>' +
+        '<button onclick="delMsg('+m.id+')" class="msg-wm-btn danger" title="Supprimer">🗑</button>' +
+      '</div>' +
+      (pjHtml?'<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">'+pjHtml+'</div>':'') +
+      '<div style="font-size:14px;line-height:1.7;color:var(--tx);white-space:pre-wrap;word-wrap:break-word">'+_esc(m.contenu||'')+'</div>' +
+    '</div>';
+}
+
+function replyMsg(id){
+  var m=MSGS.find(function(x){return x.id===id;});
+  // expediteur_sigle = sigle de l'étab expéditeur (inter-GHT)
+  // fallback sur expediteur_addr (même valeur) puis expediteur_nom
+  var replyToSigle = m ? (m.expediteur_sigle || m.expediteur_addr || '') : '';
+  var replySubj    = m ? ('Re: '+(m.sujet||'')) : '';
+  openCompose(replyToSigle, replySubj);
+  document.getElementById('ctitle').textContent='RÉPONDRE';
+}
+
+function delMsg(id){
+  if(!confirm('Supprimer ce message ?')) return;
+  _api('/api/v1/messagerie/messages/'+id,{method:'DELETE'}).then(function(r){
+    if(r.ok){
+      toast('Message supprimé','ok');
+      MSGS=MSGS.filter(function(m){return m.id!==id;});
+      renderList();
+      document.getElementById('col-detail').innerHTML='<div class="d-empty"><div style="font-size:40px;opacity:.25">✉️</div><div style="font-family:monospace;font-size:11px;color:var(--mu)">Sélectionnez un message</div></div>';
+    } else toast('Suppression impossible','err');
+  });
+}
+
+/* ── Compose ── */
+function loadInstances(preselSigle){
+  _api('/api/coll/instances').then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+  .then(function(d){
+    var sel=document.getElementById('c-dest');
+    var list=(d&&(d.instances||d))||[];
+    INSTANCES=Array.isArray(list)?list:[];
+    sel.innerHTML='<option value="">— Sélectionner une instance —</option>'+
+      '<option value="*">📢 TOUS LES DESTINATAIRES (communiqué)</option>'+
+      INSTANCES.map(function(i){
+        var sig=i.sigle||i.nom||i;
+        return '<option value="'+_esc(sig)+'">'+_esc(sig)+(i.nom&&i.nom!==sig?' — '+_esc(i.nom):'')+'</option>';
+      }).join('');
+    // Pré-sélectionner le destinataire (réponse à un message)
+    if(preselSigle){
+      var needle = preselSigle.toUpperCase().trim();
+      for(var i=0;i<sel.options.length;i++){
+        var opt = sel.options[i].value.toUpperCase().trim();
+        // Matcher exact, ou si le sigle contient le nom (ex: "Hôpitaux Du du Lac" vs "HÔPITAUX DU du Lac")
+        if(opt===needle || opt.indexOf(needle)>=0 || needle.indexOf(opt)>=0){
+          sel.selectedIndex=i; break;
+        }
+      }
+      if(sel.selectedIndex===0 && needle){
+        // Dernier recours : afficher un message si destinataire non trouvé dans la liste
+        var errEl=document.getElementById('c-err');
+        if(errEl){ errEl.textContent='Destinataire "'+preselSigle+'" — sélectionnez manuellement.'; errEl.style.display='block'; }
+      }
+    }
+  });
+}
+
+function openCompose(preselSigle, preselSubj){
+  CPJ=[];
+  document.getElementById('cpj-list').innerHTML='';
+  document.getElementById('c-subj').value=preselSubj||'';
+  document.getElementById('c-body').value='';
+  document.getElementById('c-dest').value='';
+  var du=document.getElementById('c-dest-user');
+  if(du) du.innerHTML='<option value="">— Toute la cellule de crise —</option>';
+  document.getElementById('c-err').style.display='none';
+  if(!preselSigle) document.getElementById('ctitle').textContent='NOUVEAU MESSAGE';
+  // Charger les instances puis pré-sélectionner si on répond
+  loadInstances(preselSigle);
+  loadAnnuaire(preselSigle);
+  document.getElementById('cmodal').classList.add('open');
+}
+
+/* ── Annuaire fédéré : sigle → contacts (pour l'envoi nominatif) ── */
+function loadAnnuaire(preselSigle){
+  _api('/api/annuaire').then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+  .then(function(list){
+    ANNUAIRE={};
+    (list||[]).forEach(function(etab){
+      var sig=(etab.sigle||'').toUpperCase().trim();
+      if(sig) ANNUAIRE[sig]=etab.contacts||[];
+    });
+    if(preselSigle) onDestChange();
+  });
+}
+
+/* ── Sélection d'instance → peupler le sélecteur de personne ── */
+function onDestChange(){
+  var sel=document.getElementById('c-dest');
+  var du=document.getElementById('c-dest-user');
+  if(!sel||!du) return;
+  var sig=(sel.value||'').toUpperCase().trim();
+  if(sig==='*'){
+    du.innerHTML='<option value="">— Toutes les cellules de crise —</option>';
+    du.disabled=true;
+    return;
+  }
+  du.disabled=false;
+  var contacts=ANNUAIRE[sig]||[];
+  du.innerHTML='<option value="">— Toute la cellule de crise —</option>'+
+    contacts.map(function(c){
+      var label=_esc(c.display_name||c.username)+(c.role?(' · '+_esc(c.role)):'');
+      return '<option value="'+_esc(c.username)+'">'+label+'</option>';
+    }).join('');
+}
+function closeCompose(){document.getElementById('cmodal').classList.remove('open');}
+
+function addPJ(inp){
+  Array.from(inp.files||[]).forEach(function(f){CPJ.push(f);});
+  inp.value='';
+  renderCPJ();
+}
+function renderCPJ(){
+  document.getElementById('cpj-list').innerHTML=CPJ.map(function(f,i){
+    return '<div class="cpj">📎 '+_esc(f.name)+
+      ' <span style="color:var(--mu);font-family:monospace;font-size:9px">'+Math.round(f.size/1024)+'Ko</span>'+
+      '<button onclick="rmCPJ('+i+')" title="Retirer">✕</button></div>';
+  }).join('');
+}
+function rmCPJ(i){CPJ.splice(i,1);renderCPJ();}
+
+function sendCompose(){
+  var dest=document.getElementById('c-dest').value;
+  var subj=document.getElementById('c-subj').value.trim();
+  var body=document.getElementById('c-body').value.trim();
+  var err=document.getElementById('c-err');
+  if(!dest){err.textContent='Choisissez une instance destinataire.';err.style.display='block';return;}
+  if(!subj&&!body){err.textContent='Objet ou message requis.';err.style.display='block';return;}
+  err.style.display='none';
+  var ruser=(document.getElementById('c-dest-user')||{}).value||'';
+  var fd=new FormData();
+  fd.append('target_sigle',dest);
+  if(ruser) fd.append('recipient_username',ruser);
+  fd.append('sujet',subj);
+  fd.append('contenu',body);
+  CPJ.forEach(function(f){fd.append('fichiers',f,f.name);});
+  _api('/api/coll/msg-to-instance',{method:'POST',body:fd})
+  .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
+  .then(function(res){
+    if(res.ok&&res.j&&res.j.ok){
+      var okmsg = (dest==='*')
+        ? ('📢 Communiqué diffusé'+(res.j.count!=null?(' à '+res.j.count+' instance(s)'):''))
+        : ('Message envoyé à '+(ruser?(ruser+' · '+dest):dest));
+      toast(okmsg,'ok');
+      closeCompose();
+      if(BOX==='sent') loadList();
+    } else {
+      err.textContent='Échec : '+((res.j&&res.j.detail)||'erreur inconnue');
+      err.style.display='block';
+    }
+  }).catch(function(e){err.textContent='Erreur réseau : '+e;err.style.display='block';});
+}
+
+/* ── BlueFiles ── */
+function openBfModal(){
+  // Appelle le modal BF du document parent (collecteur.py) via postMessage ou appel direct
+  try {
+    if(window.parent && typeof window.parent.bfMsgOpenModal === 'function'){
+      window.parent.bfMsgOpenModal();
+      return;
+    }
+  } catch(e){}
+  try { window.parent.postMessage({type:'scribe-open-bf'},'*'); } catch(e){}
+}
+
+/* ── Vérif BlueFiles au chargement ── */
+(function checkBf(){
+  if(!tok) return;
+  _api('/api/admin/bluefiles/status')
+  .then(function(r){return r.ok?r.json():null;})
+  .then(function(d){
+    if(d&&d.ready){
+      document.getElementById('btn-bf-toolbar').style.display='inline-block';
+      document.getElementById('c-bf-btn').style.display='inline-block';
+    }
+  }).catch(function(){});
+})();
+
+/* ── Fermeture modal au clic extérieur ── */
+document.getElementById('cmodal').addEventListener('click',function(ev){
+  if(ev.target===this) closeCompose();
+});
+
+/* ── Écoute postMessage parent (signal BF ready) ── */
+window.addEventListener('message',function(ev){
+  if(ev.data&&ev.data.type==='scribe-bf-ready'){
+    document.getElementById('btn-bf-toolbar').style.display='inline-block';
+    document.getElementById('c-bf-btn').style.display='inline-block';
+  }
+});
+
+/* ── Init ── */
+loadList();
+setInterval(function(){
+  if(BOX==='inbox'||BOX==='important') loadList();
+  else loadBadge();
+}, 20000);
+
+/* Exports globaux */
+window.selBox=selBox;window.openMsg=openMsg;window.delMsg=delMsg;
+var FICHE_FILE = null;
+function openFicheModal(){
+  _api('/api/coll/instances').then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})
+  .then(function(d){
+    var list=(d&&(d.instances||d))||[]; if(Array.isArray(list)) INSTANCES=list;
+    var sel=document.getElementById('f-dest');
+    sel.innerHTML='<option value="*">📢 Toutes les instances</option>'+
+      INSTANCES.map(function(i){var sig=i.sigle||i.nom||i;return '<option value="'+_esc(sig)+'">'+_esc(sig)+(i.nom&&i.nom!==sig?(' — '+_esc(i.nom)):'')+'</option>';}).join('');
+  });
+  FICHE_FILE=null;
+  document.getElementById('f-file-name').textContent='Aucun fichier sélectionné';
+  document.getElementById('f-note').value='';
+  var er=document.getElementById('f-err'); if(er) er.style.display='none';
+  document.getElementById('fmodal').classList.add('open');
+}
+function closeFicheModal(){ document.getElementById('fmodal').classList.remove('open'); }
+function onFicheFile(inp){
+  FICHE_FILE=(inp.files&&inp.files[0])||null;
+  document.getElementById('f-file-name').textContent=FICHE_FILE?('📄 '+FICHE_FILE.name+' ('+Math.round(FICHE_FILE.size/1024)+' Ko)'):'Aucun fichier sélectionné';
+}
+function sendFiche(){
+  var er=document.getElementById('f-err');
+  if(!FICHE_FILE){ er.textContent='Choisissez un fichier.'; er.style.display='block'; return; }
+  er.style.display='none';
+  var fd=new FormData();
+  fd.append('fichier', FICHE_FILE, FICHE_FILE.name);
+  fd.append('target_sigle', document.getElementById('f-dest').value||'*');
+  var note=(document.getElementById('f-note')||{}).value||'';
+  if(note.trim()) fd.append('note', note.trim());
+  _api('/api/admin/fiche-reflexe',{method:'POST',body:fd})
+  .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
+  .then(function(res){
+    if(res.ok&&res.j&&res.j.ok){
+      toast('📋 Fiche diffusée à '+(res.j.count||0)+' instance(s)','ok');
+      closeFicheModal();
+    } else {
+      er.textContent='Échec : '+((res.j&&res.j.detail)||'aucune instance jointe');
+      er.style.display='block';
+    }
+  }).catch(function(e){ er.textContent='Erreur réseau : '+e; er.style.display='block'; });
+}
+window.openFicheModal=openFicheModal;window.closeFicheModal=closeFicheModal;
+window.onFicheFile=onFicheFile;window.sendFiche=sendFiche;
+window.openCompose=openCompose;window.closeCompose=closeCompose;
+window.replyMsg=replyMsg;window.addPJ=addPJ;window.rmCPJ=rmCPJ;window.sendCompose=sendCompose;
+window.onDestChange=onDestChange;window.loadAnnuaire=loadAnnuaire;
+</script>
+</body>
+</html>

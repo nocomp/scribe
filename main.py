@@ -6,7 +6,7 @@ import logging
 import os
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -17,8 +17,10 @@ import app.models  # noqa
 import app.api.status_page  # noqa — enregistre les tables StatusPage
 from app.api import status_page  # v2.4.8.3 — explicitement pour include_router
 
-from app.api import sitrep, cartographie, attachments, i18n
-from app.api import auth, tasks
+from app.api import sitrep, cartographie, attachments, i18n, mobilisation
+from app.api import auth
+from app.api.auth import get_current_user, require_user
+from app.api import tasks
 from app.api import v140
 from app.api import scenario_export  # v2.4.8.3 — Générateur scénario depuis crise
 from app.api import lang_admin  # v2.4.8.3 — Admin sélection langue
@@ -121,6 +123,7 @@ def _build_csp() -> str:
         "font-src 'self' fonts.gstatic.com data:; "
         "img-src 'self' data: blob: *.basemaps.cartocdn.com *.tile.openstreetmap.org "
         "server.arcgisonline.com unpkg.com cdnjs.cloudflare.com; "
+        "media-src 'self' blob: data:; "
         f"connect-src {connect_src}; "
         "worker-src 'self'; "
         f"frame-ancestors 'self' {frame_ancestors_extra}"
@@ -139,11 +142,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
         response.headers["Content-Security-Policy"] = _CSP
+        response.headers["Server"] = "SCRIBE"  # h152 — masquer le fingerprinting
         if request.url.scheme == "https":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
-app = FastAPI(title="SCRIBE v2.5.0 Crisis OS", version="2.5.0")
+# h152 — Désactiver la doc API publique sur les instances (audit sécurité).
+app = FastAPI(
+    title="SCRIBE Crisis OS",
+    version="3.6.0",
+    openapi_url=None,
+    docs_url=None,
+    redoc_url=None,
+)
 
 # CORS — restreint aux origines configurées (jamais wildcard en prod)
 _VPS = "http://localhost"
@@ -178,6 +189,7 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # ── Core (toujours actif) ──────────────────────────────────────────────────
 app.include_router(sitrep.router,       prefix="/api/v1/sitrep",       tags=["Incidents"])
+app.include_router(mobilisation.router,  prefix="/api/v1/mobilisation", tags=["Mobilisation"])
 app.include_router(cartographie.router, prefix="/api/v1/cartographie", tags=["Cartographie"])
 app.include_router(attachments.router,  prefix="/api/v1/attachments",  tags=["PJ"])
 app.include_router(auth.router,         prefix="/api/v1/auth",         tags=["Auth"])
@@ -315,9 +327,22 @@ def get_all_plugins_public():
     ]
 
 
+@app.get("/api/v1/_debug/plugins")
+def debug_plugins_status(user=Depends(get_current_user)):
+    """v3.6.0-alpha3 — Diagnostic plugins : retourne les chargés et les erreurs.
+    Pas d'auth ici (info non sensible : juste savoir si un plugin a planté au boot)."""
+    from core.plugin_loader import _loaded_plugins, get_plugin_errors
+    return {
+        "loaded": list(_loaded_plugins.keys()),
+        "loaded_count": len(_loaded_plugins),
+        "errors": get_plugin_errors(),
+    }
+
+
 @app.on_event("startup")
 async def startup():
     _run_migrations()
+    _migrate_hospital_name()
     _init_status_page()
     # Charger les plugins activés (config.py + surcharge DB)
     from app.database import SessionLocal
@@ -342,6 +367,41 @@ async def startup():
     if not is_plugin_loaded("federation"):
         from app.api import federation as fed_legacy
         asyncio.create_task(fed_legacy.federation_loop())
+
+
+def _migrate_hospital_name():
+    """h153 — Si le Hospital principal a le nom auto-generé Site_PORT,
+    le remplacer par le vrai nom de l etablissement depuis config.js.
+    S execute au demarrage de chaque instance.
+    """
+    import re, os, json as _j
+    try:
+        port = os.environ.get("SCRIBE_PORT", "8000")
+        auto_name = f"Site_{port}"
+        config_js = os.environ.get("SCRIBE_CONFIG_JS", "")
+        if not config_js or not os.path.exists(config_js):
+            return
+        raw   = open(config_js, encoding="utf-8").read()
+        start = raw.find("const SCRIBE_CONFIG = ") + len("const SCRIBE_CONFIG = ")
+        end   = raw.rfind(";")
+        cfg   = _j.loads(raw[start:end])
+        etb   = cfg.get("etablissement", {})
+        nom   = (etb.get("nom") or etb.get("sigle") or "").strip()
+        if not nom or re.match(r"^Site_\d+$", nom, re.IGNORECASE):
+            return
+        from app.database import SessionLocal
+        from app.models import Hospital
+        db = SessionLocal()
+        try:
+            h = db.query(Hospital).filter(Hospital.nom == auto_name).first()
+            if h:
+                h.nom = nom
+                db.commit()
+                print(f"[migrate_hospital] {auto_name!r} -> {nom!r}")
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[migrate_hospital] {e}")
 
 
 def _init_status_page():
@@ -373,6 +433,9 @@ def _run_migrations():
         user_cols = [r[1] for r in cx.execute("PRAGMA table_info(users)")]
         if "must_change_password" not in user_cols:
             cx.execute("ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0")
+        # v3000h41 — Coordonnées de contact (email / téléphone) pour notifications
+        if "email"     not in user_cols: cx.execute("ALTER TABLE users ADD COLUMN email TEXT")
+        if "telephone" not in user_cols: cx.execute("ALTER TABLE users ADD COLUMN telephone TEXT")
         # Migration expediteur_nom / destinataire_nom sur messages_internes
         if "expediteur_nom" not in cols: cx.execute("ALTER TABLE messages_internes ADD COLUMN expediteur_nom TEXT")
         if "destinataire_nom" not in cols: cx.execute("ALTER TABLE messages_internes ADD COLUMN destinataire_nom TEXT")
@@ -401,6 +464,32 @@ def _run_migrations():
         # médical, indisponibilité service).
         if "visible_soignant" not in sitrep_cols:
             cx.execute("ALTER TABLE sitrep_entries ADD COLUMN visible_soignant INTEGER DEFAULT 0")
+        # h82 — Archivage des campagnes d'alerte + commentaire libre sur la réponse ETA.
+        alerte_cols = [r[1] for r in cx.execute("PRAGMA table_info(alertes_mobilisation)")]
+        if alerte_cols and "archived" not in alerte_cols:
+            cx.execute("ALTER TABLE alertes_mobilisation ADD COLUMN archived INTEGER DEFAULT 0")
+        cible_cols = [r[1] for r in cx.execute("PRAGMA table_info(alerte_cibles)")]
+        if cible_cols and "commentaire" not in cible_cols:
+            cx.execute("ALTER TABLE alerte_cibles ADD COLUMN commentaire TEXT")
+        # h89 — Périmètre d'abonnement + priorité d'alerte sur l'annuaire de mobilisation.
+        cm_cols = [r[1] for r in cx.execute("PRAGMA table_info(contacts_mobilisation)")]
+        if cm_cols and "perimetre_abonnement" not in cm_cols:
+            cx.execute("ALTER TABLE contacts_mobilisation ADD COLUMN perimetre_abonnement TEXT DEFAULT 'uf'")
+        if cm_cols and "priorite" not in cm_cols:
+            cx.execute("ALTER TABLE contacts_mobilisation ADD COLUMN priorite INTEGER DEFAULT 3")
+        # h93 — Escalade par vagues : vague courante de la campagne + vague par cible.
+        am_cols = [r[1] for r in cx.execute("PRAGMA table_info(alertes_mobilisation)")]
+        if am_cols and "vague_courante" not in am_cols:
+            cx.execute("ALTER TABLE alertes_mobilisation ADD COLUMN vague_courante INTEGER DEFAULT 0")
+        ac_cols = [r[1] for r in cx.execute("PRAGMA table_info(alerte_cibles)")]
+        if ac_cols and "vague" not in ac_cols:
+            cx.execute("ALTER TABLE alerte_cibles ADD COLUMN vague INTEGER DEFAULT 0")
+        if ac_cols and "livraison" not in ac_cols:
+            cx.execute("ALTER TABLE alerte_cibles ADD COLUMN livraison TEXT DEFAULT ''")
+        # h96 — Impact transversal (tous les services de soins).
+        se_cols = [r[1] for r in cx.execute("PRAGMA table_info(sitrep_entries)")]
+        if se_cols and "impact_global" not in se_cols:
+            cx.execute("ALTER TABLE sitrep_entries ADD COLUMN impact_global BOOLEAN DEFAULT 0")
         # v3.4 (h34) — Visibilité salons chat (DM 1-à-1 + salons restreints).
         salon_cols = [r[1] for r in cx.execute("PRAGMA table_info(chat_salons)")]
         if salon_cols and "visibility" not in salon_cols:
@@ -510,7 +599,7 @@ async def public_status():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "3.4.0-alpha2", "build": "v3000h35"}
+    return {"status": "ok", "version": "3.6.0-beta", "build": "v3000h165"}
 
 
 @app.get("/api/push-test")
@@ -536,7 +625,7 @@ async def push_test():
 
 
 @app.get("/api/debug")
-def debug_info():
+def debug_info(user=Depends(get_current_user)):
     """Diagnostic rapide — config, DB, fédération."""
     fed_cfg = federation.FederationConfig()
     config_js = os.environ.get("SCRIBE_CONFIG_JS", os.path.join(STATIC_DIR, "config.js"))

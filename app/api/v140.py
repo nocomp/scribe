@@ -273,8 +273,82 @@ def get_messages(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
+    """[v140 LEGACY] Lit dans la NOUVELLE table messagerie_messages.
+    Format de retour préservé pour ne pas casser le frontend actuel ni mobile.html.
+    Le nouveau plugin (v3.6.0-alpha1) expose des endpoints plus riches sous
+    /api/v1/messagerie/messages?box=... — ces endpoints legacy resteront dispo
+    en compat pendant 1-2 releases.
+    """
     if not user:
         raise HTTPException(401)
+    try:
+        from plugins.messagerie.models import Message
+    except ImportError:
+        # Si le nouveau plugin n'est pas chargé, fallback sur l'ancien modèle
+        from app.models import MessageInterne as _M
+        return _legacy_get_messages_messageinterne(boite, db, user)
+
+    from sqlalchemy import cast, String, or_
+    needle      = f'"type": "user", "value": {user.id}'
+    needle_cpct = f'"type":"user","value":{user.id}'
+    dest_str    = cast(Message.destinataires, String)
+    user_predicate = or_(
+        dest_str.like(f"%{needle}%"),
+        dest_str.like(f"%{needle_cpct}%"),
+    )
+
+    q = db.query(Message).filter(
+        Message.canal == "interne",
+        Message.deleted_at.is_(None),
+    )
+    if boite == "envoi":
+        q = q.filter(Message.expediteur_id == user.id, Message.statut == "sent")
+    elif boite == "all":
+        # mobile.html appelle ?boite=all
+        q = q.filter(or_(
+            Message.expediteur_id == user.id,
+            user_predicate,
+        ))
+        q = q.filter(Message.statut != "draft")
+    else:  # reception (défaut)
+        q = q.filter(user_predicate)
+        q = q.filter(Message.statut != "draft")
+
+    rows = q.order_by(Message.created_at.desc()).limit(500).all()
+    result = []
+    for m in rows:
+        # Premier destinataire user (pour rétrocompat champ "destinataire_*")
+        first_dest_id = None
+        first_dest_nom = None
+        for d in (m.destinataires or []):
+            if d.get("type") == "user":
+                try:
+                    first_dest_id = int(d.get("value"))
+                except (TypeError, ValueError):
+                    pass
+                first_dest_nom = d.get("display", "—")
+                break
+        exp_nom = m.expediteur_nom
+        if not exp_nom and m.expediteur_id:
+            exp = db.query(User).filter(User.id == m.expediteur_id).first()
+            exp_nom = exp.display_name if exp else "—"
+        result.append({
+            "id":               m.id,
+            "expediteur_id":    m.expediteur_id,
+            "expediteur_nom":   exp_nom or "—",
+            "destinataire_id":  first_dest_id,
+            "destinataire_nom": first_dest_nom or "—",
+            "sujet":            m.sujet or "",
+            "contenu":          m.contenu if not m.contenu_redacted else "[CONTENU SUPPRIMÉ]",
+            "lu":               bool(m.lu),
+            "lu_at":            m.lu_at.isoformat() if m.lu_at else None,
+            "created_at":       m.created_at.isoformat() if m.created_at else None,
+        })
+    return result
+
+
+def _legacy_get_messages_messageinterne(boite, db, user):
+    """Fallback ancien modèle si plugin messagerie non chargé."""
     if boite == "envoi":
         rows = db.query(MessageInterne).filter(
             MessageInterne.expediteur_id == user.id
@@ -283,37 +357,59 @@ def get_messages(
         rows = db.query(MessageInterne).filter(
             MessageInterne.destinataire_id == user.id
         ).order_by(MessageInterne.created_at.desc()).all()
-
     result = []
     for m in rows:
         exp = db.query(User).filter(User.id == m.expediteur_id).first()
-        dest = db.query(User).filter(User.id == m.destinataire_id).first()
+        dest = db.query(User).filter(User.id == m.destinataire_id).first() if m.destinataire_id else None
         result.append({
-            "id": m.id,
-            "expediteur_id": m.expediteur_id,
+            "id": m.id, "expediteur_id": m.expediteur_id,
             "expediteur_nom": exp.display_name if exp else "—",
             "destinataire_id": m.destinataire_id,
-            "destinataire_nom": dest.display_name if dest else "—",
-            "sujet": m.sujet,
-            "contenu": m.contenu,
-            "lu": m.lu,
+            "destinataire_nom": (dest.display_name if dest else (m.destinataire_nom or "—")),
+            "sujet": m.sujet, "contenu": m.contenu, "lu": m.lu,
             "lu_at": m.lu_at.isoformat() if m.lu_at else None,
             "created_at": m.created_at.isoformat() if m.created_at else None
         })
     return result
+
 
 @router.get("/messagerie/non-lus")
 def non_lus_count(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
+    """[v140 LEGACY] Count non lus — lit dans la nouvelle table."""
     if not user:
         return {"count": 0}
-    n = db.query(MessageInterne).filter(
-        MessageInterne.destinataire_id == user.id,
-        MessageInterne.lu == False
-    ).count()
+    try:
+        from plugins.messagerie.models import Message
+        from sqlalchemy import cast, String, or_
+        needle      = f'"type": "user", "value": {user.id}'
+        needle_cpct = f'"type":"user","value":{user.id}'
+        dest_str    = cast(Message.destinataires, String)
+        n = db.query(Message).filter(
+            Message.canal == "interne",
+            Message.deleted_at.is_(None),
+            Message.statut != "draft",
+            Message.lu == False,
+            or_(
+                dest_str.like(f"%{needle}%"),
+                dest_str.like(f"%{needle_cpct}%"),
+            ),
+        ).count()
+    except ImportError:
+        n = db.query(MessageInterne).filter(
+            MessageInterne.destinataire_id == user.id,
+            MessageInterne.lu == False
+        ).count()
+    except Exception as e:
+        logger.warning(f"non_lus_count plugin a échoué ({e}), fallback MessageInterne")
+        n = db.query(MessageInterne).filter(
+            MessageInterne.destinataire_id == user.id,
+            MessageInterne.lu == False
+        ).count()
     return {"count": n}
+
 
 @router.post("/messagerie")
 def send_message(
@@ -321,19 +417,40 @@ def send_message(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
+    """[v140 LEGACY] Envoi simple — écrit dans la nouvelle table."""
     if not user:
         raise HTTPException(401)
     dest = db.query(User).filter(User.id == body.destinataire_id, User.active == True).first()
     if not dest:
         raise HTTPException(404, "Destinataire introuvable")
-    msg = MessageInterne(
-        expediteur_id=user.id,
-        destinataire_id=body.destinataire_id,
-        sujet=body.sujet,
-        contenu=body.contenu
-    )
-    db.add(msg)
-    _log_mc(db, user, "MESSAGE", "ENVOYÉ", f"→ {dest.display_name or dest.username} | {body.sujet[:60]}")
+    try:
+        from plugins.messagerie.models import Message
+        import uuid
+        msg = Message(
+            canal="interne",
+            direction="out",
+            expediteur_id=user.id,
+            expediteur_nom=user.display_name or user.username,
+            destinataires=[{
+                "type":"user","value":dest.id,
+                "display": dest.display_name or dest.username
+            }],
+            sujet=body.sujet or "",
+            contenu=body.contenu or "",
+            thread_id=uuid.uuid4().hex,
+            statut="sent",
+            sent_at=datetime.now(timezone.utc),
+        )
+        db.add(msg)
+    except ImportError:
+        msg = MessageInterne(
+            expediteur_id=user.id,
+            destinataire_id=body.destinataire_id,
+            sujet=body.sujet,
+            contenu=body.contenu
+        )
+        db.add(msg)
+    _log_mc(db, user, "MESSAGE", "ENVOYÉ", f"→ {dest.display_name or dest.username} | {(body.sujet or '')[:60]}")
     db.commit()
     return {"status": "ok"}
 
@@ -343,16 +460,32 @@ def marquer_lu(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
+    """[v140 LEGACY] Marquer lu — écrit dans la nouvelle table."""
     if not user:
         raise HTTPException(401)
-    msg = db.query(MessageInterne).filter(
-        MessageInterne.id == msg_id,
-        MessageInterne.destinataire_id == user.id
-    ).first()
-    if msg and not msg.lu:
-        msg.lu = True
-        msg.lu_at = datetime.now(timezone.utc)
-        db.commit()
+    try:
+        from plugins.messagerie.models import Message
+        msg = db.query(Message).filter(Message.id == msg_id).first()
+        if msg:
+            # Vérifier que l'user est destinataire
+            is_dest = False
+            for d in (msg.destinataires or []):
+                if d.get("type") == "user" and int(d.get("value", 0) or 0) == user.id:
+                    is_dest = True
+                    break
+            if is_dest and not msg.lu:
+                msg.lu = True
+                msg.lu_at = datetime.now(timezone.utc)
+                db.commit()
+    except ImportError:
+        msg = db.query(MessageInterne).filter(
+            MessageInterne.id == msg_id,
+            MessageInterne.destinataire_id == user.id
+        ).first()
+        if msg and not msg.lu:
+            msg.lu = True
+            msg.lu_at = datetime.now(timezone.utc)
+            db.commit()
     return {"status": "ok"}
 
 

@@ -38,8 +38,11 @@ logger = logging.getLogger("scribe.master")
 
 # Répertoire racine du projet (parent de master/)
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent
-DATA_DIR = PROJECT_ROOT / "data" / "instances"
-STATE_FILE = PROJECT_ROOT / "master" / "master_instances.json"
+# h127 — chemins surchargeables par variable d'environnement, pour que les
+# donnees d'instances et l'etat du master SURVIVENT aux changements de build
+# (sinon, deployer un nouveau dossier de version repart sur des donnees vides).
+DATA_DIR = pathlib.Path(os.environ.get("SCRIBE_DATA_DIR") or (PROJECT_ROOT / "data" / "instances"))
+STATE_FILE = pathlib.Path(os.environ.get("SCRIBE_STATE_FILE") or (PROJECT_ROOT / "master" / "master_instances.json"))
 PROFIL_BASE_XLSX = PROJECT_ROOT / "master" / "profil_base.xlsx"
 
 
@@ -55,6 +58,12 @@ class InstanceConfig:
     nom: str = ""
     admin_login: str = "dircrise"
     admin_password: str = ""
+    # v3.4 (h38g) — Nom affiché de l'admin (display_name dans la DB).
+    # Si vide, on garde un fallback pertinent au lieu du legacy
+    # "Directeur de Crise" hardcodé qui rendait illisibles les
+    # messages de chat quand le login n'était pas "dircrise" (ex: "rssi"
+    # qui apparaissait comme "Directeur de Crise" dans les fils de chat).
+    admin_display_name: str = ""
     adresse: str = ""
     latitude: float | None = None
     longitude: float | None = None
@@ -64,14 +73,47 @@ class InstanceConfig:
     # convention GHT non encore signée, etc.
     # L'instance reste pleinement fonctionnelle pour son propre usage interne.
     synchroniser: bool = True
+    # v3.4 (h38h) — Plugins désactivés à la création (étape 5 du wizard).
+    # Liste des plugin_id à mettre à False dans la table plugin_states
+    # lors du premier bootstrap. Les autres restent activés par défaut.
+    # Ce champ n'est consulté qu'au _bootstrap_db ; modifier ensuite via
+    # /admin/plugins dans l'instance.
+    plugins_disabled: list = field(default_factory=list)
+    # v3.4 (h38k) — Langue par défaut de l'instance, choisie au wizard.
+    # Stocké en config.js (consommé par scribe.js loadI18n() au boot).
+    # Valeurs : fr, en, it, de, es, ou code ISO 2-letters d'une des 24 langues UE.
+    langue: str = "fr"
 
     def __post_init__(self):
+        # v3.4 (h38) — Strip systématique des champs textes pour éviter les
+        # espaces traînants qui cassent les headers HTTP de la fédération
+        # ("Illegal header value b'ch2 '"). Cf. bug supervision : un sigle
+        # avec un espace en fin empêchait le push vers le collecteur, donc
+        # l'instance n'apparaissait pas sur la carte territoriale.
+        if isinstance(self.sigle, str):
+            self.sigle = self.sigle.strip()
+        if isinstance(self.nom, str):
+            self.nom = self.nom.strip()
+        if isinstance(self.admin_login, str):
+            self.admin_login = self.admin_login.strip()
+        if isinstance(self.admin_display_name, str):
+            self.admin_display_name = self.admin_display_name.strip()
+        if isinstance(self.adresse, str):
+            self.adresse = self.adresse.strip()
+        if isinstance(self.timezone, str):
+            self.timezone = self.timezone.strip()
         if not self.sigle:
             self.sigle = f"Site_{self.port}"
         if not self.nom:
             self.nom = self.sigle
         if not self.admin_password:
             self.admin_password = generate_password()
+        # v3.4 (h38g) — Fallback intelligent du display_name :
+        # 1. Si le wizard a fourni un nom affiché, on l'utilise tel quel
+        # 2. Sinon, on capitalize le login (rssi → "Rssi")
+        # On ne met PLUS jamais "Directeur de Crise" en dur.
+        if not self.admin_display_name:
+            self.admin_display_name = self.admin_login.upper() if self.admin_login else "Admin"
 
 
 @dataclass
@@ -187,6 +229,10 @@ class InstanceManager:
                     state.pid = None
                 self.instances[state.config.port] = state
             logger.info(f"État rechargé : {len(self.instances)} instances")
+            # v3.4 (h38) — Re-sauver l'état après chargement : __post_init__ a
+            # appliqué un strip défensif sur sigle/nom/adresse, on persiste
+            # cette correction pour qu'elle survive aux redémarrages.
+            self._save_state()
         except Exception as e:
             logger.warning(f"Impossible de charger l'état : {e}")
 
@@ -256,6 +302,9 @@ class InstanceManager:
 
         allowed = {
             "sigle", "nom", "admin_login", "admin_password",
+            "admin_display_name",  # v3.4 (h38g)
+            "plugins_disabled",    # v3.4 (h38h) — pré-désactivation plugins par wizard
+            "langue",              # v3.4 (h38k) — langue par défaut posée par le wizard
             "adresse", "latitude", "longitude", "synchroniser",
             "timezone",
         }
@@ -266,6 +315,13 @@ class InstanceManager:
                 if k in {"sigle", "nom", "admin_login"} and isinstance(v, str) and not v.strip():
                     continue
                 setattr(state.config, k, v)
+        # Reset explicite du mot de passe admin demande (regenerate / edition panneau) :
+        # marque l'instance pour que _create_admin reapplique le mdp au prochain start.
+        if fields.get("admin_password"):
+            try:
+                state.pending_admin_reset = True
+            except Exception:
+                pass
         self._save_state()
         return state
 
@@ -607,12 +663,21 @@ class InstanceManager:
             }]
 
         # ── 1. config.js ────────────────────────────────────────────────────
+        # v3.4 (h38k) — Détecter la langue préférée pour cette instance.
+        # Le wizard envoie payload.langue dans WizardInstanceCreate ;
+        # on stocke cette préférence dans InstanceConfig.langue (mais le
+        # champ n'existe pas encore — on le lit via getattr pour fallback "fr").
+        instance_langue = getattr(cfg, "langue", "") or "fr"
         scribe_config = {
             "etablissement": {
                 "nom":      cfg.nom,
                 "sigle":    cfg.sigle,
                 "timezone": cfg.timezone or "",  # v2.4.6 : IANA ou "" (auto)
             },
+            # v3.4 (h38k) — Langue de l'instance posée par le wizard.
+            # Le frontend scribe.js charge cette langue par défaut au boot
+            # (cf. loadI18n() : SCRIBE_CONFIG.langue est lu si pas d'override admin).
+            "langue":           instance_langue,
             "login_tagline": "",
             "admin": {
                 "login":    cfg.admin_login,
@@ -740,11 +805,33 @@ class InstanceManager:
         try:
             # 2. Créer le Hospital principal
             from app.models import Hospital
-            hospital_nom = state.config.nom or state.config.sigle
+            # h153 — Éviter le fallback "Site_PORT" comme nom de Hospital :
+            # il s'afficherait dans le select établissement de la création d'incident.
+            # Si seul le sigle auto-généré est disponible, on le rend plus lisible.
+            import re as _re
+            _raw_nom   = (state.config.nom   or "").strip()
+            _raw_sigle = (state.config.sigle or "").strip()
+            _is_auto_sigle = bool(_re.match(r'^Site_\d+$', _raw_sigle, _re.IGNORECASE))
+            if _raw_nom:
+                hospital_nom = _raw_nom
+            elif _raw_sigle and not _is_auto_sigle:
+                hospital_nom = _raw_sigle
+            else:
+                # Dernier recours : utiliser le port pour créer un label lisible
+                hospital_nom = f"Instance port {state.config.port}" 
             # Sécurité défensive : si pour une raison quelconque un Hospital
             # avec ce nom existe déjà (DB qui n'aurait pas pu être supprimée),
             # on le réutilise au lieu de planter.
+            # Chercher aussi l'ancien nom auto-généré "Site_PORT" pour migration
+            import re as _re2
             existing_h = sess.query(Hospital).filter(Hospital.nom == hospital_nom).first()
+            if not existing_h:
+                # Chercher le fallback auto-généré pour le migrer
+                old_auto = f"Site_{state.config.port}"
+                existing_h = sess.query(Hospital).filter(Hospital.nom == old_auto).first()
+                if existing_h:
+                    logger.info(f"  Migration Hospital : {old_auto!r} → {hospital_nom!r}")
+                    existing_h.nom = hospital_nom
             if existing_h:
                 hospital_id = existing_h.id
                 existing_h.latitude = state.config.latitude or existing_h.latitude or 45.8992
@@ -753,7 +840,7 @@ class InstanceManager:
             else:
                 hospital_principal = Hospital(
                     nom=hospital_nom,
-                    latitude=state.config.latitude or 45.8992,    # Annecy par défaut
+                    latitude=state.config.latitude or 45.8992,    # Valmont par défaut
                     longitude=state.config.longitude or 6.1294,
                 )
                 sess.add(hospital_principal)
@@ -784,7 +871,7 @@ class InstanceManager:
                 logger.warning(f"  Profil xlsx absent : {PROFIL_BASE_XLSX}")
 
             # 4. Créer le compte admin
-            self._create_admin(sess, state)
+            self._create_admin(sess, state, preserve=preserve_mode)
 
             # 5. v2.4.7 : pré-créer les services transverses depuis le xlsx
             # (sinon fallback hardcodé dans cartographie.py au 1er hit API)
@@ -1057,7 +1144,7 @@ class InstanceManager:
             })
         return services
 
-    def _create_admin(self, sess, state: InstanceState) -> None:
+    def _create_admin(self, sess, state: InstanceState, preserve: bool = False) -> None:
         """Crée ou met à jour le compte admin de l'instance."""
         from app.models import User
 
@@ -1079,20 +1166,98 @@ class InstanceManager:
         existing = sess.query(User).filter(
             User.username == state.config.admin_login
         ).first()
+        # h60 — En mode EXERCICE, le mot de passe est fixe et non secret
+        # (« Exercice2026! ») : on ne force JAMAIS son changement (sinon les
+        # joueurs et le collecteur animateur sont bloqués à la 1ère connexion).
+        # Détection sans import circulaire via le nom de la dataclass de config.
+        _is_exo = type(state.config).__name__ == "ExerciceInstanceConfig"
         if existing:
-            existing.hashed_password = _hash(state.config.admin_password)
             existing.role = "admin"
             existing.active = True
-            logger.info(f"  Compte admin mis à jour : {state.config.admin_login}")
+            # h120 — Ne reecrire le mot de passe QUE sur premiere init (base non
+            # preservee) ou reset explicite (panneau). Une simple relance preserve
+            # le mdp choisi par l'utilisateur a sa premiere connexion.
+            _reset_pwd = (not preserve) or getattr(state, "pending_admin_reset", False)
+            if _reset_pwd:
+                existing.hashed_password = _hash(state.config.admin_password)
+                try:
+                    state.pending_admin_reset = False
+                except Exception:
+                    pass
+            # v3.4 (h38g) — Aussi mettre à jour le display_name si défini
+            # par le wizard. Évite que le legacy "Directeur de Crise"
+            # créé par bootstrap_admin reste figé alors que l'utilisateur
+            # avait renseigné un autre nom (ex: "RSSI").
+            if state.config.admin_display_name:
+                existing.display_name = state.config.admin_display_name
+            # v3.4 (h38c) — Forcer le changement de mot de passe à la
+            # première connexion (sauf si déjà déclaré non-nécessaire).
+            # Le mdp initial étant généré par le wizard et potentiellement
+            # transmis par email/chat, l'utilisateur doit le changer.
+            if _reset_pwd:
+                try:
+                    existing.must_change_password = not _is_exo
+                except Exception:
+                    pass
+            logger.info(f"  Compte admin {'reinitialise' if _reset_pwd else 'preserve'} : {state.config.admin_login}")
         else:
-            sess.add(User(
+            new_admin = User(
                 username=state.config.admin_login,
-                display_name="Directeur de Crise",
+                display_name=state.config.admin_display_name or state.config.admin_login.upper(),
                 role="admin",
                 hashed_password=_hash(state.config.admin_password),
                 active=True,
-            ))
-            logger.info(f"  Compte admin créé : {state.config.admin_login}")
+            )
+            # v3.4 (h38c) — Forcer le changement de mot de passe à la
+            # première connexion
+            try:
+                new_admin.must_change_password = not _is_exo
+            except Exception:
+                pass
+            sess.add(new_admin)
+            logger.info(f"  Compte admin créé : {state.config.admin_login} (display='{new_admin.display_name}', mdp à changer à la 1ère connexion)")
+        # v3.4 (h38g) — Commit explicite ici pour être absolument certain
+        # que must_change_password=True est persisté avant que l'instance
+        # ne réponde à un éventuel login en attente. Sans ce commit, un
+        # bootstrap concurrent ou un cache pouvait remettre le flag à False.
+        try:
+            sess.commit()
+        except Exception as e:
+            logger.warning(f"  Commit admin échoué (non bloquant) : {e}")
+
+        # v3.4 (h38h) — Écriture des plugin_states selon les préférences
+        # du wizard. Chaque plugin listé dans state.config.plugins_disabled
+        # se voit attribuer enabled=False. Les autres restent activés par
+        # défaut (config.PLUGINS = True). L'utilisateur peut ensuite modifier
+        # ces choix via /admin/plugins après création.
+        disabled = list(getattr(state.config, "plugins_disabled", []) or [])
+        if disabled:
+            try:
+                from core.plugin_state_model import PluginState
+                # S'assurer que la table existe (idempotent)
+                from app.database import Base, engine
+                Base.metadata.create_all(bind=engine, tables=[PluginState.__table__])
+
+                n_disabled = 0
+                for plugin_id in disabled:
+                    if not isinstance(plugin_id, str) or not plugin_id.strip():
+                        continue
+                    pid = plugin_id.strip()
+                    existing_ps = sess.query(PluginState).filter_by(plugin_id=pid).first()
+                    if existing_ps:
+                        if existing_ps.enabled:
+                            existing_ps.enabled = False
+                            n_disabled += 1
+                    else:
+                        sess.add(PluginState(plugin_id=pid, enabled=False))
+                        n_disabled += 1
+                sess.commit()
+                logger.info(f"  Plugins désactivés via wizard : {n_disabled} ({disabled})")
+            except Exception as e:
+                # Non bloquant : si le modèle PluginState n'existe pas ou autre,
+                # on log et on continue. L'instance fonctionnera juste avec
+                # les plugins par défaut.
+                logger.warning(f"  Écriture plugin_states KO (non bloquant) : {e}")
 
     def _auto_enrol(self, state: InstanceState, collecteur_url: str) -> None:
         """Pré-enregistre le token de l'instance auprès du collecteur.

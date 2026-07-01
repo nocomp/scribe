@@ -9,6 +9,7 @@ passlib[bcrypt]>=1.7.4
 bcrypt>=4.0.0,<5.0.0  # passlib 1.7.4 incompatible avec bcrypt 5+ (Python 3.12 crash "password > 72 bytes")
 python-docx>=1.1.0
 openpyxl>=3.1.0
+pyzipper>=0.3.6
 slowapi>=0.1.9
 
 # v2.3.x — MFA TOTP (app/api/mfa.py)
@@ -18,3 +19,11 @@ qrcode[pil]>=7.4.0
 # v2.3.87 — Plugin notifications (Web Push)
 pywebpush>=2.0.0
 py_vapid>=1.9.0
+
+# ── Répondeur de crise (optionnel) ─────────────────────────────────────────
+# Synthèse vocale (MP3) et transcription locale des messages vocaux.
+# Paquets système : sudo apt install espeak-ng ffmpeg
+# Transcription locale (au choix) :
+#   pip install faster-whisper      # recommandé (FR, CPU)
+#   pip install vosk                # alternative légère hors-ligne (+ modèle)
+# Qualité de voix supérieure (optionnel, souverain) : Piper

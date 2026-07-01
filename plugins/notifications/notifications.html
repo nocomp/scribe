@@ -86,47 +86,6 @@ details summary{cursor:pointer;font-family:var(--mo);font-size:10px;color:var(--
     Configure les canaux de notification au niveau du serveur. Les tokens/mots de passe ne sont jamais renvoyés en clair — pour modifier un canal déjà configuré, resaisissez toutes les valeurs.
   </div>
 
-  <!-- Telegram -->
-  <details open style="margin-bottom:10px">
-    <summary>💬 Telegram — <span id="adm-telegram-state">Non configuré</span></summary>
-    <div style="padding-top:12px">
-      <div class="muted" style="margin-bottom:8px">
-        Créez un bot via <a href="https://t.me/BotFather" target="_blank">@BotFather</a> (/newbot), puis collez son token ci-dessous.
-      </div>
-      <div class="row">
-        <label>Bot token</label>
-        <input type="password" id="adm-tg-token" placeholder="1234567890:AAH..." autocomplete="off">
-      </div>
-      <div class="row">
-        <label>URL publique SCRIBE</label>
-        <input type="text" id="adm-tg-url" placeholder="http://vps.example.fr:8660">
-      </div>
-      <div class="row">
-        <label>Format messages</label>
-        <select id="adm-tg-format">
-          <option value="HTML" selected>HTML (recommandé)</option>
-          <option value="Markdown">Markdown</option>
-          <option value="">Texte brut</option>
-        </select>
-      </div>
-      <div class="row">
-        <label>Silencieux si urgency &lt;</label>
-        <select id="adm-tg-silent">
-          <option value="1">1 (jamais silencieux)</option>
-          <option value="2">2</option>
-          <option value="3" selected>3 (vigilance silencieuse)</option>
-          <option value="4">4 (tout sauf critique)</option>
-          <option value="5">5 (toujours silencieux)</option>
-        </select>
-      </div>
-      <div class="row">
-        <label><input type="checkbox" id="adm-telegram-enabled"> Activer ce canal</label>
-      </div>
-      <div class="actions">
-        <button class="btn btn-primary" onclick="saveChannel('telegram')">💾 Enregistrer</button>
-      </div>
-    </div>
-  </details>
 
   <!-- Mail SMTP -->
   <details style="margin-bottom:10px">
@@ -333,48 +292,6 @@ details summary{cursor:pointer;font-family:var(--mo);font-size:10px;color:var(--
   </div>
 </div>
 
-<!-- ── TELEGRAM ─────────────────────────────────────────────────────── -->
-<!-- v2307 — id "sub-telegram-card" ajouté pour pouvoir masquer cette
-     carte côté JS quand le backend Telegram n'est pas actif (cas
-     par défaut depuis v2307). -->
-<div class="card" id="sub-telegram-card">
-  <div class="card-hdr">
-    <h2>💬 Notifications Telegram</h2>
-    <span id="telegram-pill" class="pill off">Non configuré</span>
-  </div>
-  <div class="muted" style="margin-bottom:10px">
-    <strong>Gratuit, fiable, instantané</strong> — l'alternative moderne aux SMS. Fonctionne sur tous les téléphones (iOS/Android) et en web/desktop.
-  </div>
-  <details style="margin-bottom:10px">
-    <summary>📘 Comment obtenir mon chat_id Telegram ?</summary>
-    <div style="padding-top:8px;font-size:11px;line-height:1.6">
-      1. Ouvrir Telegram, chercher le bot indiqué par votre administrateur SCRIBE<br>
-      2. Cliquer <strong>Démarrer</strong> (ou envoyer <code>/start</code>)<br>
-      3. Chercher le bot <code>@userinfobot</code> et lui envoyer <code>/start</code> — il affiche votre ID<br>
-      4. Copier cet ID (nombre, ex: <code>123456789</code>) dans le champ ci-dessous<br>
-      5. <strong>Important :</strong> envoyer au moins 1 message au bot SCRIBE avant le test, sinon il ne peut pas vous contacter
-    </div>
-  </details>
-  <div class="row">
-    <label>chat_id Telegram</label>
-    <input type="text" id="telegram-target" placeholder="123456789 (ID numérique uniquement)">
-    <input type="text" id="telegram-label" placeholder="Label (ex: Telegram perso)" style="max-width:180px">
-  </div>
-  <div class="row">
-    <label>Niveau mini</label>
-    <select id="telegram-urg">
-      <option value="1">1 - Info</option>
-      <option value="2">2 - Vigilance</option>
-      <option value="3" selected>3 - Alerte</option>
-      <option value="4">4 - Critique uniquement</option>
-    </select>
-  </div>
-  <div class="actions">
-    <button class="btn btn-primary" onclick="addSub('telegram')">➕ M'abonner</button>
-    <button class="btn" onclick="testChannel('telegram')">Tester</button>
-  </div>
-</div>
-
 <!-- ── MES ABONNEMENTS ──────────────────────────────────────────────── -->
 <div class="card">
   <div class="card-hdr">
@@ -402,7 +319,9 @@ details summary{cursor:pointer;font-family:var(--mo);font-size:10px;color:var(--
 
 <script>
 const API = '/api/v1/notifications';
-let tok = localStorage.getItem('scribe_token') || '';
+// h147 — Priorité au token dans l'URL (?token=) injecté par scribe.js
+let _url_params = new URLSearchParams(window.location.search);
+let tok = _url_params.get('token') || localStorage.getItem('scribe_token') || '';
 const hdr = () => ({'Authorization': 'Bearer ' + tok, 'Content-Type': 'application/json'});
 
 function toast(msg, type) {
@@ -443,24 +362,12 @@ async function loadChannelsState() {
     (cfg.channels || []).forEach(c => { channels[c.kind] = c; });
 
     // v2307 — Masquer les sections UI des backends non disponibles côté
-    // serveur. Exemple : Telegram est retiré des backends activés par
     // défaut depuis v2307 ; l'UI doit s'adapter pour ne pas afficher des
     // formulaires qui ne fonctionneront pas.
-    const available = new Set(cfg.available_kinds || ['mail','webpush','sms','telegram']);
-    // Masquage de la section Telegram côté admin (via l'élément <details> parent)
-    const tgAdminSummary = document.getElementById('adm-telegram-state');
-    if (!available.has('telegram') && tgAdminSummary) {
-      const det = tgAdminSummary.closest('details');
-      if (det) det.style.display = 'none';
-    }
-    // Masquage de la carte Telegram côté user (via id dédié)
-    const tgUserCard = document.getElementById('sub-telegram-card');
-    if (!available.has('telegram') && tgUserCard) {
-      tgUserCard.style.display = 'none';
-    }
+    const available = new Set(cfg.available_kinds || ['mail','webpush','sms']);
 
     // Mise à jour des états affichés
-    ['telegram','mail','sms','webpush'].forEach(k => {
+    ['mail','sms','webpush'].forEach(k => {
       if (!available.has(k)) return;   // backend non dispo → skip
       const stateEl = document.getElementById('adm-' + k + '-state');
       const enabledEl = document.getElementById('adm-' + k + '-enabled');
@@ -479,14 +386,6 @@ async function loadChannelsState() {
   }
 }
 
-function _telegramConfig() {
-  return {
-    bot_token: document.getElementById('adm-tg-token').value.trim(),
-    parse_mode: document.getElementById('adm-tg-format').value,
-    disable_notification_below: parseInt(document.getElementById('adm-tg-silent').value, 10),
-    scribe_base_url: document.getElementById('adm-tg-url').value.trim(),
-  };
-}
 
 function _mailConfig() {
   const sec = document.getElementById('adm-mail-security').value;
@@ -539,7 +438,6 @@ function _webpushConfig() {
 
 async function saveChannel(kind) {
   const configs = {
-    telegram: _telegramConfig,
     mail:     _mailConfig,
     sms:      _smsConfig,
     webpush:  _webpushConfig,
@@ -551,7 +449,6 @@ async function saveChannel(kind) {
   const enabledEl = document.getElementById('adm-' + kind + '-enabled');
   const enabled = enabledEl ? enabledEl.checked : false;
   const labels = {
-    telegram: 'Bot Telegram SCRIBE',
     mail:     'Mail SMTP',
     sms:      'Notifications SMS',
     webpush:  'Web Push navigateur',
@@ -763,7 +660,7 @@ async function loadSubs() {
       wrap.innerHTML = '<div class="muted">Aucun abonnement. Ajoutez-en un ci-dessus.</div>';
       return;
     }
-    const icons = {mail:'✉️', webpush:'🌐', sms:'📱', telegram:'💬'};
+    const icons = {mail:'✉️', webpush:'🌐', sms:'📱'};
     wrap.innerHTML = '<table class="subs-table"><thead><tr>' +
       '<th>Canal</th><th>Cible</th><th>Label</th><th>Niveau</th><th>Dernier envoi</th><th></th>' +
       '</tr></thead><tbody>' +
@@ -822,13 +719,11 @@ function enableSound() {
 
 // ── Init ─────────────────────────────────────────────────────────────
 async function init() {
+  // Toujours préférer le token live de l'app parente (évite un token périmé conservé côté iframe)
+  try { const _pt = window.parent.localStorage.getItem('scribe_token'); if (_pt) tok = _pt; } catch(e) {}
   if (!tok) {
-    // Tenter via parent (si embed en iframe dans SCRIBE)
-    try { tok = window.parent.localStorage.getItem('scribe_token') || ''; } catch(e) {}
-    if (!tok) {
-      document.body.innerHTML = '<div class="card" style="color:#dc2626">Non authentifié — ouvrez SCRIBE d&#39;abord.</div>';
-      return;
-    }
+    document.body.innerHTML = '<div class="card" style="color:#dc2626">Non authentifié — ouvrez SCRIBE d&#39;abord.</div>';
+    return;
   }
   loadSilence();
   initPushStatus();

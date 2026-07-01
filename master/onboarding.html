@@ -376,6 +376,7 @@
 <div class="lang-selector">
   <span style="font-size:0.85em;color:var(--gris)">🌐</span>
   <select id="lang-select" onchange="changeLang(this.value)">
+    <!-- v3.4 (h38c) — 24 langues officielles UE -->
     <option value="fr">Français</option>
     <option value="en">English</option>
     <option value="de">Deutsch</option>
@@ -384,6 +385,22 @@
     <option value="nl">Nederlands</option>
     <option value="pl">Polski</option>
     <option value="pt">Português</option>
+    <option value="bg">Български</option>
+    <option value="cs">Čeština</option>
+    <option value="da">Dansk</option>
+    <option value="el">Ελληνικά</option>
+    <option value="et">Eesti</option>
+    <option value="fi">Suomi</option>
+    <option value="ga">Gaeilge</option>
+    <option value="hr">Hrvatski</option>
+    <option value="hu">Magyar</option>
+    <option value="lt">Lietuvių</option>
+    <option value="lv">Latviešu</option>
+    <option value="mt">Malti</option>
+    <option value="ro">Română</option>
+    <option value="sk">Slovenčina</option>
+    <option value="sl">Slovenščina</option>
+    <option value="sv">Svenska</option>
   </select>
 </div>
 
@@ -415,11 +432,11 @@
     </div>
 
     <div class="splash-card" onclick="document.getElementById('zip-input').click()">
-      <div class="splash-card-icon">📦</div>
-      <h3 class="splash-card-title" data-i18n="splash.card3.title">Déployer un GHT complet</h3>
-      <p class="splash-card-desc" data-i18n="splash.card3.desc">Importer un .zip contenant plusieurs établissements (export GHT complet).</p>
-      <button class="splash-card-btn" data-i18n="splash.card3.btn">Choisir un .zip</button>
-      <input type="file" id="zip-input" accept=".zip" style="display:none" onchange="onZipImport(event)">
+      <div class="splash-card-icon">💾</div>
+      <h3 class="splash-card-title">Restaurer une sauvegarde complète</h3>
+      <p class="splash-card-desc">Importer un .zip de sauvegarde SCRIBE : recrée toutes les instances et leurs données (comptes, notifs, capacités…), prêtes à l'emploi.</p>
+      <button class="splash-card-btn">Choisir la sauvegarde</button>
+      <input type="file" id="zip-input" accept=".zip" style="display:none" onchange="onBackupRestore(event)">
     </div>
 
     <div class="splash-card" onclick="quickDemo()">
@@ -459,6 +476,7 @@
       <div class="wizard-progress-dot" id="dot-3"></div>
       <div class="wizard-progress-dot" id="dot-4"></div>
       <div class="wizard-progress-dot" id="dot-5"></div>
+      <div class="wizard-progress-dot" id="dot-6"></div>
     </div>
   </div>
 
@@ -509,7 +527,9 @@ const I18N = {
     'wizard.step2.title': 'Site principal',
     'wizard.step3.title': 'Compte administrateur',
     'wizard.step4.title': 'Intelligence artificielle',
-    'wizard.step5.title': 'Récapitulatif',
+    'wizard.step5.title': 'Plugins (modules)',
+    'wizard.step5.intro': 'Sélectionnez les modules à activer. Vous pourrez modifier ces choix après création.',
+    'wizard.step6.title': 'Récapitulatif',
     'field.nom': 'Nom complet de l\'établissement',
     'field.sigle': 'Sigle (3-5 lettres)',
     'field.finess': 'N° FINESS (optionnel)',
@@ -548,6 +568,41 @@ const I18N = {
     'demo.hint': '💡 La démo va s\'ouvrir dans un nouvel onglet. Vous pourrez revenir ici à tout moment, et relancer le wizard depuis le bouton 🎯 dans la liste des instances.',
     'demo.cancel': 'Annuler',
     'demo.open': '↗ Ouvrir la démo',
+    'wizard.plugin.required': 'obligatoire',
+    'wizard.plugin.cellule.label': 'Cellule de crise',
+    'wizard.plugin.cellule.desc': 'Constitution de la cellule, rôles, signaux de réunion',
+    'wizard.plugin.capacite.label': 'Capacité (lits)',
+    'wizard.plugin.capacite.desc': 'Référentiel des lits par UF, tension capacitaire',
+    'wizard.plugin.releve.label': 'Relève de garde',
+    'wizard.plugin.releve.desc': 'Notes de relève entre équipes successives',
+    'wizard.plugin.transferts.label': 'Transferts patients',
+    'wizard.plugin.transferts.desc': 'Fiches de transfert avec destination et ETA',
+    'wizard.plugin.brancardage.label': 'Brancardage',
+    'wizard.plugin.brancardage.desc': 'Bons de brancardage et missions de transport interne',
+    'wizard.plugin.messagerie.label': 'Messagerie interne',
+    'wizard.plugin.messagerie.desc': 'Messages internes avec accusés de lecture',
+    'wizard.plugin.chat.label': 'Chat temps réel',
+    'wizard.plugin.chat.desc': 'Salons et conversations privées en direct',
+    'wizard.plugin.annuaire.label': 'Annuaire',
+    'wizard.plugin.annuaire.desc': 'Annuaire interne avec contacts d’urgence',
+    'wizard.plugin.communique.label': 'Communiqués',
+    'wizard.plugin.communique.desc': 'Diffusion de communiqués officiels',
+    'wizard.plugin.rex.label': 'Retour d’expérience',
+    'wizard.plugin.rex.desc': 'REX post-incident et après-action reports',
+    'wizard.plugin.rapport.label': 'Archivage rapport',
+    'wizard.plugin.rapport.desc': 'Export ZIP téléchargeable de la crise',
+    'wizard.plugin.notifications.label': 'Notifications',
+    'wizard.plugin.notifications.desc': 'Notifications systèmes et inter-utilisateurs',
+    'wizard.plugin.tuteur.label': 'Assistant tuteur',
+    'wizard.plugin.tuteur.desc': 'Aide contextuelle à l’usage de SCRIBE (mode formation)',
+    'wizard.plugin.bluefiles.label': 'Bluefiles (transfert sécurisé HDS)',
+    'wizard.plugin.bluefiles.desc': 'Envoi sécurisé de pièces jointes via Bluefiles (chiffrement bout-en-bout, HDS, SecNumCloud)',
+    'wizard.plugin.inter_ght.label': 'Inter-GHT',
+    'wizard.plugin.inter_ght.desc': 'Demandes et messages entre établissements (GHT)',
+    'wizard.plugin.federation.label': 'Fédération / Supervision',
+    'wizard.plugin.federation.desc': 'Push vers le collecteur de supervision territoriale',
+    'wizard.plugin.albert.label': 'Assistant IA',
+    'wizard.plugin.albert.desc': 'Synthèse Albert pour analyse situationnelle',
   },
   en: {
     'splash.title': 'Welcome to SCRIBE',
@@ -574,7 +629,9 @@ const I18N = {
     'wizard.step2.title': 'Main site',
     'wizard.step3.title': 'Administrator account',
     'wizard.step4.title': 'Artificial intelligence',
-    'wizard.step5.title': 'Summary',
+    'wizard.step5.title': 'Plugins (modules)',
+    'wizard.step5.intro': 'Select the modules to enable. You can change these choices after creation.',
+    'wizard.step6.title': 'Summary',
     'field.nom': 'Full facility name',
     'field.sigle': 'Acronym (3-5 letters)',
     'field.finess': 'FINESS number (optional)',
@@ -613,6 +670,41 @@ const I18N = {
     'demo.hint': '💡 The demo will open in a new tab. You can come back here anytime and relaunch the wizard from the 🎯 button in the instances list.',
     'demo.cancel': 'Cancel',
     'demo.open': '↗ Open demo',
+    'wizard.plugin.required': 'required',
+    'wizard.plugin.cellule.label': 'Crisis cell',
+    'wizard.plugin.cellule.desc': 'Cell composition, roles, meeting signals',
+    'wizard.plugin.capacite.label': 'Capacity (beds)',
+    'wizard.plugin.capacite.desc': 'Bed reference per unit, capacity tension',
+    'wizard.plugin.releve.label': 'Shift handover',
+    'wizard.plugin.releve.desc': 'Notes between successive teams',
+    'wizard.plugin.transferts.label': 'Patient transfers',
+    'wizard.plugin.transferts.desc': 'Transfer forms with destination and ETA',
+    'wizard.plugin.brancardage.label': 'Porter service',
+    'wizard.plugin.brancardage.desc': 'Internal transport vouchers and missions',
+    'wizard.plugin.messagerie.label': 'Internal messaging',
+    'wizard.plugin.messagerie.desc': 'Internal messages with read receipts',
+    'wizard.plugin.chat.label': 'Real-time chat',
+    'wizard.plugin.chat.desc': 'Channels and private conversations live',
+    'wizard.plugin.annuaire.label': 'Directory',
+    'wizard.plugin.annuaire.desc': 'Internal directory with emergency contacts',
+    'wizard.plugin.communique.label': 'Bulletins',
+    'wizard.plugin.communique.desc': 'Official bulletin broadcasting',
+    'wizard.plugin.rex.label': 'After-action review',
+    'wizard.plugin.rex.desc': 'Post-incident AAR reports',
+    'wizard.plugin.rapport.label': 'Report archiving',
+    'wizard.plugin.rapport.desc': 'Downloadable ZIP export of the crisis',
+    'wizard.plugin.notifications.label': 'Notifications',
+    'wizard.plugin.notifications.desc': 'System and inter-user notifications',
+    'wizard.plugin.tuteur.label': 'Tutor assistant',
+    'wizard.plugin.tuteur.desc': 'Contextual help for SCRIBE usage (training mode)',
+    'wizard.plugin.bluefiles.label': 'Bluefiles (HDS secure transfer)',
+    'wizard.plugin.bluefiles.desc': 'Secure file transfer via Bluefiles (end-to-end encryption, HDS-certified hosting)',
+    'wizard.plugin.inter_ght.label': 'Inter-establishment',
+    'wizard.plugin.inter_ght.desc': 'Requests and messages between establishments',
+    'wizard.plugin.federation.label': 'Federation / Supervision',
+    'wizard.plugin.federation.desc': 'Push to territorial supervision collector',
+    'wizard.plugin.albert.label': 'AI Assistant',
+    'wizard.plugin.albert.desc': 'Albert synthesis for situational analysis',
   },
   // Auto-traduction best-effort — à réviser par un natif
   de: {
@@ -640,7 +732,9 @@ const I18N = {
     'wizard.step2.title': 'Hauptstandort',
     'wizard.step3.title': 'Administrator-Konto',
     'wizard.step4.title': 'Künstliche Intelligenz',
-    'wizard.step5.title': 'Zusammenfassung',
+    'wizard.step5.title': 'Plugins (Module)',
+    'wizard.step5.intro': 'Wählen Sie die zu aktivierenden Module aus. Änderungen sind später möglich.',
+    'wizard.step6.title': 'Zusammenfassung',
     'field.nom': 'Vollständiger Einrichtungsname',
     'field.sigle': 'Kürzel (3-5 Buchstaben)',
     'field.finess': 'FINESS-Nummer (optional)',
@@ -679,6 +773,41 @@ const I18N = {
     'demo.hint': '💡 Die Demo öffnet sich in einem neuen Tab. Sie können jederzeit hierher zurückkehren und den Assistenten über die 🎯-Schaltfläche neu starten.',
     'demo.cancel': 'Abbrechen',
     'demo.open': '↗ Demo öffnen',
+    'wizard.plugin.required': 'erforderlich',
+    'wizard.plugin.cellule.label': 'Krisenstab',
+    'wizard.plugin.cellule.desc': 'Zusammensetzung des Stabes, Rollen, Sitzungssignale',
+    'wizard.plugin.capacite.label': 'Kapazität (Betten)',
+    'wizard.plugin.capacite.desc': 'Bettenreferenz pro Einheit, Kapazitätsspannung',
+    'wizard.plugin.releve.label': 'Schichtübergabe',
+    'wizard.plugin.releve.desc': 'Notizen zwischen aufeinanderfolgenden Teams',
+    'wizard.plugin.transferts.label': 'Patiententransfers',
+    'wizard.plugin.transferts.desc': 'Transferformulare mit Ziel und ETA',
+    'wizard.plugin.brancardage.label': 'Patiententransportdienst',
+    'wizard.plugin.brancardage.desc': 'Interne Transportscheine und Aufträge',
+    'wizard.plugin.messagerie.label': 'Interne Nachrichten',
+    'wizard.plugin.messagerie.desc': 'Interne Nachrichten mit Lesebestätigungen',
+    'wizard.plugin.chat.label': 'Echtzeit-Chat',
+    'wizard.plugin.chat.desc': 'Kanäle und private Live-Unterhaltungen',
+    'wizard.plugin.annuaire.label': 'Verzeichnis',
+    'wizard.plugin.annuaire.desc': 'Internes Verzeichnis mit Notfallkontakten',
+    'wizard.plugin.communique.label': 'Mitteilungen',
+    'wizard.plugin.communique.desc': 'Verbreitung offizieller Mitteilungen',
+    'wizard.plugin.rex.label': 'Nachbesprechung',
+    'wizard.plugin.rex.desc': 'Berichte nach Vorfällen (AAR)',
+    'wizard.plugin.rapport.label': 'Berichtsarchivierung',
+    'wizard.plugin.rapport.desc': 'Herunterladbarer ZIP-Export der Krise',
+    'wizard.plugin.notifications.label': 'Benachrichtigungen',
+    'wizard.plugin.notifications.desc': 'System- und Nutzerbenachrichtigungen',
+    'wizard.plugin.tuteur.label': 'Tutor-Assistent',
+    'wizard.plugin.tuteur.desc': 'Kontextbezogene Hilfe zur SCRIBE-Nutzung',
+    'wizard.plugin.bluefiles.label': 'Bluefiles (sichere HDS-Übertragung)',
+    'wizard.plugin.bluefiles.desc': 'Sicherer Dateitransfer über Bluefiles (Ende-zu-Ende-Verschlüsselung, HDS-Hosting)',
+    'wizard.plugin.inter_ght.label': 'Zwischen-Einrichtung',
+    'wizard.plugin.inter_ght.desc': 'Anfragen und Nachrichten zwischen Einrichtungen',
+    'wizard.plugin.federation.label': 'Föderation / Aufsicht',
+    'wizard.plugin.federation.desc': 'Push an territorialen Aufsichtscollector',
+    'wizard.plugin.albert.label': 'KI-Assistent',
+    'wizard.plugin.albert.desc': 'Albert-Synthese für Lageanalyse',
   },
   es: {
     'splash.title': 'Bienvenido a SCRIBE',
@@ -705,7 +834,9 @@ const I18N = {
     'wizard.step2.title': 'Sitio principal',
     'wizard.step3.title': 'Cuenta de administrador',
     'wizard.step4.title': 'Inteligencia artificial',
-    'wizard.step5.title': 'Resumen',
+    'wizard.step5.title': 'Plugins (módulos)',
+    'wizard.step5.intro': 'Seleccione los módulos que desea activar. Podrá modificarlos después de la creación.',
+    'wizard.step6.title': 'Resumen',
     'field.nom': 'Nombre completo del establecimiento',
     'field.sigle': 'Sigla (3-5 letras)',
     'field.finess': 'Número FINESS (opcional)',
@@ -744,6 +875,41 @@ const I18N = {
     'demo.hint': '💡 La demo se abrirá en una nueva pestaña. Puede volver aquí en cualquier momento y relanzar el asistente desde el botón 🎯 en la lista de instancias.',
     'demo.cancel': 'Cancelar',
     'demo.open': '↗ Abrir demo',
+    'wizard.plugin.required': 'obligatorio',
+    'wizard.plugin.cellule.label': 'Célula de crisis',
+    'wizard.plugin.cellule.desc': 'Composición de la célula, roles, señales de reunión',
+    'wizard.plugin.capacite.label': 'Capacidad (camas)',
+    'wizard.plugin.capacite.desc': 'Referencia de camas por unidad, tensión capacitaria',
+    'wizard.plugin.releve.label': 'Relevo de guardia',
+    'wizard.plugin.releve.desc': 'Notas entre equipos sucesivos',
+    'wizard.plugin.transferts.label': 'Traslados de pacientes',
+    'wizard.plugin.transferts.desc': 'Fichas de traslado con destino y ETA',
+    'wizard.plugin.brancardage.label': 'Camillero',
+    'wizard.plugin.brancardage.desc': 'Vales de traslado y misiones internas',
+    'wizard.plugin.messagerie.label': 'Mensajería interna',
+    'wizard.plugin.messagerie.desc': 'Mensajes internos con confirmaciones de lectura',
+    'wizard.plugin.chat.label': 'Chat en tiempo real',
+    'wizard.plugin.chat.desc': 'Salas y conversaciones privadas en directo',
+    'wizard.plugin.annuaire.label': 'Directorio',
+    'wizard.plugin.annuaire.desc': 'Directorio interno con contactos de emergencia',
+    'wizard.plugin.communique.label': 'Comunicados',
+    'wizard.plugin.communique.desc': 'Difusión de comunicados oficiales',
+    'wizard.plugin.rex.label': 'Análisis posterior',
+    'wizard.plugin.rex.desc': 'Informes AAR posincidente',
+    'wizard.plugin.rapport.label': 'Archivado de informe',
+    'wizard.plugin.rapport.desc': 'Exportación ZIP descargable de la crisis',
+    'wizard.plugin.notifications.label': 'Notificaciones',
+    'wizard.plugin.notifications.desc': 'Notificaciones del sistema y entre usuarios',
+    'wizard.plugin.tuteur.label': 'Asistente tutor',
+    'wizard.plugin.tuteur.desc': 'Ayuda contextual para el uso de SCRIBE',
+    'wizard.plugin.bluefiles.label': 'Bluefiles (transferencia segura HDS)',
+    'wizard.plugin.bluefiles.desc': 'Transferencia segura de archivos vía Bluefiles (cifrado de extremo a extremo, alojamiento HDS)',
+    'wizard.plugin.inter_ght.label': 'Inter-centro',
+    'wizard.plugin.inter_ght.desc': 'Solicitudes y mensajes entre centros',
+    'wizard.plugin.federation.label': 'Federación / Supervisión',
+    'wizard.plugin.federation.desc': 'Push al colector de supervisión territorial',
+    'wizard.plugin.albert.label': 'Asistente IA',
+    'wizard.plugin.albert.desc': 'Síntesis Albert para análisis situacional',
   },
   it: {
     'splash.title': 'Benvenuto in SCRIBE',
@@ -770,7 +936,9 @@ const I18N = {
     'wizard.step2.title': 'Sito principale',
     'wizard.step3.title': 'Account amministratore',
     'wizard.step4.title': 'Intelligenza artificiale',
-    'wizard.step5.title': 'Riepilogo',
+    'wizard.step5.title': 'Plugin (moduli)',
+    'wizard.step5.intro': 'Seleziona i moduli da abilitare. Potrai modificare queste scelte dopo la creazione.',
+    'wizard.step6.title': 'Riepilogo',
     'field.nom': 'Nome completo istituto',
     'field.sigle': 'Sigla (3-5 lettere)',
     'field.finess': 'Numero FINESS (opzionale)',
@@ -809,6 +977,41 @@ const I18N = {
     'demo.hint': '💡 La demo si aprirà in una nuova scheda. Puoi tornare qui in qualsiasi momento e riavviare la procedura dal pulsante 🎯 nella lista delle istanze.',
     'demo.cancel': 'Annulla',
     'demo.open': '↗ Apri demo',
+    'wizard.plugin.required': 'obbligatorio',
+    'wizard.plugin.cellule.label': 'Cellula di crisi',
+    'wizard.plugin.cellule.desc': 'Composizione cellula, ruoli, segnali riunione',
+    'wizard.plugin.capacite.label': 'Capacità (letti)',
+    'wizard.plugin.capacite.desc': 'Riferimento letti per UF, tensione capacitiva',
+    'wizard.plugin.releve.label': 'Passaggio di consegne',
+    'wizard.plugin.releve.desc': 'Note tra squadre successive',
+    'wizard.plugin.transferts.label': 'Trasferimenti pazienti',
+    'wizard.plugin.transferts.desc': 'Schede di trasferimento con destinazione e ETA',
+    'wizard.plugin.brancardage.label': 'Servizio barellieri',
+    'wizard.plugin.brancardage.desc': 'Buoni di trasporto e missioni interne',
+    'wizard.plugin.messagerie.label': 'Messaggistica interna',
+    'wizard.plugin.messagerie.desc': 'Messaggi interni con conferma di lettura',
+    'wizard.plugin.chat.label': 'Chat in tempo reale',
+    'wizard.plugin.chat.desc': 'Sale e conversazioni private dal vivo',
+    'wizard.plugin.annuaire.label': 'Rubrica',
+    'wizard.plugin.annuaire.desc': 'Rubrica interna con contatti di emergenza',
+    'wizard.plugin.communique.label': 'Comunicati',
+    'wizard.plugin.communique.desc': 'Diffusione di comunicati ufficiali',
+    'wizard.plugin.rex.label': 'Lessons learned',
+    'wizard.plugin.rex.desc': 'Rapporti AAR post-incidente',
+    'wizard.plugin.rapport.label': 'Archiviazione rapporto',
+    'wizard.plugin.rapport.desc': 'Esportazione ZIP scaricabile della crisi',
+    'wizard.plugin.notifications.label': 'Notifiche',
+    'wizard.plugin.notifications.desc': 'Notifiche di sistema e tra utenti',
+    'wizard.plugin.tuteur.label': 'Assistente tutor',
+    'wizard.plugin.tuteur.desc': 'Aiuto contestuale per l’uso di SCRIBE',
+    'wizard.plugin.bluefiles.label': 'Bluefiles (trasferimento sicuro HDS)',
+    'wizard.plugin.bluefiles.desc': 'Trasferimento sicuro di file tramite Bluefiles (crittografia end-to-end, hosting HDS)',
+    'wizard.plugin.inter_ght.label': 'Inter-struttura',
+    'wizard.plugin.inter_ght.desc': 'Richieste e messaggi tra strutture',
+    'wizard.plugin.federation.label': 'Federazione / Supervisione',
+    'wizard.plugin.federation.desc': 'Push al collector di supervisione territoriale',
+    'wizard.plugin.albert.label': 'Assistente IA',
+    'wizard.plugin.albert.desc': 'Sintesi Albert per analisi situazionale',
   },
   nl: {
     'splash.title': 'Welkom bij SCRIBE',
@@ -835,7 +1038,9 @@ const I18N = {
     'wizard.step2.title': 'Hoofdvestiging',
     'wizard.step3.title': 'Beheerder account',
     'wizard.step4.title': 'Kunstmatige intelligentie',
-    'wizard.step5.title': 'Samenvatting',
+    'wizard.step5.title': 'Plug-ins (modules)',
+    'wizard.step5.intro': 'Selecteer de modules om in te schakelen. U kunt deze keuzes na het aanmaken wijzigen.',
+    'wizard.step6.title': 'Samenvatting',
     'field.nom': 'Volledige naam instelling',
     'field.sigle': 'Afkorting (3-5 letters)',
     'field.finess': 'FINESS nummer (optioneel)',
@@ -874,6 +1079,41 @@ const I18N = {
     'demo.hint': '💡 De demo opent in een nieuw tabblad. U kunt hier altijd terugkeren en de wizard opnieuw starten via de 🎯-knop in de lijst met instanties.',
     'demo.cancel': 'Annuleren',
     'demo.open': '↗ Demo openen',
+    'wizard.plugin.required': 'vereist',
+    'wizard.plugin.cellule.label': 'Crisis cell',
+    'wizard.plugin.cellule.desc': 'Cell composition, roles, meeting signals',
+    'wizard.plugin.capacite.label': 'Capacity (beds)',
+    'wizard.plugin.capacite.desc': 'Bed reference per unit, capacity tension',
+    'wizard.plugin.releve.label': 'Shift handover',
+    'wizard.plugin.releve.desc': 'Notes between successive teams',
+    'wizard.plugin.transferts.label': 'Patient transfers',
+    'wizard.plugin.transferts.desc': 'Transfer forms with destination and ETA',
+    'wizard.plugin.brancardage.label': 'Porter service',
+    'wizard.plugin.brancardage.desc': 'Internal transport vouchers and missions',
+    'wizard.plugin.messagerie.label': 'Internal messaging',
+    'wizard.plugin.messagerie.desc': 'Internal messages with read receipts',
+    'wizard.plugin.chat.label': 'Real-time chat',
+    'wizard.plugin.chat.desc': 'Channels and private conversations live',
+    'wizard.plugin.annuaire.label': 'Directory',
+    'wizard.plugin.annuaire.desc': 'Internal directory with emergency contacts',
+    'wizard.plugin.communique.label': 'Bulletins',
+    'wizard.plugin.communique.desc': 'Official bulletin broadcasting',
+    'wizard.plugin.rex.label': 'After-action review',
+    'wizard.plugin.rex.desc': 'Post-incident AAR reports',
+    'wizard.plugin.rapport.label': 'Report archiving',
+    'wizard.plugin.rapport.desc': 'Downloadable ZIP export of the crisis',
+    'wizard.plugin.notifications.label': 'Notifications',
+    'wizard.plugin.notifications.desc': 'System and inter-user notifications',
+    'wizard.plugin.tuteur.label': 'Tutor assistant',
+    'wizard.plugin.tuteur.desc': 'Contextual help for SCRIBE usage (training mode)',
+    'wizard.plugin.bluefiles.label': 'Bluefiles (HDS-veilige overdracht)',
+    'wizard.plugin.bluefiles.desc': 'Veilige bestandsoverdracht via Bluefiles (end-to-end versleuteling, HDS-gecertificeerd)',
+    'wizard.plugin.inter_ght.label': 'Inter-establishment',
+    'wizard.plugin.inter_ght.desc': 'Requests and messages between establishments',
+    'wizard.plugin.federation.label': 'Federation / Supervision',
+    'wizard.plugin.federation.desc': 'Push to territorial supervision collector',
+    'wizard.plugin.albert.label': 'AI Assistant',
+    'wizard.plugin.albert.desc': 'Albert synthesis for situational analysis',
   },
   pl: {
     'splash.title': 'Witamy w SCRIBE',
@@ -900,7 +1140,9 @@ const I18N = {
     'wizard.step2.title': 'Lokalizacja główna',
     'wizard.step3.title': 'Konto administratora',
     'wizard.step4.title': 'Sztuczna inteligencja',
-    'wizard.step5.title': 'Podsumowanie',
+    'wizard.step5.title': 'Wtyczki (moduły)',
+    'wizard.step5.intro': 'Wybierz moduły do włączenia. Po utworzeniu można zmienić te wybory.',
+    'wizard.step6.title': 'Podsumowanie',
     'field.nom': 'Pełna nazwa placówki',
     'field.sigle': 'Skrót (3-5 liter)',
     'field.finess': 'Numer FINESS (opcjonalny)',
@@ -939,6 +1181,41 @@ const I18N = {
     'demo.hint': '💡 Demo otworzy się w nowej karcie. Możesz tu wrócić w każdej chwili i ponownie uruchomić asystenta przyciskiem 🎯 na liście instancji.',
     'demo.cancel': 'Anuluj',
     'demo.open': '↗ Otwórz demo',
+    'wizard.plugin.required': 'wymagane',
+    'wizard.plugin.cellule.label': 'Crisis cell',
+    'wizard.plugin.cellule.desc': 'Cell composition, roles, meeting signals',
+    'wizard.plugin.capacite.label': 'Capacity (beds)',
+    'wizard.plugin.capacite.desc': 'Bed reference per unit, capacity tension',
+    'wizard.plugin.releve.label': 'Shift handover',
+    'wizard.plugin.releve.desc': 'Notes between successive teams',
+    'wizard.plugin.transferts.label': 'Patient transfers',
+    'wizard.plugin.transferts.desc': 'Transfer forms with destination and ETA',
+    'wizard.plugin.brancardage.label': 'Porter service',
+    'wizard.plugin.brancardage.desc': 'Internal transport vouchers and missions',
+    'wizard.plugin.messagerie.label': 'Internal messaging',
+    'wizard.plugin.messagerie.desc': 'Internal messages with read receipts',
+    'wizard.plugin.chat.label': 'Real-time chat',
+    'wizard.plugin.chat.desc': 'Channels and private conversations live',
+    'wizard.plugin.annuaire.label': 'Directory',
+    'wizard.plugin.annuaire.desc': 'Internal directory with emergency contacts',
+    'wizard.plugin.communique.label': 'Bulletins',
+    'wizard.plugin.communique.desc': 'Official bulletin broadcasting',
+    'wizard.plugin.rex.label': 'After-action review',
+    'wizard.plugin.rex.desc': 'Post-incident AAR reports',
+    'wizard.plugin.rapport.label': 'Report archiving',
+    'wizard.plugin.rapport.desc': 'Downloadable ZIP export of the crisis',
+    'wizard.plugin.notifications.label': 'Notifications',
+    'wizard.plugin.notifications.desc': 'System and inter-user notifications',
+    'wizard.plugin.tuteur.label': 'Tutor assistant',
+    'wizard.plugin.tuteur.desc': 'Contextual help for SCRIBE usage (training mode)',
+    'wizard.plugin.bluefiles.label': 'Bluefiles (bezpieczny transfer HDS)',
+    'wizard.plugin.bluefiles.desc': 'Bezpieczny transfer plików przez Bluefiles (szyfrowanie end-to-end, hosting HDS)',
+    'wizard.plugin.inter_ght.label': 'Inter-establishment',
+    'wizard.plugin.inter_ght.desc': 'Requests and messages between establishments',
+    'wizard.plugin.federation.label': 'Federation / Supervision',
+    'wizard.plugin.federation.desc': 'Push to territorial supervision collector',
+    'wizard.plugin.albert.label': 'AI Assistant',
+    'wizard.plugin.albert.desc': 'Albert synthesis for situational analysis',
   },
   pt: {
     'splash.title': 'Bem-vindo ao SCRIBE',
@@ -965,7 +1242,9 @@ const I18N = {
     'wizard.step2.title': 'Site principal',
     'wizard.step3.title': 'Conta de administrador',
     'wizard.step4.title': 'Inteligência artificial',
-    'wizard.step5.title': 'Resumo',
+    'wizard.step5.title': 'Plugins (módulos)',
+    'wizard.step5.intro': 'Selecione os módulos para ativar. Pode alterar estas escolhas após a criação.',
+    'wizard.step6.title': 'Resumo',
     'field.nom': 'Nome completo do estabelecimento',
     'field.sigle': 'Sigla (3-5 letras)',
     'field.finess': 'Número FINESS (opcional)',
@@ -1004,6 +1283,41 @@ const I18N = {
     'demo.hint': '💡 A demo abrirá em uma nova aba. Você pode voltar aqui a qualquer momento e relançar o assistente pelo botão 🎯 na lista de instâncias.',
     'demo.cancel': 'Cancelar',
     'demo.open': '↗ Abrir demo',
+    'wizard.plugin.required': 'obrigatório',
+    'wizard.plugin.cellule.label': 'Crisis cell',
+    'wizard.plugin.cellule.desc': 'Cell composition, roles, meeting signals',
+    'wizard.plugin.capacite.label': 'Capacity (beds)',
+    'wizard.plugin.capacite.desc': 'Bed reference per unit, capacity tension',
+    'wizard.plugin.releve.label': 'Shift handover',
+    'wizard.plugin.releve.desc': 'Notes between successive teams',
+    'wizard.plugin.transferts.label': 'Patient transfers',
+    'wizard.plugin.transferts.desc': 'Transfer forms with destination and ETA',
+    'wizard.plugin.brancardage.label': 'Porter service',
+    'wizard.plugin.brancardage.desc': 'Internal transport vouchers and missions',
+    'wizard.plugin.messagerie.label': 'Internal messaging',
+    'wizard.plugin.messagerie.desc': 'Internal messages with read receipts',
+    'wizard.plugin.chat.label': 'Real-time chat',
+    'wizard.plugin.chat.desc': 'Channels and private conversations live',
+    'wizard.plugin.annuaire.label': 'Directory',
+    'wizard.plugin.annuaire.desc': 'Internal directory with emergency contacts',
+    'wizard.plugin.communique.label': 'Bulletins',
+    'wizard.plugin.communique.desc': 'Official bulletin broadcasting',
+    'wizard.plugin.rex.label': 'After-action review',
+    'wizard.plugin.rex.desc': 'Post-incident AAR reports',
+    'wizard.plugin.rapport.label': 'Report archiving',
+    'wizard.plugin.rapport.desc': 'Downloadable ZIP export of the crisis',
+    'wizard.plugin.notifications.label': 'Notifications',
+    'wizard.plugin.notifications.desc': 'System and inter-user notifications',
+    'wizard.plugin.tuteur.label': 'Tutor assistant',
+    'wizard.plugin.tuteur.desc': 'Contextual help for SCRIBE usage (training mode)',
+    'wizard.plugin.bluefiles.label': 'Bluefiles (transferência segura HDS)',
+    'wizard.plugin.bluefiles.desc': 'Transferência segura de ficheiros via Bluefiles (encriptação ponta-a-ponta, alojamento HDS)',
+    'wizard.plugin.inter_ght.label': 'Inter-establishment',
+    'wizard.plugin.inter_ght.desc': 'Requests and messages between establishments',
+    'wizard.plugin.federation.label': 'Federation / Supervision',
+    'wizard.plugin.federation.desc': 'Push to territorial supervision collector',
+    'wizard.plugin.albert.label': 'AI Assistant',
+    'wizard.plugin.albert.desc': 'Albert synthesis for situational analysis',
   },
 };
 
@@ -1023,14 +1337,8 @@ function changeLang(lang) {
   }
 }
 
-// Détection langue navigateur
-(function detectLang() {
-  const nav = (navigator.language || 'fr').slice(0, 2).toLowerCase();
-  if (I18N[nav]) {
-    _lang = nav;
-    document.getElementById('lang-select').value = nav;
-  }
-})();
+// Détection langue navigateur : déplacée APRÈS la déclaration de _state
+// (cf. plus bas, fonction detectLang()) pour éviter TDZ sur _state.
 
 // ═══════════════════════════════════════════════════════════════════
 //   ÉTAT GLOBAL DU WIZARD
@@ -1045,6 +1353,29 @@ let _state = {
   ia_choice: 'skip',
   fournisseur_ia: '', cle_api_ia: '', modele_ia: '', url_base_ia: '',
 };
+
+// v3.4 (h38d) — Détection auto de la langue navigateur, exécutée APRÈS
+// déclaration de _state pour éviter ReferenceError TDZ. On accepte les
+// 24 langues UE présentes dans le <select>. Si la langue détectée n'a
+// PAS de traduction dans I18N (cas des 16 langues UE ajoutées en h38b),
+// le wizard reste en français en fallback, mais _state.langue est bien
+// défini sur la langue détectée, donc l'instance créée utilisera ses
+// fichiers de langue (app/lang/XX.json).
+(function detectLang() {
+  try {
+    const nav = (navigator.language || 'fr').slice(0, 2).toLowerCase();
+    const selectEl = document.getElementById('lang-select');
+    if (!selectEl) return;
+    const codes = Array.from(selectEl.options).map(o => o.value);
+    if (codes.indexOf(nav) >= 0) {
+      _lang = nav;
+      selectEl.value = nav;
+      _state.langue = nav;
+    }
+  } catch (e) {
+    console.warn('[i18n] detectLang failed:', e);
+  }
+})();
 
 function getAdminToken() {
   return localStorage.getItem("collecteur_admin_token") ||
@@ -1210,6 +1541,40 @@ async function onXlsxImport(event) {
   }
 }
 
+async function onBackupRestore(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const pwd = prompt("Mot de passe de la sauvegarde :");
+  if (!pwd) { event.target.value = ""; return; }
+  showLoading("Restauration de la sauvegarde\u2026");
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("password", pwd);
+    const r = await fetch('/api/master/instances/restore-full', {
+      method: 'POST', headers: authHeaders(), body: fd,
+    });
+    if (!r.ok) {
+      let txt = await r.text();
+      try { txt = JSON.parse(txt).detail || txt; } catch (e) {}
+      hideLoading();
+      toast("\u00c9chec : " + txt, 'err');
+      event.target.value = "";
+      return;
+    }
+    const j = await r.json();
+    const det = (j.restored || []).map(function (x) { return x.sigle + " (" + (x.rows || 0) + " lignes)"; }).join(", ");
+    await fetch('/api/master/onboarding/finish', { method: 'POST', headers: authHeaders() });
+    hideLoading();
+    toast("\u2713 " + j.count + " instance(s) restaur\u00e9e(s) : " + det, 'ok');
+    setTimeout(function () { window.location.href = '/api/master/ui'; }, 1800);
+  } catch (e) {
+    hideLoading();
+    toast("Erreur r\u00e9seau : " + e, 'err');
+    event.target.value = "";
+  }
+}
+
 async function onZipImport(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -1260,9 +1625,10 @@ async function onZipImport(event) {
 //   WIZARD RENDERING
 // ═══════════════════════════════════════════════════════════════════
 function renderStep() {
-  // Update progress dots
-  for (let i = 1; i <= 5; i++) {
-    document.getElementById('dot-' + i).classList.toggle('active', i <= _step);
+  // Update progress dots (v3.4 h38h : 6 étapes incluant le choix des plugins)
+  for (let i = 1; i <= 6; i++) {
+    var dot = document.getElementById('dot-' + i);
+    if (dot) dot.classList.toggle('active', i <= _step);
   }
   document.getElementById('step-num').textContent = _step;
   document.getElementById('wizard-title').textContent = t('wizard.step' + _step + '.title');
@@ -1367,7 +1733,7 @@ function renderStep() {
     body.innerHTML = `
       <div class="field">
         <label>${t('field.login')}</label>
-        <input type="text" id="f-login" value="${esc(_state.admin_login)}">
+        <input type="text" id="f-login" value="${esc(_state.admin_login)}" oninput="syncDisplayNameFromLogin(this.value)">
       </div>
       <div class="field">
         <label>${t('field.password')} <span class="req">*</span></label>
@@ -1379,7 +1745,7 @@ function renderStep() {
       </div>
       <div class="field">
         <label>${t('field.nom_affiche')}</label>
-        <input type="text" id="f-nom-affiche" value="${esc(_state.nom_affiche_admin)}">
+        <input type="text" id="f-nom-affiche" value="${esc(_state.nom_affiche_admin)}" data-user-edited="${_state.nom_affiche_admin_edited ? '1' : '0'}" oninput="this.dataset.userEdited='1'">
       </div>
     `;
     btnNext.textContent = t('wizard.btn_next');
@@ -1416,6 +1782,63 @@ function renderStep() {
   }
 
   else if (_step === 5) {
+    // v3.4 (h38h) — Étape 5 : Activation/désactivation des plugins.
+    // Permet à l'admin de désactiver dès la création les modules
+    // dont il n'a pas besoin (ex: inter_ght si pas d'établissement
+    // partenaire, exercice si déploiement de production uniquement, etc).
+    // Les plugins activés ici peuvent toujours être re-activés/désactivés
+    // plus tard via /admin/plugins dans l'instance.
+    // Liste figée — synchro avec config.py PLUGINS (sauf "exercice" qui
+    // n'est activable que via SCRIBE_EXERCICE_MODE, donc géré séparément).
+    // v3.4 (h38k) — Liste des plugins utilise t() pour label/desc afin
+    // d'être traduite selon la langue du wizard. Les clés sont dans
+    // master/i18n_wizard.json (sections wizard.plugin.*).
+    var pluginList = [
+      {id:'cellule',       icon:'🏛️',  required:true,  labelKey:'wizard.plugin.cellule.label',       descKey:'wizard.plugin.cellule.desc'},
+      {id:'capacite',      icon:'🛏',   required:false, labelKey:'wizard.plugin.capacite.label',      descKey:'wizard.plugin.capacite.desc'},
+      {id:'releve',        icon:'📋',   required:false, labelKey:'wizard.plugin.releve.label',        descKey:'wizard.plugin.releve.desc'},
+      {id:'transferts',    icon:'🚑',   required:false, labelKey:'wizard.plugin.transferts.label',    descKey:'wizard.plugin.transferts.desc'},
+      {id:'brancardage',   icon:'🚒',   required:false, labelKey:'wizard.plugin.brancardage.label',   descKey:'wizard.plugin.brancardage.desc'},
+      {id:'messagerie',    icon:'✉️',   required:false, labelKey:'wizard.plugin.messagerie.label',    descKey:'wizard.plugin.messagerie.desc'},
+      {id:'chat',          icon:'💬',   required:false, labelKey:'wizard.plugin.chat.label',          descKey:'wizard.plugin.chat.desc'},
+      {id:'annuaire',      icon:'📞',   required:false, labelKey:'wizard.plugin.annuaire.label',      descKey:'wizard.plugin.annuaire.desc'},
+      {id:'communique',    icon:'📣',   required:false, labelKey:'wizard.plugin.communique.label',    descKey:'wizard.plugin.communique.desc'},
+      {id:'rex',           icon:'🔍',   required:false, labelKey:'wizard.plugin.rex.label',           descKey:'wizard.plugin.rex.desc'},
+      {id:'rapport',       icon:'📦',   required:false, labelKey:'wizard.plugin.rapport.label',       descKey:'wizard.plugin.rapport.desc'},
+      {id:'notifications', icon:'🔔',   required:false, labelKey:'wizard.plugin.notifications.label',descKey:'wizard.plugin.notifications.desc'},
+      {id:'tuteur',        icon:'🎓',   required:false, labelKey:'wizard.plugin.tuteur.label',        descKey:'wizard.plugin.tuteur.desc'},
+      {id:'bluefiles',     icon:'🔒',   required:false, labelKey:'wizard.plugin.bluefiles.label',     descKey:'wizard.plugin.bluefiles.desc'},
+      {id:'federation',    icon:'🗺',   required:false, labelKey:'wizard.plugin.federation.label',    descKey:'wizard.plugin.federation.desc'},
+      {id:'albert',        icon:'🤖',   required:false, labelKey:'wizard.plugin.albert.label',        descKey:'wizard.plugin.albert.desc'},
+    ];
+    // Initialiser _state.plugins_disabled si pas déjà fait
+    if (!Array.isArray(_state.plugins_disabled)) _state.plugins_disabled = [];
+
+    var pluginsHtml = pluginList.map(function(p) {
+      var disabled = _state.plugins_disabled.indexOf(p.id) >= 0;
+      var checked = !disabled;
+      var label = t(p.labelKey);
+      var desc = t(p.descKey);
+      var requiredText = t('wizard.plugin.required');
+      var lockedNote = p.required ? '<span style="color:#b91c1c;font-size:0.8em;font-weight:600">  · ' + esc(requiredText) + '</span>' : '';
+      return '<label class="plugin-row" style="display:flex;gap:10px;padding:10px 12px;border:1px solid var(--gris-clair);border-radius:6px;margin-bottom:6px;align-items:flex-start;cursor:pointer;background:' + (checked ? 'rgba(0,49,137,0.04)' : '#fafafa') + '">' +
+        '<input type="checkbox" id="pl-' + p.id + '"' + (checked ? ' checked' : '') + (p.required ? ' disabled' : '') + ' onchange="togglePlugin(\'' + p.id + '\', this.checked)" style="margin-top:3px;flex-shrink:0">' +
+        '<div style="flex:1">' +
+          '<div style="font-weight:600;font-size:0.95em">' + p.icon + ' ' + esc(label) + lockedNote + '</div>' +
+          '<div style="font-size:0.85em;color:var(--gris);margin-top:3px">' + esc(desc) + '</div>' +
+        '</div>' +
+      '</label>';
+    }).join('');
+
+    body.innerHTML =
+      '<div style="font-size:0.95em;color:var(--gris);margin-bottom:12px">' +
+        t('wizard.step5.intro') +
+      '</div>' +
+      '<div id="plugins-list">' + pluginsHtml + '</div>';
+    btnNext.textContent = t('wizard.btn_next');
+  }
+
+  else if (_step === 6) {
     const ia = _state.ia_choice === 'skip' ? '— ' + t('ia.skip')
              : _state.ia_choice === 'albert' ? 'Albert' + (_state.cle_api_ia ? ' ✓' : ' (clé manquante)')
              : 'Custom' + (_state.cle_api_ia ? ' ✓' : ' (clé manquante)');
@@ -1497,7 +1920,13 @@ function captureStep() {
   } else if (_step === 3) {
     _state.admin_login = document.getElementById('f-login').value.trim();
     _state.admin_password = document.getElementById('f-pwd').value;
-    _state.nom_affiche_admin = document.getElementById('f-nom-affiche').value.trim();
+    var nomAfficheField = document.getElementById('f-nom-affiche');
+    _state.nom_affiche_admin = nomAfficheField.value.trim();
+    // v3.4 (h38h) — Mémoriser si l'utilisateur a édité manuellement, pour ne
+    // pas écraser sa saisie si on revient sur ce champ via Suivant/Retour
+    if (nomAfficheField.dataset.userEdited === '1') {
+      _state.nom_affiche_admin_edited = true;
+    }
   } else if (_step === 4) {
     if (_state.ia_choice !== 'skip') {
       _state.cle_api_ia = document.getElementById('f-cle-ia').value.trim();
@@ -1521,13 +1950,64 @@ function validateStep() {
 function nextStep() {
   captureStep();
   if (!validateStep()) return;
-  if (_step === 5) {
+  // v3.4 (h38h) — Le wizard a maintenant 6 étapes : la 6 (anciennement 5)
+  // est le récap final qui déclenche finishWizard. L'étape 5 nouvelle
+  // est la sélection des plugins (capturée par captureStep).
+  if (_step === 6) {
     finishWizard();
     return;
   }
   _step++;
   renderStep();
 }
+
+// v3.4 (h38h) — Toggle d'un plugin individuel dans l'étape 5.
+// Maintenu en global pour être appelable depuis le onchange du <input>.
+window.togglePlugin = function(pluginId, enabled) {
+  if (!Array.isArray(_state.plugins_disabled)) _state.plugins_disabled = [];
+  var idx = _state.plugins_disabled.indexOf(pluginId);
+  if (enabled && idx >= 0) {
+    _state.plugins_disabled.splice(idx, 1);
+  } else if (!enabled && idx < 0) {
+    _state.plugins_disabled.push(pluginId);
+  }
+  // Mettre à jour le background de la ligne pour feedback visuel
+  var label = document.getElementById('pl-' + pluginId);
+  if (label && label.parentElement) {
+    label.parentElement.style.background = enabled ? 'rgba(0,49,137,0.04)' : '#fafafa';
+  }
+};
+
+// v3.4 (h38h) — Auto-remplissage du champ "Nom affiché" depuis le login.
+// Évite le piège classique : utilisateur change le login (ex. "dircrise" → "rssi")
+// mais oublie de changer le nom affiché qui restait "Directeur de Crise" ou
+// "DIRCRISE" → confusion dans le chat ("DIRCRISE [Site_X]" pour user rssi).
+// On ne touche au champ QUE si l'utilisateur ne l'a pas édité manuellement
+// (data-user-edited='0'). Dès qu'il tape dedans, on respecte sa saisie.
+window.syncDisplayNameFromLogin = function(loginValue) {
+  var field = document.getElementById('f-nom-affiche');
+  if (!field) return;
+  // Si l'utilisateur a déjà personnalisé le nom affiché, on ne touche pas
+  if (field.dataset.userEdited === '1') return;
+  var login = (loginValue || '').trim();
+  if (!login) return;
+  // Capitaliser : "rssi" → "Rssi", "dircrise" → "Directeur de Crise" (cas spécial)
+  // Sinon générique : première lettre en majuscule du login
+  var suggested;
+  if (login.toLowerCase() === 'dircrise') {
+    suggested = 'Directeur de Crise';
+  } else if (login.toLowerCase() === 'rssi') {
+    suggested = 'RSSI';
+  } else if (login.toLowerCase() === 'admin') {
+    suggested = 'Administrateur';
+  } else {
+    // Capitalisation simple : première lettre majuscule
+    suggested = login.charAt(0).toUpperCase() + login.slice(1);
+  }
+  field.value = suggested;
+  // _state aussi pour cohérence si renderStep re-run
+  _state.nom_affiche_admin = suggested;
+};
 
 function prevStep() {
   captureStep();
@@ -1552,10 +2032,57 @@ async function doGeocode() {
 }
 
 async function exportCurrentConfig() {
-  // Export depuis les champs du wizard sans encore avoir créé l'instance
-  // → on re-génère un xlsx côté client n'est pas possible (openpyxl côté server)
-  // → solution : on crée l'instance en draft + download + l'utilisateur peut continuer
-  toast('Pour exporter, finalisez d\'abord la création de l\'instance.', 'warn');
+  // v3.4 (h38) — Export direct depuis les champs du wizard, sans devoir
+  // finaliser la création de l'instance. Génère un xlsx côté serveur à
+  // partir de _state et le télécharge.
+  if (!_state.sigle || _state.sigle.toUpperCase().startsWith('SITE_')) {
+    toast(t('wizard.sigle_required') || 'Sigle obligatoire (retournez à l\'étape 1)', 'warn');
+    return;
+  }
+  try {
+    showLoading(t('loading.exporting') || 'Génération du fichier…');
+    const r = await fetch('/api/master/onboarding/export-config', {
+      method: 'POST',
+      headers: authHeaders({'Content-Type': 'application/json'}),
+      body: JSON.stringify({
+        sigle: _state.sigle, nom: _state.nom, finess: _state.finess,
+        langue: _state.langue,
+        admin_login: _state.admin_login,
+        admin_password: _state.admin_password,
+        nom_affiche_admin: _state.nom_affiche_admin,
+        adresse: _state.adresse,
+        latitude: _state.latitude, longitude: _state.longitude,
+        timezone: _state.timezone,
+        fournisseur_ia: _state.fournisseur_ia,
+        cle_api_ia: _state.cle_api_ia,
+        modele_ia: _state.modele_ia,
+      }),
+    });
+    hideLoading();
+    if (!r.ok) {
+      // Fallback : on retombe sur le template vierge si l'endpoint n'existe pas
+      if (r.status === 404) {
+        window.location.href = '/api/master/onboarding/template-xlsx';
+        return;
+      }
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.detail || 'HTTP ' + r.status);
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeSigle = (_state.sigle || 'instance').replace(/[^a-zA-Z0-9_-]/g, '');
+    a.download = `SCRIBE_config_${safeSigle}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast(t('toast.exported') || 'Configuration exportée', 'ok');
+  } catch (e) {
+    hideLoading();
+    toast((t('toast.error') || 'Erreur') + ': ' + e.message, 'err');
+  }
 }
 
 async function finishWizard() {
@@ -1588,6 +2115,8 @@ async function finishWizard() {
         fournisseur_ia: _state.fournisseur_ia,
         cle_api_ia: _state.cle_api_ia,
         modele_ia: _state.modele_ia,
+        // v3.4 (h38h) — Plugins désactivés sélectionnés à l'étape 5
+        plugins_disabled: Array.isArray(_state.plugins_disabled) ? _state.plugins_disabled : [],
       }),
     });
     if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'HTTP ' + r.status); }
@@ -1608,9 +2137,14 @@ function esc(s) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// v3.4 (h38c) — 24 langues officielles UE
 const LANG_LABELS = {
   fr: 'Français', en: 'English', de: 'Deutsch', es: 'Español',
   it: 'Italiano', nl: 'Nederlands', pl: 'Polski', pt: 'Português',
+  bg: 'Български', cs: 'Čeština', da: 'Dansk', el: 'Ελληνικά',
+  et: 'Eesti', fi: 'Suomi', ga: 'Gaeilge', hr: 'Hrvatski',
+  hu: 'Magyar', lt: 'Lietuvių', lv: 'Latviešu', mt: 'Malti',
+  ro: 'Română', sk: 'Slovenčina', sl: 'Slovenščina', sv: 'Svenska',
 };
 function langueLabel(code) { return LANG_LABELS[code] || code; }
 

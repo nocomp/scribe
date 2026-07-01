@@ -23,7 +23,7 @@ from app.database import get_db
 from app.models import (
     CapaciteReferentiel, CapaciteDeclaration, SitrepEntry
 )
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, require_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -98,6 +98,26 @@ def _statut_global(ref: CapaciteReferentiel,
     return "normal"
 
 
+def _global_impact_active(db) -> bool:
+    """h96 — Existe-t-il un incident à impact transversal actif (non résolu) ?"""
+    try:
+        from app.models import SitrepEntry
+        return db.query(SitrepEntry).filter(
+            SitrepEntry.impact_global == True,  # noqa: E712
+            SitrepEntry.resolved_at.is_(None),
+            SitrepEntry.archived == False,  # noqa: E712
+        ).first() is not None
+    except Exception:
+        return False
+
+
+def _floor_orange(statut, active):
+    """h96 — Plancher orange : au moins « tension » si impact transversal actif."""
+    if active and statut in ("normal", "inconnu", None):
+        return "tension"
+    return statut
+
+
 def _decl_to_dict(decl: CapaciteDeclaration) -> dict:
     return {
         "id":              decl.id,
@@ -154,7 +174,7 @@ def _ref_to_dict(ref: CapaciteReferentiel,
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @router.get("/referentiel")
-def get_referentiel(db: Session = Depends(get_db)):
+def get_referentiel(db: Session = Depends(get_db), user=Depends(require_user)):
     """Renvoie toutes les unités avec leur dernière déclaration."""
     refs = db.query(CapaciteReferentiel).filter(
         CapaciteReferentiel.actif == True
@@ -168,6 +188,9 @@ def get_referentiel(db: Session = Depends(get_db)):
                   .order_by(CapaciteDeclaration.horodatage.desc())
                   .first())
         result.append(_ref_to_dict(ref, last))
+    if _global_impact_active(db):
+        for it in result:
+            it["statut_global"] = _floor_orange(it.get("statut_global"), True)
     return result
 
 
@@ -266,7 +289,8 @@ def submit_declaration(
 def get_declarations(
     referentiel_id: Optional[int] = None,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user=Depends(require_user)   # h62 — auth requise
 ):
     """Historique des déclarations."""
     q = db.query(CapaciteDeclaration).order_by(CapaciteDeclaration.horodatage.desc())
@@ -276,7 +300,7 @@ def get_declarations(
 
 
 @router.get("/synthese")
-def get_synthese(db: Session = Depends(get_db)):
+def get_synthese(db: Session = Depends(get_db), user=Depends(require_user)):  # h62
     """Agrégation par site et pôle — vue d'ensemble pour la cellule."""
     refs = db.query(CapaciteReferentiel).filter(
         CapaciteReferentiel.actif == True
@@ -328,6 +352,7 @@ def get_synthese(db: Session = Depends(get_db)):
 
     # Calcul statut global par pôle
     POIDS_MAP = {"ferme": 3, "critique": 2, "tension": 1, "normal": 0, "inconnu": -1}
+    _gi_synthese = _global_impact_active(db)
     result = {}
     for site, poles in by_site.items():
         result[site] = {}
@@ -335,13 +360,14 @@ def get_synthese(db: Session = Depends(get_db)):
             poids_liste = [POIDS_MAP.get(s, -1) for s in data["statuts"]]
             max_p = max(poids_liste) if poids_liste else -1
             statut_pole = {3:"ferme", 2:"critique", 1:"tension", 0:"normal"}.get(max_p, "inconnu")
+            statut_pole = _floor_orange(statut_pole, _gi_synthese)
             result[site][pole] = {**data, "statut_pole": statut_pole}
 
     return result
 
 
 @router.get("/evolution/{referentiel_id}")
-def get_evolution(referentiel_id: int, jours: int = 3, db: Session = Depends(get_db)):
+def get_evolution(referentiel_id: int, jours: int = 3, db: Session = Depends(get_db), user=Depends(require_user)):  # h62
     """Historique pour graphique d'évolution (derniers N jours)."""
     depuis = datetime.now(timezone.utc) - timedelta(days=jours)
     decls = (db.query(CapaciteDeclaration)
@@ -358,7 +384,7 @@ def get_evolution(referentiel_id: int, jours: int = 3, db: Session = Depends(get
 
 
 @router.get("/export-csv")
-def export_capacite_csv(db: Session = Depends(get_db)):
+def export_capacite_csv(db: Session = Depends(get_db), user=Depends(require_user)):  # h62
     """Export CSV des déclarations — intégré dans la main courante."""
     import csv, io as _io
     from fastapi.responses import StreamingResponse

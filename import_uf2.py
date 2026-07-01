@@ -30,22 +30,22 @@ from app.models import Hospital, UniteFonctionnelle
 #
 # Exemples pour le modèle générique (uf_modele.xlsx) :
 SITE_MAPPING = {
-    # Mapping FICOM DEMO1 → noms EXACTS des sites tels que dans config.xml DEMO1
-    # Valeurs colonne 'Site' dans uf.xlsx DEMO1 : ANNECY, BI SITE, ST JULIEN
+    # Mapping FICOM CHV → noms EXACTS des sites tels que dans config.xml CHV
+    # Valeurs colonne 'Site' dans uf.xlsx CHV : Valmont, BI SITE, ST JULIEN
     # Les noms ici doivent correspondre aux <nom> dans config.xml <sites>
-    "ANNECY":       ["Site hospitalier principal Annecy"],
-    "BI SITE":      ["Site hospitalier principal Annecy", "Hopital Saint-Julien"],
-    "ST JULIEN":    ["Hopital Saint-Julien"],
+    "Valmont":       ["Site hospitalier principal Valmont"],
+    "BI SITE":      ["Site hospitalier principal Valmont", "Hopital Saint-Aubin"],
+    "ST JULIEN":    ["Hopital Saint-Aubin"],
     # Variantes avec accent (selon la version du config.xml)
-    "SAINT-JULIEN": ["Hopital Saint-Julien", "Hôpital Saint-Julien"],
-    "ST-JULIEN":    ["Hopital Saint-Julien", "Hôpital Saint-Julien"],
+    "Saint-Aubin": ["Hopital Saint-Aubin", "Hôpital Saint-Aubin"],
+    "ST-JULIEN":    ["Hopital Saint-Aubin", "Hôpital Saint-Aubin"],
     # Compatibilité démo générique (config_demo1.xml)
-    "SITE PRINCIPAL":  ["Site Principal — Valmont", "Site hospitalier principal Annecy"],
-    "SITE SECONDAIRE": ["Site Secondaire — Crestval", "Hopital Saint-Julien"],
+    "SITE PRINCIPAL":  ["Site Principal — Valmont", "Site hospitalier principal Valmont"],
+    "SITE SECONDAIRE": ["Site Secondaire — Crestval", "Hopital Saint-Aubin"],
 }
 # Exemple pour un export FICOM d'un établissement bi-sites (Site A / Site B) :
 # SITE_MAPPING = {
-#     "ANNECY":    ["Site Principal A", "Site Annexe A"],
+#     "Valmont":    ["Site Principal A", "Site Annexe A"],
 #     "ST JULIEN": ["Site Principal B"],
 #     "BI SITE":   ["Site Principal A", "Site Principal B"],
 # }
@@ -138,8 +138,8 @@ def import_uf(file_path: str):
                             break
                 if not hospital:
                     # Fallback 2 : mot-clé géographique dans le nom du site
-                    # ex: "Annecy" matche "Site hospitalier principal Annecy"
-                    # et aussi "Site Principal — Valmont" si config DEMO1 le nomme ainsi
+                    # ex: "Valmont" matche "Site hospitalier principal Valmont"
+                    # et aussi "Site Principal — Valmont" si config CHV le nomme ainsi
                     mots_cles = [m for m in nom_hosp.lower().split() if len(m) > 3]
                     for nom_db, h in hospitals_cache.items():
                         nom_db_lower = nom_db.lower()
@@ -147,9 +147,9 @@ def import_uf(file_path: str):
                             hospital = h
                             break
                 if not hospital:
-                    # Fallback 3 : chercher par ordre (ANNECY → premier site, ST JULIEN → second)
+                    # Fallback 3 : chercher par ordre (Valmont → premier site, ST JULIEN → second)
                     sites_list = list(hospitals_cache.values())
-                    idx_map = {"ANNECY": 0, "BI SITE": 0, "ST JULIEN": 1, "SAINT-JULIEN": 1}
+                    idx_map = {"Valmont": 0, "BI SITE": 0, "ST JULIEN": 1, "Saint-Aubin": 1}
                     site_excel_key = site_excel.upper()
                     if site_excel_key in idx_map and idx_map[site_excel_key] < len(sites_list):
                         hospital = sites_list[idx_map[site_excel_key]]

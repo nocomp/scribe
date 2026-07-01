@@ -19,7 +19,7 @@ MANIFEST = {
     # v3.4 (h34) — Restriction RGPD : seul le rôle soignant (et l'admin) voit
     # cet onglet. La cellule de crise n'a pas un besoin légitime d'accéder
     # aux flux patient nominatifs internes.
-    "allowed_roles": ["soignant", "admin"],
+    "allowed_roles": ["soignant", "cadre_sante", "admin"],
 }
 
 

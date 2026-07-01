@@ -208,13 +208,13 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
       <div style="padding:10px 12px;border-bottom:1px solid var(--bd)">
         <div style="font-family:var(--mo);font-size:9px;color:var(--mu);margin-bottom:6px">SITES PARTICIPANTS</div>
         <div class="sites-checkboxes" id="sites-sel">
-          <div class="site-cb sel" data-sigle="DEMO1" onclick="toggleSite(this)">CHANGE</div>
-          <div class="site-cb" data-sigle="DEMO2" onclick="toggleSite(this)">DEMO2</div>
-          <div class="site-cb" data-sigle="DEMO5" onclick="toggleSite(this)">DEMO5</div>
-          <div class="site-cb" data-sigle="DEMO6" onclick="toggleSite(this)">DEMO6</div>
-          <div class="site-cb" data-sigle="DEMO7" onclick="toggleSite(this)">DEMO7</div>
-          <div class="site-cb" data-sigle="DEMO5" onclick="toggleSite(this)">DEMO5</div>
-          <div class="site-cb" data-sigle="DEMO6" onclick="toggleSite(this)">DEMO6</div>
+          <div class="site-cb sel" data-sigle="CHV" onclick="toggleSite(this)">CHANGE</div>
+          <div class="site-cb" data-sigle="GHT1" onclick="toggleSite(this)">GHT1</div>
+          <div class="site-cb" data-sigle="CH2" onclick="toggleSite(this)">CH2</div>
+          <div class="site-cb" data-sigle="CH3" onclick="toggleSite(this)">CH3</div>
+          <div class="site-cb" data-sigle="CH4" onclick="toggleSite(this)">CH4</div>
+          <div class="site-cb" data-sigle="CHB" onclick="toggleSite(this)">CHB</div>
+          <div class="site-cb" data-sigle="CH6" onclick="toggleSite(this)">CH6</div>
         </div>
       </div>
 
@@ -307,13 +307,13 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
       <div class="form-row">
         <label>Sites participants</label>
         <div class="sites-checkboxes" id="ia-sites">
-          <div class="site-cb sel" data-sigle="DEMO1">CHANGE</div>
-          <div class="site-cb" data-sigle="DEMO2">DEMO2</div>
-          <div class="site-cb" data-sigle="DEMO5">DEMO5</div>
-          <div class="site-cb" data-sigle="DEMO6">DEMO6</div>
-          <div class="site-cb" data-sigle="DEMO7">DEMO7</div>
-          <div class="site-cb" data-sigle="DEMO5">DEMO5</div>
-          <div class="site-cb" data-sigle="DEMO6">DEMO6</div>
+          <div class="site-cb sel" data-sigle="CHV">CHANGE</div>
+          <div class="site-cb" data-sigle="GHT1">GHT1</div>
+          <div class="site-cb" data-sigle="CH2">CH2</div>
+          <div class="site-cb" data-sigle="CH3">CH3</div>
+          <div class="site-cb" data-sigle="CH4">CH4</div>
+          <div class="site-cb" data-sigle="CHB">CHB</div>
+          <div class="site-cb" data-sigle="CH6">CH6</div>
         </div>
       </div>
       <div id="ia-status" style="font-family:var(--mo);font-size:10px;color:var(--mu);display:none;text-align:center;padding:10px">
@@ -340,13 +340,13 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
       <div class="form-row"><label>Rôle dans l'exercice *</label><input id="j-role" placeholder="Médecin urgentiste CHANGE"></div>
       <div class="form-row"><label>Site assigné</label>
         <select id="j-site">
-          <option value="DEMO1:8660">CHANGE (port 8660)</option>
-          <option value="DEMO2:8661">DEMO2 (port 8661)</option>
-          <option value="DEMO5:8662">DEMO5 (port 8662)</option>
-          <option value="DEMO6:8663">DEMO6 (port 8663)</option>
-          <option value="DEMO7:8664">DEMO7 (port 8664)</option>
-          <option value="DEMO5:8665">DEMO5 (port 8665)</option>
-          <option value="DEMO6:8666">DEMO6 (port 8666)</option>
+          <option value="CHV:8660">CHANGE (port 8660)</option>
+          <option value="GHT1:8661">GHT1 (port 8661)</option>
+          <option value="CH2:8662">CH2 (port 8662)</option>
+          <option value="CH3:8663">CH3 (port 8663)</option>
+          <option value="CH4:8664">CH4 (port 8664)</option>
+          <option value="CHB:8665">CHB (port 8665)</option>
+          <option value="CH6:8666">CH6 (port 8666)</option>
         </select>
       </div>
       <div class="form-row"><label>Mot de passe temporaire</label><input id="j-pwd" value="Exercice2026!"></div>
@@ -786,7 +786,7 @@ function submitGenerateIA() {
   var body = {
     sujet: sujet,
     nb_sites: sites.length || 1,
-    sites: sites.length ? sites : ['DEMO1'],
+    sites: sites.length ? sites : ['CHV'],
     duree_exercice_min: parseInt(document.getElementById('ia-duree').value),
     duree_reel_min: parseInt(document.getElementById('ia-duree-reel').value),
     type_crise: document.getElementById('ia-type').value,

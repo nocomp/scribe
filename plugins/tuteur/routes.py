@@ -645,7 +645,7 @@ def coach_check(
              .order_by(TuteurSession.started_at.desc())
              .first())
         if not s:
-            # v3000h32 — Création automatique de session AUSSI EN PROD (Arc Alpin).
+            # v3000h32 — Création automatique de session AUSSI EN PROD (Territoire).
             # L'Assistant est une fonctionnalité à part entière qui doit fonctionner
             # dans tous les modes. Avant h32, seul le mode exercice créait des
             # sessions automatiquement → le badge de la bulle 🎓 ne s'affichait
@@ -1156,6 +1156,16 @@ def _gather_situation_context(db: Session, max_age_hours: int = 24) -> dict:
     }
 
 
+def _mob_ctx(db) -> str:
+    """Contexte mobilisation agrégé (par compétence + délai, SANS nominatif) pour
+    le copilote — réutilise la fonction d'Albert. Sûr : renvoie '' si indispo."""
+    try:
+        from app.api.albert import _mobilisation_context
+        return _mobilisation_context(db) or ""
+    except Exception:
+        return ""
+
+
 def _build_situation_prompt(ctx: dict) -> str:
     """Construit le prompt utilisateur pour la synthèse IA."""
     incidents_lines = []
@@ -1437,6 +1447,9 @@ async def coach_situation(
                 "Tu ne fais JAMAIS de remplissage et tu reconnais quand il y a peu d'éléments."
             )
             prompt = _build_situation_prompt(ctx)
+            _m = _mob_ctx(db)
+            if _m:
+                prompt += "\n\n" + _m
             text, ai_source = await call_ai(system, prompt)
             parsed = _parse_ia_situation(text)
             parsed["ai_provider"] = ai_source
@@ -1504,10 +1517,19 @@ async def coach_ask(
                 f"\n- [#{inc.id}] {(inc.type_crise or '?')} : {(inc.fait or '')[:80]}"
             )
 
+    _m = _mob_ctx(db)
+    if _m:
+        context_short += "\n\n" + _m
     try:
         system = (
             "Tu es un copilote stratégique pour la gestion de crise hospitalière. "
             "Tu réponds de manière concise (max 6 lignes), factuelle, actionnable. "
+            "Si un état de MOBILISATION EN COURS est fourni, CROISE les compétences qui arrivent "
+            "(et leur délai) avec les incidents pour aider à la décision "
+            "(ex. « 2 techniciens < 30 min : attendre leur constat avant d'engager un prestataire »). "
+            "Sépare toujours le FAIT de la RECOMMANDATION ; une réponse « j'arrive » est une déclaration, "
+            "pas une garantie, et une compétence présente ne garantit pas la résolution. "
+            "Tu PROPOSES et tu OBSERVES, tu ne déclenches JAMAIS d'action toi-même. "
             "Si la question est hors crise ou hors champ, dis-le poliment."
         )
         prompt = f"{context_short}\n\nQUESTION DU DIRECTEUR DE CRISE :\n{q}"

@@ -29,11 +29,12 @@ from __future__ import annotations
 
 import json
 import logging
-import pathlib
+import os, pathlib
+import re
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Request
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Request, Form
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
@@ -127,7 +128,7 @@ def list_instances(request: Request):
     return {"instances": get_manager().list_instances()}
 
 
-@router.get("/instances/{port}")
+@router.get("/instances/{port:int}")
 def get_instance(port: int, request: Request):
     _check_admin(request)
     state = get_manager().get_instance(port)
@@ -138,7 +139,7 @@ def get_instance(port: int, request: Request):
     return d
 
 
-@router.put("/instances/{port}")
+@router.put("/instances/{port:int}")
 def update_instance(port: int, payload: InstanceUpdate, request: Request):
     _check_admin(request)
     try:
@@ -274,7 +275,7 @@ def add_custom(payload: InstanceCreate, request: Request):
     return d
 
 
-@router.delete("/instances/{port}", status_code=204)
+@router.delete("/instances/{port:int}", status_code=204)
 def delete_instance(port: int, request: Request):
     _check_admin(request)
     try:
@@ -804,6 +805,47 @@ def onboarding_template_xlsx():
     )
 
 
+@router.post("/onboarding/export-config")
+async def onboarding_export_config(request: Request):
+    """v3.4 (h38) — Export d'une config partielle saisie dans le wizard,
+    AVANT que l'instance soit créée. L'utilisateur peut continuer son
+    wizard, ou interrompre et reprendre plus tard avec son xlsx.
+    """
+    _check_admin(request)
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(400, "JSON invalide")
+
+    # Strip défensif sur les champs textes
+    cfg = {}
+    for k, v in payload.items():
+        if isinstance(v, str):
+            cfg[k] = v.strip()
+        else:
+            cfg[k] = v
+
+    if not cfg.get("sigle") or cfg["sigle"].upper().startswith("SITE_"):
+        raise HTTPException(400, "Sigle requis (3-5 lettres)")
+
+    try:
+        from master.excel_export import export_instance_to_xlsx
+        # On exporte SANS secrets (mdp hashé, clés API vidées) car c'est
+        # un fichier intermédiaire qui peut transiter par email/clé USB
+        xlsx_bytes = export_instance_to_xlsx(cfg, db_data=None, include_secrets=False)
+    except Exception as e:
+        logger.exception("Erreur export config wizard")
+        raise HTTPException(500, f"Erreur génération xlsx: {e}")
+
+    from fastapi.responses import Response
+    safe_sigle = re.sub(r"[^a-zA-Z0-9_-]", "", cfg["sigle"]) or "instance"
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="SCRIBE_config_{safe_sigle}.xlsx"'},
+    )
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Modèle de création d'instance depuis le wizard
 # ─────────────────────────────────────────────────────────────────────────────
@@ -825,6 +867,10 @@ class WizardInstanceCreate(BaseModel):
     modele_ia:         str | None = None
     url_base_ia:       str | None = None
     port:              int | None = None  # si None, premier port libre
+    # v3.4 (h38h) — Plugins désactivés par le wizard (étape 5). Liste vide
+    # par défaut → tous les plugins activés. Le wizard expose une checkbox
+    # par plugin et envoie ici ceux que l'utilisateur a décochés.
+    plugins_disabled:  list[str] | None = None
 
 
 @router.post("/onboarding/create-instance", status_code=201)
@@ -866,10 +912,22 @@ def onboarding_create_instance(payload: WizardInstanceCreate, request: Request):
             nom=nom_clean,
             admin_login=(payload.admin_login or "dircrise").strip(),
             admin_password=payload.admin_password,
+            # v3.4 (h38g) — propager le nom affiché choisi par l'utilisateur
+            # dans le wizard. Sera utilisé comme User.display_name lors de
+            # la création/update de l'admin dans la DB de l'instance.
+            admin_display_name=(payload.nom_affiche_admin or "").strip(),
             adresse=(payload.adresse or "").strip(),
             latitude=payload.latitude,
             longitude=payload.longitude,
             timezone=(payload.timezone or "").strip(),
+            # v3.4 (h38h) — Liste des plugins à désactiver à la création.
+            # Le _bootstrap_db de l'instance écrira ces préférences dans
+            # la table plugin_states avant le premier démarrage des plugins.
+            plugins_disabled=list(payload.plugins_disabled or []),
+            # v3.4 (h38k) — Langue par défaut de l'instance. Sera écrite dans
+            # config.js, et scribe.js loadI18n() la chargera au boot.
+            # Le wizard envoie un code ISO 2-letters parmi les 24 langues UE.
+            langue=(payload.langue or "fr").strip()[:5] or "fr",
         )
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -1059,6 +1117,540 @@ def export_all_instances_zip(request: Request, include_secrets: bool = False):
     )
 
 
+from pydantic import BaseModel as _BaseModel
+class _EncBackupIn(_BaseModel):
+    password: str
+    include_secrets: bool = True
+
+
+@router.post("/instances/export-all-zip-encrypted")
+def export_all_instances_zip_encrypted(body: _EncBackupIn, request: Request):
+    """Backup GHT CHIFFRE (AES) : meme contenu que export-all-zip, dans une
+    archive ZIP protegee par mot de passe (pyzipper). Le mot de passe transite
+    dans le corps POST, jamais en query (pas de fuite dans les logs)."""
+    _check_admin(request)
+    if not body.password or len(body.password) < 4:
+        raise HTTPException(400, "Mot de passe trop court (4 caracteres minimum).")
+    from master.excel_export import export_ght_to_zip
+    from fastapi.responses import Response
+    mgr = get_manager()
+    instances_configs = []
+    instances_db_data = {}
+    for port, state in sorted(mgr.instances.items()):
+        cfg = state.config
+        if not cfg.sigle or cfg.sigle.startswith("Site_"):
+            continue
+        instances_configs.append({
+            "port": port, "sigle": cfg.sigle, "nom": cfg.nom,
+            "admin_login": cfg.admin_login, "admin_password": cfg.admin_password,
+            "adresse": cfg.adresse, "latitude": cfg.latitude, "longitude": cfg.longitude,
+            "fed_token": state.fed_token,
+        })
+        if state.db_path and pathlib.Path(state.db_path).exists():
+            try:
+                instances_db_data[cfg.sigle] = _read_instance_db_data(state.db_path)
+            except Exception as e:
+                logger.warning(f"Lecture DB pour backup GHT {cfg.sigle} : {e}")
+    if not instances_configs:
+        raise HTTPException(400, "Aucune instance configuree a sauvegarder")
+    try:
+        inner_zip = export_ght_to_zip(
+            instances_configs, instances_db_data, include_secrets=body.include_secrets,
+        )
+    except Exception as e:
+        import traceback
+        logger.error(f"Erreur backup GHT zip : {traceback.format_exc()}")
+        raise HTTPException(500, f"Erreur backup : {e}")
+    try:
+        import pyzipper, io as _io
+        ts = now_iso()[:10]
+        buf = _io.BytesIO()
+        with pyzipper.AESZipFile(buf, "w", compression=pyzipper.ZIP_DEFLATED,
+                                 encryption=pyzipper.WZ_AES) as zf:
+            zf.setpassword(body.password.encode("utf-8"))
+            zf.writestr(f"scribe_ght_export_{ts}.zip", inner_zip)
+        enc_bytes = buf.getvalue()
+    except Exception as e:
+        import traceback
+        logger.error(f"Erreur chiffrement backup : {traceback.format_exc()}")
+        raise HTTPException(500, f"Erreur chiffrement (pyzipper installe ?) : {e}")
+    filename = f"scribe_ght_backup_{now_iso()[:10]}.zip"
+    return Response(
+        content=enc_bytes, media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _load_central_config():
+    """Charge la config serveur (notifications SMTP/SMS) en CLAIR, ou {}."""
+    try:
+        import sys as _sys, os as _os
+        _cdir = _os.path.join(PROJECT_ROOT, "collecteur")
+        if _cdir not in _sys.path:
+            _sys.path.insert(0, _cdir)
+        import central_config_store as _ccs
+        return _ccs.load_clear() or {}
+    except Exception as e:
+        logger.warning(f"Config serveur (lecture) indisponible : {e}")
+        return {}
+
+
+def _save_central_config(server_config):
+    """Re-chiffre et persiste la config serveur restauree. Renvoie le nb de canaux."""
+    if not server_config:
+        return 0
+    try:
+        import sys as _sys, os as _os
+        _cdir = _os.path.join(PROJECT_ROOT, "collecteur")
+        if _cdir not in _sys.path:
+            _sys.path.insert(0, _cdir)
+        import central_config_store as _ccs
+    except Exception as e:
+        logger.warning(f"Config serveur (module) indisponible : {e}")
+        return 0
+    n = 0
+    for domain, fields in server_config.items():
+        if isinstance(fields, dict):
+            try:
+                _ccs.save(domain, fields, updated_by="restore")
+                n += 1
+            except Exception as e:
+                logger.warning(f"Restauration config serveur {domain} : {e}")
+    return n
+
+
+_SERVER_FILE_PATTERNS = ["collecteur/collecteur_*.json", "master/profil_base.xlsx"]
+_SERVER_DBS = {"collecteur_messagerie": "collecteur/collecteur_messagerie.db"}
+
+
+def _proot():
+    return os.path.abspath(str(PROJECT_ROOT))
+
+
+def _safe_under_root(rel):
+    dest = os.path.abspath(os.path.join(_proot(), rel))
+    return dest if dest.startswith(_proot() + os.sep) else None
+
+
+def _collect_server_files():
+    """Tout l'etat serveur en fichiers (comptes supervision, tokens, donnees
+    collecteur, profil UF), encode base64."""
+    import os, base64, glob
+    files = {}
+    for pat in _SERVER_FILE_PATTERNS:
+        for fp in glob.glob(os.path.join(_proot(), pat)):
+            try:
+                rel = os.path.relpath(fp, _proot())
+                with open(fp, "rb") as fh:
+                    files[rel] = base64.b64encode(fh.read()).decode("ascii")
+            except Exception as e:
+                logger.warning(f"Backup fichier serveur {fp} : {e}")
+    return files
+
+
+def _collect_server_dbs():
+    """Bases SQLite serveur (messagerie du collecteur)."""
+    import os
+    from app.backup import dump_database
+    dbs = {}
+    for name, rel in _SERVER_DBS.items():
+        path = os.path.join(_proot(), rel)
+        if os.path.isfile(path):
+            try:
+                dbs[name] = {"path": rel, "dump": dump_database(path)}
+            except Exception as e:
+                logger.warning(f"Backup base serveur {name} : {e}")
+    return dbs
+
+
+def _restore_server_files(files):
+    import os, base64
+    n = 0
+    for rel, b64 in (files or {}).items():
+        dest = _safe_under_root(rel)
+        if not dest:
+            logger.warning(f"Chemin serveur refuse (hors racine) : {rel}")
+            continue
+        try:
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            with open(dest, "wb") as fh:
+                fh.write(base64.b64decode(b64))
+            n += 1
+        except Exception as e:
+            logger.warning(f"Restauration fichier serveur {rel} : {e}")
+    return n
+
+
+def _restore_server_dbs(dbs):
+    import os
+    from app.backup import restore_database
+    n = 0
+    for name, entry in (dbs or {}).items():
+        rel = (entry or {}).get("path")
+        dump = (entry or {}).get("dump")
+        dest = _safe_under_root(rel) if rel else None
+        if dest and dump:
+            try:
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                restore_database(dest, dump)
+                n += 1
+            except Exception as e:
+                logger.warning(f"Restauration base serveur {name} : {e}")
+    return n
+
+
+# ── h144 — Sauvegarde INTEGRALE : arborescences de fichiers ──────────────────
+# Dossiers serveur partages contenant du contenu lie aux instances mais STOCKE
+# HORS scribe.db : pieces jointes (incidents + messagerie) et archives ZIP de
+# rapports de crise. Sans eux, la sauvegarde n'est pas une image complete.
+_SERVER_TREE_DIRS = ["uploads", "archives"]
+# Fichiers a NE PAS embarquer depuis un dossier d'instance (la base est dumpee
+# a part en JSON portable ; les -wal/-shm/-journal sont volatils ; les logs
+# n'ont pas a etre restaures).
+_INSTANCE_SKIP = {"scribe.db", "scribe.db-wal", "scribe.db-shm", "scribe.db-journal"}
+_INSTANCE_SKIP_SUFFIX = (".log",)
+# Garde-fou taille (octets) par fichier embarque, pour eviter d'embarquer par
+# erreur un fichier geant ; 0 = pas de limite.
+_MAX_BACKUP_FILE = int(os.environ.get("SCRIBE_BACKUP_MAX_FILE", str(200 * 1024 * 1024)))
+
+
+def _collect_dir_tree(abs_dir):
+    """Tous les fichiers sous abs_dir (recursif) -> {relpath: b64}. Vide si absent."""
+    import os, base64
+    out = {}
+    if not abs_dir or not os.path.isdir(abs_dir):
+        return out
+    for root, _dirs, names in os.walk(abs_dir):
+        for nm in names:
+            fp = os.path.join(root, nm)
+            try:
+                if _MAX_BACKUP_FILE and os.path.getsize(fp) > _MAX_BACKUP_FILE:
+                    logger.warning(f"Backup : fichier ignore (trop gros) {fp}")
+                    continue
+                rel = os.path.relpath(fp, abs_dir)
+                with open(fp, "rb") as fh:
+                    out[rel] = base64.b64encode(fh.read()).decode("ascii")
+            except Exception as e:
+                logger.warning(f"Backup arborescence {fp} : {e}")
+    return out
+
+
+def _restore_dir_tree(abs_dir, tree):
+    """Re-ecrit {relpath: b64} sous abs_dir. Renvoie le nb de fichiers ecrits."""
+    import os, base64
+    if not tree or not abs_dir:
+        return 0
+    base = os.path.abspath(abs_dir)
+    n = 0
+    for rel, b64 in tree.items():
+        dest = os.path.abspath(os.path.join(base, rel))
+        # Anti path-traversal : la cible doit rester sous abs_dir
+        if not dest.startswith(base + os.sep):
+            logger.warning(f"Restauration arborescence refusee (hors dossier) : {rel}")
+            continue
+        try:
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            with open(dest, "wb") as fh:
+                fh.write(base64.b64decode(b64))
+            n += 1
+        except Exception as e:
+            logger.warning(f"Restauration fichier {rel} : {e}")
+    return n
+
+
+def _collect_instance_files(inst_dir):
+    """Tous les fichiers du dossier d'instance SAUF la base (dumpee a part),
+    ses annexes SQLite volatiles et les logs. -> {relpath: b64}."""
+    import os, base64
+    out = {}
+    if not inst_dir or not os.path.isdir(inst_dir):
+        return out
+    for root, _dirs, names in os.walk(inst_dir):
+        for nm in names:
+            if nm in _INSTANCE_SKIP or nm.endswith(_INSTANCE_SKIP_SUFFIX):
+                continue
+            fp = os.path.join(root, nm)
+            try:
+                if _MAX_BACKUP_FILE and os.path.getsize(fp) > _MAX_BACKUP_FILE:
+                    logger.warning(f"Backup : fichier instance ignore (trop gros) {fp}")
+                    continue
+                rel = os.path.relpath(fp, inst_dir)
+                with open(fp, "rb") as fh:
+                    out[rel] = base64.b64encode(fh.read()).decode("ascii")
+            except Exception as e:
+                logger.warning(f"Backup fichier instance {fp} : {e}")
+    return out
+
+
+def _fichiers_blobs_dir():
+    """Répertoire des blobs du plugin fichiers — MÊME logique que
+    plugins/fichiers/storage.py (SCRIBE_DATA_DIR/fichiers, sinon <racine>/data/fichiers).
+    Ces blobs vivent hors des dossiers d'instance : sans cette capture, une
+    restauration recrée les métadonnées mais PAS le contenu des fichiers."""
+    import os
+    base = os.environ.get("SCRIBE_DATA_DIR")
+    root = os.path.abspath(base) if base else os.path.join(_proot(), "data")
+    return os.path.join(root, "fichiers")
+
+
+def _collect_server_trees():
+    """Arborescences serveur partagees (uploads, archives, blobs fichiers) -> {dir: {rel: b64}}.
+    Honore SCRIBE_UPLOADS_DIR si defini hors racine projet."""
+    import os
+    trees = {}
+    seen = set()
+    for d in _SERVER_TREE_DIRS:
+        abs_d = os.path.join(_proot(), d)
+        tree = _collect_dir_tree(abs_d)
+        if tree:
+            trees[d] = tree
+            seen.add(os.path.abspath(abs_d))
+    # uploads redirige par variable d'environnement (messagerie)
+    up_env = os.environ.get("SCRIBE_UPLOADS_DIR")
+    if up_env:
+        abs_up = os.path.abspath(up_env)
+        if abs_up not in seen:
+            tree = _collect_dir_tree(abs_up)
+            if tree:
+                trees["uploads"] = {**trees.get("uploads", {}), **tree}
+    # blobs du plugin fichiers (hors dossiers d'instance) — sinon contenu perdu
+    abs_b = os.path.abspath(_fichiers_blobs_dir())
+    if abs_b not in seen:
+        tree = _collect_dir_tree(abs_b)
+        if tree:
+            trees["fichiers_blobs"] = tree
+            seen.add(abs_b)
+    return trees
+
+
+def _restore_server_trees(trees):
+    """Restaure les arborescences serveur. Renvoie {dir: nb_fichiers}."""
+    import os
+    res = {}
+    for d, tree in (trees or {}).items():
+        # Blobs du plugin fichiers : restaurés vers leur répertoire réel
+        # (SCRIBE_DATA_DIR/fichiers), hors racine projet.
+        if d == "fichiers_blobs":
+            res[d] = _restore_dir_tree(_fichiers_blobs_dir(), tree)
+            continue
+        # On restaure uniquement vers les dossiers connus, sous la racine projet
+        if d not in _SERVER_TREE_DIRS:
+            logger.warning(f"Arborescence serveur inconnue ignoree : {d}")
+            continue
+        abs_d = os.path.join(_proot(), d)
+        res[d] = _restore_dir_tree(abs_d, tree)
+    return res
+
+
+@router.post("/instances/backup-full")
+def backup_full(body: _EncBackupIn, request: Request):
+    """Sauvegarde INTEGRALE plug-and-play (chiffree AES) : pour chaque instance,
+    le contenu COMPLET de sa base SQLite + ses fichiers de config. Capture tout,
+    contrairement a l'export xlsx partiel."""
+    _check_admin(request)
+    if not body.password or len(body.password) < 4:
+        raise HTTPException(400, "Mot de passe trop court (4 caracteres minimum).")
+    try:
+        from app.backup import dump_database, make_encrypted_zip
+    except Exception as e:
+        raise HTTPException(500, f"Moteur de sauvegarde indisponible : {e}")
+    from fastapi.responses import Response
+    from .instances_manager import _safe_path_segment, DATA_DIR
+    mgr = get_manager()
+    instances = {}
+    summary = {}
+    for port, state in sorted(mgr.instances.items()):
+        cfg = state.config
+        if not cfg.sigle:
+            continue
+        # Resoudre le chemin de base meme si state.db_path n'est pas renseigne
+        # (master redemarre, instance jamais relancee). On ne filtre PLUS sur le
+        # nom du sigle : toute instance ayant une base reelle est sauvegardee.
+        db_path = state.db_path or str(
+            DATA_DIR / _safe_path_segment(cfg.sigle, fallback=f"instance_{port}") / "scribe.db")
+        if not pathlib.Path(db_path).exists():
+            continue  # pas de base => rien a sauvegarder pour cette instance
+        entry = {
+            "config": {
+                "port": port, "sigle": cfg.sigle, "nom": cfg.nom,
+                "admin_login": cfg.admin_login, "admin_password": cfg.admin_password,
+                "adresse": cfg.adresse, "latitude": cfg.latitude,
+                "longitude": cfg.longitude, "fed_token": state.fed_token,
+            },
+            "config_files": {},
+            "instance_files": {},
+            "database": None,
+        }
+        try:
+            entry["database"] = dump_database(db_path)
+        except Exception as e:
+            logger.warning(f"Dump DB backup {cfg.sigle} : {e}")
+        summary[cfg.sigle] = sum(len(v) for v in entry["database"]["data"].values()) if entry["database"] else 0
+        inst_dir = pathlib.Path(db_path).parent
+        for fn in ("config.xml", "config.js"):
+            fp = inst_dir / fn
+            if fp.exists():
+                try:
+                    entry["config_files"][fn] = fp.read_text(encoding="utf-8")
+                except Exception:
+                    pass
+        # h144 — image COMPLETE du dossier d'instance : tout fichier present
+        # (secrets de plugins, DB annexes, clefs, etc.) hors base/aux/logs.
+        try:
+            entry["instance_files"] = _collect_instance_files(str(inst_dir))
+        except Exception as e:
+            logger.warning(f"Backup fichiers instance {cfg.sigle} : {e}")
+        instances[cfg.sigle] = entry
+    server_config = _load_central_config()
+    server_files = _collect_server_files()
+    server_dbs = _collect_server_dbs()
+    server_trees = _collect_server_trees()
+    if not instances and not server_config and not server_files and not server_trees:
+        raise HTTPException(400, "Aucune donnee a sauvegarder.")
+    payload = {
+        "manifest": {
+            "scribe_version": "4.0.0", "kind": "ght-full-backup",
+            "created_at": now_iso(), "instances": list(instances.keys()),
+            "rows": summary,
+            "instance_files": {s: len(i.get("instance_files") or {}) for s, i in instances.items()},
+            "has_server_config": bool(server_config),
+            "server_files": sorted(server_files.keys()),
+            "server_dbs": sorted(server_dbs.keys()),
+            "server_trees": {d: len(t) for d, t in server_trees.items()},
+        },
+        "instances": instances,
+        "server_config": server_config,
+        "server_files": server_files,
+        "server_dbs": server_dbs,
+        "server_trees": server_trees,
+    }
+    try:
+        enc = make_encrypted_zip(payload, body.password)
+    except Exception as e:
+        import traceback
+        logger.error(f"Erreur backup integral : {traceback.format_exc()}")
+        raise HTTPException(500, f"Erreur chiffrement (pyzipper installe ?) : {e}")
+    fn = f"scribe_backup_complet_{now_iso()[:10]}.zip"
+    summary_str = "; ".join(f"{k}:{v}" for k, v in summary.items())
+    return Response(content=enc, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{fn}"',
+                             "X-Scribe-Backup-Summary": summary_str,
+                             "Access-Control-Expose-Headers": "X-Scribe-Backup-Summary"})
+
+
+@router.post("/instances/restore-full")
+async def restore_full(request: Request, file: UploadFile = File(...), password: str = Form(...)):
+    """Restauration plug-and-play : dechiffre l'archive et recree chaque instance
+    (config + base complete + fichiers de config). Instances cibles : ARRETEES."""
+    _check_admin(request)
+    if not password or len(password) < 4:
+        raise HTTPException(400, "Mot de passe requis.")
+    try:
+        from app.backup import read_encrypted_zip, restore_database
+    except Exception as e:
+        raise HTTPException(500, f"Moteur de restauration indisponible : {e}")
+    from .instances_manager import _safe_path_segment, DATA_DIR, InstanceState
+    raw = await file.read()
+    try:
+        payload = read_encrypted_zip(raw, password)
+    except Exception:
+        raise HTTPException(400, "Mot de passe incorrect ou archive illisible.")
+    insts = payload.get("instances")
+    if not insts:
+        raise HTTPException(400, "Archive invalide : aucune instance trouvee.")
+    mgr = get_manager()
+    running = [int(i["config"]["port"]) for i in insts.values()
+               if mgr.instances.get(int(i["config"]["port"]))
+               and getattr(mgr.instances[int(i["config"]["port"])], "statut", "") == "actif"]
+    if running:
+        raise HTTPException(409, f"Arretez d'abord les instances actives (ports {running}) avant de restaurer.")
+    restored = []
+    for sigle, inst in insts.items():
+        c = inst["config"]; port = int(c["port"])
+        cfg = InstanceConfig(
+            port=port, sigle=c.get("sigle", ""), nom=c.get("nom", ""),
+            admin_login=c.get("admin_login", "dircrise"),
+            admin_password=c.get("admin_password", ""),
+            adresse=c.get("adresse", ""),
+            latitude=c.get("latitude"), longitude=c.get("longitude"),
+        )
+        state = mgr.instances.get(port)
+        if state is None:
+            state = InstanceState(config=cfg)
+            mgr.instances[port] = state
+        else:
+            state.config = cfg
+        if c.get("fed_token"):
+            state.fed_token = c["fed_token"]
+        # Chemin canonique = celui que start() recalculera au lancement
+        seg = _safe_path_segment(cfg.sigle, fallback=f"instance_{port}")
+        inst_dir = DATA_DIR / seg
+        inst_dir.mkdir(parents=True, exist_ok=True)
+        target = str(inst_dir / "scribe.db")
+        # Purger d'eventuels fichiers SQLite annexes (-wal/-shm/-journal) perimes
+        # de l'ancienne session : sinon un WAL non checkpointe peut masquer la
+        # base restauree et l'instance semble "vide".
+        for suf in ("-wal", "-shm", "-journal"):
+            aux = pathlib.Path(target + suf)
+            if aux.exists():
+                try: aux.unlink()
+                except Exception: pass
+        state.db_path = target
+        state.log_path = str(inst_dir / "scribe.log")
+        applied_rows = 0
+        if inst.get("database"):
+            try:
+                restore_database(target, inst["database"])
+            except Exception as e:
+                logger.error(f"Restauration DB {sigle} : {e}")
+                raise HTTPException(500, f"Erreur restauration base {sigle} : {e}")
+            # Verification REELLE sur disque (et pas le nombre attendu)
+            try:
+                import sqlite3 as _sq
+                _c = _sq.connect(target)
+                applied_rows = sum(
+                    _c.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0]
+                    for t in inst["database"].get("order", []))
+                _c.close()
+            except Exception as e:
+                logger.warning(f"Verif post-restore {sigle} : {e}")
+                applied_rows = sum(len(v) for v in inst["database"]["data"].values())
+            # Re-purger le WAL cree par la restauration (checkpoint propre)
+            for suf in ("-wal", "-shm", "-journal"):
+                aux = pathlib.Path(target + suf)
+                if aux.exists():
+                    try: aux.unlink()
+                    except Exception: pass
+        for fn, content in (inst.get("config_files") or {}).items():
+            try:
+                (inst_dir / fn).write_text(content, encoding="utf-8")
+            except Exception as e:
+                logger.warning(f"Ecriture config {fn} ({sigle}) : {e}")
+        # h144 — restaurer l'image complete du dossier d'instance (secrets de
+        # plugins, DB annexes, etc.). Ecrit APRES config_files : fait foi.
+        n_inst_files = 0
+        try:
+            n_inst_files = _restore_dir_tree(str(inst_dir), inst.get("instance_files") or {})
+        except Exception as e:
+            logger.warning(f"Restauration fichiers instance {sigle} : {e}")
+        # h147 — flag one-shot pour signaler à ensure_admin que c'est un
+        # demarrage post-restore : ne pas forcer must_change_password.
+        try:
+            (inst_dir / ".scribe_restored").write_text("1")
+        except Exception:
+            pass
+        restored.append({"sigle": cfg.sigle, "port": port, "rows": applied_rows,
+                         "files": n_inst_files})
+    n_channels = _save_central_config(payload.get("server_config") or {})
+    n_files = _restore_server_files(payload.get("server_files") or {})
+    n_dbs = _restore_server_dbs(payload.get("server_dbs") or {})
+    n_trees = _restore_server_trees(payload.get("server_trees") or {})
+    mgr._save_state()
+    return {"ok": True, "count": len(restored), "restored": restored,
+            "server_channels": n_channels, "server_files": n_files,
+            "server_dbs": n_dbs, "server_trees": n_trees}
+
+
 @router.post("/instances/{port}/import-xlsx")
 async def import_instance_xlsx(port: int, request: Request):
     """Importe un xlsx pour mettre à jour la config d'une instance.
@@ -1145,8 +1737,14 @@ async def import_ght_zip(request: Request):
         raise HTTPException(400, "Fichier vide")
     try:
         with zipfile.ZipFile(_io.BytesIO(body), "r") as zf:
-            xlsx_files = [n for n in zf.namelist() if n.lower().endswith(".xlsx")]
+            names = zf.namelist()
+            xlsx_files = [n for n in names if n.lower().endswith(".xlsx")]
             if not xlsx_files:
+                if any(n in ("backup.json", "manifest.json") for n in names):
+                    raise HTTPException(400,
+                        "Archive de sauvegarde complete chiffree detectee. Pour la restaurer, "
+                        "utilisez le bouton « Restaurer » du panneau Instances (avec son mot de "
+                        "passe) — l'import GHT n'accepte que les exports xlsx.")
                 raise HTTPException(400, "Aucun .xlsx dans le zip")
             previews = []
             for fname in xlsx_files:
