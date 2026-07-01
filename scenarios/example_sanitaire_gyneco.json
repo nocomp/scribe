@@ -2,13 +2,8 @@
   "meta": {
     "id": "exo_gyneco_2026",
     "titre": "Exercice G7 — Crise obstétricale multi-sites",
-<<<<<<< HEAD
     "description": "Hémorragie du post-partum + prématuré extrême. Saturation maternité CHV. Coordination inter-GHT nécessaire.",
     "sujet": "Femme enceinte hémorragie au bloc + prématuré. Saturation de la maternité CHV.",
-=======
-    "description": "Hémorragie du post-partum + prématuré extrême. Saturation maternité DEMO1. Coordination inter-GHT nécessaire.",
-    "sujet": "Femme enceinte hémorragie au bloc + prématuré. Saturation de la maternité DEMO1.",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     "duree_min": 60,
     "duree_reel_min": 240,
     "ratio_compression": 4.0,
@@ -25,23 +20,14 @@
   },
   "acteurs": [
     {
-<<<<<<< HEAD
       "sigle": "CHV",
-      "nom_etablissement": "Centre Hospitalier de Valmont",
-=======
-      "sigle": "DEMO1",
-      "nom_etablissement": "Centre Hospitalier example hospital",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+      "nom_etablissement": "Centre Hospitalier Valmont",
       "role": "coordinateur",
       "port": 8660,
       "joueurs": [
         {
           "username": "dircrise",
-<<<<<<< HEAD
           "display_name": "Directeur de Crise CHV",
-=======
-          "display_name": "Directeur de Crise DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
           "role_exercice": "Directeur de cellule de crise",
           "responsabilites": [
             "Activation plan blanc",
@@ -51,11 +37,7 @@
         },
         {
           "username": "maternite",
-<<<<<<< HEAD
           "display_name": "Sage-femme Coordinatrice CHV",
-=======
-          "display_name": "Sage-femme Coordinatrice DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
           "role_exercice": "Coordination maternité",
           "responsabilites": [
             "Gestion capacité maternité",
@@ -65,11 +47,7 @@
         },
         {
           "username": "reanimation",
-<<<<<<< HEAD
           "display_name": "Médecin Réanimateur CHV",
-=======
-          "display_name": "Médecin Réanimateur DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
           "role_exercice": "Prise en charge réanimation",
           "responsabilites": [
             "Réanimation hémorragie",
@@ -79,32 +57,19 @@
       ]
     },
     {
-<<<<<<< HEAD
       "sigle": "GHT1",
-      "nom_etablissement": "GHT du Lac Mont-Blanc",
-=======
-      "sigle": "DEMO2",
-      "nom_etablissement": "GHT Léman Example Peak",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+      "nom_etablissement": "GHT Lac Grandmont",
       "role": "participant",
       "port": 8661,
       "joueurs": [
         {
           "username": "dircrise",
-<<<<<<< HEAD
           "display_name": "Directeur de Crise GHT1",
-=======
-          "display_name": "Directeur de Crise DEMO2",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
           "role_exercice": "Récepteur du transfert",
           "responsabilites": [
             "Accueil transfert maternel",
             "Capacité maternité",
-<<<<<<< HEAD
             "Coordination CHV"
-=======
-            "Coordination DEMO1"
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
           ]
         }
       ]
@@ -114,26 +79,15 @@
     {
       "id": "S01",
       "t_min": 0,
-<<<<<<< HEAD
       "cible": "CHV",
       "type": "incident",
       "titre": "Hémorragie post-partum au bloc",
       "description_animateur": "Déclenchement du scénario. Patiente en hémorragie sévère au bloc opératoire. Les équipes CHV doivent réagir immédiatement.",
-=======
-      "cible": "DEMO1",
-      "type": "incident",
-      "titre": "Hémorragie post-partum au bloc",
-      "description_animateur": "Déclenchement du scénario. Patiente en hémorragie sévère au bloc opératoire. Les équipes DEMO1 doivent réagir immédiatement.",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "payload": {
         "fait": "ALERTE MATERNITÉ : Hémorragie du post-partum au bloc opératoire. Patiente P2G2, 34 SA, césarienne en cours. Perte estimée > 2L. Produits sanguins en urgence requis.",
         "urgency": 3,
         "type_crise": "SANITAIRE",
-<<<<<<< HEAD
         "site_id": "CHV-MATERNITE",
-=======
-        "site_id": "DEMO1-MATERNITE",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         "unite_fonctionnelle": "Bloc obstétrical",
         "declarant_nom": "Sage-femme coordinatrice",
         "analyse": "Situation critique nécessitant activation du protocole hémorragie obstétricale",
@@ -155,21 +109,13 @@
       "id": "S03b",
       "t_min": 3,
       "type": "incident",
-<<<<<<< HEAD
       "cible": "CHV",
-=======
-      "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "payload": {
         "fait": "PANNE ÉQUIPEMENT : Perte du respirateur du bloc 5. Maintenance informée. Alternatives disponibles sur autres blocs. Vérifier quel bloc est utilisé pour la césarienne en cours.",
         "urgency": 2,
         "type_crise": "SANITAIRE",
         "impact_fonctionnel": true,
-<<<<<<< HEAD
         "site_id": "CHV-BLOC",
-=======
-        "site_id": "DEMO1-BLOC",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         "unite_fonctionnelle": "Bloc opératoire",
         "declarant_nom": "IBODE de garde",
         "analyse": "Équipement HS identifié. Impact direct sur la capacité opératoire du plateau technique. Besoin de vérifier compatibilité avec intervention en cours.",
@@ -184,7 +130,6 @@
     {
       "id": "S02",
       "t_min": 5,
-<<<<<<< HEAD
       "cible": "CHV",
       "type": "incident",
       "titre": "Prématuré extrême — saturation néonatologie",
@@ -194,17 +139,6 @@
         "urgency": 4,
         "type_crise": "SANITAIRE",
         "site_id": "CHV-NEONATOLOGIE",
-=======
-      "cible": "DEMO1",
-      "type": "incident",
-      "titre": "Prématuré extrême — saturation néonatologie",
-      "description_animateur": "Complication : le nouveau-né est prématuré à 28 SA. La néonatologie DEMO1 est saturée. Transfert néonatal nécessaire.",
-      "payload": {
-        "fait": "COMPLICATION : Nouveau-né prématuré 28 SA extrait par césarienne. Score d'Apgar 4/8. Unité de néonatologie DEMO1 SATURÉE — 0 lit SCNN disponible. Transfert néonatal à organiser en urgence.",
-        "urgency": 4,
-        "type_crise": "SANITAIRE",
-        "site_id": "DEMO1-NEONATOLOGIE",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         "unite_fonctionnelle": "Néonatologie",
         "declarant_nom": "Pédiatre de garde",
         "analyse": "Saturation SCNN — transfert SMUR néonatal à activer immédiatement",
@@ -226,7 +160,6 @@
     {
       "id": "S03",
       "t_min": 10,
-<<<<<<< HEAD
       "cible": "CHV",
       "type": "message",
       "titre": "Message SAMU — coordination",
@@ -240,27 +173,11 @@
       "indicateurs_reussite": [
         "Message lu",
         "Transfert créé dans SCRIBE vers GHT1"
-=======
-      "cible": "DEMO1",
-      "type": "message",
-      "titre": "Message SAMU — coordination",
-      "description_animateur": "Le SAMU répond et oriente vers DEMO2 pour la mère. Le joueur doit initier le transfert.",
-      "payload": {
-        "contenu": "📞 SAMU 15 — Régulation médicale : Transfert maternel DEMO1 → DEMO2 autorisé. SMUR disponible dans 8 min. DEMO2 confirme 1 lit réanimation obstétricale. Préparez le dossier de transport et les produits sanguins pour le transfert. Médecin régulateur : Dr DUPONT.",
-        "expediteur": "SAMU 15 — Coordination",
-        "type": "ALERTE"
-      },
-      "action_attendue": "Prendre en compte le message, initier le transfert vers DEMO2 dans SCRIBE",
-      "indicateurs_reussite": [
-        "Message lu",
-        "Transfert créé dans SCRIBE vers DEMO2"
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       ]
     },
     {
       "id": "S04",
       "t_min": 12,
-<<<<<<< HEAD
       "cible": "CHV",
       "type": "transfert",
       "titre": "Création transfert maternel → GHT1",
@@ -268,75 +185,38 @@
       "payload": {
         "unite_origine": "Maternité CHV — Bloc obstétrical",
         "etablissement_destination": "GHT1",
-        "site_destination": "Hôpitaux du du Lac — Rivemont",
+        "site_destination": "Hôpitaux du Lac — Lacville",
         "unite_destination": "Réanimation obstétricale",
         "motif": "Hémorragie post-partum — saturation CHV",
         "mode_transport": "SMUR",
         "urgence": "IMMEDIAT",
         "etablissement_origine": "CHV",
-=======
-      "cible": "DEMO1",
-      "type": "transfert",
-      "titre": "Création transfert maternel → DEMO2",
-      "description_animateur": "Stimulus de support : si le joueur n'a pas encore initié le transfert, l'animateur peut l'injecter manuellement.",
-      "payload": {
-        "unite_origine": "Maternité DEMO1 — Bloc obstétrical",
-        "etablissement_destination": "DEMO2",
-        "site_destination": "Hôpitaux du Léman — Example Lake-les-Bains",
-        "unite_destination": "Réanimation obstétricale",
-        "motif": "Hémorragie post-partum — saturation DEMO1",
-        "mode_transport": "SMUR",
-        "urgence": "IMMEDIAT",
-        "etablissement_origine": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         "redacteur": "Sage-femme coordinatrice",
         "statut": "EN_COURS",
         "nom": "Patient simulation",
         "prenom": "",
         "ipp": "EXO-S04",
-<<<<<<< HEAD
         "commentaire": "Motif: Hémorragie post-partum — saturation CHV"
       },
       "action_attendue": "Confirmer le transfert dans SCRIBE, compléter les informations",
       "indicateurs_reussite": [
         "Transfert EN_COURS visible côté GHT1"
-=======
-        "commentaire": "Motif: Hémorragie post-partum — saturation DEMO1"
-      },
-      "action_attendue": "Confirmer le transfert dans SCRIBE, compléter les informations",
-      "indicateurs_reussite": [
-        "Transfert EN_COURS visible côté DEMO2"
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       ]
     },
     {
       "id": "S05",
       "t_min": 15,
-<<<<<<< HEAD
       "cible": "GHT1",
       "type": "incident",
       "titre": "GHT1 — Préparation accueil transfert",
       "description_animateur": "GHT1 reçoit l'alerte. Ils doivent préparer l'accueil et confirmer la capacité.",
       "payload": {
-        "fait": "ALERTE TRANSFERT ENTRANT : Patiente hémorragie post-partum en provenance de CHV. Arrivée SMUR estimée dans 15 minutes. Préparer réanimation obstétricale et produits sanguins. Contacter EFS Rivemont.",
+        "fait": "ALERTE TRANSFERT ENTRANT : Patiente hémorragie post-partum en provenance de CHV. Arrivée SMUR estimée dans 15 minutes. Préparer réanimation obstétricale et produits sanguins. Contacter EFS Lacville.",
         "urgency": 3,
         "type_crise": "SANITAIRE",
         "site_id": "GHT1-REANIMATION",
         "unite_fonctionnelle": "Réanimation obstétricale",
         "declarant_nom": "Cadre de garde GHT1",
-=======
-      "cible": "DEMO2",
-      "type": "incident",
-      "titre": "DEMO2 — Préparation accueil transfert",
-      "description_animateur": "DEMO2 reçoit l'alerte. Ils doivent préparer l'accueil et confirmer la capacité.",
-      "payload": {
-        "fait": "ALERTE TRANSFERT ENTRANT : Patiente hémorragie post-partum en provenance de DEMO1. Arrivée SMUR estimée dans 15 minutes. Préparer réanimation obstétricale et produits sanguins. Contacter EFS Example Lake.",
-        "urgency": 3,
-        "type_crise": "SANITAIRE",
-        "site_id": "DEMO2-REANIMATION",
-        "unite_fonctionnelle": "Réanimation obstétricale",
-        "declarant_nom": "Cadre de garde DEMO2",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         "analyse": "Préparation accueil transfert maternel urgent",
         "jalons_labels": [
           "Confirmer disponibilité lit réanimation",
@@ -345,40 +225,24 @@
           "Informer chirurgien de garde"
         ]
       },
-<<<<<<< HEAD
       "action_attendue": "GHT1 crée l'incident de réception, prépare l'accueil",
       "indicateurs_reussite": [
         "Incident GHT1 créé",
         "Jalons validés",
         "Communication avec CHV"
-=======
-      "action_attendue": "DEMO2 crée l'incident de réception, prépare l'accueil",
-      "indicateurs_reussite": [
-        "Incident DEMO2 créé",
-        "Jalons validés",
-        "Communication avec DEMO1"
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       ]
     },
     {
       "id": "S06b",
       "t_min": 18,
       "type": "incident",
-<<<<<<< HEAD
       "cible": "CHV",
-=======
-      "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "payload": {
         "fait": "INCIDENT SI : DPI gynéco-obstétrique indisponible pendant 15 min (maintenance imprévue). Saisie sur papier. Risque de perte de traçabilité pour le transfert en cours.",
         "urgency": 2,
         "type_crise": "CYBER",
         "impact_fonctionnel": true,
-<<<<<<< HEAD
         "site_id": "CHV-MATERNITE",
-=======
-        "site_id": "DEMO1-MATERNITE",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         "unite_fonctionnelle": "Maternité, Bloc obstétrical",
         "declarant_nom": "Sage-femme coordinatrice",
         "analyse": "Panne SI limitée mais problématique pendant le transfert. Procédure dégradée papier à activer.",
@@ -393,17 +257,10 @@
     {
       "id": "S06",
       "t_min": 25,
-<<<<<<< HEAD
       "cible": "CHV",
       "type": "capacite",
       "titre": "Mise à jour capacité — bloc saturé",
       "description_animateur": "Le bloc CHV est maintenant bloqué sur 2 tables. Mise à jour de la capacité.",
-=======
-      "cible": "DEMO1",
-      "type": "capacite",
-      "titre": "Mise à jour capacité — bloc saturé",
-      "description_animateur": "Le bloc DEMO1 est maintenant bloqué sur 2 tables. Mise à jour de la capacité.",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "payload": {
         "uf_code": "BL1",
         "statut_global": "critique",
@@ -419,26 +276,15 @@
     {
       "id": "S07",
       "t_min": 35,
-<<<<<<< HEAD
       "cible": "CHV",
-=======
-      "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "type": "incident",
       "titre": "Demande médias / préfecture",
       "description_animateur": "La préfecture demande un point de situation. Exercice de communication institutionnelle.",
       "payload": {
-<<<<<<< HEAD
-        "fait": "La préfecture de Territoire demande un point de situation écrit sur l'incident en cours. La presse locale est informée d'une 'situation exceptionnelle' à l'hôpital. Besoin d'un communiqué de situation dans les 30 minutes.",
+        "fait": "La préfecture de Valmontois demande un point de situation écrit sur l'incident en cours. La presse locale est informée d'une 'situation exceptionnelle' à l'hôpital. Besoin d'un communiqué de situation dans les 30 minutes.",
         "urgency": 2,
         "type_crise": "SANITAIRE",
         "site_id": "CHV",
-=======
-        "fait": "La préfecture de Example Region demande un point de situation écrit sur l'incident en cours. La presse locale est informée d'une 'situation exceptionnelle' à l'hôpital. Besoin d'un communiqué de situation dans les 30 minutes.",
-        "urgency": 2,
-        "type_crise": "SANITAIRE",
-        "site_id": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         "unite_fonctionnelle": "Direction",
         "declarant_nom": "Chargé de communication",
         "analyse": "Gestion institutionnelle et communication de crise",
@@ -457,35 +303,20 @@
     {
       "id": "S08",
       "t_min": 50,
-<<<<<<< HEAD
       "cible": "CHV",
-=======
-      "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "type": "incident",
       "titre": "Résolution — stabilisation patiente",
       "description_animateur": "La situation se normalise. Les équipes doivent documenter la résolution et préparer le REX.",
       "payload": {
-<<<<<<< HEAD
         "fait": "STABILISATION : Patiente stable en réanimation GHT1. Hémorragie contrôlée. Nouveau-né transféré en SCNN CHU Grenoble. Cellule de crise peut envisager la clôture progressive. Préparer le retour d'expérience.",
         "urgency": 1,
         "type_crise": "SANITAIRE",
         "site_id": "CHV",
-=======
-        "fait": "STABILISATION : Patiente stable en réanimation DEMO2. Hémorragie contrôlée. Nouveau-né transféré en SCNN CHU Grenoble. Cellule de crise peut envisager la clôture progressive. Préparer le retour d'expérience.",
-        "urgency": 1,
-        "type_crise": "SANITAIRE",
-        "site_id": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         "unite_fonctionnelle": "Direction",
         "declarant_nom": "Directeur de crise",
         "analyse": "Phase de résolution — coordination post-crise",
         "jalons_labels": [
-<<<<<<< HEAD
           "Confirmer stabilisation patiente avec GHT1",
-=======
-          "Confirmer stabilisation patiente avec DEMO2",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
           "Confirmer prise en charge néonatal CHU Grenoble",
           "Préparer chronologie pour REX",
           "Informer les équipes de la résolution"
@@ -502,11 +333,7 @@
   "decisions_attendues": [
     {
       "t_min": 2,
-<<<<<<< HEAD
       "contenu": "Activation cellule de crise CHV",
-=======
-      "contenu": "Activation cellule de crise DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "responsable": "Directeur de crise",
       "obligatoire": true
     },
@@ -524,11 +351,7 @@
     },
     {
       "t_min": 12,
-<<<<<<< HEAD
       "contenu": "Validation transfert maternel vers GHT1",
-=======
-      "contenu": "Validation transfert maternel vers DEMO2",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "responsable": "Directeur de crise",
       "obligatoire": true
     },
@@ -554,22 +377,14 @@
   "debriefing_guide": {
     "points_cles": [
       "Réactivité lors de l'alerte initiale (T+0 à T+5)",
-<<<<<<< HEAD
       "Qualité de la communication inter-GHT CHV ↔ GHT1",
-=======
-      "Qualité de la communication inter-GHT DEMO1 ↔ DEMO2",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "Gestion du double problème (mère + nouveau-né)",
       "Coordination avec le SAMU",
       "Documentation dans SCRIBE en temps réel"
     ],
     "questions_debriefing": [
       "Quelles ont été les premières actions prises et pourquoi ?",
-<<<<<<< HEAD
       "Comment s'est passée la communication avec GHT1 ?",
-=======
-      "Comment s'est passée la communication avec DEMO2 ?",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "Qu'est-ce qui aurait pu être fait plus rapidement ?",
       "Les informations documentées dans SCRIBE étaient-elles suffisantes ?",
       "Que feriez-vous différemment lors d'un vrai incident ?"
@@ -577,18 +392,10 @@
     "pieges_frequents": [
       "Oublier le nouveau-né en se concentrant sur la mère",
       "Ne pas contacter le SAMU assez tôt",
-<<<<<<< HEAD
       "Communication CHV-GHT1 insuffisante ou trop tardive",
-=======
-      "Communication DEMO1-DEMO2 insuffisante ou trop tardive",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "Sous-estimer la saturation des capacités",
       "Ne pas documenter les décisions dans SCRIBE"
     ]
   },
-<<<<<<< HEAD
-  "solution_attendue": "CELLULE DE CRISE — RÉPONSE IDÉALE (SCÉNARIO GYNECO-OBSTÉTRIQUE)\n\nT+0 — ALERTE HÉMORRAGIE POST-PARTUM (urgence 3)\n• Activer immédiatement le protocole hémorragie obstétricale (équipe bloc renforcée, anesthésiste, sage-femme coord).\n• Demander en urgence produits sanguins à la banque du sang EFS (2 CGR + PFC + fibrinogène).\n• Jalon attendu : \"Protocole hémorragie obstétricale activé\" coché dans les 3 minutes.\n\nT+3 — PANNE RESPIRATEUR BLOC 5 (impact fonctionnel)\n• Vérifier quel bloc est utilisé pour la césarienne en cours — point critique à valider IMMÉDIATEMENT.\n• Mobiliser le respirateur de secours ou rebasculer sur un autre bloc (3 ou 6).\n• Prévenir biomédical de garde et reporter les interventions programmées non urgentes.\n• Ne pas laisser la panne coupler avec l'hémorragie en cours.\n\nT+5 — COMPLICATION NÉONATALE + SATURATION NÉONATOLOGIE CHV\n• Appel SAMU 15 pour orienter le nouveau-né prématuré (28 SA, Apgar 4/8) vers un SCNN disponible.\n• Contacter GHT1 (Hôpitaux du du Lac) pour validation capacité réa obstétricale/néonat.\n• Activation potentielle du plan blanc si saturation étendue.\n\nT+10 — COORDINATION SAMU AUTORISÉE POUR TRANSFERT MATERNEL\n• Préparer dossier de transport complet (antécédents, examens, produits sanguins à embarquer).\n• Confirmer équipe SMUR avec médecin régulateur.\n• Informer GHT1 de l'ETA et de l'état patient.\n\nT+12 — TRANSFERT MATERNEL INITIÉ\n• Créer la fiche transfert dans SCRIBE : CHV Maternité bloc obstétrical → GHT1 Réanimation obstétricale.\n• Suivre l'ambulance en temps réel (onglet transferts, statut EN_COURS).\n• GHT1 doit recevoir la fiche entrante automatiquement (fédération).\n\nT+15 — CÔTÉ GHT1 — ACCUEIL TRANSFERT\n• Confirmer réception dans le kanban transferts entrants.\n• Préparer box d'accueil réa obstétricale.\n• Décision de cellule : activer équipe de relève si transfert complexe.\n\nT+18 — INCIDENT SI (DPI GYNÉCO INDISPONIBLE)\n• Activer immédiatement la procédure papier (impression fiches de transmission).\n• Appeler DSI + éditeur pour remise en service rapide.\n• Tracer manuellement tous les actes pour re-saisie ultérieure.\n• Ne PAS retarder le transfert en cours à cause de la panne SI.\n\nT+25 — MISE À JOUR CAPACITÉ\n• Déclarer la capacité maternité via le panneau CAPACITÉ (statut : critique ou ferme).\n• Informer la cellule de crise régionale via messagerie inter-GHT.\n\nT+35 — POINT DE SITUATION PRÉFECTURE\n• Rédiger un point de situation écrit (fait, analyse, moyens, perspectives).\n• Utiliser le bouton \"🤖 Analyse IA\" + \"Convertir en actions\" pour structurer rapidement.\n• Envoyer via messagerie ou communiqué officiel.\n\nT+50 — STABILISATION\n• Patiente stable en réa GHT1, hémorragie contrôlée, nouveau-né transféré.\n• Passer les incidents en statut \"RÉSOLUTION\" puis \"RÉSOLU\".\n• Archiver la crise via le bouton \"Archiver\" (créé un ZIP horodaté).\n\nCOMPÉTENCES ATTENDUES\n• Réactivité : chaque stimulus doit entraîner une action dans les 2-3 minutes.\n• Communication : messages chat inter-GHT, présences cellule enregistrées, 2-3 décisions tracées minimum.\n• Décision : au moins 4 décisions formelles en cellule (protocole hémorragie, transfert, activation plan blanc, procédure papier).\n• Coordination inter-GHT : fiche transfert créée + fiche entrante reçue côté GHT1 + chat inter-établissements actif.\n• Méthode : jalons cochés sur l'hémorragie (chef service alerté, protocole activé, EFS contactée, directeur informé).\n• Documentation : analyse remplie sur chaque incident, jalons tenus à jour.\n\nPIÈGES À ÉVITER\n• Ne pas traiter l'hémorragie et la panne respirateur indépendamment — vérifier la co-occurrence.\n• Ne pas attendre que le DPI soit réparé pour transférer.\n• Ne pas oublier la cellule régionale quand on a trop d'incidents locaux."
-=======
-  "solution_attendue": "CELLULE DE CRISE — RÉPONSE IDÉALE (SCÉNARIO GYNECO-OBSTÉTRIQUE)\n\nT+0 — ALERTE HÉMORRAGIE POST-PARTUM (urgence 3)\n• Activer immédiatement le protocole hémorragie obstétricale (équipe bloc renforcée, anesthésiste, sage-femme coord).\n• Demander en urgence produits sanguins à la banque du sang EFS (2 CGR + PFC + fibrinogène).\n• Jalon attendu : \"Protocole hémorragie obstétricale activé\" coché dans les 3 minutes.\n\nT+3 — PANNE RESPIRATEUR BLOC 5 (impact fonctionnel)\n• Vérifier quel bloc est utilisé pour la césarienne en cours — point critique à valider IMMÉDIATEMENT.\n• Mobiliser le respirateur de secours ou rebasculer sur un autre bloc (3 ou 6).\n• Prévenir biomédical de garde et reporter les interventions programmées non urgentes.\n• Ne pas laisser la panne coupler avec l'hémorragie en cours.\n\nT+5 — COMPLICATION NÉONATALE + SATURATION NÉONATOLOGIE DEMO1\n• Appel SAMU 15 pour orienter le nouveau-né prématuré (28 SA, Apgar 4/8) vers un SCNN disponible.\n• Contacter DEMO2 (Hôpitaux du Léman) pour validation capacité réa obstétricale/néonat.\n• Activation potentielle du plan blanc si saturation étendue.\n\nT+10 — COORDINATION SAMU AUTORISÉE POUR TRANSFERT MATERNEL\n• Préparer dossier de transport complet (antécédents, examens, produits sanguins à embarquer).\n• Confirmer équipe SMUR avec médecin régulateur.\n• Informer DEMO2 de l'ETA et de l'état patient.\n\nT+12 — TRANSFERT MATERNEL INITIÉ\n• Créer la fiche transfert dans SCRIBE : DEMO1 Maternité bloc obstétrical → DEMO2 Réanimation obstétricale.\n• Suivre l'ambulance en temps réel (onglet transferts, statut EN_COURS).\n• DEMO2 doit recevoir la fiche entrante automatiquement (fédération).\n\nT+15 — CÔTÉ DEMO2 — ACCUEIL TRANSFERT\n• Confirmer réception dans le kanban transferts entrants.\n• Préparer box d'accueil réa obstétricale.\n• Décision de cellule : activer équipe de relève si transfert complexe.\n\nT+18 — INCIDENT SI (DPI GYNÉCO INDISPONIBLE)\n• Activer immédiatement la procédure papier (impression fiches de transmission).\n• Appeler DSI + éditeur pour remise en service rapide.\n• Tracer manuellement tous les actes pour re-saisie ultérieure.\n• Ne PAS retarder le transfert en cours à cause de la panne SI.\n\nT+25 — MISE À JOUR CAPACITÉ\n• Déclarer la capacité maternité via le panneau CAPACITÉ (statut : critique ou ferme).\n• Informer la cellule de crise régionale via messagerie inter-GHT.\n\nT+35 — POINT DE SITUATION PRÉFECTURE\n• Rédiger un point de situation écrit (fait, analyse, moyens, perspectives).\n• Utiliser le bouton \"🤖 Analyse IA\" + \"Convertir en actions\" pour structurer rapidement.\n• Envoyer via messagerie ou communiqué officiel.\n\nT+50 — STABILISATION\n• Patiente stable en réa DEMO2, hémorragie contrôlée, nouveau-né transféré.\n• Passer les incidents en statut \"RÉSOLUTION\" puis \"RÉSOLU\".\n• Archiver la crise via le bouton \"Archiver\" (créé un ZIP horodaté).\n\nCOMPÉTENCES ATTENDUES\n• Réactivité : chaque stimulus doit entraîner une action dans les 2-3 minutes.\n• Communication : messages chat inter-GHT, présences cellule enregistrées, 2-3 décisions tracées minimum.\n• Décision : au moins 4 décisions formelles en cellule (protocole hémorragie, transfert, activation plan blanc, procédure papier).\n• Coordination inter-GHT : fiche transfert créée + fiche entrante reçue côté DEMO2 + chat inter-établissements actif.\n• Méthode : jalons cochés sur l'hémorragie (chef service alerté, protocole activé, EFS contactée, directeur informé).\n• Documentation : analyse remplie sur chaque incident, jalons tenus à jour.\n\nPIÈGES À ÉVITER\n• Ne pas traiter l'hémorragie et la panne respirateur indépendamment — vérifier la co-occurrence.\n• Ne pas attendre que le DPI soit réparé pour transférer.\n• Ne pas oublier la cellule régionale quand on a trop d'incidents locaux."
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+  "solution_attendue": "CELLULE DE CRISE — RÉPONSE IDÉALE (SCÉNARIO GYNECO-OBSTÉTRIQUE)\n\nT+0 — ALERTE HÉMORRAGIE POST-PARTUM (urgence 3)\n• Activer immédiatement le protocole hémorragie obstétricale (équipe bloc renforcée, anesthésiste, sage-femme coord).\n• Demander en urgence produits sanguins à la banque du sang EFS (2 CGR + PFC + fibrinogène).\n• Jalon attendu : \"Protocole hémorragie obstétricale activé\" coché dans les 3 minutes.\n\nT+3 — PANNE RESPIRATEUR BLOC 5 (impact fonctionnel)\n• Vérifier quel bloc est utilisé pour la césarienne en cours — point critique à valider IMMÉDIATEMENT.\n• Mobiliser le respirateur de secours ou rebasculer sur un autre bloc (3 ou 6).\n• Prévenir biomédical de garde et reporter les interventions programmées non urgentes.\n• Ne pas laisser la panne coupler avec l'hémorragie en cours.\n\nT+5 — COMPLICATION NÉONATALE + SATURATION NÉONATOLOGIE CHV\n• Appel SAMU 15 pour orienter le nouveau-né prématuré (28 SA, Apgar 4/8) vers un SCNN disponible.\n• Contacter GHT1 (Hôpitaux du Lac) pour validation capacité réa obstétricale/néonat.\n• Activation potentielle du plan blanc si saturation étendue.\n\nT+10 — COORDINATION SAMU AUTORISÉE POUR TRANSFERT MATERNEL\n• Préparer dossier de transport complet (antécédents, examens, produits sanguins à embarquer).\n• Confirmer équipe SMUR avec médecin régulateur.\n• Informer GHT1 de l'ETA et de l'état patient.\n\nT+12 — TRANSFERT MATERNEL INITIÉ\n• Créer la fiche transfert dans SCRIBE : CHV Maternité bloc obstétrical → GHT1 Réanimation obstétricale.\n• Suivre l'ambulance en temps réel (onglet transferts, statut EN_COURS).\n• GHT1 doit recevoir la fiche entrante automatiquement (fédération).\n\nT+15 — CÔTÉ GHT1 — ACCUEIL TRANSFERT\n• Confirmer réception dans le kanban transferts entrants.\n• Préparer box d'accueil réa obstétricale.\n• Décision de cellule : activer équipe de relève si transfert complexe.\n\nT+18 — INCIDENT SI (DPI GYNÉCO INDISPONIBLE)\n• Activer immédiatement la procédure papier (impression fiches de transmission).\n• Appeler DSI + éditeur pour remise en service rapide.\n• Tracer manuellement tous les actes pour re-saisie ultérieure.\n• Ne PAS retarder le transfert en cours à cause de la panne SI.\n\nT+25 — MISE À JOUR CAPACITÉ\n• Déclarer la capacité maternité via le panneau CAPACITÉ (statut : critique ou ferme).\n• Informer la cellule de crise régionale via messagerie inter-GHT.\n\nT+35 — POINT DE SITUATION PRÉFECTURE\n• Rédiger un point de situation écrit (fait, analyse, moyens, perspectives).\n• Utiliser le bouton \"🤖 Analyse IA\" + \"Convertir en actions\" pour structurer rapidement.\n• Envoyer via messagerie ou communiqué officiel.\n\nT+50 — STABILISATION\n• Patiente stable en réa GHT1, hémorragie contrôlée, nouveau-né transféré.\n• Passer les incidents en statut \"RÉSOLUTION\" puis \"RÉSOLU\".\n• Archiver la crise via le bouton \"Archiver\" (créé un ZIP horodaté).\n\nCOMPÉTENCES ATTENDUES\n• Réactivité : chaque stimulus doit entraîner une action dans les 2-3 minutes.\n• Communication : messages chat inter-GHT, présences cellule enregistrées, 2-3 décisions tracées minimum.\n• Décision : au moins 4 décisions formelles en cellule (protocole hémorragie, transfert, activation plan blanc, procédure papier).\n• Coordination inter-GHT : fiche transfert créée + fiche entrante reçue côté GHT1 + chat inter-établissements actif.\n• Méthode : jalons cochés sur l'hémorragie (chef service alerté, protocole activé, EFS contactée, directeur informé).\n• Documentation : analyse remplie sur chaque incident, jalons tenus à jour.\n\nPIÈGES À ÉVITER\n• Ne pas traiter l'hémorragie et la panne respirateur indépendamment — vérifier la co-occurrence.\n• Ne pas attendre que le DPI soit réparé pour transférer.\n• Ne pas oublier la cellule régionale quand on a trop d'incidents locaux."
 }

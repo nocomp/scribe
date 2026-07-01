@@ -22,13 +22,8 @@
   },
   "acteurs": [
     {
-<<<<<<< HEAD
       "sigle": "CHV",
-      "nom_etablissement": "Centre Hospitalier de Valmont (CHV)",
-=======
-      "sigle": "DEMO1",
-      "nom_etablissement": "Centre Hospitalier example hospital (DEMO1)",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+      "nom_etablissement": "Centre Hospitalier Valmont Valmont (CHV)",
       "role": "coordinateur",
       "port": 8660,
       "joueurs": [
@@ -43,11 +38,7 @@
   ],
   "stimuli": [
     {
-<<<<<<< HEAD
       "id": "S01", "t_min": 0, "type": "incident", "cible": "CHV",
-=======
-      "id": "S01", "t_min": 0, "type": "incident", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "⚡ PANNE ÉLECTRIQUE GÉNÉRALE",
       "description_animateur": "Incident déclencheur à 6h30. Heure critique (relèves, petits déj patients, préparation blocs).",
       "action_attendue": "Activer cellule de crise technique. Vérifier les groupes électrogènes.",
@@ -59,11 +50,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S02", "t_min": 5, "type": "incident", "cible": "CHV",
-=======
-      "id": "S02", "t_min": 5, "type": "incident", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "🔴 Groupe secours site B en échec",
       "description_animateur": "Aggravation : un des groupes de secours ne démarre pas. Situation critique pour ce bâtiment.",
       "action_attendue": "Mobiliser prestataire, décider de transférer les patients critiques du site B.",
@@ -75,31 +62,18 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S03", "t_min": 10, "type": "message", "cible": "CHV",
-=======
-      "id": "S03", "t_min": 10, "type": "message", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "Enedis : intervention dans 90 min",
       "description_animateur": "Enedis confirme une panne secteur. Intervention sous 90 minutes, rétablissement inconnu.",
       "action_attendue": "Planifier 2-3h de mode dégradé minimum.",
       "payload": {
         "expediteur": "ENEDIS",
-<<<<<<< HEAD
         "sujet": "Panne confirmée secteur Valmont Centre",
         "contenu": "Panne confirmée sur le transformateur 20kV du secteur Valmont Centre. Équipe technique engagée, arrivée sur site ~90 min. Rétablissement estimé 3-4h. Nous vous confirmerons dès que possible."
       }
     },
     {
       "id": "S04", "t_min": 18, "type": "incident", "cible": "CHV",
-=======
-        "sujet": "Panne confirmée secteur Example City Centre",
-        "contenu": "Panne confirmée sur le transformateur 20kV du secteur Example City Centre. Équipe technique engagée, arrivée sur site ~90 min. Rétablissement estimé 3-4h. Nous vous confirmerons dès que possible."
-      }
-    },
-    {
-      "id": "S04", "t_min": 18, "type": "incident", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "🔴 Activité réseau anormale détectée (EDR)",
       "description_animateur": "Pendant la panne, une alerte cyber arrive. Coïncidence ou exploitation de la confusion ?",
       "action_attendue": "Activer cellule cyber EN PARALLÈLE de la cellule technique.",
@@ -111,11 +85,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S05", "t_min": 24, "type": "decision", "cible": "CHV",
-=======
-      "id": "S05", "t_min": 24, "type": "decision", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "DÉCISION : transfert 12 résidents EHPAD site B",
       "description_animateur": "Décision cruciale : évacuer le site B avant épuisement batteries.",
       "action_attendue": "Coordination avec brancardage, ambulances externes, établissements d'accueil.",
@@ -126,11 +96,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S06", "t_min": 30, "type": "message", "cible": "CHV",
-=======
-      "id": "S06", "t_min": 30, "type": "message", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "CERT Santé : alerte secteur santé",
       "description_animateur": "Le CERT Santé signale une vague d'attaques nationale. Contexte clarifie.",
       "action_attendue": "Prendre la décision d'isoler ou pas, sachant qu'on a déjà la panne.",
@@ -141,11 +107,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S07", "t_min": 38, "type": "incident", "cible": "CHV",
-=======
-      "id": "S07", "t_min": 38, "type": "incident", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "Retour partiel alimentation (site A uniquement)",
       "description_animateur": "Une partie de l'alim revient. Soulagement partiel, mais site B toujours en panne.",
       "action_attendue": "Prioriser les services à remettre en route.",
@@ -157,11 +119,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S08", "t_min": 45, "type": "decision", "cible": "CHV",
-=======
-      "id": "S08", "t_min": 45, "type": "decision", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "DÉCISION : Stratégie de relance SI en contexte cyber",
       "description_animateur": "Faut-il remonter le SI en sachant qu'on a des IOC cyber ? Dilemme technique.",
       "action_attendue": "Décision avec arbitrage DSI/RSSI/Médecine.",
@@ -172,11 +130,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S09", "t_min": 52, "type": "message", "cible": "CHV",
-=======
-      "id": "S09", "t_min": 52, "type": "message", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "ARS : point situation consolidé",
       "description_animateur": "L'ARS demande un bilan consolidé des deux crises.",
       "action_attendue": "Produire un bilan croisé technique + cyber.",
@@ -187,11 +141,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S10", "t_min": 58, "type": "decision", "cible": "CHV",
-=======
-      "id": "S10", "t_min": 58, "type": "decision", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "DÉCISION : communication publique coordonnée",
       "description_animateur": "Comment parler de deux crises ? Transparence vs stabilité de la confiance publique.",
       "action_attendue": "Communiqué unique, message coordonné avec ARS.",

@@ -3,11 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<<<<<<< HEAD
 <title>SCRIBE v3.6.0-alpha119 | Crisis OS</title>
-=======
-<title>SCRIBE v3.6.0-alpha112 | Crisis OS</title>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="/api/config.js"></script>
@@ -43,23 +39,14 @@
   </div>
 </div>
 
-<<<<<<< HEAD
-<script src="/static/js/scribe.js?v=3000h165"></script>
-<script src="/static/js/coach.js?v=3000h165"></script>
-=======
-<script src="/static/js/scribe.js?v=3000h141"></script>
-<script src="/static/js/coach.js?v=3000h141"></script>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+<script src="/static/js/scribe.js?v=360beta"></script>
+<script src="/static/js/coach.js?v=360beta"></script>
 
 <header id="main-header" style="display:none">
   <div class="header-top">
   <div class="brand">
     <img src="/static/logo-scribe.png" alt="SCRIBE" style="height:30px;width:auto;flex-shrink:0">
-<<<<<<< HEAD
     <span style="font-family:var(--font-ui);font-weight:400;font-size:11px;color:#9aa0ac;letter-spacing:0">v3.6.0-alpha119</span>
-=======
-    <span style="font-family:var(--font-ui);font-weight:400;font-size:11px;color:#9aa0ac;letter-spacing:0">v3.6.0-alpha112</span>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     <span id="etab-sigle" style="font-family:var(--font-ui);font-size:11px;color:#000091;margin-left:4px;letter-spacing:0;padding:2px 8px;background:#eef0fb;border-radius:6px;font-weight:500"></span>
   </div>
   <div class="header-right">
@@ -123,11 +110,7 @@
          désactivé depuis cette version (le chat natif couvre le besoin).
          Le bouton reste dans le DOM pour que l'auto-découverte puisse le
          ré-afficher si un admin réactive le plugin via l'admin → Plugins. -->
-<<<<<<< HEAD
     <!-- v3000h154c — Onglet INTER-GHT retiré du HTML (le chat natif couvre le
-=======
-    <!-- v3000h146 — Onglet INTER-GHT retiré du HTML (le chat natif couvre le
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
          besoin). Suppression du bouton pour qu'il ne réapparaisse jamais, quel
          que soit le build/JS/état des plugins. Le conteneur tab-declarations
          reste présent (orphelin, non atteignable) pour ne rien casser. -->
@@ -183,13 +166,8 @@
     <button class="btn-login" onclick="doLogin()" data-i18n="login.connexion_btn">CONNEXION</button>
     <div class="login-err" id="login-err" data-i18n="login.err_creds">Identifiants incorrects</div>
     <div id="login-footer" style="font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center;margin-top:4px" data-i18n="login.footer">Réseau parallèle — Accès restreint</div>
-<<<<<<< HEAD
-    <div style="text-align:center;font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.25);margin-top:8px;letter-spacing:1px" data-i18n="login.credit">Designed by SCRIBE</div>
-    <div id="login-credit" style="font-family:var(--mono);font-size:8px;color:var(--muted);text-align:center;margin-top:6px;opacity:.6" data-i18n="login.credit">Designed by SCRIBE</div>
-=======
     <div style="text-align:center;font-family:var(--mono);font-size:8px;color:rgba(255,255,255,0.25);margin-top:8px;letter-spacing:1px" data-i18n="login.credit">Designed by Hervé PELLARIN</div>
     <div id="login-credit" style="font-family:var(--mono);font-size:8px;color:var(--muted);text-align:center;margin-top:6px;opacity:.6" data-i18n="login.credit">Designed by Hervé PELLARIN</div>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
   </div>
 </div>
 <script>
@@ -268,11 +246,7 @@ window.changeLanguagePreference = function(code) {
             <div style="font-family:var(--mono);font-size:32px;font-weight:700;color:var(--text)" id="db-incidents">—</div>
             <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px" id="db-incidents-sub"></div>
           </div>
-<<<<<<< HEAD
           <div id="db-kpi-capacite" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;border-left:3px solid #d97706;cursor:pointer" onclick="openTab('tab-capacite',document.getElementById('tab-btn-capacite'))">
-=======
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;border-left:3px solid #d97706;cursor:pointer" onclick="openTab('tab-capacite',document.getElementById('tab-btn-capacite'))">
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
             <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--muted);margin-bottom:6px;text-transform:uppercase" data-i18n="dashboard.kpi.capacite_globale">Capacité globale</div>
             <div style="font-family:var(--mono);font-size:32px;font-weight:700;color:var(--text)" id="db-capacite">—</div>
             <div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px" id="db-capacite-sub"></div>
@@ -672,10 +646,7 @@ window.changeLanguagePreference = function(code) {
       <option value="EN_COURS">En cours</option>
       <option value="ARRIVE" data-i18n="transferts.arrive">Arrivé</option>
       <option value="ANNULE" data-i18n="transferts.annule">Annulé</option>
-<<<<<<< HEAD
       <option value="ARCHIVE" data-i18n="transferts.archive">Archivé</option>
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     </select>
     <select id="tr-filter-site" onchange="trRender()" style="font-family:var(--mono);font-size:9px;padding:3px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
       <option value="" data-i18n="transferts.tous_sites">Tous sites</option>
@@ -1121,10 +1092,7 @@ window.changeLanguagePreference = function(code) {
               <div class="admin-field"><label data-i18n="admin.role">Rôle</label>
                 <select id="nu-role">
                   <option value="cellule_crise" data-i18n="admin.role_cellule">Cellule de crise (directeur, RSSI, cadre supérieur)</option>
-<<<<<<< HEAD
                   <option value="cadre_sante">Cadre de santé (capacité lits uniquement)</option>
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
                   <option value="soignant">Soignant (brancardage, transferts patient)</option>
                   <option value="admin" data-i18n="admin.role_admin">Admin (accès total)</option>
                 </select>
@@ -1135,11 +1103,7 @@ window.changeLanguagePreference = function(code) {
                   <strong>Admin</strong> : tout + gestion des comptes
                 </div>
               </div>
-<<<<<<< HEAD
-              <div class="admin-field" style="grid-column:1/-1"><label data-i18n="admin.perimetre_opt">Périmètre (optionnel)</label><input type="text" id="nu-perimetre" placeholder="ex: CANCEROLOGIE, DNA, Valmont..."></div>
-=======
               <div class="admin-field" style="grid-column:1/-1"><label data-i18n="admin.perimetre_opt">Périmètre (optionnel)</label><input type="text" id="nu-perimetre" placeholder="ex: CANCEROLOGIE, DNA, ANNECY..."></div>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
               <div class="admin-field" style="grid-column:1/-1"><div style="font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.4" data-i18n="admin.contact_hint">Email et téléphone servent aux notifications (mail / SMS) si les passerelles correspondantes sont configurées.</div></div>
             </div>
             <button class="btn-primary" style="margin-top:12px;font-size:11px" onclick="createUser()">+ Créer le compte</button>
@@ -1322,11 +1286,7 @@ window.changeLanguagePreference = function(code) {
               </div>
               <div>
                 <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px">SIGLE CIBLE</label>
-<<<<<<< HEAD
                 <input type="text" id="scen-cible" value="CHV"
-=======
-                <input type="text" id="scen-cible" value="CHAG"
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
                        style="width:100%;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:11px;margin-top:4px">
               </div>
             </div>
@@ -2400,31 +2360,9 @@ window.changeLanguagePreference = function(code) {
         </div>
       </div>
 
-<<<<<<< HEAD
       <!-- Canaux Mail/SMS retirés de la messagerie (h154k) : Mail et SMS servent
            désormais uniquement aux notifications et au partage de fichiers.
            La messagerie est interne uniquement. -->
-=======
-      <!-- 📧 MAIL (Phase 3) -->
-      <div class="msg-channel-section" data-canal="mail" style="margin-top:14px">
-        <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:.3px;color:#8a909c;padding:9px 14px 4px;display:flex;align-items:center;gap:6px">
-          <span>📧</span>
-          <span data-i18n="messagerie.canal_mail">MAIL</span>
-          <span style="font-size:8px;background:rgba(22,163,74,.15);color:#16a34a;padding:1px 5px;border-radius:3px;margin-left:auto" data-i18n="messagerie.canal_active">Activé</span>
-        </div>
-        <div style="padding:4px 14px;font-family:var(--mono);font-size:9px;color:var(--muted);font-style:italic" data-i18n="messagerie.mail_hint">Nouveau message → choisir le canal Mail</div>
-      </div>
-
-      <!-- 📱 SMS (Phase 3) -->
-      <div class="msg-channel-section" data-canal="sms" style="margin-top:8px;opacity:.45">
-        <div style="font-family:var(--font-ui);font-size:11px;font-weight:600;letter-spacing:.3px;color:#8a909c;padding:9px 14px 4px;display:flex;align-items:center;gap:6px">
-          <span>📱</span>
-          <span data-i18n="messagerie.canal_sms">SMS</span>
-          <span style="font-size:8px;background:rgba(0,49,137,.15);color:#003189;padding:1px 5px;border-radius:3px;margin-left:auto" data-i18n="messagerie.phase3_soon">Phase 3</span>
-        </div>
-        <div style="padding:4px 14px;font-family:var(--mono);font-size:9px;color:var(--muted);font-style:italic" data-i18n="messagerie.phase3_hint_sms">Disponible après configuration gateway SMS</div>
-      </div>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     </div>
 
     <!-- ── LISTE MESSAGES ──────────────────────────────────────────────── -->
@@ -2549,27 +2487,11 @@ window.changeLanguagePreference = function(code) {
     <!-- Body -->
     <div style="padding:14px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px">
 
-<<<<<<< HEAD
       <!-- Canal : messagerie interne uniquement (h154k) -->
-=======
-      <!-- Canal : interne ou mail (h77) -->
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       <input type="hidden" id="msg-compose-canal" value="interne">
       <input type="hidden" id="msg-compose-reply-to" value="">
       <input type="hidden" id="msg-compose-thread-id" value="">
 
-<<<<<<< HEAD
-=======
-      <div style="display:flex;align-items:center;gap:8px">
-        <label style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px" data-i18n="messagerie.canal_label">CANAL</label>
-        <select id="msg-compose-canal-select" onchange="msgComposeSetCanal(this.value)"
-                style="font-family:var(--mono);font-size:10px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text)">
-          <option value="interne" data-i18n="messagerie.canal_interne">INTERNE</option>
-          <option value="mail" data-i18n="messagerie.canal_mail">MAIL</option>
-        </select>
-      </div>
-
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       <!-- Destinataires -->
       <div>
         <label style="display:block;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px" data-i18n="messagerie.to_label">DESTINATAIRES</label>
@@ -2611,14 +2533,11 @@ window.changeLanguagePreference = function(code) {
       <!-- Corps -->
       <div>
         <label style="display:block;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px" data-i18n="messagerie.body_label">MESSAGE</label>
-<<<<<<< HEAD
         <div style="display:flex;gap:4px;margin-bottom:5px">
           <button type="button" onclick="msgBBWrap('b')" title="Gras [b]" style="font-family:var(--mono);font-size:11px;font-weight:700;width:28px;height:26px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);cursor:pointer">B</button>
           <button type="button" onclick="msgBBWrap('i')" title="Italique [i]" style="font-family:var(--mono);font-size:11px;font-style:italic;width:28px;height:26px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);cursor:pointer">I</button>
           <button type="button" onclick="msgBBUrl()" title="Lien de téléchargement [url]" style="font-family:var(--mono);font-size:10px;height:26px;padding:0 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);cursor:pointer">🔗 [url]</button>
         </div>
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         <textarea id="msg-compose-body" rows="9" 
                   placeholder="Rédigez votre message…" data-i18n-placeholder="messagerie.body_placeholder"
                   style="width:100%;box-sizing:border-box;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);resize:vertical;min-height:140px"></textarea>

@@ -634,7 +634,14 @@ async def voice_webhook(lid: int, request: Request, db: Session = Depends(get_db
             url = str(request.url)
             if not tw.validate_signature(cfg["auth_token"], url, params, sig):
                 logger.warning("Signature Twilio invalide sur /voice/%s", lid)
-                # on continue en mode tolérant (proxies réécrivent souvent l'URL)
+                # Par défaut : mode tolérant (les proxies réécrivent souvent l'URL,
+                # ce qui invalide la signature à tort). Rejet strict activable via
+                # SCRIBE_REPONDEUR_STRICT_SIG=1 quand l'URL publique n'est pas réécrite.
+                import os as _os_sig
+                if _os_sig.getenv("SCRIBE_REPONDEUR_STRICT_SIG") == "1":
+                    raise HTTPException(403, "Signature webhook invalide")
+    except HTTPException:
+        raise
     except Exception:
         params = dict(request.query_params)
 

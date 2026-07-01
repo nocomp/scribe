@@ -82,7 +82,6 @@ class SmsBackend(NotificationBackend):
                 text += " — " + payload.body[:avail]
         text += tail
         return text[:hard_max]
-<<<<<<< HEAD
 
     async def send_raw(self, text: str, target: str) -> NotifResult:
         """Envoi BRUT d'un SMS : pas de préfixe « [SCRIBE …] », pas de filtre
@@ -103,8 +102,6 @@ class SmsBackend(NotificationBackend):
         except Exception as e:
             logger.warning(f"SMS raw {provider} → {target}: {e}")
             return NotifResult(False, target, str(e))
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
     async def send(self, payload: NotifPayload, target: str) -> NotifResult:
         if not self.is_configured():

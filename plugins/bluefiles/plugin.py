@@ -72,7 +72,6 @@ def register(app: FastAPI) -> None:
     app.include_router(router,    prefix="/api/v1/bluefiles", tags=["BLUEFILES"])
     app.include_router(ui_router, prefix="/api/v1/bluefiles", tags=["BLUEFILES UI"])
 
-<<<<<<< HEAD
     # Restaurer le bit exécutable du binaire CLI (peut sauter à l'extraction du
     # ZIP / copie). Sinon cli_available() → False → bascule silencieuse en
     # simulation (cause historique du bug « envoyé mais jamais reçu »).
@@ -82,8 +81,6 @@ def register(app: FastAPI) -> None:
     except Exception:
         pass
 
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     # v3000h136 (audit cyber) — Purge des fichiers résiduels dans data/ : en
     # fonctionnement normal ils sont supprimés après chaque envoi, mais un crash
     # entre l'écriture et la purge pourrait laisser des données patient sur

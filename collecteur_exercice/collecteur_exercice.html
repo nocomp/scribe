@@ -443,7 +443,7 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
     <div style="font-family:var(--mo);font-size:9px;color:var(--mu);font-weight:700;letter-spacing:.5px;margin-bottom:6px;border-bottom:1px solid var(--bd);padding-bottom:6px">PARAMÈTRES DE GÉNÉRATION IA</div>
     <div class="form-row">
       <label>Sujet / contexte clinique *</label>
-      <textarea id="ia-sujet" placeholder="Ex: Femme enceinte hémorragie au bloc + prématuré. Saturation maternité CHANGE. Coordination SAMU et transfert vers GHTLMB nécessaires."></textarea>
+      <textarea id="ia-sujet" placeholder="Ex: Femme enceinte hémorragie au bloc + prématuré. Saturation maternité CHANGE. Coordination SAMU et transfert vers GHT1 nécessaires."></textarea>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
       <div class="form-row"><label>Durée exercice</label>
@@ -775,7 +775,7 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
           </div>
           <div><label style="font-family:var(--mo);font-size:9px;color:var(--mu)">Établissement destination</label>
             <select id="adhoc-tr-dest" style="width:100%;padding:4px;font-family:var(--mo);font-size:11px;background:var(--s);border:1px solid var(--bd);color:var(--tx);border-radius:4px">
-              <option value="CHAG">CHANGE</option><option value="GHTLMB">GHTLMB</option><option value="CHRUMILLY">CHRUMILLY</option><option value="HDLEMAN">HDLEMAN</option><option value="HPMB">HPMB</option><option value="CHB">CHB</option><option value="CHPG">CHPG</option>
+              <option value="CHV">CHANGE</option><option value="GHT1">GHT1</option><option value="CHR1">CHR1</option><option value="CH2">CH2</option><option value="CH3">CH3</option><option value="CH4">CH4</option><option value="CH5">CH5</option>
             </select>
           </div>
         </div>
@@ -1805,7 +1805,7 @@ function submitGenIA(){
   document.getElementById('ia-loading').style.display='block';
   document.getElementById('btn-gen').disabled=true;
   api('/api/exercice/generate',{method:'POST',body:JSON.stringify({
-    sujet:sujet,nb_sites:sites.length||1,sites:sites.length?sites:['CHAG'],
+    sujet:sujet,nb_sites:sites.length||1,sites:sites.length?sites:['CHV'],
     duree_exercice_min:parseInt(document.getElementById('ia-duree').value)||60,
     duree_reel_min:parseInt(document.getElementById('ia-duree-reel').value)||240,
     type_crise:document.getElementById('ia-type').value,
@@ -2248,7 +2248,7 @@ function openAdhocModal(){
   } catch(e){}
   if(!sites.length){
     // Fallback : lister toutes les instances G7 (le backend rejettera si non connectée)
-    sites=['CHAG','GHTLMB','CHRUMILLY','HDLEMAN','HPMB','CHB','CHPG'];
+    sites=['CHV','GHT1','CHR1','CH2','CH3','CH4','CH5'];
   }
   sites.forEach(function(s){
     var opt=document.createElement('option');

@@ -14,7 +14,7 @@ Un seul dossier scribe, deux launchers BAT.
 
 ```
 Poste Windows
-├── Instance 1 — CHAG       → http://localhost:8000   (scribe_chag.db)
+├── Instance 1 — CHV       → http://localhost:8000   (scribe_chag.db)
 ├── Instance 2 — GHT2 demo  → http://localhost:8001   (scribe_ght2.db)
 └── Collecteur Ubuntu 192.168.1.109 → http://192.168.1.109:9000
 ```
@@ -35,12 +35,12 @@ scribe_v140_clean/
 └── ... (autres fichiers)
 ```
 
-> Renommez simplement votre fichier de config CHAG en `config_chag.xml`
+> Renommez simplement votre fichier de config CHV en `config_chag.xml`
 > et placez-le à la racine du dossier.
 
 ---
 
-## Étape 2 — Lancer l'instance CHAG (port 8000)
+## Étape 2 — Lancer l'instance CHV (port 8000)
 
 Double-clic sur **LANCER_CHAG.bat**
 
@@ -48,7 +48,7 @@ Double-clic sur **LANCER_CHAG.bat**
 1. Copie `config_chag.xml` → `config.xml`
 2. Initialise `scribe_chag.db` avec vos sites et directeurs
 3. Importe vos UF depuis `uf.xlsx` (si présent)
-4. Charge le référentiel capacitaire CHAG (58 unités)
+4. Charge le référentiel capacitaire CHV (58 unités)
 5. Démarre sur http://localhost:8000
 
 Login : `dircrise` + mot de passe de votre `config_chag.xml`
@@ -81,7 +81,7 @@ python3 collecteur.py &
 
 Notez le **token admin** affiché au démarrage.
 
-### Enregistrer l'instance CHAG
+### Enregistrer l'instance CHV
 
 Dans `config_chag.xml`, activer la fédération :
 ```xml
@@ -99,7 +99,7 @@ Puis enregistrer côté collecteur :
 curl -X POST http://localhost:9000/api/admin/tokens \
   -H "Authorization: Bearer TOKEN_ADMIN_COLLECTEUR" \
   -H "Content-Type: application/json" \
-  -d '{"sigle":"CHAG","token":"token_chag_2026"}'
+  -d '{"sigle":"CHV","token":"token_chag_2026"}'
 ```
 
 ### Enregistrer l'instance GHT2
@@ -109,7 +109,7 @@ Dans `config_demo2.xml`, activer la fédération :
 <federation>
   <enabled>true</enabled>
   <collecteur_url>http://192.168.1.109:9000/api/push</collecteur_url>
-  <token>token_ght2_2026</token>    <!-- token DIFFÉRENT du CHAG -->
+  <token>token_ght2_2026</token>    <!-- token DIFFÉRENT du CHV -->
   <sync_crise>true</sync_crise>
   <sync_sanitaire>true</sync_sanitaire>
 </federation>
@@ -141,8 +141,8 @@ Puis relancer le BAT correspondant.
 
 | Action | Commande |
 |--------|---------|
-| Lancer CHAG | Double-clic `LANCER_CHAG.bat` |
+| Lancer CHV | Double-clic `LANCER_CHAG.bat` |
 | Lancer GHT2 | Double-clic `LANCER_GHT2_DEMO.bat` |
-| Reset CHAG | `del scribe_chag.db` puis relancer |
+| Reset CHV | `del scribe_chag.db` puis relancer |
 | Reset GHT2 | `del scribe_ght2.db` puis relancer |
 | Voir les tokens collecteur | `cat ~/tools/scribe/collecteur_tokens.json` |

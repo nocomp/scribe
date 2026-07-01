@@ -1,10 +1,10 @@
 """
-seed_uf_chag.py — Injecte les UF strictement conformes au référentiel CHAG 2026.
+seed_uf_chag.py — Injecte les UF strictement conformes au référentiel CHV 2026.
 Source: uf_chag_reference.json (extrait du fichier officiel FICHIER UF 2026).
-- ANNECY : site hospitalier principal Annecy (et sites dont le nom contient ANNECY)
+- ANNECY : site hospitalier principal Valmont (et sites dont le nom contient ANNECY)
 - ST JULIEN : Hôpital Saint-Julien (et sites dont le nom contient JULIEN)
-- Autres sites CHAG (Psychiatrie, Rumilly, etc.) : pas d'UF référentielles
-- Pour les GHTs démo : 5 UF représentatives par pôle CHAG
+- Autres sites CHV (Psychiatrie, Plainville, etc.) : pas d'UF référentielles
+- Pour les GHTs démo : 5 UF représentatives par pôle CHV
 
 Usage: python3 seed_uf_chag.py [DB_PATH]
 """
@@ -15,7 +15,7 @@ BASE = Path(__file__).parent
 JSON_PATH = BASE / 'uf_chag_reference.json'
 
 
-def seed_chag_ufs(db_path: str, label: str = "CHAG"):
+def seed_chag_ufs(db_path: str, label: str = "CHV"):
     if not Path(db_path).exists():
         print(f"  {label}: DB absente — skip")
         return
@@ -96,7 +96,7 @@ def seed_chag_ufs(db_path: str, label: str = "CHAG"):
 
 
 def seed_demo_ufs_from_chag(db_path: str, label: str):
-    """GHTs démo: pôles CHAG avec jusqu'à 5 UF représentatives par pôle."""
+    """GHTs démo: pôles CHV avec jusqu'à 5 UF représentatives par pôle."""
     if not Path(db_path).exists():
         print(f"  {label}: DB absente — skip"); return
     if not JSON_PATH.exists():
@@ -145,7 +145,7 @@ def seed_demo_ufs_from_chag(db_path: str, label: str):
     conn.commit()
     total = c.execute("SELECT COUNT(*) FROM unites_fonctionnelles").fetchone()[0]
     conn.close()
-    print(f"  {label}: {created} UF injectées (pôles CHAG, total {total})")
+    print(f"  {label}: {created} UF injectées (pôles CHV, total {total})")
 
 
 if __name__ == '__main__':
@@ -158,13 +158,13 @@ if __name__ == '__main__':
         else:
             seed_demo_ufs_from_chag(db_arg, label)
     else:
-        print("Seed UF — référentiel CHAG 2026")
+        print("Seed UF — référentiel CHV 2026")
         print("=" * 50)
         instances = [
-            (str(BASE / "scribe_chag.db"),  "CHAG",    "chag"),
-            (str(BASE / "scribe_ght2.db"),  "GHTLMB",  "demo"),
-            (str(BASE / "scribe_ght3.db"),  "GHTSAV",  "demo"),
-            (str(BASE / "scribe_ght4.db"),  "GHTAD38", "demo"),
+            (str(BASE / "scribe_chag.db"),  "CHV",    "chag"),
+            (str(BASE / "scribe_ght2.db"),  "GHT1",  "demo"),
+            (str(BASE / "scribe_ght3.db"),  "GHT2",  "demo"),
+            (str(BASE / "scribe_ght4.db"),  "GHT3", "demo"),
         ]
         for db_path, label, mode in instances:
             try:

@@ -19,7 +19,9 @@ MANIFEST = {
 
 def register(app: FastAPI) -> None:
     from plugins.federation.api import router
-    app.include_router(router, prefix="/api/v1/federation", tags=["SUPERVISION"])
+    from fastapi import Depends as _Depends
+    from app.api.auth import require_user as _require_user
+    app.include_router(router, prefix="/api/v1/federation", tags=["SUPERVISION"], dependencies=[_Depends(_require_user)])
 
 
 def start_background(app: FastAPI) -> None:

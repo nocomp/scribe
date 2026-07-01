@@ -846,8 +846,6 @@ import hashlib as _hashlib
 from fastapi import UploadFile, File
 import io as _io
 
-IMPORT_TEMP_PASSWORD = "Scribe2026!"
-IMPORT_TEMP_HASH     = _hashlib.sha256(IMPORT_TEMP_PASSWORD.encode()).hexdigest()
 IMPORT_VALID_ROLES   = {"admin", "directeur", "observateur"}
 
 
@@ -900,6 +898,8 @@ async def import_comptes_xlsx(
 
     created, updated, skipped = 0, 0, 0
     errors = []
+    temp_passwords = []   # [{username, password}] — mots de passe temporaires par compte
+    import secrets as _secrets_imp, bcrypt as _bcrypt_imp
 
     for row_idx in range(2, ws.max_row + 1):
         row = {}
@@ -942,11 +942,13 @@ async def import_comptes_xlsx(
             db.commit()
             updated += 1
         else:
+            _pwd = _secrets_imp.token_urlsafe(9)
+            _hash = _bcrypt_imp.hashpw(_pwd.encode(), _bcrypt_imp.gensalt()).decode()
             u = User(
                 username=username,
                 display_name=display_name,
                 role=role,
-                hashed_password=IMPORT_TEMP_HASH,
+                hashed_password=_hash,
                 perimetre=perim or None,
                 active=True,
                 must_change_password=True,
@@ -955,6 +957,7 @@ async def import_comptes_xlsx(
             try:
                 db.commit()
                 created += 1
+                temp_passwords.append({"username": username, "password": _pwd})
             except Exception as e:
                 db.rollback()
                 errors.append(f"Ligne {row_idx}: erreur création '{username}': {e}")
@@ -965,7 +968,7 @@ async def import_comptes_xlsx(
         "updated": updated,
         "skipped": skipped,
         "errors": errors,
-        "temp_password": IMPORT_TEMP_PASSWORD,
+        "temp_passwords": temp_passwords,
         "message": f"{created} créé(s), {updated} mis à jour, {skipped} ignoré(s)"
     }
 

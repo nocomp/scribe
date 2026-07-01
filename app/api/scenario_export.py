@@ -12,11 +12,7 @@ Usage :
     "description": "Crise réelle, pour rejouage annuel",
     "since": "2026-04-23T08:00:00Z",     // optionnel
     "until": "2026-04-23T18:00:00Z",     // optionnel
-<<<<<<< HEAD
     "cible_sigle": "CHV",
-=======
-    "cible_sigle": "MONCH",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     "anonymize": true,
     "include_incidents": true,
     "include_messages": true,
@@ -53,11 +49,7 @@ class ScenarioExportIn(BaseModel):
     description: str = Field(default="", max_length=2000)
     since: Optional[datetime] = None
     until: Optional[datetime] = None
-<<<<<<< HEAD
     cible_sigle: str = Field(default="CHV", max_length=20)
-=======
-    cible_sigle: str = Field(default="MONCH", max_length=20)
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     anonymize: bool = Field(default=True)
     include_incidents: bool = True
     include_messages: bool = True

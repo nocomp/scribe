@@ -90,7 +90,7 @@ bash lancer_scribe.sh
 
 ## Signaler une vulnérabilité
 
-**Email** :  (PGP key disponible sur demande)
+**Email** : contact@example.org (PGP key disponible sur demande)
 
 Merci de ne pas ouvrir d'issue GitHub publique pour les vulnérabilités de sécurité.
 Délai de réponse cible : 72h. Délai de correction : 30 jours pour les critiques.

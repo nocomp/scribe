@@ -6,7 +6,7 @@ import logging
 import os
 
 import uvicorn
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,13 +18,9 @@ import app.api.status_page  # noqa — enregistre les tables StatusPage
 from app.api import status_page  # v2.4.8.3 — explicitement pour include_router
 
 from app.api import sitrep, cartographie, attachments, i18n, mobilisation
-<<<<<<< HEAD
 from app.api import auth
-from app.api.auth import get_current_user, require_user
+from app.api.auth import get_current_user, require_user, require_admin
 from app.api import tasks
-=======
-from app.api import auth, tasks
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 from app.api import v140
 from app.api import scenario_export  # v2.4.8.3 — Générateur scénario depuis crise
 from app.api import lang_admin  # v2.4.8.3 — Admin sélection langue
@@ -161,7 +157,7 @@ app = FastAPI(
 )
 
 # CORS — restreint aux origines configurées (jamais wildcard en prod)
-_VPS = "http://vps-389073b7.vps.ovh.net"
+_VPS = "http://localhost"
 _ALL_PORTS = list(range(8000, 8010)) + list(range(6560, 6568)) + [9000, 7474, 7373]
 _allowed_origins = os.getenv(
     "SCRIBE_ALLOWED_ORIGINS",
@@ -189,15 +185,45 @@ UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app.mount("/static",  StaticFiles(directory=STATIC_DIR), name="static")
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+# /uploads — NE PAS servir en statique public : ce répertoire contient les pièces
+# jointes d'incident (potentiellement sensibles). Route authentifiée à la place :
+# jeton via en-tête Authorization OU paramètre ?token= (les <a href>/<img src> ne
+# peuvent pas envoyer d'en-tête). Anti-path-traversal.
+@app.get("/uploads/{fname:path}", tags=["Uploads"])
+def serve_upload(fname: str, request: Request, token: str = ""):
+    auth = request.headers.get("Authorization", "") or ""
+    tok = auth[7:].strip() if auth[:7].lower() == "bearer " else (token or "")
+    ok = False
+    if tok:
+        try:
+            from app.api.auth import _decode_token
+            from app.database import SessionLocal
+            from app.models import User
+            payload = _decode_token(tok)
+            uid = int(payload["sub"])
+            _db = SessionLocal()
+            try:
+                ok = _db.query(User).filter(User.id == uid, User.active == True).first() is not None
+            finally:
+                _db.close()
+        except Exception:
+            ok = False
+    if not ok:
+        raise HTTPException(status_code=401, detail="Authentification requise")
+    base = os.path.realpath(UPLOAD_DIR)
+    target = os.path.realpath(os.path.join(base, fname))
+    if not (target == base or target.startswith(base + os.sep)) or not os.path.isfile(target):
+        raise HTTPException(status_code=404, detail="Fichier introuvable")
+    return FileResponse(target)
 
 # ── Core (toujours actif) ──────────────────────────────────────────────────
-app.include_router(sitrep.router,       prefix="/api/v1/sitrep",       tags=["Incidents"])
+app.include_router(sitrep.router,       prefix="/api/v1/sitrep",       tags=["Incidents"], dependencies=[Depends(require_user)])
 app.include_router(mobilisation.router,  prefix="/api/v1/mobilisation", tags=["Mobilisation"])
-app.include_router(cartographie.router, prefix="/api/v1/cartographie", tags=["Cartographie"])
-app.include_router(attachments.router,  prefix="/api/v1/attachments",  tags=["PJ"])
+app.include_router(cartographie.router, prefix="/api/v1/cartographie", tags=["Cartographie"], dependencies=[Depends(require_user)])
+app.include_router(attachments.router,  prefix="/api/v1/attachments",  tags=["PJ"], dependencies=[Depends(require_user)])
 app.include_router(auth.router,         prefix="/api/v1/auth",         tags=["Auth"])
-app.include_router(tasks.router,        prefix="/api/v1/tasks",        tags=["Kanban"])
+app.include_router(tasks.router,        prefix="/api/v1/tasks",        tags=["Kanban"], dependencies=[Depends(require_user)])
 app.include_router(i18n.router,         prefix="",                     tags=["i18n"])
 # ── Admin plugins ──────────────────────────────────────────────────────────
 app.include_router(admin_plugins.router, prefix="/api/v1/admin",       tags=["Admin Plugins"])
@@ -332,11 +358,7 @@ def get_all_plugins_public():
 
 
 @app.get("/api/v1/_debug/plugins")
-<<<<<<< HEAD
-def debug_plugins_status(user=Depends(get_current_user)):
-=======
-def debug_plugins_status():
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+def debug_plugins_status(user=Depends(require_admin)):
     """v3.6.0-alpha3 — Diagnostic plugins : retourne les chargés et les erreurs.
     Pas d'auth ici (info non sensible : juste savoir si un plugin a planté au boot)."""
     from core.plugin_loader import _loaded_plugins, get_plugin_errors
@@ -607,11 +629,7 @@ async def public_status():
 
 @app.get("/health")
 def health():
-<<<<<<< HEAD
-    return {"status": "ok", "version": "3.6.0-beta", "build": "v3000h165"}
-=======
-    return {"status": "ok", "version": "3.6.0-alpha112", "build": "v3000h146"}
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+    return {"status": "ok", "version": "3.6.0-beta", "build": "beta-public"}
 
 
 @app.get("/api/push-test")
@@ -637,7 +655,7 @@ async def push_test():
 
 
 @app.get("/api/debug")
-def debug_info(user=Depends(get_current_user)):
+def debug_info(user=Depends(require_admin)):
     """Diagnostic rapide — config, DB, fédération."""
     fed_cfg = federation.FederationConfig()
     config_js = os.environ.get("SCRIBE_CONFIG_JS", os.path.join(STATIC_DIR, "config.js"))

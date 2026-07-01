@@ -5,7 +5,8 @@ Le fournisseur effectif est défini dans config.xml <ia> ou via variables d'envi
 Ce fichier contient uniquement les prompts et la logique métier.
 L'appel réseau est délégué à app/api/ai_router.py.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from app.api.ratelimit import rate_limit
 from pydantic import BaseModel
 from typing import List, Optional
 from app.api.ai_router import call_ai, get_ai_config, require_ia_configured
@@ -84,7 +85,7 @@ async def get_ia_config_info():
     }
 
 
-@router.post("/analyser")
+@router.post("/analyser", dependencies=[Depends(rate_limit("albert", 20, 60))])
 async def analyser_incident(req: AlbertRequest):
     """Analyse un incident individuel et retourne un avis structuré."""
     err = require_ia_configured()
@@ -113,7 +114,7 @@ async def analyser_incident(req: AlbertRequest):
         raise HTTPException(status_code=503, detail=f"IA indisponible : {str(e)}")
 
 
-@router.post("/situation-globale")
+@router.post("/situation-globale", dependencies=[Depends(rate_limit("albert", 20, 60))])
 async def analyser_situation_globale(req: SituationGlobaleRequest):
     """Analyse globale : tous les incidents ouverts + décisions prises."""
     if not req.incidents:
@@ -193,7 +194,7 @@ class AnalyseCriseRequest(BaseModel):
     type_analyse: Optional[str] = "crise" # "crise" | "capacitaire"
     mode: Optional[str] = "analyse_crise"
 
-@router.post("/analyse-crise")
+@router.post("/analyse-crise", dependencies=[Depends(rate_limit("albert", 20, 60))])
 async def analyse_crise(req: AnalyseCriseRequest):
     """Répond à une question libre sur une main courante ou situation capacitaire."""
     err = require_ia_configured()
@@ -232,7 +233,7 @@ class AskRequest(BaseModel):
     question: str
     contexte: str = ""
 
-@router.post("/ask")
+@router.post("/ask", dependencies=[Depends(rate_limit("albert", 20, 60))])
 async def ask_albert(req: AskRequest):
     """Question libre à Albert AI — avec contexte optionnel pour les questions de suivi."""
     err = require_ia_configured()

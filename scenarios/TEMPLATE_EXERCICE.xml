@@ -31,25 +31,14 @@
   </meta>
 
   <!-- ── Acteurs / Joueurs ── -->
-<<<<<<< HEAD
-  <!-- Ports exercice : CHV=8660 GHT1=8661 CH2=8662 CH3=8663 CH4=8664 CHB=8665 CH6=8666 -->
+  <!-- Ports exercice : CHV=8660 GHT1=8661 CHR1=8662 CH2=8663 CH3=8664 CH4=8665 CH5=8666 -->
   <acteurs>
     <acteur sigle="CHV" port="8660" role="coordinateur">
-      <nom_etablissement>Centre Hospitalier de Valmont</nom_etablissement>
+      <nom_etablissement>Centre Hospitalier Valmont</nom_etablissement>
       <joueurs>
         <joueur>
           <username>dircrise</username>
           <display_name>Dr Martin — Directeur de Crise CHV</display_name>
-=======
-  <!-- Ports exercice : CHAG=8660 GHTLMB=8661 CHRUMILLY=8662 HDLEMAN=8663 HPMB=8664 CHB=8665 CHPG=8666 -->
-  <acteurs>
-    <acteur sigle="CHAG" port="8660" role="coordinateur">
-      <nom_etablissement>Centre Hospitalier Annecy-Genevois</nom_etablissement>
-      <joueurs>
-        <joueur>
-          <username>dircrise</username>
-          <display_name>Dr Martin — Directeur de Crise CHAG</display_name>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
           <role_exercice>Directeur de cellule de crise</role_exercice>
           <responsabilites>
             <resp>Activation plan blanc</resp>
@@ -68,21 +57,12 @@
         </joueur>
       </joueurs>
     </acteur>
-<<<<<<< HEAD
     <acteur sigle="GHT1" port="8661" role="participant">
-      <nom_etablissement>GHT du Lac Mont-Blanc</nom_etablissement>
+      <nom_etablissement>GHT Lac Grandmont</nom_etablissement>
       <joueurs>
         <joueur>
           <username>dircrise</username>
           <display_name>Mme Bernard — Directrice GHT1</display_name>
-=======
-    <acteur sigle="GHTLMB" port="8661" role="participant">
-      <nom_etablissement>GHT Léman Mont-Blanc</nom_etablissement>
-      <joueurs>
-        <joueur>
-          <username>dircrise</username>
-          <display_name>Mme Bernard — Directrice GHTLMB</display_name>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
           <role_exercice>Récepteur transfert et coordinateur site</role_exercice>
           <responsabilites>
             <resp>Accueil transfert</resp>
@@ -100,11 +80,7 @@
     <stimulus>
       <id>S01</id>
       <t_min>0</t_min>            <!-- Minutes depuis le début de l'exercice -->
-<<<<<<< HEAD
       <cible>CHV</cible>         <!-- Sigle du site qui reçoit le stimulus -->
-=======
-      <cible>CHAG</cible>         <!-- Sigle du site qui reçoit le stimulus -->
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       <type>incident</type>
       <titre>Déclenchement — Nom court du stimulus</titre>
       <description_animateur>
@@ -116,11 +92,7 @@
         <fait>Description précise pour les joueurs — ce qu'ils voient dans SCRIBE</fait>
         <urgency>3</urgency>
         <type_crise>SANITAIRE</type_crise>
-<<<<<<< HEAD
         <site_id>CHV</site_id>
-=======
-        <site_id>CHAG</site_id>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         <unite_fonctionnelle>Maternité</unite_fonctionnelle>
         <declarant_nom>Sage-femme coordinatrice</declarant_nom>
         <analyse></analyse>
@@ -136,11 +108,7 @@
     <stimulus>
       <id>S02</id>
       <t_min>10</t_min>
-<<<<<<< HEAD
       <cible>CHV</cible>
-=======
-      <cible>CHAG</cible>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       <type>message</type>
       <titre>Message entrant — exemple</titre>
       <description_animateur>Message entrant simulé depuis le SAMU ou un partenaire</description_animateur>
@@ -154,7 +122,6 @@
     <stimulus>
       <id>S03</id>
       <t_min>20</t_min>
-<<<<<<< HEAD
       <cible>GHT1</cible>
       <type>incident</type>
       <titre>Stimulus sur site secondaire</titre>
@@ -169,22 +136,6 @@
         <declarant_nom>Médecin urgentiste</declarant_nom>
         <jalons>
           <jalon>Contacter CHV pour coordination</jalon>
-=======
-      <cible>GHTLMB</cible>
-      <type>incident</type>
-      <titre>Stimulus sur site secondaire</titre>
-      <description_animateur>Forcer la coordination inter-sites en injectant un incident sur GHTLMB</description_animateur>
-      <action_attendue>Communication CHAG ↔ GHTLMB et coordination</action_attendue>
-      <payload>
-        <fait>Description de l'incident pour les joueurs GHTLMB</fait>
-        <urgency>2</urgency>
-        <type_crise>SANITAIRE</type_crise>
-        <site_id>GHTLMB</site_id>
-        <unite_fonctionnelle>Urgences</unite_fonctionnelle>
-        <declarant_nom>Médecin urgentiste</declarant_nom>
-        <jalons>
-          <jalon>Contacter CHAG pour coordination</jalon>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
           <jalon>Préparer l'accueil</jalon>
         </jalons>
       </payload>
@@ -195,11 +146,7 @@
   <!-- ── Décisions attendues ── -->
   <decisions_attendues>
     <decision obligatoire="true" t_min="5" responsable="Directeur de crise">
-<<<<<<< HEAD
       Activation cellule de crise CHV
-=======
-      Activation cellule de crise CHAG
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     </decision>
     <decision obligatoire="true" t_min="10" responsable="Chef de service">
       Activation protocole hémorragie obstétricale
@@ -213,11 +160,7 @@
   <debriefing>
     <points_cles>
       <point>Réactivité lors de l'alerte initiale (T+0 à T+5 min)</point>
-<<<<<<< HEAD
       <point>Qualité de la communication inter-sites CHV ↔ GHT1</point>
-=======
-      <point>Qualité de la communication inter-sites CHAG ↔ GHTLMB</point>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       <point>Documentation dans SCRIBE en temps réel</point>
     </points_cles>
     <questions>

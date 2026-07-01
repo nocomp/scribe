@@ -22,7 +22,6 @@ from pathlib import Path
 from typing import Optional, List
 
 import uvicorn
-<<<<<<< HEAD
 
 # ── h153 — Transferts supervision (SQLAlchemy + SQLite dédié) ────────────────
 try:
@@ -69,8 +68,6 @@ except Exception as _e:
     _TR_ENABLED = False
     print(f"[collecteur] Transferts supervision désactivés : {_e}")
 from starlette.middleware.base import BaseHTTPMiddleware
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 from fastapi import FastAPI, HTTPException, Request, Depends, Form, File, UploadFile
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -230,11 +227,7 @@ SUPERVISOR_LABEL = _get_supervisor_label()
 
 def load_tokens():
     global tokens
-<<<<<<< HEAD
-    tokens = dict(scribe_TOKENS)
-=======
-    tokens = dict(ARC_ALPIN_TOKENS)
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+    tokens = dict(DEMO_TOKENS)
     if Path(TOKENS_FILE).exists():
         try:
             saved = json.loads(Path(TOKENS_FILE).read_text())
@@ -366,26 +359,6 @@ async def _on_startup():
 
 
 
-
-
-# ── v3000h48 — Messagerie ISO : embarque le VRAI plugin messagerie ───────────
-# La supervision utilise exactement le même module que les instances.
-try:
-    import os as _os_mm, sys as _sys_mm
-    _sys_mm.path.insert(0, _os_mm.path.dirname(_os_mm.path.abspath(__file__)))
-    import messagerie_mount as _msg_mount
-    # IDOR fix : la messagerie embarquée exige le token du collecteur (ADMIN_TOKEN
-    # ou session UI admin), en header Bearer ou ?token= (liens PJ). Sans token → 401.
-    def _msg_token_ok(tok):
-        if not tok:
-            return False
-        if tok == ADMIN_TOKEN:
-            return True
-        return tok in ui_sessions
-    _msg_mount.mount(app, token_validator=_msg_token_ok)
-except Exception as _e_mm:
-    import logging as _l_mm
-    _l_mm.getLogger("scribe.collecteur").error("[messagerie] montage KO : %s", _e_mm)
 
 
 # ── v3000h48 — Messagerie ISO : embarque le VRAI plugin messagerie ───────────
@@ -632,25 +605,17 @@ async def accept_pending(token_prefix: str, body: dict = {}):
     logger.info(f"Établissement accepté : {sigle} (token: {token[:12]}...)")
     return {"ok": True, "sigle": sigle, "message": f"{sigle} enrôlé avec succès"}
 
-<<<<<<< HEAD
-@app.post("/api/admin/tokens/Territoire", dependencies=[Depends(require_admin)])
-async def register_scribe_tokens():
-    """Enregistre les 4 tokens Territoire démo — utile si l'auto-register a échoué."""
-    added = []
-    for tok, sigle in scribe_TOKENS.items():
-=======
 @app.post("/api/admin/tokens/arc-alpin", dependencies=[Depends(require_admin)])
-async def register_arc_alpin_tokens():
-    """Enregistre les 4 tokens Arc Alpin démo — utile si l'auto-register a échoué."""
+async def register_scribe_demo_tokens():
+    """Enregistre les 4 tokens Réseau Démo démo — utile si l'auto-register a échoué."""
     added = []
-    for tok, sigle in ARC_ALPIN_TOKENS.items():
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+    for tok, sigle in DEMO_TOKENS.items():
         if tok not in tokens:
             tokens[tok] = sigle
             added.append(sigle)
     if added:
         save_tokens()
-        logger.info(f"Tokens Territoire enregistrés manuellement : {added}")
+        logger.info(f"Tokens Réseau Démo enregistrés manuellement : {added}")
     return {"ok": True, "added": added, "total": len(tokens),
             "message": f"{len(added)} token(s) ajouté(s), {len(tokens)} token(s) total"}
 
@@ -1669,11 +1634,7 @@ async def get_annuaire_interght():
     l'annuaire-public de chaque port d'instance connu, en parallèle, et on
     identifie chaque établissement par le sigle qu'il DÉCLARE lui-même. Plus de
     PORT_MAP codé en dur (qui cassait avec des sigles personnalisés comme
-<<<<<<< HEAD
-    « CH Rivemont » → tout retombait sur le port 8000). Dédup par sigle déclaré."""
-=======
     « CH THONON » → tout retombait sur le port 8000). Dédup par sigle déclaré."""
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     import httpx, asyncio
     ports = list(range(8000, 8010)) + [7474]   # instances nominales + démo
     async def _fetch(port):
@@ -1796,11 +1757,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <title>SCRIBE — Supervision Territoriale</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<<<<<<< HEAD
-<!-- polices terminal retirées v3000h165 — police système Suite, aucune dépendance externe -->
-=======
-<!-- polices terminal retirées v3000h146 — police système Suite, aucune dépendance externe -->
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+<!-- polices terminal retirées 3.6.0-beta — police système Suite, aucune dépendance externe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -2153,17 +2110,10 @@ body.light .sp-card:hover{border-color:#000091}
     <span data-mi18n="login.password">Mot de passe</span> : <code style="background:rgba(0,0,145,.1);padding:1px 4px;border-radius:2px">Scribe2026!</code><br>
     <span data-mi18n="login.first_time_hint" style="font-size:9px;opacity:.7">À changer après le premier login (onglet Comptes).</span>
   </div>
-<<<<<<< HEAD
-  <!-- v3.4 (h38m) — Footer crédite SCRIBE (projet personnel, pas CHV).
-       Liens hypertextes : nom → profil LinkedIn, "SCRIBE Crisis OS" → GitHub repo. -->
-  <div style="font-family:monospace;font-size:9px;color:#94a3b8;text-align:center;margin-top:8px;line-height:1.6">
-    <span data-mi18n="login.designed_by">Designed by</span> <a href="https://www.linkedin.com/in/%D0%BD%D0%BE-%D0%BA%D0%BE%D0%BC%D0%BF/" target="_blank" rel="noopener noreferrer" style="color:#003189;text-decoration:none;border-bottom:1px dotted #003189">SCRIBE</a><br>
-=======
-  <!-- v3.4 (h38m) — Footer crédite Hervé PELLARIN (projet personnel, pas CHAG).
+  <!-- v3.4 (h38m) — Footer crédite Hervé PELLARIN (projet personnel, pas CHV).
        Liens hypertextes : nom → profil LinkedIn, "SCRIBE Crisis OS" → GitHub repo. -->
   <div style="font-family:monospace;font-size:9px;color:#94a3b8;text-align:center;margin-top:8px;line-height:1.6">
     <span data-mi18n="login.designed_by">Designed by</span> <a href="https://www.linkedin.com/in/%D0%BD%D0%BE-%D0%BA%D0%BE%D0%BC%D0%BF/" target="_blank" rel="noopener noreferrer" style="color:#003189;text-decoration:none;border-bottom:1px dotted #003189">Hervé PELLARIN</a><br>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     <a href="https://github.com/nocomp/scribe" target="_blank" rel="noopener noreferrer" style="color:#003189;text-decoration:none;border-bottom:1px dotted #003189">SCRIBE Crisis OS</a> · <span data-mi18n="login.opensource">open source</span> · AGPL-3.0
   </div>
 </div>
@@ -2431,11 +2381,7 @@ async function submitMasterForcedPw() {
 
   <!-- KPI BAR -->
   <div id="kpi-bar">
-<<<<<<< HEAD
     <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.6.0-alpha119</div>
-=======
-    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.6.0-alpha112</div>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     <div class="kpi-cell"><span class="kpi-label">GHT</span><span class="kpi-val" id="k-ght">—</span></div>
     <div class="kpi-cell" style="cursor:pointer" title="Délai avant masquage incidents résolus (clic pour modifier)">
       <span class="kpi-label">RÉSOLU → masqué</span>
@@ -2492,19 +2438,11 @@ async function submitMasterForcedPw() {
         <div style="border-bottom:1px solid var(--border);padding:6px 12px;background:rgba(249,115,22,.04)">
           <div class="lh-sub" style="margin-bottom:4px;display:flex;align-items:center;justify-content:space-between">
             <span>🔧 INSTANCES SYNCHRONISÉES</span>
-<<<<<<< HEAD
-            <button onclick="registerscribeTokens()" class="lh-btn" style="cursor:pointer">
+            <button onclick="registerArcAlpinTokens()" class="lh-btn" style="cursor:pointer">
               ⚡ Enregistrer les instances
             </button>
           </div>
           <div class="lh-note">Force l'enregistrement des tokens des instances connues du master. Cliquez si une instance n'apparaît pas après démarrage.</div>
-=======
-            <button onclick="registerArcAlpinTokens()" class="lh-btn" style="cursor:pointer">
-              ⚡ Enregistrer
-            </button>
-          </div>
-          <div class="lh-note">Si la supervision est vide → cliquer pour forcer l'enregistrement des tokens des instances connues</div>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         </div>
         <div id="relay-section" style="border-bottom:1px solid var(--border);padding:8px 12px">
           <div class="lh-sub" style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
@@ -2601,7 +2539,6 @@ async function submitMasterForcedPw() {
 
       <div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:16px;max-width:780px">
         <div style="font-family:var(--mono);font-size:11px;font-weight:700;margin-bottom:4px;color:var(--blue)">🔐 <span data-i18n="supervision.bluefiles.admin_title">TRANSFERT SÉCURISÉ (BlueFiles)</span></div>
-<<<<<<< HEAD
         <div style="font-size:11px;color:var(--muted);margin-bottom:12px" data-i18n="supervision.bluefiles.admin_desc">Identifiants du compte BlueFiles — mêmes champs que la configuration côté instance.</div>
         <div id="adm-bf-mode" style="font-family:var(--mono);font-size:10px;margin-bottom:12px"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -2625,18 +2562,6 @@ async function submitMasterForcedPw() {
         <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
           <span id="adm-bf-state" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span>
           <button onclick="bfTestColl()" style="font-family:var(--mono);font-size:11px;padding:8px 14px;background:#f5f5fe;color:#000091;border:1px solid #000091;border-radius:5px;cursor:pointer" data-i18n="supervision.bluefiles.test">Tester la connexion</button>
-=======
-        <div style="font-size:11px;color:var(--muted);margin-bottom:12px" data-i18n="supervision.bluefiles.admin_desc">Identifiants du compte BlueFiles pour les envois sécurisés depuis la supervision.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <label style="font-size:10px;color:var(--muted)" data-i18n="supervision.bluefiles.login">Login<input id="adm-bf-login" type="text" autocomplete="off" placeholder="login@exemple.fr" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
-          <label style="font-size:10px;color:var(--muted)" data-i18n="supervision.bluefiles.password">Mot de passe<input id="adm-bf-pwd" type="password" autocomplete="off" placeholder="(laisser vide pour conserver)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
-          <label style="font-size:10px;color:var(--muted)" data-i18n="supervision.bluefiles.server">Serveur<input id="adm-bf-server" placeholder="api.bluefiles.com" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:12px;cursor:pointer"><input type="checkbox" id="adm-bf-enabled"> <span data-i18n="supervision.bluefiles.enable">Activer les envois sécurisés BlueFiles dans la messagerie supervision</span></label>
-        <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
-          <span id="adm-bf-state" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span>
-          <button onclick="bfTestColl()" style="font-family:var(--mono);font-size:11px;padding:8px 14px;background:#f5f5fe;color:#000091;border:1px solid #000091;border-radius:5px;cursor:pointer" data-i18n="supervision.bluefiles.test">Tester</button>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
           <button onclick="adminSave('bluefiles')" style="margin-left:auto;font-family:var(--mono);font-size:11px;padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700" data-i18n="supervision.bluefiles.save">Enregistrer</button>
         </div>
         <div id="adm-bf-test-result" style="display:none;margin-top:10px;font-size:12px;padding:8px 12px;border-radius:5px"></div>
@@ -2663,7 +2588,6 @@ async function submitMasterForcedPw() {
         <div style="font-family:var(--mono);font-size:11px;font-weight:700;margin-bottom:12px;color:var(--blue)">💬 PASSERELLE SMS</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <label style="font-size:10px;color:var(--muted)">Fournisseur<select id="adm-sms-provider" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"><option value="ovh">OVH</option><option value="twilio">Twilio</option><option value="free">Free Mobile (test)</option></select></label>
-<<<<<<< HEAD
           <label style="font-size:10px;color:var(--muted)">Endpoint<select id="adm-sms-endpoint" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"><option value="ovh-eu">OVH Europe (ovh-eu)</option><option value="ovh-ca">OVH Canada (ovh-ca)</option></select></label>
           <label style="font-size:10px;color:var(--muted)">Application Key<input id="adm-sms-appkey" type="password" autocomplete="off" placeholder="(laisser vide pour conserver)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
           <label style="font-size:10px;color:var(--muted)">Application Secret<input id="adm-sms-appsecret" type="password" autocomplete="off" placeholder="(laisser vide pour conserver)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
@@ -2720,21 +2644,6 @@ async function submitMasterForcedPw() {
         <button onclick="adminSyncConfigs()" id="adm-sync-btn" style="margin-top:14px;font-family:var(--mono);font-size:11px;padding:9px 18px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700">🔄 Synchroniser les configs vers les instances</button>
         <div style="font-size:9px;color:var(--muted);margin-top:6px">Pousse la config centrale (mail, SMS, BlueFiles) vers toutes les instances découvertes, matérialise les canaux et vérifie leur état opérationnel.</div>
         <div id="adm-sync-result" style="margin-top:12px"></div>
-=======
-          <label style="font-size:10px;color:var(--muted)">Émetteur (sender)<input id="adm-sms-sender" placeholder="SCRIBE" maxlength="11" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
-          <label style="font-size:10px;color:var(--muted)">Clé / identifiant API<input id="adm-sms-key" type="password" autocomplete="off" placeholder="(laisser vide pour conserver)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
-          <label style="font-size:10px;color:var(--muted)">Secret API<input id="adm-sms-secret" type="password" autocomplete="off" placeholder="(laisser vide pour conserver)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
-          <label style="font-size:10px;color:var(--muted)">URL base / endpoint<input id="adm-sms-url" placeholder="(optionnel)" style="width:100%;margin-top:3px;padding:7px;background:var(--s2,#fff);border:1px solid var(--border);border-radius:5px;font-size:12px"></label>
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:12px;cursor:pointer"><input type="checkbox" id="adm-sms-enabled"> Diffuser cette config SMS aux instances</label>
-        <div style="font-size:9px;color:var(--muted);margin-top:6px">Les champs spécifiques au fournisseur (ex. consumer_key / service_name OVH) restent complétables dans l'admin notifications de chaque instance.</div>
-        <div style="display:flex;align-items:center;gap:12px;margin-top:10px"><span id="adm-sms-state" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span><button onclick="adminSave('sms')" style="margin-left:auto;font-family:var(--mono);font-size:11px;padding:8px 16px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700">Enregistrer</button></div>
-      </div>
-
-      <div style="background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:16px;max-width:780px">
-        <div style="font-family:var(--mono);font-size:11px;font-weight:700;margin-bottom:10px;color:var(--blue)">📡 PROPAGATION</div>
-        <div id="adm-prop" style="font-size:11px;color:var(--muted);line-height:1.7">—</div>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       </div>
 
       <div style="font-size:10px;color:var(--muted);max-width:780px">La gestion des comptes (avec import Excel) arrive au prochain build.</div>
@@ -3234,11 +3143,7 @@ function closeModal(id) {
 function switchTab(id, btn) {
   // Masquer tous les panes (classe tab-pane ET nos panes custom)
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-<<<<<<< HEAD
   ['pane-chat','pane-comptes','pane-instances','pane-exercice','pane-admin','pane-transferts'].forEach(pid => {
-=======
-  ['pane-chat','pane-comptes','pane-instances','pane-exercice','pane-admin'].forEach(pid => {
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     var el = document.getElementById(pid);
     if (el) el.style.display = 'none';
   });
@@ -3247,11 +3152,7 @@ function switchTab(id, btn) {
   // Panes natifs via classe active
   var pane = document.getElementById('pane-' + id);
   if (pane) {
-<<<<<<< HEAD
     if (id === 'chat' || id === 'comptes' || id === 'instances' || id === 'exercice' || id === 'admin' || id === 'transferts') {
-=======
-    if (id === 'chat' || id === 'comptes' || id === 'instances' || id === 'exercice' || id === 'admin') {
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       pane.style.display = 'flex';
     } else {
       pane.classList.add('active');
@@ -3262,10 +3163,7 @@ function switchTab(id, btn) {
   if (id === 'messagerie') { /* iframe autonome — pas d'ancien rendu */ }
   if (id === 'statuts') renderStatuts(allData);
   if (id === 'admin') adminLoad();
-<<<<<<< HEAD
   if (id === 'transferts') { trSupLoad(); _trSupInitDnD(); }
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
   if (id === 'chat') {
     var iframe = document.getElementById('chat-iframe');
     if (iframe) {
@@ -3759,13 +3657,10 @@ async function fetchAll() {
     if (sumRes.ok) allData = await sumRes.json();
     if (pendRes.ok) pendingList = await pendRes.json();
   } catch(e) {}
-<<<<<<< HEAD
   try {
     const rl = await fetch('/api/repondeur-lignes');
     if (rl.ok) repondeurLignes = await rl.json();
   } catch(e) {}
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
   if (Object.keys(INSTANCE_PORTS).length === 0) loadInstancePorts();
   renderKPIs();
   renderEtabList();
@@ -3910,7 +3805,6 @@ function renderDetail(e) {
   const sites = e.sites || [];
   const incs  = e.incidents || [];
   const SECLBL = 'font-size:12px;font-weight:700;letter-spacing:.3px;color:#000091;margin-bottom:10px;text-transform:uppercase';
-<<<<<<< HEAD
 
   // h153 — Section TRANSFERTS remplace SITES dans le panneau détail
   const tActifsDetail = e.transferts_actifs || [];
@@ -3931,20 +3825,6 @@ function renderDetail(e) {
         ${mkTile(tAttente.length,  'En préparation', '#d97706', '#fffbeb', '⏳')}
         ${mkTile(tPartis.length,   'En route',       '#3b82f6', '#eff6ff', '🚑')}
         ${mkTile(tArrivees.length, 'Arrivés',        '#22c55e', '#f0fdf4', '✅')}
-=======
-
-  let sitesHtml = '';
-  if (sites.length) {
-    sitesHtml = `<div style="margin-bottom:20px">
-      <div style="${SECLBL}">Sites</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        ${sites.map(s => {
-          const sc = lvlCol(s.niveau);
-          return `<div style="padding:8px 12px;background:#fff;border:1px solid #ddd;border-radius:6px;font-size:13px;color:#161616">
-            <span style="color:${sc}">●</span> ${s.nom} <span style="color:#666">${s.nb_incidents||0} inc.</span>
-          </div>`;
-        }).join('')}
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       </div>
       ${tPartis.length ? `<div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">En route</div>
         ${tPartis.map(t => `<div style="font-size:12px;color:#374151;padding:6px 10px;background:#fff;border:1px solid #e5e7eb;border-left:3px solid #3b82f6;border-radius:0 5px 5px 0;margin-bottom:4px">
@@ -3979,7 +3859,6 @@ function renderDetail(e) {
     </div>`;
   }
 
-<<<<<<< HEAD
   // h148 — Vue capacité : utiliser _capacite (poussé par le plugin capacité de l'instance)
   const capData = e._capacite || {};
   const renforts = (capData.services_renfort || []);
@@ -4177,58 +4056,6 @@ function renderDetail(e) {
           '</div>';
       })()}
       ${spPill ? '<div style="margin-bottom:10px">' + spPill + '</div>' : ''}
-=======
-  const capData = e.capacite || {};
-  const renforts = (capData.services_renfort || []);
-  const tActifs = e.transferts_actifs || [];
-  const transfertsHtml = tActifs.length ? `<div style="margin-bottom:20px">
-    <div style="${SECLBL};color:#0063cb">🚑 Transferts actifs (${tActifs.length})</div>
-    ${tActifs.map(t=>`<div style="padding:8px 12px;background:#fff;border:1px solid #ddd;border-left:3px solid ${t.statut==='EN_COURS'?'#0063cb':'#b34000'};border-radius:0 6px 6px 0;margin-bottom:6px;font-size:13px;color:#161616">
-      ${t.statut==='EN_COURS'?'🚑':'⏳'} ${t.unite_origine} → ${t.unite_destination}
-      ${t.etablissement_destination!==e.sigle?`<span style="color:#666"> (${t.etablissement_destination})</span>`:''}
-    </div>`).join('')}
-  </div>` : '';
-
-  const spHtml = (() => {
-    const sp = e._status_page;
-    if (!sp) return '';
-    const faqVisible = (sp.faq||[]).filter(f => f.visible && f.reponse);
-    const spSvcs = (sp.services_si||[]).filter(s => s.statut && s.statut.toLowerCase() !== 'ok');
-    const spPec = (sp.prise_en_charge||[]).filter(s => s.statut && s.statut.toLowerCase() !== 'ok');
-    const impacted = [...spSvcs, ...spPec];
-    if (!faqVisible.length && !impacted.length && !sp.message_public) return '';
-    const url = statusUrlFor(e.sigle);
-    const openBtn = url
-      ? `<button onclick="openStatusPage('${e.sigle}')" title="Ouvrir la page de statut publique dans un nouvel onglet" style="font-size:12px;font-weight:600;padding:6px 14px;background:#000091;color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap">Ouvrir la page ↗</button>`
-      : '';
-    return `<div style="margin-bottom:20px;padding:16px;background:#fff;border:1px solid #ddd;border-radius:8px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
-        <div style="${SECLBL};margin-bottom:0">📋 Statut public</div>
-        ${openBtn}
-      </div>
-      ${sp.message_public ? `<div style="font-size:14px;color:#161616;margin-bottom:12px;line-height:1.5">${sp.message_public}</div>` : ''}
-      ${impacted.length ? `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:${faqVisible.length?'14px':'0'}">${impacted.map(s => {
-        const isDeg = ['hs','hors_service','hors service'].includes((s.statut||'').toLowerCase());
-        const c = isDeg ? '#ce0500' : '#b34000';
-        return `<div style="font-size:14px;color:#161616"><span style="color:${c}">●</span> ${s.label||s.id||''} — <span style="color:${c};font-weight:600">${isDeg?'Hors service':'Perturbé'}</span></div>`;
-      }).join('')}</div>` : ''}
-      ${faqVisible.length ? `<div style="border-top:1px solid #ededed;padding-top:12px;display:flex;flex-direction:column;gap:10px">${faqVisible.map(f =>
-        `<div style="font-size:14px;line-height:1.4"><div style="color:#161616;font-weight:600">${f.question}</div><div style="color:#3a3a3a;margin-top:2px">${f.reponse}</div></div>`
-      ).join('')}</div>` : ''}
-    </div>`;
-  })();
-
-  el.innerHTML = `
-    <div style="max-width:760px">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px">
-        <div style="width:12px;height:12px;border-radius:50%;background:${col};flex-shrink:0"></div>
-        <div>
-          <div style="font-size:24px;font-weight:700;color:#161616;letter-spacing:0">${e.nom||e.sigle}</div>
-          <div style="font-size:12px;color:#666;margin-top:2px">${e.sigle} · Dernière mise à jour : ${fmtDate(e.received_at)}</div>
-        </div>
-        <div style="margin-left:auto;padding:6px 14px;border-radius:5px;background:${col}14;border:1px solid ${col}55;font-size:12px;font-weight:700;color:${col}">${e.niveau_global||'—'}</div>
-      </div>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px">
         ${[
           ['Incidents ouverts', kpis.incidents_ouverts||0, kpis.incidents_ouverts>0?'#b34000':'#161616'],
@@ -4240,26 +4067,11 @@ function renderDetail(e) {
           <div style="font-size:11px;color:#666;margin-top:4px">${l}</div>
         </div>`).join('')}
       </div>
-<<<<<<< HEAD
       ${spDetailBody}
       ${sitesHtml}
       ${incsHtml}
       ${capHtml}
       ${transfertsHtml}
-=======
-      ${sitesHtml}
-      ${incsHtml}
-      ${renforts.length ? `<div style="margin-bottom:20px">
-        <div style="${SECLBL};color:#b34000">⚙ Mode dégradé — RH</div>
-        ${renforts.map(r=>`<div style="padding:10px 12px;background:#fff;border:1px solid #ddd;border-left:3px solid #b34000;border-radius:0 6px 6px 0;margin-bottom:6px;font-size:13px;color:#161616">
-          <b>${r.service}</b> · ${r.site}
-          ${r.besoin_renfort>0?`<span style="color:#b34000;margin-left:8px">⚠ Renfort : ${r.besoin_renfort}</span>`:''}
-          ${r.peut_preter>0?`<span style="color:#18753c;margin-left:8px">🤝 Prête : ${r.peut_preter}</span>`:''}
-        </div>`).join('')}
-      </div>` : ''}
-      ${transfertsHtml}
-      ${spHtml}
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     </div>`;
 }
 
@@ -4447,7 +4259,6 @@ function updateTransfertLayer() {
   });
 }
 
-<<<<<<< HEAD
 async function updateTransfertLayerOSRM() {
   if (!map) return;
   // Nettoyer les anciennes lignes OSRM (garder les lignes pointillées de base)
@@ -4545,8 +4356,6 @@ async function updateTransfertLayerOSRM() {
 
 
 
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 const _NIV_RANK = {NOMINAL:0, ALERTE:1, CRISE:2, CRITIQUE:3, INCONNU:0};
 function _worstNiv(a, b){ return (_NIV_RANK[a]||0) >= (_NIV_RANK[b]||0) ? a : b; }
 
@@ -4651,7 +4460,6 @@ async function adminLoad() {
     document.getElementById('adm-ia-key').placeholder = ia.has_api_key ? '•••• clé configurée (vide = conserver)' : 'aucune clé';
     document.getElementById('adm-ia-state').textContent = ia.has_api_key ? '🔑 clé configurée' : '— pas de clé';
     const bf = c.bluefiles || {};
-<<<<<<< HEAD
     document.getElementById('adm-bf-login').value = '';
     document.getElementById('adm-bf-server').value = bf.server || 'api.bluefiles.com';
     document.getElementById('adm-bf-pwd').value = '';
@@ -4665,14 +4473,6 @@ async function adminLoad() {
     if (bfPwState) bfPwState.textContent = bf.has_password ? '✓ Mot de passe configuré : ' + (bf.cli_password_preview || '') : '— Aucun mot de passe configuré';
     document.getElementById('adm-bf-state').textContent = bf.cli_ready ? '🔑 Prêt' : '— Non configuré';
     const bfEn = document.getElementById('adm-bf-enabled'); if (bfEn) bfEn.checked = !!bf.enabled;
-=======
-    document.getElementById('adm-bf-login').value = bf.login || '';
-    document.getElementById('adm-bf-server').value = bf.server || 'api.bluefiles.com';
-    document.getElementById('adm-bf-enabled').checked = !!bf.enabled;
-    document.getElementById('adm-bf-pwd').value = '';
-    document.getElementById('adm-bf-pwd').placeholder = bf.has_password ? '•••• configuré (vide = conserver)' : '(aucun)';
-    document.getElementById('adm-bf-state').textContent = bf.has_password ? '🔑 configuré' : '— non configuré';
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     const sm = c.smtp || {};
     document.getElementById('adm-smtp-host').value = sm.smtp_host || '';
     document.getElementById('adm-smtp-port').value = sm.smtp_port || 587;
@@ -4686,7 +4486,6 @@ async function adminLoad() {
     document.getElementById('adm-smtp-state').textContent = sm.has_smtp_pass ? '🔑 mot de passe configuré' : '— non configuré';
     const ss = c.sms || {};
     document.getElementById('adm-sms-provider').value = ss.provider || 'ovh';
-<<<<<<< HEAD
     document.getElementById('adm-sms-endpoint').value = ss.endpoint || 'ovh-eu';
     document.getElementById('adm-sms-service').value = ss.service_name || '';
     document.getElementById('adm-sms-sender').value = ss.sender || '';
@@ -4725,16 +4524,6 @@ async function adminLoad() {
     const ovEn = document.getElementById('adm-ov-enabled');   if (ovEn) ovEn.checked = !!ov.enabled;
     const ovState = document.getElementById('adm-ov-state');
     if (ovState) ovState.textContent = (ov.has_app_secret && ov.has_consumer_key) ? ('● Identifiants OVH enregistrés' + (ov.enabled ? ' — diffusés' : ' — non diffusés')) : '— Non configuré';
-=======
-    document.getElementById('adm-sms-sender').value = ss.sender || '';
-    document.getElementById('adm-sms-url').value = ss.base_url || '';
-    document.getElementById('adm-sms-enabled').checked = !!ss.enabled;
-    document.getElementById('adm-sms-key').value = '';
-    document.getElementById('adm-sms-secret').value = '';
-    document.getElementById('adm-sms-key').placeholder = ss.has_api_key ? '•••• configurée (vide = conserver)' : '(aucune)';
-    document.getElementById('adm-sms-secret').placeholder = ss.has_api_secret ? '•••• configuré (vide = conserver)' : '(aucun)';
-    document.getElementById('adm-sms-state').textContent = (ss.has_api_key || ss.has_api_secret) ? '🔑 identifiants configurés' : '— non configuré';
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     adminRenderProp(d.propagation || {});
   } catch(e) {}
 }
@@ -4746,7 +4535,6 @@ function adminRenderProp(p) {
   el.innerHTML = keys.sort().map(s => '🏥 <b>' + s + '</b> — config tirée le ' + new Date(p[s]).toLocaleString('fr-FR')).join('<br>');
 }
 
-<<<<<<< HEAD
 async function adminSyncConfigs() {
   const btn = document.getElementById('adm-sync-btn');
   const out = document.getElementById('adm-sync-result');
@@ -4781,8 +4569,6 @@ async function adminSyncConfigs() {
   }
 }
 
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 async function adminSave(domain) {
   let fields = {};
   if (domain === 'ia') {
@@ -4813,7 +4599,6 @@ async function adminSave(domain) {
     const p = document.getElementById('adm-smtp-pass').value; if (p) fields.smtp_pass = p;
   } else if (domain === 'sms') {
     fields = {
-<<<<<<< HEAD
       provider:     document.getElementById('adm-sms-provider').value,
       endpoint:     document.getElementById('adm-sms-endpoint').value,
       service_name: document.getElementById('adm-sms-service').value.trim(),
@@ -4846,15 +4631,6 @@ async function adminSave(domain) {
     };
     const ovsec = document.getElementById('adm-ov-secret').value;   if (ovsec) fields.app_secret = ovsec;
     const ovck  = document.getElementById('adm-ov-consumer').value; if (ovck)  fields.consumer_key = ovck;
-=======
-      provider: document.getElementById('adm-sms-provider').value,
-      sender:   document.getElementById('adm-sms-sender').value.trim(),
-      base_url: document.getElementById('adm-sms-url').value.trim(),
-      enabled:  document.getElementById('adm-sms-enabled').checked
-    };
-    const ak = document.getElementById('adm-sms-key').value; if (ak) fields.api_key = ak;
-    const sk = document.getElementById('adm-sms-secret').value; if (sk) fields.api_secret = sk;
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
   }
   try {
     const r = await fetch('/api/admin/central-config', {
@@ -4967,6 +4743,29 @@ function bfRenderRecipients() {
   ).join('');
 }
 
+// Upload avec progression réelle (fetch ne remonte pas la progression du corps).
+function xhrUploadColl(url, formData, onProgress) {
+  return new Promise(function(resolve, reject) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    if (typeof ADMIN_TOKEN !== 'undefined' && ADMIN_TOKEN) {
+      xhr.setRequestHeader('Authorization', 'Bearer ' + ADMIN_TOKEN);
+    }
+    if (xhr.upload && onProgress) {
+      xhr.upload.onprogress = function(e) { if (e.lengthComputable) onProgress(e.loaded, e.total); };
+    }
+    xhr.onload = function() {
+      resolve({
+        ok: xhr.status >= 200 && xhr.status < 300,
+        status: xhr.status,
+        json: function() { try { return Promise.resolve(JSON.parse(xhr.responseText)); } catch (e) { return Promise.resolve({}); } }
+      });
+    };
+    xhr.onerror = function() { reject(new Error('network')); };
+    xhr.send(formData);
+  });
+}
+
 async function bfDoSend() {
   const errEl = document.getElementById('bf-send-err');
   errEl.style.display = 'none';
@@ -4974,34 +4773,37 @@ async function bfDoSend() {
   if (!_bfRecipients.length) { errEl.textContent = 'Ajoutez au moins un destinataire.'; errEl.style.display='block'; return; }
   const btn = document.getElementById('bf-send-btn');
   if (btn) btn.disabled = true;
+  const bar = document.getElementById('bf-send-bar');
+  const label = document.getElementById('bf-send-label');
   document.getElementById('bf-send-progress').style.display = 'block';
-  document.getElementById('bf-send-bar').style.width = '30%';
+  if (bar) bar.style.width = '0%';
   const fd = new FormData();
   _bfFiles.forEach(f => fd.append('file', f));
   fd.append('recipients', JSON.stringify(_bfRecipients.map(e => ({email:e, acknowledge:false}))));
   fd.append('object', 'Document sécurisé — SCRIBE Supervision');
   fd.append('message', document.getElementById('bf-message').value || '');
   try {
-    const r = await fetch('/api/admin/bluefiles/send', {
-      method: 'POST',
-      headers: {'Authorization': 'Bearer '+ADMIN_TOKEN},
-      body: fd
+    const r = await xhrUploadColl('/api/admin/bluefiles/send', fd, function(loaded, total) {
+      const pct = total ? Math.round(loaded / total * 100) : 0;
+      if (bar) bar.style.width = pct + '%';
+      if (label) label.textContent = (pct >= 100) ? 'Chiffrement et envoi…' : ('Téléversement… ' + pct + ' %');
     });
-    document.getElementById('bf-send-bar').style.width = '90%';
     if (!r.ok) {
       const d = await r.json().catch(()=>({}));
       errEl.textContent = d.detail || 'Erreur envoi BlueFiles';
       errEl.style.display = 'block';
+      if (label) label.textContent = 'Envoi en cours…';
       if (btn) btn.disabled = false;
       return;
     }
-    document.getElementById('bf-send-bar').style.width = '100%';
+    if (bar) bar.style.width = '100%';
     const d = await r.json();
     toast('✓ Envoi BlueFiles réussi → '+d.recipients.join(', '), 'ok');
     setTimeout(() => {
       closeModal('modal-bf-send');
       document.getElementById('bf-send-progress').style.display = 'none';
-      document.getElementById('bf-send-bar').style.width = '30%';
+      if (bar) bar.style.width = '0%';
+      if (label) label.textContent = 'Envoi en cours…';
     }, 1200);
   } catch(e) {
     errEl.textContent = 'Erreur réseau : '+e;
@@ -5164,8 +4966,8 @@ function renderRelays(relays) {
     <button onclick="deleteRelay(${i})" style="font-family:var(--mono);font-size:7px;padding:2px 5px;background:transparent;border:1px solid rgba(255,45,85,.3);border-radius:3px;color:var(--red);cursor:pointer">✕</button>
   </div>`).join('');
 }
-async function registerscribeTokens() {
-  const r = await fetch('/api/admin/tokens/Territoire', {
+async function registerArcAlpinTokens() {
+  const r = await fetch('/api/admin/tokens/arc-alpin', {
     method: 'POST',
     headers: {'Authorization': 'Bearer ' + ADMIN_TOKEN}
   });
@@ -5820,7 +5622,6 @@ var HELP_ARTICLES = [
   title:{fr:'Sécurité & conformité',en:'Security & compliance',de:'Sicherheit & Compliance',es:'Seguridad y cumplimiento',it:'Sicurezza e conformità',nl:'Beveiliging & naleving'},
   kw:'securite security bcrypt rate limit cors headers rgpd hds donnees patient secret key',
   body:{fr:'<p>SCRIBE applique une base de sécurité robuste :</p><ul><li><b>Mots de passe hachés</b> (bcrypt), avec limitation des tentatives de connexion.</li><li><b>En-têtes HTTP de sécurité</b> et <b>CORS restreint</b> aux origines déclarées.</li><li><b>Clé secrète</b> stockée en variable d\'environnement, jamais en clair dans le code.</li></ul><p><b>Conformité données de santé</b> : les données nominatives patients ne quittent jamais l\'établissement vers la supervision (HDS / RGPD). Avant toute diffusion publique du code, on retire systématiquement les références internes (sigles, noms de sites, URLs, clés d\'API) ; les configurations de démonstration ne contiennent jamais d\'identifiants réels.</p>',
-<<<<<<< HEAD
        en:'<p>SCRIBE enforces a robust security baseline:</p><ul><li><b>Hashed passwords</b> (bcrypt), with login rate limiting.</li><li><b>HTTP security headers</b> and <b>CORS restricted</b> to declared origins.</li><li><b>Secret key</b> stored in an environment variable, never in plaintext in the code.</li></ul><p><b>Health-data compliance</b>: patient-identifying data never leaves the establishment toward supervision (HDS / GDPR). Before any public code release, internal references (codes, site names, URLs, API keys) are systematically removed; demo configurations never contain real credentials.</p>'}},
  {id:'bluefiles', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
   title:{fr:'Envoi sécurisé BlueFiles',en:'Secure BlueFiles transfer',de:'Sicherer BlueFiles-Versand',es:'Envío seguro BlueFiles',it:'Invio sicuro BlueFiles',nl:'Veilige BlueFiles-verzending'},
@@ -5828,10 +5629,6 @@ var HELP_ARTICLES = [
   body:{fr:'<p>SCRIBE intègre nativement <b>BlueFiles</b> (Forecomm), service d\'envoi sécurisé chiffré bout-en-bout, hébergé HDS. Il est disponible à deux niveaux :</p><ul><li><b>Depuis une instance établissement</b> : dans la messagerie (onglet MESSAGERIE), le bouton <b>« Envoi sécurisé par BlueFiles »</b> ouvre un panneau dédié (fichiers par glisser-déposer, destinataires email, commentaire). L\'envoi est un <b>transfert indépendant</b> — le contenu ne transite jamais par SCRIBE, il est chiffré côté BlueFiles.</li><li><b>Depuis la supervision</b> : dans l\'onglet MESSAGES, le bouton <b>« 🔒 Envoi sécurisé BlueFiles »</b> apparaît si le plugin est activé. Il permet d\'envoyer des fichiers sensibles depuis le poste de supervision territoriale.</li></ul><h2>Configuration (établissement)</h2><p>Dans <b>Admin → Plugins → BlueFiles</b> : renseigne le login, le mot de passe (chiffré Fernet au repos), et le serveur (défaut : <code>api.bluefiles.com</code>). Un bouton <b>Tester</b> vérifie la connexion sans envoyer de fichier.</p><h2>Configuration (supervision)</h2><p>Dans <b>Admin → Transfert sécurisé (BlueFiles)</b> : mêmes champs (login, mot de passe, serveur), case « Activer ». Bouton Tester disponible. Après activation, le bouton apparaît automatiquement dans la messagerie de supervision.</p><h2>Traçabilité & conformité</h2><ul><li>Chaque envoi est <b>tracé</b> dans SCRIBE (journal de bord interne).</li><li>Le contenu des fichiers ne touche jamais les serveurs SCRIBE — il est chiffré bout-en-bout chez BlueFiles.</li><li>Aucune copie locale des fichiers envoyés n\'est conservée sur SCRIBE.</li><li>Compatible HDS — idéal pour les données de santé sensibles (bilans patients, listes nominatives) à partager entre établissements en situation de crise.</li></ul><p>⚠️ Ce n\'est pas une pièce jointe à un message SCRIBE : c\'est un <b>envoi sécurisé indépendant</b>. Le destinataire reçoit un email BlueFiles avec un lien de téléchargement sécurisé.</p>',
        en:'<p>SCRIBE natively integrates <b>BlueFiles</b> (Forecomm), an end-to-end encrypted secure file transfer service with HDS hosting. It is available at two levels:</p><ul><li><b>From an establishment instance</b>: in the messaging module (MESSAGING tab), the <b>"Secure send via BlueFiles"</b> button opens a dedicated panel (drag-and-drop files, email recipients, comment). The send is an <b>independent transfer</b> — content never transits through SCRIBE, it is encrypted on the BlueFiles side.</li><li><b>From supervision</b>: in the MESSAGES tab, the <b>"🔒 Secure BlueFiles send"</b> button appears if the plugin is enabled. It allows sending sensitive files from the territorial supervision desk.</li></ul><h2>Setup (establishment)</h2><p>In <b>Admin → Plugins → BlueFiles</b>: enter the login, password (Fernet-encrypted at rest), and server (default: <code>api.bluefiles.com</code>). A <b>Test</b> button verifies the connection without sending a file.</p><h2>Setup (supervision)</h2><p>In <b>Admin → Secure transfer (BlueFiles)</b>: same fields (login, password, server), with an Enable checkbox. Test button available. Once enabled, the button appears automatically in the supervision messaging bar.</p><h2>Traceability & compliance</h2><ul><li>Every transfer is <b>logged</b> in SCRIBE (internal audit trail).</li><li>File content never touches SCRIBE servers — it is end-to-end encrypted at BlueFiles.</li><li>No local copy of sent files is retained on SCRIBE.</li><li>HDS-compatible — ideal for sensitive health data (patient summaries, staff lists) to share between establishments during a crisis.</li></ul><p>⚠️ This is not a SCRIBE message attachment: it is an <b>independent secure transfer</b>. The recipient receives a BlueFiles email with a secure download link.</p>'}},
 ];;
-=======
-       en:'<p>SCRIBE enforces a robust security baseline:</p><ul><li><b>Hashed passwords</b> (bcrypt), with login rate limiting.</li><li><b>HTTP security headers</b> and <b>CORS restricted</b> to declared origins.</li><li><b>Secret key</b> stored in an environment variable, never in plaintext in the code.</li></ul><p><b>Health-data compliance</b>: patient-identifying data never leaves the establishment toward supervision (HDS / GDPR). Before any public code release, internal references (codes, site names, URLs, API keys) are systematically removed; demo configurations never contain real credentials.</p>'}}
-];
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 function openHelpCenter(){ var o=document.getElementById('help-overlay'); if(!o)return; o.classList.add('open'); var L=helpLang2(); var s=document.getElementById('help-search'); if(s){s.placeholder=L==='fr'?'Rechercher dans l\'aide…':'Search help…'; s.value='';} var t=document.getElementById('help-title'); if(t)t.textContent=L==='fr'?'Centre d\'aide':'Help center'; helpRender(); if(s)setTimeout(function(){s.focus();},50); }
 function closeHelpCenter(){ var o=document.getElementById('help-overlay'); if(o)o.classList.remove('open'); }
 function helpRender(){
@@ -5851,14 +5648,6 @@ function helpShowArticle(id){
   artEl.innerHTML='<button id="help-back" onclick="helpRender()">← '+(L==='fr'?'Retour':'Back')+'</button><h2>'+(a.title[L]||a.title.en)+'</h2>'+(a.body[L]||a.body.en);
 }
 
-<<<<<<< HEAD
-=======
- {id:'bluefiles', cat:{fr:'Utilisation',en:'Usage',de:'Nutzung',es:'Uso',it:'Utilizzo',nl:'Gebruik'},
-  title:{fr:'Envoi sécurisé BlueFiles',en:'Secure BlueFiles transfer',de:'Sicherer BlueFiles-Versand',es:'Envío seguro BlueFiles',it:'Invio sicuro BlueFiles',nl:'Veilige BlueFiles-verzending'},
-  kw:'bluefiles securise hds chiffrement bout en bout transfert fichier patient donnees sensibles supervision messagerie envoi configuration admin',
-  body:{fr:'<p>SCRIBE intègre nativement <b>BlueFiles</b> (Forecomm), service d\'envoi sécurisé chiffré bout-en-bout, hébergé HDS. Il est disponible à deux niveaux :</p><ul><li><b>Depuis une instance établissement</b> : dans la messagerie (onglet MESSAGERIE), le bouton <b>« Envoi sécurisé par BlueFiles »</b> ouvre un panneau dédié (fichiers par glisser-déposer, destinataires email, commentaire). L\'envoi est un <b>transfert indépendant</b> — le contenu ne transite jamais par SCRIBE, il est chiffré côté BlueFiles.</li><li><b>Depuis la supervision</b> : dans l\'onglet MESSAGES, le bouton <b>« 🔒 Envoi sécurisé BlueFiles »</b> apparaît si le plugin est activé. Il permet d\'envoyer des fichiers sensibles depuis le poste de supervision territoriale.</li></ul><h2>Configuration (établissement)</h2><p>Dans <b>Admin → Plugins → BlueFiles</b> : renseigne le login, le mot de passe (chiffré Fernet au repos), et le serveur (défaut : <code>api.bluefiles.com</code>). Un bouton <b>Tester</b> vérifie la connexion sans envoyer de fichier.</p><h2>Configuration (supervision)</h2><p>Dans <b>Admin → Transfert sécurisé (BlueFiles)</b> : mêmes champs (login, mot de passe, serveur), case « Activer ». Bouton Tester disponible. Après activation, le bouton apparaît automatiquement dans la messagerie de supervision.</p><h2>Traçabilité & conformité</h2><ul><li>Chaque envoi est <b>tracé</b> dans SCRIBE (journal de bord interne).</li><li>Le contenu des fichiers ne touche jamais les serveurs SCRIBE — il est chiffré bout-en-bout chez BlueFiles.</li><li>Aucune copie locale des fichiers envoyés n\'est conservée sur SCRIBE.</li><li>Compatible HDS — idéal pour les données de santé sensibles (bilans patients, listes nominatives) à partager entre établissements en situation de crise.</li></ul><p>⚠️ Ce n\'est pas une pièce jointe à un message SCRIBE : c\'est un <b>envoi sécurisé indépendant</b>. Le destinataire reçoit un email BlueFiles avec un lien de téléchargement sécurisé.</p>',
-       en:'<p>SCRIBE natively integrates <b>BlueFiles</b> (Forecomm), an end-to-end encrypted secure file transfer service with HDS hosting. It is available at two levels:</p><ul><li><b>From an establishment instance</b>: in the messaging module (MESSAGING tab), the <b>"Secure send via BlueFiles"</b> button opens a dedicated panel (drag-and-drop files, email recipients, comment). The send is an <b>independent transfer</b> — content never transits through SCRIBE, it is encrypted on the BlueFiles side.</li><li><b>From supervision</b>: in the MESSAGES tab, the <b>"🔒 Secure BlueFiles send"</b> button appears if the plugin is enabled. It allows sending sensitive files from the territorial supervision desk.</li></ul><h2>Setup (establishment)</h2><p>In <b>Admin → Plugins → BlueFiles</b>: enter the login, password (Fernet-encrypted at rest), and server (default: <code>api.bluefiles.com</code>). A <b>Test</b> button verifies the connection without sending a file.</p><h2>Setup (supervision)</h2><p>In <b>Admin → Secure transfer (BlueFiles)</b>: same fields (login, password, server), with an Enable checkbox. Test button available. Once enabled, the button appears automatically in the supervision messaging bar.</p><h2>Traceability & compliance</h2><ul><li>Every transfer is <b>logged</b> in SCRIBE (internal audit trail).</li><li>File content never touches SCRIBE servers — it is end-to-end encrypted at BlueFiles.</li><li>No local copy of sent files is retained on SCRIBE.</li><li>HDS-compatible — ideal for sensitive health data (patient summaries, staff lists) to share between establishments during a crisis.</li></ul><p>⚠️ This is not a SCRIBE message attachment: it is an <b>independent secure transfer</b>. The recipient receives a BlueFiles email with a secure download link.</p>'}},
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
 </script>
 </body>
@@ -5980,10 +5769,7 @@ async def coll_msg_to_instance(
     recipient_username: str = Form(""),
     origin_sigle: str = Form(""),
     origin_nom:   str = Form(""),
-<<<<<<< HEAD
     origin_username: str = Form(""),
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     fichiers:     list[UploadFile] = File([]),
     caller:       str = Depends(require_node_or_admin),
 ):
@@ -5994,16 +5780,11 @@ async def coll_msg_to_instance(
     `caller` = sigle de l'appelant (SUPERVISEUR si admin)."""
     # h72 — Résolution du port cible par DÉCOUVERTE (sigle réellement déclaré
     # par chaque instance), comme /api/annuaire. Le PORT_MAP codé en dur cassait
-<<<<<<< HEAD
-    # avec des sigles personnalisés (« CH Rivemont » → défaut 8000 → message livré
-=======
     # avec des sigles personnalisés (« CH THONON » → défaut 8000 → message livré
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     # à la mauvaise instance). Repli PORT_MAP uniquement si la découverte échoue.
     import httpx, asyncio
     _want = (target_sigle or "").upper().strip()
     _ports = list(range(8000, 8010)) + [7474]
-<<<<<<< HEAD
 
     # ── Diffusion à TOUTES les instances (communiqué) : target_sigle == "*" ──
     if _want == "*":
@@ -6026,7 +5807,8 @@ async def coll_msg_to_instance(
         _found = [d for d in await asyncio.gather(*[_disc(pp) for pp in _ports]) if d and d.get("sigle")]
         _bdata = {"origin_sigle": "SUPERVISION", "origin_nom": "Supervision",
                   "sujet": sujet, "contenu": contenu,
-                  "origin_username": origin_username or "", "recipient_username": ""}
+                  "origin_username": origin_username or "", "recipient_username": "",
+                  "node_token": os.getenv("SCRIBE_NODE_TOKEN", "")}
         _ok = {"n": 0}
         async def _one(d):
             _u = f"http://127.0.0.1:{d['port']}/api/v1/messagerie/ingest"
@@ -6061,8 +5843,6 @@ async def coll_msg_to_instance(
             pass
         return {"ok": _ok["n"] > 0, "broadcast": True, "count": _ok["n"], "total": len(_found)}
 
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     async def _probe(p):
         try:
             async with httpx.AsyncClient(timeout=2.5) as _c:
@@ -6080,13 +5860,8 @@ async def coll_msg_to_instance(
             port = _p
             break
     if port is None:
-<<<<<<< HEAD
-        PORT_MAP = {"CHV": "8000", "GHT1": "8001", "GHTSAV": "8002", "GHTAD38": "8003",
-                    "CH2": "8002", "CH3": "8003", "CH4": "8004", "CHB": "8005", "CH6": "8006"}
-=======
-        PORT_MAP = {"CHAG": "8000", "GHTLMB": "8001", "GHTSAV": "8002", "GHTAD38": "8003",
-                    "CHRUMILLY": "8002", "HDLEMAN": "8003", "HPMB": "8004", "CHB": "8005", "CHPG": "8006"}
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+        PORT_MAP = {"CHV": "8000", "GHT1": "8001", "GHT2": "8002", "GHT3": "8003",
+                    "CHR1": "8002", "CH2": "8003", "CH3": "8004", "CH4": "8005", "CH5": "8006"}
         port = PORT_MAP.get(_want, "8000")
     url = f"http://127.0.0.1:{port}/api/v1/messagerie/ingest"
 
@@ -6103,11 +5878,9 @@ async def coll_msg_to_instance(
     data = {"origin_sigle": origin_sigle or (caller if not _is_superviseur else "SUPERVISION"),
             "origin_nom":   origin_nom or (caller if not _is_superviseur else "Supervision"),
             "sujet": sujet, "contenu": contenu,
-<<<<<<< HEAD
             "origin_username": origin_username or "",
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
-            "recipient_username": recipient_username or ""}
+            "recipient_username": recipient_username or "",
+            "node_token": os.getenv("SCRIBE_NODE_TOKEN", "")}
 
     import httpx
     delivered, detail = False, ""
@@ -6169,7 +5942,6 @@ async def admin_central_config_get(_ok: bool = Depends(require_admin)):
     """Console admin : config centrale, secrets MASQUÉS + état de propagation."""
     if not _ccs:
         raise HTTPException(500, "magasin de config indisponible")
-<<<<<<< HEAD
     masked = _ccs.masked()
     # h146 — aligner bluefiles sur le format instance :
     # ajouter has_login, cli_ready, et un aperçu masqué du login (non-secret)
@@ -6184,9 +5956,6 @@ async def admin_central_config_get(_ok: bool = Depends(require_admin)):
     bf["cli_password_preview"] = ("•" * min(len(pwd_val), 6) if pwd_val else "")
     masked["bluefiles"] = bf
     return {"config": masked, "propagation": last_config_pull}
-=======
-    return {"config": _ccs.masked(), "propagation": last_config_pull}
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
 
 @app.post("/api/admin/central-config")
@@ -6219,7 +5988,6 @@ async def central_config_pull(credentials=Depends(security)):
     return {"ok": True, "config": _ccs.for_instance()}
 
 
-<<<<<<< HEAD
 @app.post("/api/admin/sync-configs")
 async def admin_sync_configs(credentials=Depends(security)):
     """Pousse la config centrale vers TOUTES les instances découvertes et renvoie
@@ -6364,8 +6132,6 @@ async def diffuser_fiche_reflexe(
             "count": sent["n"], "total": len(found), "nom": nom}
 
 
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 # ── h145 — BlueFiles supervision : status + envoi ────────────────────────────
 
 def _coll_bf_binary():
@@ -6711,13 +6477,13 @@ async def get_territorial_debug(_ok: bool = Depends(require_admin)):
     return debug
 
 
-# v3000h25 — Assistant territorial (vue agrégée Territoire)
+# v3000h25 — Assistant territorial (vue agrégée Réseau Démo)
 @app.get("/api/territorial-assistant")
 async def get_territorial_assistant():
     """v3000h25 — Assistant de supervision territoriale.
 
     Évalue les 5 règles territoriales (RT1-RT5) sur la vue agrégée des
-    établissements Territoire et retourne les alertes + un résumé d'état.
+    établissements Réseau Démo et retourne les alertes + un résumé d'état.
 
     Sans auth pour faciliter la supervision (la vue agrégée n'expose
     pas de données patients nominatives). Si on veut auth plus tard,
@@ -7088,16 +6854,11 @@ def verify_session(credentials=Depends(security)):
 
 # ── Démarrage ──────────────────────────────────────────────────────────────
 
-<<<<<<< HEAD
-# ── Tokens Territoire démo — enregistrés automatiquement si tokens vides ─────
+# ── Tokens Réseau Démo démo — enregistrés automatiquement si tokens vides ─────
 # h153 — Tokens pré-enrôlés retirés : ils étaient spécifiques à un déploiement
 # G7 et n'ont pas leur place dans le code public.
 # Les instances s'enrôlent dynamiquement via /api/admin/pending → accept.
-scribe_TOKENS = {}
-=======
-# ── Tokens Arc Alpin démo — enregistrés automatiquement si tokens vides ─────
-ARC_ALPIN_TOKENS = {}  # tokens internes retirés du build public
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+DEMO_TOKENS = {}
 
 if __name__ == "__main__":
     load_tokens()
@@ -7113,11 +6874,7 @@ if __name__ == "__main__":
     else:
         print(f"  ℹ Aucun token — les GHTs apparaîtront en ⏳ EN ATTENTE")
         print(f"  → Ouvrir http://localhost:9000 et cliquer ✓ ACCEPTER")
-<<<<<<< HEAD
-        print(f"  → OU cliquer ⚡ Enregistrer (section TOKENS Territoire)")
-=======
         print(f"  → OU cliquer ⚡ Enregistrer (section TOKENS ARC ALPIN)")
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
     nb_etab = len(tokens)
     nb_data  = len(etablissements)
@@ -7133,15 +6890,11 @@ if __name__ == "__main__":
         print("  ► Aucun établissement enregistré.")
         print("  → Les GHT qui poussent arrivent en section ⏳ EN ATTENTE")
         print("  → Ouvrir http://localhost:9000 et cliquer ✓ ACCEPTER\n")
-<<<<<<< HEAD
-        print("  Tokens Territoire démo :")
-        print("    CHV    : token_demo_a_changer")
-        print("    GHT1  : token_demo")
-=======
-        print("  Tokens Arc Alpin démo :")
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
-        print("    GHTSAV  : token_ghtsav_demo_2026")
-        print("    GHTAD38 : token_ghtad38_demo_2026\n")
+        print("  Tokens Réseau Démo démo :")
+        print("    CHV    : demo_token_chv")
+        print("    GHT1  : demo_token_ght1")
+        print("    GHT2  : demo_token_ght2")
+        print("    GHT3 : demo_token_ght3\n")
     else:
         etabs = list(set(tokens.values()))
         print(f"  ► Etablissements actifs : {', '.join(etabs)}")

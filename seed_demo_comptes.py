@@ -88,7 +88,7 @@ def site_tag(site_nom, index):
     return tag
 
 # ── Services par type d'établissement ─────────────────────────────────────
-# Comptes de messagerie = 1 par pôle (affiché dans l'onglet SOINS)
+# Comptes de messagerie = 1 par pôle CHV (affichés dans l'onglet SOINS)
 # + comptes transverses
 SERVICES_POLES_PRINCIPAL = [
     "urgences",      # pôle URGENCES

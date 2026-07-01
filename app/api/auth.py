@@ -141,6 +141,35 @@ def _check_rate_limit(ip: str):
     attempts.append(now)
 
 
+# ── Verrou par compte (en plus du rate-limit par IP) ─────────────────────────
+# Bloque le bourrage d'identifiants ciblant un compte précis depuis des IP
+# variées. Se comporte identiquement que le compte existe ou non (pas
+# d'énumération : defaultdict + même fenêtre temporelle).
+_account_fails: dict = defaultdict(list)   # username(lower) → [timestamps échecs]
+_ACCT_MAX     = 5
+_ACCT_LOCKOUT = 900   # 15 min
+
+def _account_locked(username: str):
+    now = time.time()
+    key = (username or "").lower()
+    fails = [t for t in _account_fails[key] if now - t < _ACCT_LOCKOUT]
+    _account_fails[key] = fails
+    if len(fails) >= _ACCT_MAX:
+        wait = int(_ACCT_LOCKOUT - (now - fails[0]))
+        if wait > 0:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Trop de tentatives sur ce compte. Réessayez dans {wait}s.",
+                headers={"Retry-After": str(wait)},
+            )
+
+def _account_record_fail(username: str):
+    _account_fails[(username or "").lower()].append(time.time())
+
+def _account_clear(username: str):
+    _account_fails.pop((username or "").lower(), None)
+
+
 # ── Helpers ──────────────────────────────────────────────
 
 def _make_token(user_id: int, username: str, role: str) -> str:
@@ -303,7 +332,6 @@ def ensure_admin(db: Session):
         if not existing.hashed_password.startswith("$2"):
             existing.hashed_password = _hash(ADMIN_PASS)
             db.commit()
-<<<<<<< HEAD
         # h147 — Rétrofit must_change_password : uniquement si le compte
         # utilise ENCORE le mot de passe par défaut (ADMIN_PASS env) ET
         # que must_change_password n'a jamais été acquitté (valeur False en DB).
@@ -328,21 +356,6 @@ def ensure_admin(db: Session):
             try:
                 existing.must_change_password = True
                 db.commit()
-=======
-        # v3.4 (h38d) — Rétrofit : si un admin existant utilise encore le
-        # mdp par défaut (Scribe2026!), forcer `must_change_password=True`
-        # au prochain login. Hors mode exercice.
-        # Ce code s'applique UNE FOIS : dès que l'admin a changé son mdp,
-        # `verify_password(ADMIN_PASS, hash)` est False → on ne touche
-        # plus à `must_change_password` (l'utilisateur reste libre).
-        is_exercice = os.getenv("SCRIBE_EXERCICE_MODE", "0") == "1"
-        if (os.getenv("SCRIBE_ADMIN_MUST_CHANGE", "1") != "0") and not is_exercice \
-                and ADMIN_PASS and verify_password(ADMIN_PASS, existing.hashed_password):
-            try:
-                if not getattr(existing, "must_change_password", False):
-                    existing.must_change_password = True
-                    db.commit()
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
             except Exception:
                 pass
         # v3.0.0 — En MODE EXERCICE uniquement : forcer la resynchronisation du
@@ -405,12 +418,17 @@ def login(request: Request, body: LoginIn, db: Session = Depends(get_db)):
     # Rate limiting par IP
     client_ip = getattr(request.client, "host", "unknown")
     _check_rate_limit(client_ip)
+    # Verrou par compte (anti-bourrage ciblé)
+    _account_locked(body.username)
     # S'assurer que le compte admin existe et a un hash bcrypt
     ensure_admin(db)
     user = db.query(User).filter(User.username == body.username, User.active == True).first()
     # Message d'erreur identique (évite l'énumération de comptes)
     if not user or not _verify(body.password, user.hashed_password):
+        _account_record_fail(body.username)
         raise HTTPException(status_code=401, detail="Identifiants incorrects")
+    # Connexion réussie → réinitialiser le compteur d'échecs du compte
+    _account_clear(body.username)
     # Migrer SHA-256 → bcrypt à la prochaine connexion réussie
     if not user.hashed_password.startswith("$2"):
         user.hashed_password = _hash(body.password)

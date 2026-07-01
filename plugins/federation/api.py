@@ -360,7 +360,7 @@ async def push_to_collecteur(cfg: FederationConfig, payload: dict) -> bool:
                     "Content-Type":  "application/json",
                     "X-Scribe-Version": "6",
                     # h153 — X-Scribe-Etab doit être ASCII (RFC 7230).
-                    # Les sigles accentués (ex: "Hôpitaux Du du Lac") cassent httpx.
+                    # Les sigles accentués (ex: "Hôpitaux Du Lac") cassent httpx.
                     "X-Scribe-Etab": unicodedata.normalize("NFD", cfg.etablissement_sigle or "").encode("ascii","ignore").decode("ascii").strip(),
                 },
             )

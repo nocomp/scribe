@@ -238,7 +238,7 @@ class CapaciteReferentiel(Base):
     service_nom     = Column(String, nullable=False, index=True)
     uf_code         = Column(String, nullable=True)
     pole            = Column(String, nullable=True)
-    site            = Column(String, nullable=True)       # Valmont / Saint-Aubin / Beaulieu / USLD
+    site            = Column(String, nullable=True)       # Valmont / Saint-Julien / Plainville / USLD
     capacite_totale = Column(Integer, default=0)          # capacité nominale totale
     tension_1       = Column(Integer, default=0)          # lits ouverts en tension niveau 1
     tension_2       = Column(Integer, default=0)          # lits ouverts en tension niveau 2

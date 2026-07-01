@@ -45,11 +45,7 @@ from pydantic import BaseModel
 
 from app.database import get_db
 from app.models import User
-<<<<<<< HEAD
 from app.api.auth import get_current_user, require_role, decode_token, require_admin
-=======
-from app.api.auth import get_current_user, require_role
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
 from plugins.messagerie.models import Message, Folder, MessageAttachment
 
@@ -64,7 +60,6 @@ MAX_TOTAL_ATTACHMENT_SIZE = 25 * 1024 * 1024      # 25 Mo total par message
 MAX_ATTACHMENTS_PER_MSG   = 10
 
 
-<<<<<<< HEAD
 def _msg_upload_policy(fichiers) -> int:
     """Valide les extensions (catégories MIME admin du plugin, sinon politique
     centrale) AVANT toute écriture et renvoie la taille max effective par PJ
@@ -91,8 +86,6 @@ def _msg_max_attachments() -> int:
         return MAX_ATTACHMENTS_PER_MSG
 
 
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 # ── Utilitaires ──────────────────────────────────────────────────────────────
 def _ensure_uploads_dir(message_id: int) -> Path:
     p = UPLOADS_BASE / str(message_id)
@@ -499,7 +492,6 @@ async def create_message(
             if _etab and _uname:
                 dest_clean.append({"type": "agent_federe", "value": _uname, "etab": _etab,
                                    "display": d.get("display") or (_uname + "@" + _etab)})
-<<<<<<< HEAD
         elif d.get("type") == "instance":
             # h153 — Destinataire inter-GHT de type instance (reply depuis une instance distante).
             # Acheminé via le collecteur comme message inter-GHT.
@@ -507,8 +499,6 @@ async def create_message(
             if _sigle:
                 dest_clean.append({"type": "instance", "value": _sigle,
                                    "display": d.get("display") or _sigle})
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     if not draft and not dest_clean:
         raise HTTPException(400, "Au moins un destinataire requis")
 
@@ -525,14 +515,9 @@ async def create_message(
     # PJ : validation préalable des tailles
     total_size = 0
     if fichiers:
-<<<<<<< HEAD
         _max_att = _msg_max_attachments()
         if len(fichiers) > _max_att:
             raise HTTPException(400, f"Maximum {_max_att} PJ par message")
-=======
-        if len(fichiers) > MAX_ATTACHMENTS_PER_MSG:
-            raise HTTPException(400, f"Maximum {MAX_ATTACHMENTS_PER_MSG} PJ par message")
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         for f in fichiers:
             # On ne peut pas connaître la taille sans lire — on lira au moment de stocker
             pass
@@ -557,18 +542,11 @@ async def create_message(
     # Stocker les PJ (uniquement si pas brouillon, ou même en brouillon ?)
     # Décision : en brouillon on stocke aussi (l'user veut récupérer son brouillon avec PJ).
     saved_count = 0
-<<<<<<< HEAD
     _eff_max = _msg_upload_policy(fichiers)
     if fichiers:
         target_dir = _ensure_uploads_dir(msg.id)
         for upload in fichiers:
             if saved_count >= _msg_max_attachments():
-=======
-    if fichiers:
-        target_dir = _ensure_uploads_dir(msg.id)
-        for upload in fichiers:
-            if saved_count >= MAX_ATTACHMENTS_PER_MSG:
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
                 break
             try:
                 # Lire et hasher en stream
@@ -590,19 +568,11 @@ async def create_message(
                         chunk = await upload.read(65536)
                         if not chunk:
                             break
-<<<<<<< HEAD
                         if size + len(chunk) > _eff_max:
                             out.close()
                             try: dest_path.unlink()
                             except OSError: pass
                             raise HTTPException(413, f"PJ trop volumineuse (max {_eff_max // (1024*1024)} Mo) : {upload.filename}")
-=======
-                        if size + len(chunk) > MAX_ATTACHMENT_SIZE:
-                            out.close()
-                            try: dest_path.unlink()
-                            except OSError: pass
-                            raise HTTPException(413, f"PJ > {MAX_ATTACHMENT_SIZE} octets : {upload.filename}")
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
                         if total_size + len(chunk) > MAX_TOTAL_ATTACHMENT_SIZE:
                             out.close()
                             try: dest_path.unlink()
@@ -648,11 +618,7 @@ async def create_message(
         for d in (msg.destinataires or []):
             if isinstance(d, dict) and d.get("type") == "agent_federe":
                 try:
-<<<<<<< HEAD
                     await _deliver_to_agent_federe(msg, d.get("etab"), d.get("value"), db)
-=======
-                    await _deliver_to_agent_federe(msg, d.get("etab"), d.get("value"))
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
                 except Exception:
                     logger.warning("[messagerie] livraison agent fédéré échouée (message conservé en local)", exc_info=True)
         # h77 — Livraison MAIL : envoi SMTP aux destinataires e-mail / utilisateurs.
@@ -762,7 +728,6 @@ async def _deliver_to_supervision(msg, db):
         return
     base = collecteur_url.replace("/api/push", "")
     url = base + "/api/v1/messagerie/ingest"
-<<<<<<< HEAD
     _origin_username = ""
     if db is not None and msg.expediteur_id:
         try:
@@ -771,8 +736,6 @@ async def _deliver_to_supervision(msg, db):
                 _origin_username = _su.username or ""
         except Exception:
             _origin_username = ""
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     data = {
         "origin_sigle": sigle or "",
         "origin_nom":   nom or sigle or "Instance",
@@ -780,10 +743,7 @@ async def _deliver_to_supervision(msg, db):
         "contenu":      msg.contenu or "",
         "source_uuid":  f"{sigle or 'ETB'}-{msg.id}",
         "recipient_username": "supervision",
-<<<<<<< HEAD
         "origin_username": _origin_username,
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         "node_token":   os.getenv("SCRIBE_NODE_TOKEN", ""),
     }
     files = []
@@ -871,19 +831,12 @@ async def correspondants_federes(user: User = Depends(get_current_user)):
     return {"etablissements": out}
 
 
-<<<<<<< HEAD
 async def _deliver_to_agent_federe(msg, target_sigle, recipient_username, db=None):
     """Relaie un message vers un agent nominatif d'une AUTRE instance, via le
     relais collecteur /api/coll/msg-to-instance (authentifié par le token de
     fédération). Best-effort : un échec ne casse jamais le stockage local.
     Les pièces jointes locales sont jointes (le relais collecteur les reforwarde
     au /ingest de l'instance cible, qui les enregistre)."""
-=======
-async def _deliver_to_agent_federe(msg, target_sigle, recipient_username):
-    """Relaie un message vers un agent nominatif d'une AUTRE instance, via le
-    relais collecteur /api/coll/msg-to-instance (authentifié par le token de
-    fédération). Best-effort : un échec ne casse jamais le stockage local."""
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     import httpx
     collecteur_url, token, sigle, nom = _read_fed_config()
     if not collecteur_url or not token:
@@ -891,7 +844,6 @@ async def _deliver_to_agent_federe(msg, target_sigle, recipient_username):
         return
     base = collecteur_url.replace("/api/push", "")
     url = base + "/api/coll/msg-to-instance"
-<<<<<<< HEAD
     origin_username = ""
     if db is not None and msg.expediteur_id:
         try:
@@ -900,14 +852,11 @@ async def _deliver_to_agent_federe(msg, target_sigle, recipient_username):
                 origin_username = _su.username or ""
         except Exception:
             origin_username = ""
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     data = {
         "target_sigle":       (target_sigle or "").upper(),
         "recipient_username": recipient_username or "",
         "origin_sigle":       sigle or "",
         "origin_nom":         nom or sigle or "Instance",
-<<<<<<< HEAD
         "origin_username":    origin_username,
         "sujet":              msg.sujet or "",
         "contenu":            msg.contenu or "",
@@ -935,17 +884,6 @@ async def _deliver_to_agent_federe(msg, target_sigle, recipient_username):
                                headers={"Authorization": f"Bearer {token}"})
             logger.info("[messagerie] agent fédéré → %s/%s : HTTP %s (%s PJ) : %s",
                         target_sigle, recipient_username, r.status_code, len(files),
-=======
-        "sujet":              msg.sujet or "",
-        "contenu":            msg.contenu or "",
-    }
-    try:
-        async with httpx.AsyncClient(timeout=20, verify=False) as cli:
-            r = await cli.post(url, data=data,
-                               headers={"Authorization": f"Bearer {token}"})
-            logger.info("[messagerie] agent fédéré → %s/%s : HTTP %s : %s",
-                        target_sigle, recipient_username, r.status_code,
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
                         (r.text or "")[:160])
     except Exception as e:
         logger.warning("[messagerie] agent fédéré ÉCHEC réseau vers %s : %s", url, e)
@@ -968,10 +906,7 @@ async def ingest_message(
     source_uuid:  str = Form(""),
     recipient_username: str = Form(""),
     node_token:   str = Form(""),
-<<<<<<< HEAD
     origin_username: str = Form(""),
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     fichiers:     list[UploadFile] = File([]),
     db:   Session = Depends(get_db),
 ):
@@ -1023,11 +958,7 @@ async def ingest_message(
         rfc_message_id  = source_uuid or None,
         statut          = "received",
         lu              = False,
-<<<<<<< HEAD
         backend_meta    = {"origin": origin_sigle, "origin_username": origin_username or "", "ingested": True},
-=======
-        backend_meta    = {"origin": origin_sigle, "ingested": True},
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         created_at      = datetime.now(timezone.utc),
     )
     db.add(msg)
@@ -1035,18 +966,11 @@ async def ingest_message(
 
     saved_count = 0
     total_size = 0
-<<<<<<< HEAD
     _eff_max = _msg_upload_policy(fichiers)
     if fichiers:
         target_dir = _ensure_uploads_dir(msg.id)
         for upload in fichiers:
             if saved_count >= _msg_max_attachments():
-=======
-    if fichiers:
-        target_dir = _ensure_uploads_dir(msg.id)
-        for upload in fichiers:
-            if saved_count >= MAX_ATTACHMENTS_PER_MSG:
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
                 break
             safe_name = _safe_filename(upload.filename or f"file_{saved_count}")
             dest_path = target_dir / safe_name
@@ -1062,19 +986,11 @@ async def ingest_message(
                     chunk = await upload.read(65536)
                     if not chunk:
                         break
-<<<<<<< HEAD
                     if size + len(chunk) > _eff_max:
                         out.close()
                         try: dest_path.unlink()
                         except OSError: pass
                         raise HTTPException(413, f"PJ trop volumineuse (max {_eff_max // (1024*1024)} Mo) : {upload.filename}")
-=======
-                    if size + len(chunk) > MAX_ATTACHMENT_SIZE:
-                        out.close()
-                        try: dest_path.unlink()
-                        except OSError: pass
-                        raise HTTPException(413, f"PJ trop volumineuse : {upload.filename}")
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
                     h.update(chunk); out.write(chunk); size += len(chunk); total_size += len(chunk)
             db.add(MessageAttachment(
                 message_id=msg.id, kind="local",
@@ -1116,7 +1032,6 @@ def reply_message(
     if not src or not _can_access(src, user.id):
         raise HTTPException(404, "Message introuvable")
 
-<<<<<<< HEAD
     # Destinataire = expéditeur du message original
     dest = []
     if src.expediteur_id and src.expediteur_id != user.id:
@@ -1143,15 +1058,6 @@ def reply_message(
                          "etab": sigle, "display": f"{disp} · {sigle}"})
         elif sigle:
             dest.append({"type": "instance", "value": sigle, "display": sigle})
-=======
-    # Destinataire = expéditeur du message original (si user, sinon vide)
-    dest = []
-    if src.expediteur_id and src.expediteur_id != user.id:
-        exp = db.query(User).filter(User.id == src.expediteur_id).first()
-        if exp:
-            dest.append({"type":"user","value":exp.id,
-                         "display":exp.display_name or exp.username})
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
     sujet = src.sujet or ""
     if not sujet.lower().startswith("re:"):
@@ -1383,7 +1289,6 @@ def permanent_delete_message(
 @router.get("/attachments/{att_id}")
 def download_attachment(
     att_id: int,
-<<<<<<< HEAD
     token: str = Query(""),
     db:   Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -1398,11 +1303,6 @@ def download_attachment(
             user = db.query(User).filter(User.id == uid, User.active == True).first()
         except Exception:
             user = None
-=======
-    db:   Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     if not user:
         raise HTTPException(401)
     a = db.query(MessageAttachment).filter(MessageAttachment.id == att_id).first()
@@ -1481,7 +1381,6 @@ def mark_read_compat(
     m.lu_at = datetime.now(timezone.utc)
     db.commit()
     return {"ok": True}
-<<<<<<< HEAD
 
 
 # ── Configuration admin du plugin (carte ⚙ Plugins) ─────────────────────────
@@ -1498,5 +1397,3 @@ def messagerie_admin_config_post(payload: dict, admin=Depends(require_admin)):
     from app.plugin_settings import set_plugin_config
     cfg = set_plugin_config("messagerie", payload or {})
     return {"ok": True, "config": cfg}
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060

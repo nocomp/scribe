@@ -49,13 +49,9 @@ def plugin_status(user: User = Depends(get_current_user)):
         "mode":      mode,             # "cli" | "live" | "dev"
         "ready":     True,
         "cli_ready": cli_ready,        # bool seul — aucun chemin serveur exposé
-<<<<<<< HEAD
         "cli_unavailable_reason": ("" if cli_ready else cli_sender.unavailable_reason()),
         "cli_password_unreadable": cli_sender.password_unreadable(),
         "version":   "3.6.0-alpha116",
-=======
-        "version":   "3.6.0-alpha112",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     }
 
 
@@ -197,7 +193,6 @@ async def send_secure(
         if not res.get("ok"):
             raise HTTPException(status_code=502,
                                 detail=f"BlueFiles : {res.get('error', 'échec envoi')}")
-<<<<<<< HEAD
         # Trace d'audit (sans contenu ni secret) — l'envoi réel passe par le CLI,
         # ce qui n'était pas journalisé auparavant.
         _expdt = datetime.now(timezone.utc) + timedelta(days=expiration_days)
@@ -237,21 +232,11 @@ async def send_secure(
             "uuid":       res.get("uuid", ""),
             "short_link": res.get("short_link", ""),
             "expires_at": _expdt.isoformat(),
-=======
-        return {
-            "ok":         True,
-            "mode":       "cli",
-            "uuid":       res.get("uuid", ""),
-            "short_link": res.get("short_link", ""),
-            "expires_at": (datetime.now(timezone.utc)
-                           + timedelta(days=expiration_days)).isoformat(),
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
             "transfer_password": tpwd,
             "destinataires": [{"email": d["email"]} for d in dest_list],
             "statut":     "delivered",
         }
 
-<<<<<<< HEAD
     # ── 3. AUCUNE simulation pour un envoi réel ────────────────────────────
     # Si l'exécution atteint ce point, le CLI BlueFiles n'est pas opérationnel.
     # Historiquement, le code retombait ici sur un client REST « DEV » qui
@@ -263,127 +248,6 @@ async def send_secure(
         status_code=503,
         detail="Envoi BlueFiles impossible — " + _cs.unavailable_reason(),
     )
-=======
-    # ── 3. Création de l'envoi côté Bluefiles ──────────────────────────────
-    client = BluefilesClient()
-    try:
-        bf_response = client.create_envoi(
-            destinataires     = dest_list,
-            fichiers_meta     = fichiers_meta,
-            expiration_days   = expiration_days,
-            password_required = password_required,
-            ar_enabled        = ar_enabled,
-            commentaire       = commentaire,
-        )
-    except Exception as e:
-        logger.exception("Bluefiles create_envoi failed")
-        raise HTTPException(status_code=502, detail=f"Bluefiles indisponible : {e}")
-
-    bf_uuid    = bf_response["uuid"]
-    short_link = bf_response.get("short_link", "")
-    upload_url = bf_response.get("upload_url", "")
-    expires_iso = bf_response.get("expires_at")
-    dest_with_meta = bf_response.get("destinataires", dest_list)
-
-    # ── 4. Upload streamé de chaque fichier vers Bluefiles ─────────────────
-    upload_ok = True
-    for f in fichiers:
-        try:
-            ok = client.upload_file(upload_url, f.file, f.filename or "file")
-            if not ok:
-                upload_ok = False
-                break
-        except Exception as e:
-            logger.exception(f"Bluefiles upload_file({f.filename}) failed")
-            upload_ok = False
-            break
-
-    # ── 5. Finalize ────────────────────────────────────────────────────────
-    finalize_ok = client.finalize_envoi(bf_uuid) if upload_ok else False
-
-    # ── 6. Audit DB ────────────────────────────────────────────────────────
-    expires_dt = None
-    if expires_iso:
-        try:
-            expires_dt = datetime.fromisoformat(expires_iso.replace("Z", "+00:00"))
-        except ValueError:
-            expires_dt = datetime.now(timezone.utc) + timedelta(days=expiration_days)
-    else:
-        expires_dt = datetime.now(timezone.utc) + timedelta(days=expiration_days)
-
-    # Statut initial
-    if not upload_ok:
-        statut = "error"
-        error_msg = "Upload Bluefiles a échoué"
-    elif not finalize_ok:
-        statut = "error"
-        error_msg = "Finalize Bluefiles a échoué"
-    else:
-        statut = "delivered"   # En DEV on saute directement à delivered.
-        error_msg = None
-
-    # Destinataires audit (sans le MdP — sécurité)
-    dest_audit = [
-        {
-            "email":     d["email"],
-            "nom":       d.get("nom", ""),
-            "mode_auth": d.get("mode_auth", "password"),
-            "statut":    "delivered" if statut == "delivered" else "error",
-            "delivered_at": datetime.now(timezone.utc).isoformat() if statut == "delivered" else None,
-            "read_at":   None,
-        }
-        for d in dest_with_meta
-    ]
-
-    envoi = BluefilesEnvoi(
-        bf_uuid           = bf_uuid,
-        mode              = current_mode(),
-        module_origine    = module,
-        ref_id            = ref_id,
-        ref_label         = ref_label,
-        auteur_id         = user.id,
-        auteur_nom        = user.display_name or user.username,
-        auteur_role       = user.role,
-        destinataires     = dest_audit,
-        fichiers_meta     = fichiers_meta,
-        fichiers_total_size = total_size,
-        expiration_days   = expiration_days,
-        password_required = 1 if password_required else 0,
-        ar_enabled        = 1 if ar_enabled else 0,
-        commentaire       = commentaire,
-        statut            = statut,
-        short_link        = short_link,
-        uploaded_at       = datetime.now(timezone.utc) if upload_ok else None,
-        delivered_at      = datetime.now(timezone.utc) if statut == "delivered" else None,
-        expires_at        = expires_dt,
-        error_msg         = error_msg,
-        webhook_events    = [],
-    )
-    db.add(envoi)
-    db.commit()
-    db.refresh(envoi)
-
-    # ── 7. Retour client : MdP destinataires (1 seule fois) + récap ───────
-    return {
-        "ok":           statut == "delivered",
-        "envoi_id":     envoi.id,
-        "bf_uuid":      bf_uuid,
-        "short_link":   short_link,
-        "expires_at":   expires_dt.isoformat() if expires_dt else None,
-        "statut":       statut,
-        "mode":         current_mode(),
-        "destinataires_passwords": [
-            {
-                "email":     d["email"],
-                "mode_auth": d.get("mode_auth", "password"),
-                # password présent UNIQUEMENT au retour de send (1 seule fois)
-                "password":  d.get("password") if password_required else None,
-            }
-            for d in dest_with_meta
-        ],
-        "error":        error_msg,
-    }
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
 
 # ── GET /envoi/{id} ──────────────────────────────────────────────────────────
@@ -599,11 +463,8 @@ def _cli_config_public(row) -> dict:
         "cli_ready":            diag["ready"],
         "cli_binary_present":   diag["binary_present"],
         "cli_binary_exec":      diag["binary_exec"],
-<<<<<<< HEAD
         "cli_password_unreadable": diag.get("password_unreadable", False),
         "cli_unavailable_reason": (cli_sender.unavailable_reason() if not diag["ready"] else ""),
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         "cli_sources": {
             "login":       _src("cli_login",       ("SCRIBE_BLUEFILES_LOGIN", "BLUEFILES_LOGIN")),
             "password":    _src("cli_password",    ("SCRIBE_BLUEFILES_PASSWORD", "BLUEFILES_PASSWORD")),
@@ -619,11 +480,7 @@ class BluefilesConfigIn(_BaseModel):
     webhook_secret:    Optional[str] = None    # non vide => remplace
     clear_api_key:      Optional[bool] = False
     clear_webhook_secret: Optional[bool] = False
-<<<<<<< HEAD
     # v3000h150 — champs de l'utilitaire CLI BlueFiles
-=======
-    # v3000h146 — champs de l'utilitaire CLI BlueFiles
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     cli_login:          Optional[str] = None
     cli_server:         Optional[str] = None
     cli_impersonate:    Optional[str] = None
@@ -654,11 +511,7 @@ def get_bluefiles_config(admin: User = Depends(require_admin),
         },
         "updated_at": row.updated_at.isoformat() if (row and row.updated_at) else None,
         "updated_by": row.updated_by if row else None,
-<<<<<<< HEAD
         # v3000h150 — Voie réelle d'envoi : utilitaire CLI BlueFiles
-=======
-        # v3000h146 — Voie réelle d'envoi : utilitaire CLI BlueFiles
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         **_cli_config_public(row),
     }
 
@@ -691,11 +544,7 @@ def save_bluefiles_config(body: BluefilesConfigIn,
     elif body.webhook_secret and body.webhook_secret.strip():
         row.webhook_secret = body.webhook_secret.strip()
 
-<<<<<<< HEAD
     # v3000h150 — login : blanc = conserver la valeur existante ; émetteur
-=======
-    # v3000h146 — login : blanc = conserver la valeur existante ; émetteur
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     # rattaché retiré de l'UI → toujours vidé (le compte API est l'émetteur).
     if body.cli_login and body.cli_login.strip():
         row.cli_login = body.cli_login.strip()
@@ -765,14 +614,11 @@ def test_bluefiles_config(admin: User = Depends(require_admin)):
     missing = [n for n, v in (("login", cfg["login"]),
                               ("mot de passe", cfg["password"]),
                               ("serveur", cfg["server"])) if not v]
-<<<<<<< HEAD
     if cli_sender.password_unreadable():
         return {"ok": False, "mode": "cli",
                 "detail": "Mot de passe enregistré mais illisible : la clé de "
                           "chiffrement (SCRIBE_SECRET) a changé depuis "
                           "l'enregistrement. Ré-saisissez le mot de passe BlueFiles."}
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     if missing:
         return {"ok": False, "mode": "cli",
                 "detail": "Identifiants incomplets : " + ", ".join(missing) + "."}

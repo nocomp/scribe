@@ -18,18 +18,13 @@ logger = logging.getLogger("scribe.collecteur.central")
 _STORE_PATH = Path(os.path.dirname(os.path.abspath(__file__))) / "collecteur_central_config.json"
 
 # Domaines + champs secrets (chiffrés au repos, masqués en UI)
-<<<<<<< HEAD
 DOMAINS = ("ia", "bluefiles", "smtp", "sms", "uploads", "twilio", "ovh_voice")
-=======
-DOMAINS = ("ia", "bluefiles", "smtp", "sms")
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
 _DEFAULT = {
     "ia":        {"provider": "albert", "api_key": "", "base_url": "", "model": "", "enabled": False},
     "bluefiles": {"login": "", "password": "", "server": "api.bluefiles.com", "enabled": False},
     "smtp":      {"smtp_host": "", "smtp_port": 587, "smtp_user": "", "smtp_pass": "",
                   "from_addr": "", "use_tls": True, "use_ssl": False, "enabled": False},
-<<<<<<< HEAD
     "sms":       {"provider": "ovh", "endpoint": "ovh-eu", "app_key": "", "app_secret": "",
                   "consumer_key": "", "service_name": "", "sender": "SCRIBE", "enabled": False},
     "uploads":   {"max_size_mb": 0, "allowed_extensions": []},
@@ -37,10 +32,6 @@ _DEFAULT = {
                   "default_voice": "alice", "enabled": False},
     "ovh_voice": {"endpoint": "ovh-eu", "app_key": "", "app_secret": "",
                   "consumer_key": "", "billing_account": "", "service": "", "enabled": False},
-=======
-    "sms":       {"provider": "ovh", "sender": "SCRIBE", "api_key": "", "api_secret": "",
-                  "base_url": "", "enabled": False},
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     "_meta":     {"updated_at": "", "updated_by": ""},
 }
 
@@ -51,13 +42,9 @@ SECRET_FIELDS = {
     "ia":        ["api_key"],
     "bluefiles": ["password"],
     "smtp":      ["smtp_pass"],
-<<<<<<< HEAD
     "sms":       ["app_key", "app_secret", "consumer_key"],
     "twilio":    ["auth_token"],
     "ovh_voice": ["app_secret", "consumer_key"],
-=======
-    "sms":       ["api_key", "api_secret"],
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 }
 
 

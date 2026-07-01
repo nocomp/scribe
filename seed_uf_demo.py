@@ -1,7 +1,7 @@
 """
-seed_uf_demo.py — Unités Fonctionnelles démo pour tous les sites Arc Alpin
+seed_uf_demo.py — Unités Fonctionnelles démo pour tous les sites Réseau Démo
 Crée des UF réalistes par pôle pour chaque site enregistré en DB.
-Pour CHAG : synchronise aussi depuis CapaciteReferentiel (données BedManager réelles).
+Pour CHV : synchronise aussi depuis CapaciteReferentiel (données BedManager réelles).
 Usage: python3 seed_uf_demo.py
 """
 import os, sys, sqlite3
@@ -70,7 +70,7 @@ def seed_for_db_direct(db_path: str, label: str):
 
     created = 0
 
-    # Pour CHAG : synchroniser depuis capacite_referentiel si disponible
+    # Pour CHV : synchroniser depuis capacite_referentiel si disponible
     try:
         cap_refs = c.execute(
             "SELECT DISTINCT service_nom, pole, site FROM capacite_referentiel"
@@ -132,10 +132,10 @@ def seed_for_db_direct(db_path: str, label: str):
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 instances = [
-    (os.path.join(BASE, "scribe_chag.db"),  "CHAG"),
-    (os.path.join(BASE, "scribe_ght2.db"),  "GHTLMB"),
-    (os.path.join(BASE, "scribe_ght3.db"),  "GHTSAV"),
-    (os.path.join(BASE, "scribe_ght4.db"),  "GHTAD38"),
+    (os.path.join(BASE, "scribe_chag.db"),  "CHV"),
+    (os.path.join(BASE, "scribe_ght2.db"),  "GHT1"),
+    (os.path.join(BASE, "scribe_ght3.db"),  "GHT2"),
+    (os.path.join(BASE, "scribe_ght4.db"),  "GHT3"),
 ]
 
 # Si DATABASE_URL est défini (lancement depuis subshell instance), n'opérer que sur cette DB
@@ -151,7 +151,7 @@ if db_url_env and db_url_env.startswith("sqlite:///"):
         print(f"  {label}: ERREUR {e}")
     print("=" * 50)
 else:
-    print("Seed UF démo — Arc Alpin")
+    print("Seed UF démo — Réseau Démo")
     print("=" * 50)
     for db_path, label in instances:
         try:

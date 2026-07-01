@@ -83,7 +83,7 @@ def menu():
         print("  Choisissez un mode :\n")
         print(f"   {bold('1')}  {green('Démo ransomware LockBit 48h')} (CHV Valmont — recommandé pour découvrir SCRIBE)")
         print(f"   {bold('2')}  {green('Démo clinique Montrelay')}")
-        print(f"   {bold('3')}  {yellow('Supervision multi-établissements')} (démo 4 GHTs + collecteur Territoire)")
+        print(f"   {bold('3')}  {yellow('Supervision multi-établissements')} (démo 4 GHTs + collecteur Réseau Démo)")
         print(f"   {bold('4')}  {cyan('Mon établissement')} (depuis config.xml)")
         print(f"   {bold('5')}  {cyan('Mon établissement')} (depuis fichier Excel SCRIBE_config_etablissement.xlsx)")
         print(f"   {bold('6')}  Docker")
@@ -118,7 +118,7 @@ def demo2():
     demarrer()
 
 def supervision():
-    banner("[SUPERVISION] Démo 4 GHTs + collecteur territorial (Territoire)")
+    banner("[SUPERVISION] Démo 4 GHTs + collecteur territorial (Réseau Démo)")
     print()
     print("  Ce mode démarre 5 services :")
     print(f"  {dim('→')} Collecteur      : http://localhost:9000")
@@ -127,26 +127,16 @@ def supervision():
     print(f"  {dim('→')} Site 3 (8002)   : http://localhost:8002")
     print(f"  {dim('→')} Site 4 (8003)   : http://localhost:8003")
     print()
-<<<<<<< HEAD
-    script = os.path.join(BASE_DIR, "lancer_scribe.sh")
+    script = os.path.join(BASE_DIR, "lancer_scribe_demo.sh")
     if not os.path.exists(script):
-        err("lancer_scribe.sh introuvable.")
-=======
-    script = os.path.join(BASE_DIR, "lancer_instances.sh")
-    if not os.path.exists(script):
-        err("lancer_instances.sh introuvable.")
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+        err("lancer_scribe_demo.sh introuvable.")
         warn("Ce script est fourni dans la version de déploiement multi-GHT.")
         input("\n  Appuyez sur Entrée pour revenir au menu...")
         return
     reset = input("  Réinitialiser les bases de données ? (o/N) : ").strip().lower()
     print()
     flag = "--reset" if reset in ("o", "oui", "y", "yes") else ""
-<<<<<<< HEAD
-    run(f"bash lancer_scribe.sh {flag}")
-=======
-    run(f"bash lancer_instances.sh {flag}")
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+    run(f"bash lancer_scribe_demo.sh {flag}")
 
 def from_xml(xml_file=None):
     banner("[MON ÉTABLISSEMENT] Initialisation depuis config.xml")

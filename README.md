@@ -172,20 +172,6 @@ docker compose up -d
 - Capture : base SQLite de chaque instance (users, mots de passe, configs plugins, messagerie, capacité, salons chat), fichiers de configuration, secrets de plugins, pièces jointes (`uploads/`), archives de rapports (`archives/`)
 - **Restauration plug-and-play** sur une nouvelle version de SCRIBE — anti-path-traversal, purge des fichiers WAL
 - Archive non déchiffrable sans le mot de passe : à conserver hors-ligne
-<<<<<<< HEAD
-
-#### ☎️ RÉPONDEUR DE CRISE *(nouveau)*
-
-- **Lignes d'information téléphoniques** dédiées à la crise (public, familles, médias…), multilingues
-- **Deux fournisseurs** : Twilio (message vocal en direct via webhook TwiML) et **OVH Télécom** (SVI / pré-décroché)
-- **Synthèse vocale intégrée (TTS)** : génère le message audio en **MP3** à partir du texte, prêt à téléverser sur le répondeur — 100 % local et souverain (espeak-ng ; qualité neurale optionnelle via Piper)
-- **Boîte de réception** : écoute, téléchargement et **transcription des messages vocaux directement dans SCRIBE**
-- **Transcription locale (souveraine)** : l'audio est transcrit sur le serveur SCRIBE (faster-whisper / Vosk), sans dépendre d'un service tiers ; l'audio n'est pas conservé (minimisation RGPD)
-- **Statistiques d'appels en direct** (appels du jour, détail par appel) via l'API OVH ; découverte automatique du compte de facturation
-- Rédaction du message assistée par Albert ; import depuis le plugin Fichiers
-- Les lignes actives s'affichent sur la **page de statut publique** et dans la supervision territoriale
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
 ---
 
@@ -430,20 +416,6 @@ Dedicated isolated instances, animator console for scripted stimulus injection.
 - Captures: SQLite database (users, passwords, plugin configs, messaging, capacity, chat), config files, plugin secrets, attachments (`uploads/`), report archives (`archives/`)
 - **Plug-and-play restore** on a fresh SCRIBE version — anti-path-traversal, WAL purge
 - Archive unreadable without the password: keep offline
-<<<<<<< HEAD
-
-#### ☎️ CRISIS HOTLINE *(new)*
-
-- **Dedicated phone information lines** for the crisis (public, families, media…), multilingual
-- **Two providers**: Twilio (live voice message via TwiML webhook) and **OVH Télécom** (IVR / pre-answer)
-- **Built-in text-to-speech (TTS)**: turns the announcement text into an **MP3** ready to upload to the answering service — fully local and sovereign (espeak-ng; optional neural quality via Piper)
-- **Inbox**: listen to, download and **transcribe voicemails directly inside SCRIBE**
-- **Local (sovereign) transcription**: audio is transcribed on the SCRIBE server (faster-whisper / Vosk), with no third-party dependency; audio is not retained (GDPR data minimisation)
-- **Live call statistics** (today's calls, per-call detail) via the OVH API; automatic billing-account discovery
-- Albert-assisted drafting; import from the Files plugin
-- Active lines appear on the **public status page** and in territorial supervision
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 
 ---
 
@@ -461,23 +433,20 @@ Dedicated isolated instances, animator console for scripted stimulus injection.
 
 ## Changelog
 
-<<<<<<< HEAD
-### v3.6.0-beta (July 2026)
+### v3.6.0-beta (July 2026) — Security hardening
 
-- **NEW: Crisis hotline (Répondeur)** — dedicated multilingual phone information lines, two providers (Twilio live TwiML + OVH Télécom IVR)
-- **NEW: Sovereign text-to-speech** — generate the announcement audio (MP3) locally from text (espeak-ng, optional Piper), ready to upload to the answering service
-- **NEW: Voicemail inbox** — listen, download and transcribe voicemails inside SCRIBE
-- **NEW: Local voicemail transcription** — audio transcribed on the SCRIBE server (faster-whisper / Vosk), no third-party service; audio not retained (GDPR minimisation)
-- **NEW: Live OVH call statistics** — today's call count and per-call detail, with automatic billing-account discovery
-- **IMPROVED: Public status page** — DSFR Suite numérique restyle, active hotline numbers displayed
-- **IMPROVED: Content-Security-Policy** — `media-src` added for in-app audio playback
+- **API access lockdown** — all data endpoints (reports, incidents, bed capacity, crisis cell, handover, REX, transfers, cartography, kanban, attachments, Albert AI, federation) now require a valid session by default (deny-by-default at router mount)
+- **Authenticated `/uploads`** — incident attachments are no longer served as public static files; access requires a token (header or query) with path-traversal protection
+- **Federation node token** — inter-instance endpoints (`/messagerie/ingest`, notifications sync, supervision) can be locked fleet-wide with a shared `SCRIBE_NODE_TOKEN`; collector now sends it on downstream delivery
+- **Admin diagnostics** — `/debug` endpoints moved from optional auth to `require_admin`
+- **Brute-force protection** — per-IP rate limiting plus per-account lockout on the login endpoint
+- **Rate limiting** — costly (Albert AI) and real-world-effect flows (staff-recall SMS) are throttled per user
+- **Account import** — each imported account now gets a unique random temporary password (bcrypt), forced change on first login (no shared default)
+- **Plugin upload** — defense-in-depth zip-slip guard (per-member resolved-path confinement)
+- **Dependencies** — upper version bounds added to reduce supply-chain / surprise-major risk
 
 ### v3.6.0-beta (June 2026)
 
-=======
-### v3.6.0-beta (June 2026)
-
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 - **NEW: Staff recall module** — mass mobilisation with presets, SMS/SMTP delivery, real-time response tracking (half-circle gauge widget), wave escalation, telephony failover
 - **NEW: BlueFiles secure transfer** — native integration for end-to-end encrypted file sharing from both establishment messaging and territorial supervision; HDS-compatible, audit trail in SCRIBE
 - **NEW: Full backup / restore** — AES-encrypted complete image of all instances including attachments, plugin secrets and report archives; plug-and-play restore on fresh install

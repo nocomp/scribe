@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SCRIBE Messagerie — Supervision</title>
 <style>
-<<<<<<< HEAD
 :root{
   --blue:#003189;--dark:#000091;--red:#ce0500;--ok:#18753c;--warn:#b34000;
   --bg:#f8fafc;--s:#fff;--s2:#f1f5f9;--bd:#e2e8f0;--tx:#0f172a;--mu:#64748b;--mo:monospace;
@@ -20,23 +19,12 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-s
 #col-folders{width:210px;flex-shrink:0;background:var(--s);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow-y:auto}
 .fold-sec{font-family:var(--mo);font-size:8px;letter-spacing:1.5px;color:var(--mu);padding:14px 14px 4px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
 .fold{display:flex;align-items:center;gap:9px;padding:8px 14px;cursor:pointer;font-size:13px;border-left:3px solid transparent;transition:background .12s}
-=======
-:root{--blue:#003189;--red:#e1000f;--bg:#f8fafc;--s:#fff;--s2:#f1f5f9;--bd:#e2e8f0;--tx:#0f172a;--mu:#64748b;--mo:monospace}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx)}
-#root{display:flex;height:100%;overflow:hidden}
-/* Colonne dossiers */
-#col-folders{width:210px;flex-shrink:0;background:var(--s);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow-y:auto}
-.fold-sec{font-family:var(--mo);font-size:8px;letter-spacing:1.5px;color:var(--mu);padding:14px 14px 4px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
-.fold{display:flex;align-items:center;gap:9px;padding:8px 14px;cursor:pointer;font-size:13px;border-left:3px solid transparent}
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 .fold:hover{background:var(--s2)}
 .fold.active{background:#eef2ff;border-left-color:var(--blue);color:var(--blue);font-weight:600}
 .fold .fi{font-size:14px;width:18px;text-align:center}
 .fold .fn{flex:1}
 .fold .fb{font-family:var(--mo);font-size:9px;background:var(--blue);color:#fff;border-radius:9px;padding:0 6px;min-width:16px;text-align:center}
 .fold.disabled{opacity:.45;cursor:not-allowed}
-<<<<<<< HEAD
 .fold-note{font-size:9px;color:var(--mu);padding:0 14px 8px 45px;font-style:italic;line-height:1.4}
 
 /* ── Colonne liste ── */
@@ -87,70 +75,12 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,sans-serif;backgroun
 
 /* ── Toast ── */
 #toast{position:fixed;bottom:16px;right:16px;font-family:var(--mo);font-size:11px;padding:10px 16px;border-radius:6px;display:none;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.12)}
-=======
-.fold .phase{font-family:var(--mo);font-size:7px;background:#ede9fe;color:#7c3aed;border-radius:6px;padding:1px 5px}
-.fold-note{font-size:9px;color:var(--mu);padding:0 14px 8px 45px;font-style:italic;line-height:1.4}
-/* Colonne liste */
-#col-list{width:330px;flex-shrink:0;background:var(--s);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
-#list-top{padding:12px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px}
-#list-title{font-family:var(--mo);font-size:11px;font-weight:700;letter-spacing:1px;flex:1}
-.btn-new{font-family:var(--mo);font-size:10px;padding:7px 12px;background:var(--blue);color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:700;white-space:nowrap}
-.btn-new:hover{opacity:.9}
-#list-pane{flex:1;overflow-y:auto}
-.mi{padding:11px 14px;border-bottom:1px solid var(--bd);cursor:pointer}
-.mi:hover{background:var(--s2)}
-.mi.sel{background:#eef2ff}
-.mi.unread .mi-subj{font-weight:700}
-.mi-top{display:flex;justify-content:space-between;margin-bottom:3px}
-.mi-from{font-size:11px;font-weight:600;color:var(--blue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
-.mi-date{font-family:var(--mo);font-size:9px;color:var(--mu);flex-shrink:0}
-.mi-subj{font-size:12px;margin-bottom:2px}
-.mi-prev{font-size:11px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mi-pj{color:var(--mu)}
-.empty{padding:36px 14px;text-align:center;font-family:var(--mo);font-size:10px;color:var(--mu)}
-/* Colonne détail */
-#col-detail{flex:1;overflow-y:auto;background:var(--bg);min-width:0}
-#detail{padding:26px 32px;max-width:760px}
-.d-subj{font-family:var(--mo);font-size:16px;font-weight:700;margin-bottom:16px}
-.d-from{display:flex;align-items:center;gap:12px;padding:11px 15px;background:var(--s);border:1px solid var(--bd);border-radius:8px;margin-bottom:18px}
-.d-ava{width:34px;height:34px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:15px}
-.d-fname{font-family:var(--mo);font-size:10px;font-weight:700;color:var(--blue)}
-.d-fdate{font-family:var(--mo);font-size:9px;color:var(--mu)}
-.d-body{font-size:14px;line-height:1.75;white-space:pre-wrap;color:var(--tx)}
-.d-pj-sec{margin-top:22px;border-top:1px solid var(--bd);padding-top:14px}
-.d-pj-lbl{font-family:var(--mo);font-size:9px;color:var(--mu);margin-bottom:8px;letter-spacing:1px}
-.d-pj{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;background:var(--s);border:1px solid var(--bd);border-radius:7px;font-size:12px;text-decoration:none;color:var(--tx);margin:0 8px 8px 0}
-.d-pj:hover{border-color:var(--blue)}
-.d-pj .sz{color:var(--mu);font-size:9px}
-.d-actions{margin-top:24px;display:flex;gap:8px;flex-wrap:wrap}
-.d-act{font-family:var(--mo);font-size:10px;padding:8px 14px;background:var(--s);border:1px solid var(--bd);border-radius:6px;cursor:pointer;color:var(--tx)}
-.d-act:hover{border-color:var(--blue);color:var(--blue)}
-.d-act.danger:hover{border-color:var(--red);color:var(--red)}
-.d-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--mu);gap:10px}
-/* Modal compose */
-#cmodal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:18px}
-.cbox{background:var(--s);border-radius:12px;width:560px;max-width:96vw;max-height:92vh;overflow:auto}
-.chdr{padding:15px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:9px}
-.chdr h3{font-family:var(--mo);font-size:12px;font-weight:700;flex:1}
-.cx{background:none;border:none;cursor:pointer;font-size:18px;color:var(--mu)}
-.cbody{padding:18px 20px;display:flex;flex-direction:column;gap:13px}
-.cf label{font-family:var(--mo);font-size:9px;color:var(--mu);letter-spacing:1px;display:block;margin-bottom:5px}
-.cf input,.cf select,.cf textarea{width:100%;font-size:13px;padding:9px 11px;background:var(--s2);border:1px solid var(--bd);border-radius:5px;color:var(--tx);font-family:inherit}
-.cf textarea{resize:vertical;min-height:120px}
-.cfoot{padding:13px 20px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px}
-.cerr{display:none;font-size:11px;color:var(--red);background:rgba(225,0,15,.07);padding:7px 11px;border-radius:5px}
-#cpj-list{display:flex;flex-direction:column;gap:5px}
-.cpj{display:flex;align-items:center;gap:8px;font-size:11px;background:var(--s2);padding:6px 10px;border-radius:5px}
-.cpj button{margin-left:auto;background:none;border:none;color:var(--red);cursor:pointer}
-#toast{position:fixed;bottom:16px;right:16px;font-family:var(--mo);font-size:11px;padding:9px 15px;border-radius:6px;display:none;z-index:99999}
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 #toast.ok{background:#dcfce7;color:#15803d;border:1px solid #86efac}
 #toast.err{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}
 </style>
 </head>
 <body>
 <div id="root">
-<<<<<<< HEAD
   <!-- Colonne dossiers -->
   <div id="col-folders">
     <div class="fold-sec">📬 Dossiers</div>
@@ -236,58 +166,10 @@ html,body{height:100%;overflow:hidden;font-family:system-ui,sans-serif;backgroun
           <input type="file" id="c-file" multiple style="display:none" onchange="addPJ(this)">
           <span style="font-family:monospace;font-size:8px;color:var(--mu)">10 Mo/PJ · 25 Mo total · 10 max</span>
         </div>
-=======
-  <!-- Dossiers -->
-  <div id="col-folders">
-    <div class="fold-sec">📁 Interne</div>
-    <div class="fold active" data-box="inbox"   onclick="selBox('inbox',this)"><span class="fi">📥</span><span class="fn">Inbox</span><span class="fb" id="fb-inbox" style="display:none"></span></div>
-    <div class="fold"        data-box="sent"    onclick="selBox('sent',this)"><span class="fi">📤</span><span class="fn">Envoyés</span></div>
-    <div class="fold"        data-box="drafts"  onclick="selBox('drafts',this)"><span class="fi">📝</span><span class="fn">Brouillons</span></div>
-    <div class="fold"        data-box="important" onclick="selBox('important',this)"><span class="fi">⭐</span><span class="fn">Important</span></div>
-    <div class="fold"        data-box="trash"   onclick="selBox('trash',this)"><span class="fi">🗑️</span><span class="fn">Corbeille</span></div>
-    <div class="fold-sec">🛰️ Supervision</div>
-    <div class="fold" data-box="inbox" onclick="selBox('inbox',this)"><span class="fi">🏛️</span><span class="fn">Supervision</span></div>
-    <div class="fold-sec">📧 Mail</div>
-    <div class="fold disabled"><span class="fi">📧</span><span class="fn">Mail</span><span class="phase">Phase 3</span></div>
-    <div class="fold-note">Disponible après configuration SMTP</div>
-    <div class="fold-sec">💬 SMS</div>
-    <div class="fold disabled"><span class="fi">💬</span><span class="fn">SMS</span><span class="phase">Phase 3</span></div>
-    <div class="fold-note">Disponible après configuration gateway SMS</div>
-  </div>
-  <!-- Liste -->
-  <div id="col-list">
-    <div id="list-top">
-      <span id="list-title">INBOX</span>
-      <button class="btn-new" onclick="openCompose()">✏️ Nouveau message</button>
-    </div>
-    <div id="list-pane"><div class="empty">Chargement…</div></div>
-  </div>
-  <!-- Détail -->
-  <div id="col-detail">
-    <div id="detail"><div class="d-empty"><div style="font-size:40px;opacity:.3">✉️</div><div style="font-family:monospace;font-size:11px">Sélectionnez un message</div></div></div>
-  </div>
-</div>
-
-<!-- Modal compose -->
-<div id="cmodal">
-  <div class="cbox">
-    <div class="chdr"><span style="font-size:16px">✏️</span><h3 id="ctitle">NOUVEAU MESSAGE</h3><button class="cx" onclick="closeCompose()">✕</button></div>
-    <div class="cbody">
-      <div class="cf"><label>Destinataire (instance)</label>
-        <select id="c-dest"><option value="">— Sélectionner une instance —</option></select>
-      </div>
-      <div class="cf"><label>Objet</label><input type="text" id="c-subj" placeholder="Objet du message"></div>
-      <div class="cf"><label>Message</label><textarea id="c-body" placeholder="Rédigez votre message…"></textarea></div>
-      <div class="cf"><label>Pièces jointes</label>
-        <input type="file" id="c-file" multiple onchange="addPJ(this)" style="font-size:11px">
-        <div id="cpj-list" style="margin-top:7px"></div>
-        <div style="font-size:9px;color:var(--mu);margin-top:4px">⚠️ Pas de donnée patient — fichiers sensibles via Bluefiles sur l'instance.</div>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       </div>
       <div class="cerr" id="c-err"></div>
     </div>
     <div class="cfoot">
-<<<<<<< HEAD
       <button class="btn-action btn-secondary" onclick="closeCompose()">Annuler</button>
       <button class="btn-action btn-primary" onclick="sendCompose()">📤 Envoyer</button>
     </div>
@@ -499,7 +381,7 @@ function loadInstances(preselSigle){
       var needle = preselSigle.toUpperCase().trim();
       for(var i=0;i<sel.options.length;i++){
         var opt = sel.options[i].value.toUpperCase().trim();
-        // Matcher exact, ou si le sigle contient le nom (ex: "Hôpitaux Du du Lac" vs "HÔPITAUX DU du Lac")
+        // Matcher exact, ou si le sigle contient le nom (ex: "Hôpitaux Du Lac" vs "HÔPITAUX DU LÉMAN")
         if(opt===needle || opt.indexOf(needle)>=0 || needle.indexOf(opt)>=0){
           sel.selectedIndex=i; break;
         }
@@ -702,136 +584,6 @@ window.onFicheFile=onFicheFile;window.sendFiche=sendFiche;
 window.openCompose=openCompose;window.closeCompose=closeCompose;
 window.replyMsg=replyMsg;window.addPJ=addPJ;window.rmCPJ=rmCPJ;window.sendCompose=sendCompose;
 window.onDestChange=onDestChange;window.loadAnnuaire=loadAnnuaire;
-=======
-      <button class="d-act" onclick="closeCompose()">Annuler</button>
-      <button class="btn-new" onclick="sendCompose()">📤 Envoyer</button>
-    </div>
-  </div>
-</div>
-<div id="toast"></div>
-
-<script>
-var P = new URLSearchParams(location.search);
-var TOK = P.get("token") || "";
-function _api(url,opts){opts=opts||{};opts.headers=opts.headers||{};opts.headers["Authorization"]="Bearer "+TOK;if(opts.body&&!(opts.body instanceof FormData)&&!opts.headers["Content-Type"])opts.headers["Content-Type"]="application/json";return fetch(url,opts);}
-function _esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
-function toast(m,t){var e=document.getElementById("toast");e.textContent=m;e.className=t||"ok";e.style.display="block";clearTimeout(e._t);e._t=setTimeout(function(){e.style.display="none";},3000);}
-function fmtDate(iso){if(!iso)return"";var s=iso;if(s.indexOf("Z")<0&&s.indexOf("+")<0)s=s.replace(" ","T")+"Z";var d=new Date(s);if(isNaN(d.getTime()))return"";return d.toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});}
-
-var BOX="inbox", SEL=null, MSGS=[], INSTANCES=[];
-var BOXQ={inbox:"box=inbox",sent:"box=sent",drafts:"box=drafts",important:"box=inbox&important=1",trash:"box=trash"};
-var BOXLBL={inbox:"INBOX",sent:"ENVOYÉS",drafts:"BROUILLONS",important:"IMPORTANT",trash:"CORBEILLE"};
-
-function selBox(box,el){
-  BOX=box;
-  document.querySelectorAll(".fold").forEach(function(f){f.classList.remove("active");});
-  if(el)el.classList.add("active");
-  document.getElementById("list-title").textContent=BOXLBL[box]||box.toUpperCase();
-  loadList();
-}
-
-function loadBadge(){
-  _api("/api/v1/messagerie/non-lus").then(function(r){return r.ok?r.json():{count:0};}).then(function(d){
-    var b=document.getElementById("fb-inbox");if(!b)return;
-    if(d.count>0){b.textContent=d.count;b.style.display="inline";}else b.style.display="none";
-  }).catch(function(){});
-}
-
-function loadList(){
-  var pane=document.getElementById("list-pane");
-  pane.innerHTML='<div class="empty">Chargement…</div>';
-  var q=BOXQ[BOX]||"box=inbox";
-  _api("/api/v1/messagerie/messages?canal=interne&"+q).then(function(r){return r.ok?r.json():{messages:[]};}).then(function(d){
-    MSGS=d.messages||[];
-    renderList();
-  }).catch(function(){pane.innerHTML='<div class="empty">Erreur de chargement</div>';});
-  loadBadge();
-}
-
-function renderList(){
-  var pane=document.getElementById("list-pane");
-  if(!MSGS.length){pane.innerHTML='<div class="empty">'+(BOX==="sent"?"Aucun message envoyé":BOX==="drafts"?"Aucun brouillon":BOX==="trash"?"Corbeille vide":"Aucun message")+'</div>';return;}
-  pane.innerHTML=MSGS.slice().reverse().map(function(m){
-    var unread=(BOX==="inbox"||BOX==="important")&&!m.lu;
-    var who=(BOX==="sent"||BOX==="drafts")?("→ "+((m.destinataires||[]).map(function(d){return d.display||d.value;}).join(", ")||"—")):(m.expediteur_nom||m.expediteur_addr||"Instance");
-    var pj=m.attachments_count>0?' <span class="mi-pj">📎</span>':"";
-    return '<div class="mi '+(unread?"unread":"")+(SEL===m.id?" sel":"")+'" onclick="openMsg('+m.id+')">'+
-      '<div class="mi-top"><span class="mi-from">'+_esc(who)+'</span><span class="mi-date">'+fmtDate(m.created_at)+'</span></div>'+
-      '<div class="mi-subj">'+_esc(m.sujet||"(sans objet)")+pj+'</div>'+
-      '<div class="mi-prev">'+_esc((m.contenu||"").substring(0,70))+'</div></div>';
-  }).join("");
-}
-
-function openMsg(id){
-  SEL=id;renderList();
-  _api("/api/v1/messagerie/messages/"+id).then(function(r){return r.ok?r.json():null;}).then(function(m){
-    if(!m){return;}
-    try{_api("/api/v1/messagerie/"+id+"/lire",{method:"PUT"}).then(function(){loadBadge();});}catch(e){}
-    var from=m.expediteur_nom||m.expediteur_addr||"Instance";
-    var pj=(m.attachments||[]).map(function(a){
-      return '<a class="d-pj" href="/api/v1/messagerie/attachments/'+a.id+'?token='+encodeURIComponent(TOK)+'" target="_blank">📎 '+_esc(a.nom||"fichier")+' <span class="sz">'+Math.round((a.taille||0)/1024)+'Ko</span></a>';
-    }).join("");
-    var d=document.getElementById("detail");
-    d.innerHTML='<div class="d-subj">'+_esc(m.sujet||"(sans objet)")+'</div>'+
-      '<div class="d-from"><div class="d-ava">🏥</div><div><div class="d-fname">'+_esc(from)+'</div><div class="d-fdate">'+fmtDate(m.created_at)+'</div></div></div>'+
-      '<div class="d-body">'+_esc(m.contenu||"")+'</div>'+
-      (pj?'<div class="d-pj-sec"><div class="d-pj-lbl">PIÈCES JOINTES</div>'+pj+'</div>':"")+
-      '<div class="d-actions">'+
-        '<button class="d-act" onclick="replyMsg('+JSON.stringify(from).replace(/"/g,"&quot;")+','+JSON.stringify(m.sujet||"").replace(/"/g,"&quot;")+','+JSON.stringify(m.expediteur_addr||"").replace(/"/g,"&quot;")+')">↩ Répondre</button>'+
-        '<button class="d-act" onclick="fwdMsg('+JSON.stringify(m.sujet||"").replace(/"/g,"&quot;")+','+JSON.stringify(m.contenu||"").replace(/"/g,"&quot;")+')">↪ Transférer</button>'+
-        '<button class="d-act danger" onclick="delMsg('+id+')">🗑 Supprimer</button>'+
-      '</div>';
-  }).catch(function(){});
-}
-
-function delMsg(id){
-  if(!confirm("Supprimer ce message ?"))return;
-  _api("/api/v1/messagerie/messages/"+id,{method:"DELETE"}).then(function(r){
-    if(r.ok){document.getElementById("detail").innerHTML='<div class="d-empty"><div style="font-size:40px;opacity:.3">✉️</div></div>';loadList();toast("Message supprimé");}
-    else toast("Suppression impossible","err");
-  });
-}
-
-/* ---- Compose / Répondre / Transférer ---- */
-var CPJ=[];
-function loadInstances(){
-  _api("/api/coll/instances").then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}).then(function(d){
-    var sel=document.getElementById("c-dest");
-    var list=(d&&(d.instances||d))||[];
-    INSTANCES=Array.isArray(list)?list:[];
-    sel.innerHTML='<option value="">— Sélectionner une instance —</option>'+INSTANCES.map(function(i){
-      var sig=i.sigle||i.nom||i;return '<option value="'+_esc(sig)+'">'+_esc(sig)+(i.nom&&i.nom!==sig?" — "+_esc(i.nom):"")+'</option>';
-    }).join("");
-  });
-}
-function openCompose(){CPJ=[];document.getElementById("cpj-list").innerHTML="";document.getElementById("c-subj").value="";document.getElementById("c-body").value="";document.getElementById("c-dest").value="";document.getElementById("c-err").style.display="none";document.getElementById("ctitle").textContent="NOUVEAU MESSAGE";loadInstances();document.getElementById("cmodal").style.display="flex";}
-function closeCompose(){document.getElementById("cmodal").style.display="none";}
-function replyMsg(from,subj,sigle){openCompose();document.getElementById("ctitle").textContent="RÉPONDRE";document.getElementById("c-subj").value=(subj&&subj.indexOf("Re:")===0?subj:"Re: "+(subj||""));setTimeout(function(){var sel=document.getElementById("c-dest");if(sigle){for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===sigle){sel.selectedIndex=i;break;}}}},300);}
-function fwdMsg(subj,body){openCompose();document.getElementById("ctitle").textContent="TRANSFÉRER";document.getElementById("c-subj").value="Tr: "+(subj||"");document.getElementById("c-body").value="\n\n--- Message transféré ---\n"+(body||"");}
-function addPJ(inp){var fs=Array.from(inp.files||[]);fs.forEach(function(f){CPJ.push(f);});inp.value="";renderCPJ();}
-function renderCPJ(){document.getElementById("cpj-list").innerHTML=CPJ.map(function(f,i){return '<div class="cpj">📎 '+_esc(f.name)+' <span style="color:var(--mu)">'+Math.round(f.size/1024)+'Ko</span><button onclick="rmCPJ('+i+')">✕</button></div>';}).join("");}
-function rmCPJ(i){CPJ.splice(i,1);renderCPJ();}
-function sendCompose(){
-  var dest=document.getElementById("c-dest").value;
-  var subj=document.getElementById("c-subj").value.trim();
-  var body=document.getElementById("c-body").value.trim();
-  var err=document.getElementById("c-err");
-  if(!dest){err.textContent="Choisissez une instance destinataire.";err.style.display="block";return;}
-  if(!subj&&!body){err.textContent="Objet ou message requis.";err.style.display="block";return;}
-  err.style.display="none";
-  var fd=new FormData();
-  fd.append("target_sigle",dest);fd.append("sujet",subj);fd.append("contenu",body);
-  CPJ.forEach(function(f){fd.append("fichiers",f,f.name);});
-  _api("/api/coll/msg-to-instance",{method:"POST",body:fd}).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});}).then(function(res){
-    if(res.ok&&res.j&&res.j.ok){toast("Message envoyé à "+dest);closeCompose();if(BOX==="sent")loadList();}
-    else{err.textContent="Échec : "+((res.j&&res.j.detail)||"erreur");err.style.display="block";}
-  }).catch(function(e){err.textContent="Erreur réseau : "+e;err.style.display="block";});
-}
-
-window.selBox=selBox;window.openMsg=openMsg;window.delMsg=delMsg;window.openCompose=openCompose;window.closeCompose=closeCompose;window.replyMsg=replyMsg;window.fwdMsg=fwdMsg;window.addPJ=addPJ;window.rmCPJ=rmCPJ;window.sendCompose=sendCompose;
-loadList();
-setInterval(function(){if(BOX==="inbox"||BOX==="important")loadList();else loadBadge();},20000);
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
 </script>
 </body>
 </html>

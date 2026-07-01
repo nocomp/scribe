@@ -208,23 +208,13 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
       <div style="padding:10px 12px;border-bottom:1px solid var(--bd)">
         <div style="font-family:var(--mo);font-size:9px;color:var(--mu);margin-bottom:6px">SITES PARTICIPANTS</div>
         <div class="sites-checkboxes" id="sites-sel">
-<<<<<<< HEAD
           <div class="site-cb sel" data-sigle="CHV" onclick="toggleSite(this)">CHANGE</div>
           <div class="site-cb" data-sigle="GHT1" onclick="toggleSite(this)">GHT1</div>
+          <div class="site-cb" data-sigle="CHR1" onclick="toggleSite(this)">CHR1</div>
           <div class="site-cb" data-sigle="CH2" onclick="toggleSite(this)">CH2</div>
           <div class="site-cb" data-sigle="CH3" onclick="toggleSite(this)">CH3</div>
           <div class="site-cb" data-sigle="CH4" onclick="toggleSite(this)">CH4</div>
-          <div class="site-cb" data-sigle="CHB" onclick="toggleSite(this)">CHB</div>
-          <div class="site-cb" data-sigle="CH6" onclick="toggleSite(this)">CH6</div>
-=======
-          <div class="site-cb sel" data-sigle="CHAG" onclick="toggleSite(this)">CHANGE</div>
-          <div class="site-cb" data-sigle="GHTLMB" onclick="toggleSite(this)">GHTLMB</div>
-          <div class="site-cb" data-sigle="CHRUMILLY" onclick="toggleSite(this)">CHRUMILLY</div>
-          <div class="site-cb" data-sigle="HDLEMAN" onclick="toggleSite(this)">HDLEMAN</div>
-          <div class="site-cb" data-sigle="HPMB" onclick="toggleSite(this)">HPMB</div>
-          <div class="site-cb" data-sigle="CHB" onclick="toggleSite(this)">CHB</div>
-          <div class="site-cb" data-sigle="CHPG" onclick="toggleSite(this)">CHPG</div>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+          <div class="site-cb" data-sigle="CH5" onclick="toggleSite(this)">CH5</div>
         </div>
       </div>
 
@@ -317,23 +307,13 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
       <div class="form-row">
         <label>Sites participants</label>
         <div class="sites-checkboxes" id="ia-sites">
-<<<<<<< HEAD
           <div class="site-cb sel" data-sigle="CHV">CHANGE</div>
           <div class="site-cb" data-sigle="GHT1">GHT1</div>
+          <div class="site-cb" data-sigle="CHR1">CHR1</div>
           <div class="site-cb" data-sigle="CH2">CH2</div>
           <div class="site-cb" data-sigle="CH3">CH3</div>
           <div class="site-cb" data-sigle="CH4">CH4</div>
-          <div class="site-cb" data-sigle="CHB">CHB</div>
-          <div class="site-cb" data-sigle="CH6">CH6</div>
-=======
-          <div class="site-cb sel" data-sigle="CHAG">CHANGE</div>
-          <div class="site-cb" data-sigle="GHTLMB">GHTLMB</div>
-          <div class="site-cb" data-sigle="CHRUMILLY">CHRUMILLY</div>
-          <div class="site-cb" data-sigle="HDLEMAN">HDLEMAN</div>
-          <div class="site-cb" data-sigle="HPMB">HPMB</div>
-          <div class="site-cb" data-sigle="CHB">CHB</div>
-          <div class="site-cb" data-sigle="CHPG">CHPG</div>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+          <div class="site-cb" data-sigle="CH5">CH5</div>
         </div>
       </div>
       <div id="ia-status" style="font-family:var(--mo);font-size:10px;color:var(--mu);display:none;text-align:center;padding:10px">
@@ -360,23 +340,13 @@ html,body{height:100%;font-family:system-ui,sans-serif;background:var(--bg);colo
       <div class="form-row"><label>Rôle dans l'exercice *</label><input id="j-role" placeholder="Médecin urgentiste CHANGE"></div>
       <div class="form-row"><label>Site assigné</label>
         <select id="j-site">
-<<<<<<< HEAD
           <option value="CHV:8660">CHANGE (port 8660)</option>
           <option value="GHT1:8661">GHT1 (port 8661)</option>
-          <option value="CH2:8662">CH2 (port 8662)</option>
-          <option value="CH3:8663">CH3 (port 8663)</option>
-          <option value="CH4:8664">CH4 (port 8664)</option>
-          <option value="CHB:8665">CHB (port 8665)</option>
-          <option value="CH6:8666">CH6 (port 8666)</option>
-=======
-          <option value="CHAG:8660">CHANGE (port 8660)</option>
-          <option value="GHTLMB:8661">GHTLMB (port 8661)</option>
-          <option value="CHRUMILLY:8662">CHRUMILLY (port 8662)</option>
-          <option value="HDLEMAN:8663">HDLEMAN (port 8663)</option>
-          <option value="HPMB:8664">HPMB (port 8664)</option>
-          <option value="CHB:8665">CHB (port 8665)</option>
-          <option value="CHPG:8666">CHPG (port 8666)</option>
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+          <option value="CHR1:8662">CHR1 (port 8662)</option>
+          <option value="CH2:8663">CH2 (port 8663)</option>
+          <option value="CH3:8664">CH3 (port 8664)</option>
+          <option value="CH4:8665">CH4 (port 8665)</option>
+          <option value="CH5:8666">CH5 (port 8666)</option>
         </select>
       </div>
       <div class="form-row"><label>Mot de passe temporaire</label><input id="j-pwd" value="Exercice2026!"></div>
@@ -816,11 +786,7 @@ function submitGenerateIA() {
   var body = {
     sujet: sujet,
     nb_sites: sites.length || 1,
-<<<<<<< HEAD
     sites: sites.length ? sites : ['CHV'],
-=======
-    sites: sites.length ? sites : ['CHAG'],
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
     duree_exercice_min: parseInt(document.getElementById('ia-duree').value),
     duree_reel_min: parseInt(document.getElementById('ia-duree-reel').value),
     type_crise: document.getElementById('ia-type').value,

@@ -22,13 +22,8 @@
   },
   "acteurs": [
     {
-<<<<<<< HEAD
       "sigle": "CHV",
-      "nom_etablissement": "Centre Hospitalier de Valmont (CHV)",
-=======
-      "sigle": "DEMO1",
-      "nom_etablissement": "Centre Hospitalier example hospital (DEMO1)",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
+      "nom_etablissement": "Centre Hospitalier Valmont Valmont (CHV)",
       "role": "coordinateur",
       "port": 8660,
       "joueurs": [
@@ -43,11 +38,7 @@
   ],
   "stimuli": [
     {
-<<<<<<< HEAD
       "id": "S01", "t_min": 0, "type": "incident", "cible": "CHV",
-=======
-      "id": "S01", "t_min": 0, "type": "incident", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "🔴 ALERTE SOC : Activité ransomware détectée sur serveur de fichiers SRV-DATA01",
       "description_animateur": "L'incident initial. Le SOC externe signale un chiffrement massif en cours. Attendre que la cellule de crise soit activée.",
       "action_attendue": "Activer le PC Cyber. Isoler SRV-DATA01 du réseau.",
@@ -59,11 +50,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S02", "t_min": 8, "type": "message", "cible": "CHV",
-=======
-      "id": "S02", "t_min": 8, "type": "message", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "Alerte CERT Santé",
       "description_animateur": "Le CERT Santé envoie une alerte officielle. L'équipe doit répondre avec un premier bilan.",
       "action_attendue": "Accuser réception, fournir premier bilan sous 1h.",
@@ -74,11 +61,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S03", "t_min": 15, "type": "incident", "cible": "CHV",
-=======
-      "id": "S03", "t_min": 15, "type": "incident", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "🔴 PACS imagerie inaccessible",
       "description_animateur": "Escalade : les examens radiologiques ne sont plus consultables. Impact clinique direct.",
       "action_attendue": "Décision sur la continuité de l'activité imagerie.",
@@ -90,11 +73,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S04", "t_min": 22, "type": "decision", "cible": "CHV",
-=======
-      "id": "S04", "t_min": 22, "type": "decision", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "DÉCISION STRATÉGIQUE : isolement complet du réseau",
       "description_animateur": "Point de bascule. Isoler = protéger, mais casse encore plus la continuité.",
       "action_attendue": "Décision formelle à tracer.",
@@ -105,11 +84,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S05", "t_min": 28, "type": "message", "cible": "CHV",
-=======
-      "id": "S05", "t_min": 28, "type": "message", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "ANSSI demande l'isolement",
       "description_animateur": "L'ANSSI confirme officiellement la demande d'isolement — aide à trancher.",
       "action_attendue": "Appliquer la décision.",
@@ -120,11 +95,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S06", "t_min": 35, "type": "incident", "cible": "CHV",
-=======
-      "id": "S06", "t_min": 35, "type": "incident", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "⚠️ Panne téléphonie IP liée à l'isolement",
       "description_animateur": "Conséquence inattendue de l'isolement : perte de la téléphonie IP.",
       "action_attendue": "Activer la téléphonie de secours (GSM, talkies).",
@@ -136,11 +107,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S07", "t_min": 42, "type": "message", "cible": "CHV",
-=======
-      "id": "S07", "t_min": 42, "type": "message", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "Demande ARS : bilan et impact patient",
       "description_animateur": "L'ARS entre dans la boucle — demande un état quantitatif.",
       "action_attendue": "Produire un bilan quantifié (services touchés, patients en attente, reports).",
@@ -151,30 +118,18 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S08", "t_min": 50, "type": "decision", "cible": "CHV",
-=======
-      "id": "S08", "t_min": 50, "type": "decision", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "DÉCISION : demande de déclenchement Plan Blanc",
       "description_animateur": "Si les impacts cliniques s'aggravent, le Plan Blanc devient nécessaire.",
       "action_attendue": "Décision formelle de déclenchement ou non.",
       "payload": {
-<<<<<<< HEAD
         "contenu": "Délibération sur le déclenchement du Plan Blanc CHV suite à impacts cliniques : imagerie hors service, laboratoire dégradé, blocs opératoires en mode papier uniquement.",
-=======
-        "contenu": "Délibération sur le déclenchement du Plan Blanc DEMO1 suite à impacts cliniques : imagerie hors service, laboratoire dégradé, blocs opératoires en mode papier uniquement.",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
         "responsable": "Directeur de l'établissement",
         "base_reglementaire": "Code santé publique L.3131-7 / Plan Blanc"
       }
     },
     {
-<<<<<<< HEAD
       "id": "S09", "t_min": 55, "type": "message", "cible": "CHV",
-=======
-      "id": "S09", "t_min": 55, "type": "message", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "Demande CNIL : notification violation de données",
       "description_animateur": "Aspect RGPD : obligation de notifier sous 72h si données personnelles compromises.",
       "action_attendue": "Engager la déclaration CNIL, identifier le DPO.",
@@ -185,11 +140,7 @@
       }
     },
     {
-<<<<<<< HEAD
       "id": "S10", "t_min": 58, "type": "decision", "cible": "CHV",
-=======
-      "id": "S10", "t_min": 58, "type": "decision", "cible": "DEMO1",
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060
       "titre": "DÉCISION : stratégie de communication publique",
       "description_animateur": "Les médias commencent à appeler. Il faut parler d'une seule voix.",
       "action_attendue": "Rédiger le communiqué, désigner un porte-parole.",

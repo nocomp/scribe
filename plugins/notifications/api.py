@@ -566,7 +566,6 @@ def sent_incidents(db: Session = Depends(get_db), user=Depends(get_current_user)
               .filter(NotifLog.event_ref_id.isnot(None), NotifLog.status == "sent")
               .distinct().all())
     return {"incident_ids": sorted({r[0] for r in rows if r[0] is not None})}
-<<<<<<< HEAD
 
 
 # ── Synchronisation config centrale → canaux opérationnels ──────────────────
@@ -679,5 +678,3 @@ def notif_sync_apply(request: Request, db: Session = Depends(get_db)):
         pulled = False
     rep = materialize_central_channels(db)
     return {"ok": True, "pulled": pulled, "channels": rep, "bluefiles": _bf_sync_status()}
-=======
->>>>>>> 42014cc0f1f987ee0564de52890336b067151060

@@ -43,17 +43,17 @@ SCENARIOS_DIR = ROOT_DIR / "scenarios"
 
 # Instances exercice
 # v3.0.0 — Sigles génériques EXO1-EXO7 (au lieu des sigles G7 réels).
-# Les anciens sigles (CHAG, GHTLMB...) sont maintenus en ALIAS pour rétrocompat
+# Les anciens sigles (CHV, GHT1...) sont maintenus en ALIAS pour rétrocompat
 # avec les scénarios existants qui les utilisent comme cibles narratives.
 EXO_INSTANCES = {
     "EXO1":8660,"EXO2":8661,"EXO3":8662,
     "EXO4":8663,"EXO5":8664,"EXO6":8665,"EXO7":8666,
 }
 # Alias historiques → mêmes ports. Permet aux scénarios déjà écrits avec
-# cible="CHAG" / "GHTLMB" / etc. de continuer à fonctionner sans modification.
+# cible="CHV" / "GHT1" / etc. de continuer à fonctionner sans modification.
 _EXO_ALIASES = {
-    "CHAG":"EXO1","GHTLMB":"EXO2","CHRUMILLY":"EXO3",
-    "HDLEMAN":"EXO4","HPMB":"EXO5","CHB":"EXO6","CHPG":"EXO7",
+    "CHV":"EXO1","GHT1":"EXO2","CHR1":"EXO3",
+    "CH2":"EXO4","CH3":"EXO5","CH4":"EXO6","CH5":"EXO7",
 }
 # Vue "complète" sigle→port incluant alias (utilisée pour la résolution).
 EXO_INSTANCES_FULL = dict(EXO_INSTANCES)
@@ -548,7 +548,7 @@ async def save_scenario(request:Request, auth=Depends(require_auth)):
 
 # ── Génération IA ──────────────────────────────────────────────────────────────
 class GenRequest(BaseModel):
-    sujet:str; nb_sites:int=1; sites:list=["CHAG"]
+    sujet:str; nb_sites:int=1; sites:list=["CHV"]
     duree_exercice_min:int=60; duree_reel_min:int=240
     complexite:str="MOYEN"; type_crise:str="SANITAIRE"; langue:str="fr"
     nb_joueurs:int=4; nb_stimuli:int=8
@@ -566,14 +566,14 @@ class GenRequest(BaseModel):
 ALBERT_URL   = "https://albert.api.etalab.gouv.fr/v1/chat/completions"
 ALBERT_MODEL = "mistralai/Ministral-3-8B-Instruct-2512"
 ALBERT_KEY   = os.environ.get("SCRIBE_IA_KEY",
-    "sk-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo5ODA1LCJ0b2tlbl9pZCI6MjAzNTUsImV4cGlyZXMiOjE4MDY1MzA0MDB9.nUl4-G3ygETP11uooQ7u8HYGRYY_cAmcHSUCcy7IN9g")
+    "")
 
 SYSTEM_EXO = """Tu es expert en gestion de crise hospitalière française. Tu génères des scénarios d'exercice réalistes pour équipes GHT. Tu réponds UNIQUEMENT en JSON valide, sans texte autour."""
 
 def _prompt_scenario(b:GenRequest) -> str:
     ratio = round(b.duree_reel_min/b.duree_exercice_min,1)
     sid = datetime.now().strftime("%Y%m%d_%H%M")
-    ports = {"CHAG":8660,"GHTLMB":8661,"CHRUMILLY":8662,"HDLEMAN":8663,"HPMB":8664,"CHB":8665,"CHPG":8666}
+    ports = {"CHV":8660,"GHT1":8661,"CHR1":8662,"CH2":8663,"CH3":8664,"CH4":8665,"CH5":8666}
     
     # Construire les instructions spécifiques
     type_instructions = {
@@ -636,25 +636,25 @@ CONTRAINTE DE SITE — IMPORTANT :
 - NE JAMAIS cibler un site non listé. Les "cible" des stimuli doivent strictement appartenir à : {", ".join(b.sites)}.
 
 NOMS DES ÉTABLISSEMENTS — pour la rédaction des textes :
-- Les sigles à utiliser dans les champs "cible", "sigle" et les identifiants sont : CHAG, GHTLMB, CHRUMILLY, HDLEMAN, HPMB, CHB, CHPG.
+- Les sigles à utiliser dans les champs "cible", "sigle" et les identifiants sont : CHV, GHT1, CHR1, CH2, CH3, CH4, CH5.
 - MAIS dans les textes en langage naturel (titres, descriptions, faits, contenus de messages), utilisez le VRAI nom :
-  * CHAG = "CHANGE" (Centre Hospitalier ANnecy-GEnevois)
-  * GHTLMB = "Hôpitaux du Léman" ou "Thonon"
-  * CHRUMILLY = "CH Rumilly"
-  * HDLEMAN = "Hôpitaux du Pays du Mont-Blanc"
-  * HPMB = "Hôpital Privé Mont-Blanc"
-  * CHB = "CH Bonneville"
-  * CHPG = "CH Pays de Gex"
-- Exemple CORRECT : titre "Afflux massif au CHANGE", cible "CHAG".
-- Exemple INCORRECT : titre "Afflux massif au CHAG" (on utilise le nom long dans les textes).
+  * CHV = "CHANGE" (Centre Hospitalier ANnecy-GEnevois)
+  * GHT1 = "Hôpitaux du Lac" ou "Lacville"
+  * CHR1 = "CH Plainville"
+  * CH2 = "Hôpitaux du Pays du Grandmont"
+  * CH3 = "Hôpital Privé Grandmont"
+  * CH4 = "CH Bonneville"
+  * CH5 = "CH Pays de Gex"
+- Exemple CORRECT : titre "Afflux massif au CHANGE", cible "CHV".
+- Exemple INCORRECT : titre "Afflux massif au CHV" (on utilise le nom long dans les textes).
 
 Retourne UNIQUEMENT ce JSON valide (rien d'autre, pas de texte avant ou après):
-{{"meta":{{"id":"exo_{sid}","titre":"<titre court et évocateur>","description":"<2-3 phrases>","duree_min":{b.duree_exercice_min},"duree_reel_min":{b.duree_reel_min},"ratio_compression":{ratio},"complexite":"{b.complexite}","type_crise":"{b.type_crise}","objectifs_pedagogiques":["<obj1>","<obj2>","<obj3>"]}},"acteurs":[{{"sigle":"{b.sites[0] if b.sites else "CHAG"}","nom_etablissement":"<nom complet>","role":"coordinateur","port":{ports.get(b.sites[0] if b.sites else "CHAG",8660)},"joueurs":[{{"username":"dircrise","display_name":"<prénom NOM — Directeur de Crise>","role_exercice":"<rôle précis dans l'exercice>","responsabilites":["<resp1>","<resp2>"]}}]}}],"stimuli":[{{"id":"S01","t_min":0,"cible":"{b.sites[0] if b.sites else "CHAG"}","type":"incident","titre":"<titre court>","description_animateur":"<contexte pour animateur — ce que les joueurs doivent faire>","payload":{{"fait":"<description précise pour les joueurs>","urgency":3,"type_crise":"{b.type_crise}","site_id":"<SIGLE>","unite_fonctionnelle":"<service>","declarant_nom":"<qui déclare>","analyse":"","jalons_labels":["<jalon1>","<jalon2>","<jalon3>"]}},"action_attendue":"<décision ou action attendue des joueurs>"}}],"decisions_attendues":[{{"t_min":5,"contenu":"<décision>","responsable":"Directeur de crise","obligatoire":true}}],"debriefing_guide":{{"points_cles":["<point1>","<point2>"],"questions_debriefing":["<question1>","<question2>"],"pieges_frequents":["<piège1>"]}}}}
+{{"meta":{{"id":"exo_{sid}","titre":"<titre court et évocateur>","description":"<2-3 phrases>","duree_min":{b.duree_exercice_min},"duree_reel_min":{b.duree_reel_min},"ratio_compression":{ratio},"complexite":"{b.complexite}","type_crise":"{b.type_crise}","objectifs_pedagogiques":["<obj1>","<obj2>","<obj3>"]}},"acteurs":[{{"sigle":"{b.sites[0] if b.sites else "CHV"}","nom_etablissement":"<nom complet>","role":"coordinateur","port":{ports.get(b.sites[0] if b.sites else "CHV",8660)},"joueurs":[{{"username":"dircrise","display_name":"<prénom NOM — Directeur de Crise>","role_exercice":"<rôle précis dans l'exercice>","responsabilites":["<resp1>","<resp2>"]}}]}}],"stimuli":[{{"id":"S01","t_min":0,"cible":"{b.sites[0] if b.sites else "CHV"}","type":"incident","titre":"<titre court>","description_animateur":"<contexte pour animateur — ce que les joueurs doivent faire>","payload":{{"fait":"<description précise pour les joueurs>","urgency":3,"type_crise":"{b.type_crise}","site_id":"<SIGLE>","unite_fonctionnelle":"<service>","declarant_nom":"<qui déclare>","analyse":"","jalons_labels":["<jalon1>","<jalon2>","<jalon3>"]}},"action_attendue":"<décision ou action attendue des joueurs>"}}],"decisions_attendues":[{{"t_min":5,"contenu":"<décision>","responsable":"Directeur de crise","obligatoire":true}}],"debriefing_guide":{{"points_cles":["<point1>","<point2>"],"questions_debriefing":["<question1>","<question2>"],"pieges_frequents":["<piège1>"]}}}}
 
 RÈGLES STRICTES:
 - EXACTEMENT {b.nb_stimuli} stimuli, espacés progressivement (T+0, T+5, T+10...)
 - Types stimuli disponibles: incident, message, transfert, chat, decision
-- Ports fixes: CHAG=8660 GHTLMB=8661 CHRUMILLY=8662 HDLEMAN=8663 HPMB=8664 CHB=8665 CHPG=8666
+- Ports fixes: CHV=8660 GHT1=8661 CHR1=8662 CH2=8663 CH3=8664 CH4=8665 CH5=8666
 - EXACTEMENT {b.nb_joueurs} joueurs répartis sur les sites
 - JSON VALIDE UNIQUEMENT — pas de backtick, pas de commentaire, pas de texte hors JSON"""
 
@@ -849,8 +849,8 @@ async def _find_chat_salon_id(client, base: str, hdr: dict, preferred: str = "g�
 async def _do_inject(stimulus:dict, tok_instances:dict):
     sigle = stimulus.get("cible","")
 
-    # v3.0.0 — Normaliser le sigle pour gérer les alias historiques (CHAG → EXO1, etc.)
-    # Les scénarios existants utilisent encore CHAG/GHTLMB dans leur narration.
+    # v3.0.0 — Normaliser le sigle pour gérer les alias historiques (CHV → EXO1, etc.)
+    # Les scénarios existants utilisent encore CHV/GHT1 dans leur narration.
     # Sans cette normalisation, ces sigles étaient traités comme "acteurs externes"
     # et les stimuli ne s'injectaient pas correctement.
     _canon = _canonical_sigle(sigle)
@@ -897,7 +897,7 @@ async def _do_inject(stimulus:dict, tok_instances:dict):
         sigle = nouveau_sigle
     else:
         # v3.0.0 — Sigle valide ou alias : on utilise la forme canonique pour la
-        # suite (lookup port, token, etc.). Les stimuli ciblant "CHAG" sont
+        # suite (lookup port, token, etc.). Les stimuli ciblant "CHV" sont
         # désormais correctement routés vers EXO1.
         sigle = _canon
 
@@ -1076,7 +1076,7 @@ async def _do_inject(stimulus:dict, tok_instances:dict):
                 # sur le récepteur (transfert entrant). Auparavant seul le
                 # côté "cible" du stimulus voyait le transfert.
                 dest_sigle = pl.get("etablissement_destination")
-                # v3.0.0 — Normaliser pour gérer les alias (CHAG → EXO1)
+                # v3.0.0 — Normaliser pour gérer les alias (CHV → EXO1)
                 dest_sigle_canon = _canonical_sigle(dest_sigle) if dest_sigle else None
                 if dest_sigle_canon and dest_sigle_canon != sigle and dest_sigle_canon in tok_instances:
                     try:
@@ -1420,7 +1420,7 @@ async def start_exercice(body:StartRequest, auth=Depends(require_auth)):
     
     # Login sur toutes les instances actives
     # v3.0.0 — Normaliser les sigles envoyés par l'UI (les chips HTML legacy
-    # envoient encore CHAG/GHTLMB...). Sans normalisation, EXO_INSTANCES.get("CHAG")
+    # envoient encore CHV/GHT1...). Sans normalisation, EXO_INSTANCES.get("CHV")
     # renvoyait None → aucun login → 0 stimulus injecté.
     _token_instances = {}
     for sigle_in in body.sites:
@@ -1603,7 +1603,7 @@ async def inject_adhoc(body: InjectAdhocRequest, auth=Depends(require_auth)):
     # login "à la volée" sur l'instance cible. Ça permet de tester en
     # mode G7 nominal ou mode démo sans avoir à démarrer un scénario.
     global _token_instances
-    # v3.0.0 — Normaliser le sigle (CHAG → EXO1, etc.) pour accepter les alias.
+    # v3.0.0 — Normaliser le sigle (CHV → EXO1, etc.) pour accepter les alias.
     body_cible_canon = _canonical_sigle(body.cible)
     if body_cible_canon not in _token_instances:
         # Tenter un login à la volée
@@ -1730,7 +1730,7 @@ async def get_sites_actifs_public():
     Réponse minimale pour limiter la surface d'exposition :
       {
         "running": bool,
-        "sites": ["CHAG", "HDLEMAN", ...]
+        "sites": ["CHV", "CH2", ...]
       }
     Si aucun exercice actif : running=False, sites=[].
     """
@@ -1931,21 +1931,21 @@ def _template_json_skeleton() -> dict:
             "type_crise": "CYBER",
             "complexite": "MOYEN",
             "duree_min": 60,
-            "sites": ["CHAG"],
+            "sites": ["CHV"],
             "nb_joueurs": 5,
             "auteur": "À compléter",
             "date_creation": "2026-04-21"
         },
         "joueurs": [
-            {"nom": "Martin DUPONT", "role": "Directeur général", "site": "CHAG"},
-            {"nom": "Claire MOREAU", "role": "RSSI", "site": "CHAG"}
+            {"nom": "Martin DUPONT", "role": "Directeur général", "site": "CHV"},
+            {"nom": "Claire MOREAU", "role": "RSSI", "site": "CHV"}
         ],
         "stimuli": [
             {
                 "id": "S01",
                 "type": "incident",
                 "t_min": 0,
-                "cible": "CHAG",
+                "cible": "CHV",
                 "titre": "Premier incident",
                 "description_animateur": "Ce que l'animateur doit savoir",
                 "action_attendue": "Ce que les joueurs doivent faire",
@@ -1961,7 +1961,7 @@ def _template_json_skeleton() -> dict:
                 "id": "S02",
                 "type": "message",
                 "t_min": 10,
-                "cible": "CHAG",
+                "cible": "CHV",
                 "titre": "Message chat",
                 "description_animateur": "Contexte du message",
                 "action_attendue": "Réaction des joueurs",
@@ -1973,14 +1973,14 @@ def _template_json_skeleton() -> dict:
                 "id": "S03",
                 "type": "transfert",
                 "t_min": 25,
-                "cible": "CHAG",
+                "cible": "CHV",
                 "titre": "Transfert patient urgent",
                 "description_animateur": "Contexte du transfert",
                 "action_attendue": "Coordination du transfert",
                 "payload": {
                     "unite_origine": "Urgences",
-                    "etablissement_destination": "GHTLMB",
-                    "site_destination": "Hôpitaux du Léman",
+                    "etablissement_destination": "GHT1",
+                    "site_destination": "Hôpitaux du Lac",
                     "unite_destination": "Réanimation",
                     "motif": "Saturation locale",
                     "mode_transport": "SMUR",
@@ -2014,11 +2014,11 @@ async def get_template_csv(auth=Depends(require_auth)):
         # En-tête explicite des colonnes attendues
         "id,type,t_min,cible,titre,description_animateur,action_attendue,contenu_ou_fait,urgency,declarant_nom,unite_fonctionnelle,etablissement_destination,unite_destination,motif,mode_transport,urgence",
         # Exemple incident
-        'S01,incident,0,CHAG,"Panne SI","Le SI tombe","Activer PCA","DPI inaccessible depuis 5 min",3,"Technicien DSI","DSI","","","","",""',
+        'S01,incident,0,CHV,"Panne SI","Le SI tombe","Activer PCA","DPI inaccessible depuis 5 min",3,"Technicien DSI","DSI","","","","",""',
         # Exemple message
-        'S02,message,10,CHAG,"Message ARS","L\'ARS demande info","Répondre sous 30 min","Demande urgente d\'information ARS",2,"","","","","","",""',
+        'S02,message,10,CHV,"Message ARS","L\'ARS demande info","Répondre sous 30 min","Demande urgente d\'information ARS",2,"","","","","","",""',
         # Exemple transfert
-        'S03,transfert,25,CHAG,"Transfert SMUR","Saturation","Coordonner avec GHTLMB","",3,"","",GHTLMB,"Réanimation","Saturation locale",SMUR,URGENT',
+        'S03,transfert,25,CHV,"Transfert SMUR","Saturation","Coordonner avec GHT1","",3,"","",GHT1,"Réanimation","Saturation locale",SMUR,URGENT',
     ]
     content = "\n".join(rows) + "\n"
     return Response(
@@ -2048,7 +2048,7 @@ async def get_template_xlsx(auth=Depends(require_auth)):
         ("type_crise", "CYBER", "CYBER / SANITAIRE / MIXTE / RH / TERTIAIRE"),
         ("complexite", "MOYEN", "FACILE / MOYEN / DIFFICILE / EXPERT"),
         ("duree_min", 60, "Durée en minutes"),
-        ("sites", "CHAG,GHTLMB", "Sites séparés par virgule"),
+        ("sites", "CHV,GHT1", "Sites séparés par virgule"),
         ("nb_joueurs", 5, ""),
         ("auteur", "Prénom NOM", ""),
     ]
@@ -2063,24 +2063,24 @@ async def get_template_xlsx(auth=Depends(require_auth)):
                "unite_fonctionnelle", "etablissement_destination",
                "unite_destination", "motif", "mode_transport", "urgence"]
     ws_stim.append(headers)
-    ws_stim.append(["S01", "incident", 0, "CHAG", "Panne SI",
+    ws_stim.append(["S01", "incident", 0, "CHV", "Panne SI",
                     "Le SI tombe", "Activer PCA",
                     "DPI inaccessible depuis 5 min", 3,
                     "Technicien DSI", "DSI", "", "", "", "", ""])
-    ws_stim.append(["S02", "message", 10, "CHAG", "Message ARS",
+    ws_stim.append(["S02", "message", 10, "CHV", "Message ARS",
                     "L'ARS demande info", "Répondre sous 30 min",
                     "Demande urgente d'information ARS", 2,
                     "", "", "", "", "", "", ""])
-    ws_stim.append(["S03", "transfert", 25, "CHAG", "Transfert SMUR",
-                    "Saturation", "Coordonner avec GHTLMB",
-                    "", 3, "", "", "GHTLMB", "Réanimation",
+    ws_stim.append(["S03", "transfert", 25, "CHV", "Transfert SMUR",
+                    "Saturation", "Coordonner avec GHT1",
+                    "", 3, "", "", "GHT1", "Réanimation",
                     "Saturation locale", "SMUR", "URGENT"])
 
     # Feuille 3 : Joueurs
     ws_joueurs = wb.create_sheet("Joueurs")
     ws_joueurs.append(["nom", "role", "site"])
-    ws_joueurs.append(["Martin DUPONT", "Directeur général", "CHAG"])
-    ws_joueurs.append(["Claire MOREAU", "RSSI", "CHAG"])
+    ws_joueurs.append(["Martin DUPONT", "Directeur général", "CHV"])
+    ws_joueurs.append(["Claire MOREAU", "RSSI", "CHV"])
 
     # Écrire en mémoire
     import io

@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
+from app.api.ratelimit import rate_limit
 from fastapi.responses import StreamingResponse, HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -307,7 +308,7 @@ class DeclenchementIn(BaseModel):
     escalade:    bool = False     # h93 — True = envoi par vagues (priorité)
 
 
-@router.post("/alerte")
+@router.post("/alerte", dependencies=[Depends(rate_limit("mobilisation", 10, 60))])
 async def declencher_alerte(body: DeclenchementIn, request: Request,
                             db: Session = Depends(get_db), admin=Depends(require_admin)):
     """Crée une alerte, résout les cibles et envoie SMS+mail avec un lien ETA
@@ -541,7 +542,7 @@ async def vague_suivante(alerte_id: int, request: Request,
             "sms_envoyes": nb_sms, "mails_envoyes": nb_mail, "reste_attente": reste}
 
 
-@router.post("/alerte/{alerte_id}/relancer")
+@router.post("/alerte/{alerte_id}/relancer", dependencies=[Depends(rate_limit("mobilisation", 10, 60))])
 async def relancer_alerte(alerte_id: int, request: Request, uf: Optional[str] = None,
                           db: Session = Depends(get_db), admin=Depends(require_admin)):
     """h80/h81 — Relance UNIQUEMENT les destinataires sans réponse, en réutilisant
