@@ -180,6 +180,26 @@ app.add_middleware(CORSMiddleware,
 )
 app.add_middleware(SecurityHeadersMiddleware)
 
+# ── Télémétrie sécurité (OBSERVE ONLY — ne bloque jamais une requête) ──────────
+from app.api import sectelemetry as _sectel
+
+class SecurityTelemetryMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        try:
+            _sectel.record(
+                _sectel.client_ip(request),
+                request.method,
+                request.url.path,
+                response.status_code,
+                request.headers.get("user-agent", ""),
+            )
+        except Exception:
+            pass
+        return response
+
+app.add_middleware(SecurityTelemetryMiddleware)
+
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "app", "static")
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -220,6 +240,8 @@ def serve_upload(fname: str, request: Request, token: str = ""):
 # ── Core (toujours actif) ──────────────────────────────────────────────────
 app.include_router(sitrep.router,       prefix="/api/v1/sitrep",       tags=["Incidents"], dependencies=[Depends(require_user)])
 app.include_router(mobilisation.router,  prefix="/api/v1/mobilisation", tags=["Mobilisation"])
+from app.api import securite as _securite
+app.include_router(_securite.router,     prefix="/api/v1/securite",     tags=["Sécurité"])
 app.include_router(cartographie.router, prefix="/api/v1/cartographie", tags=["Cartographie"], dependencies=[Depends(require_user)])
 app.include_router(attachments.router,  prefix="/api/v1/attachments",  tags=["PJ"], dependencies=[Depends(require_user)])
 app.include_router(auth.router,         prefix="/api/v1/auth",         tags=["Auth"])
