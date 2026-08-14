@@ -485,6 +485,8 @@
   </div>
 
   <div class="wizard-footer">
+    <a onclick="skipOnboarding()" title="Quitter le wizard et gérer les instances existantes"
+       style="margin-right:auto;align-self:center;font-size:13px;color:var(--bleu-france);cursor:pointer;text-decoration:underline">⟵ Gestion des instances</a>
     <button class="btn btn-secondary" onclick="prevStep()" id="btn-prev" data-i18n="wizard.btn_prev">← Retour</button>
     <button class="btn btn-primary" onclick="nextStep()" id="btn-next" data-i18n="wizard.btn_next">Suivant →</button>
   </div>
@@ -2127,7 +2129,18 @@ async function finishWizard() {
     setTimeout(() => { window.location.href = '/api/master/ui'; }, 1500);
   } catch (e) {
     hideLoading();
-    toast(t('toast.error') + ': ' + e.message, 'err');
+    var _msg = e.message || '';
+    // Issue #12 : quand les 10 slots (ports 8000-8009) sont pleins, l'API renvoie
+    // « Aucun slot libre ». Un simple toast laissait l'utilisateur piégé dans le
+    // wizard, sans accès à l'onglet Instances. On propose une sortie explicite.
+    if (/slot/i.test(_msg)) {
+      if (confirm(_msg + '\n\nAller à la gestion des instances pour en supprimer une ?')) {
+        try { await fetch('/api/master/onboarding/finish', {method: 'POST', headers: authHeaders()}); } catch (_) {}
+        window.location.href = '/api/master/ui';
+        return;
+      }
+    }
+    toast(t('toast.error') + ': ' + _msg, 'err');
   }
 }
 
