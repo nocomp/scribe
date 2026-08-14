@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 import os
+_SLOT_END = 8000 + max(1, int(os.getenv("SCRIBE_MAX_SLOTS", "50")))  # slots instances (défaut 50)
 import platform
 import shutil
 import socket
@@ -31,7 +32,7 @@ logger = logging.getLogger("scribe.port_cleanup")
 # Ports protégés par défaut. Modifiable au besoin par les appelants.
 DEFAULT_SCRIBE_PORTS: list[int] = (
     [9000]                          # master
-    + list(range(8000, 8010))       # instances master classiques
+    + list(range(8000, _SLOT_END))       # instances master classiques
     + [8565]                        # collecteur exercice
     + list(range(8660, 8670))       # instances exercice
     + [7474, 7373]                  # démo permanente + collecteur démo

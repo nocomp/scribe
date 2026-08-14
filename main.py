@@ -4,6 +4,7 @@ main.py — SCRIBE v2.4.8.3
 import asyncio
 import logging
 import os
+_SLOT_END = 8000 + max(1, int(os.getenv("SCRIBE_MAX_SLOTS", "50")))  # slots instances (défaut 50)
 
 import uvicorn
 from fastapi import Depends, FastAPI, Request, HTTPException
@@ -82,7 +83,7 @@ def _build_csp() -> str:
     # Lire directement depuis l'env (évite la dépendance à _allowed_origins)
     _cors_env = os.getenv(
         "SCRIBE_ALLOWED_ORIGINS",
-        ",".join([f"http://localhost:{p}" for p in list(range(8000, 8010)) + list(range(6560, 6568)) + [9000, 7474, 7373]])
+        ",".join([f"http://localhost:{p}" for p in list(range(8000, _SLOT_END)) + list(range(6560, 6568)) + [9000, 7474, 7373]])
     )
     for orig in _cors_env.split(","):
         orig = orig.strip()
@@ -158,7 +159,7 @@ app = FastAPI(
 
 # CORS — restreint aux origines configurées (jamais wildcard en prod)
 _VPS = "http://localhost"
-_ALL_PORTS = list(range(8000, 8010)) + list(range(6560, 6568)) + [9000, 7474, 7373]
+_ALL_PORTS = list(range(8000, _SLOT_END)) + list(range(6560, 6568)) + [9000, 7474, 7373]
 _allowed_origins = os.getenv(
     "SCRIBE_ALLOWED_ORIGINS",
     ",".join([

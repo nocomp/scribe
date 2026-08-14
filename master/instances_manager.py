@@ -250,8 +250,11 @@ class InstanceManager:
             logger.error(f"Impossible de sauvegarder l'état : {e}")
 
     def _ensure_defaults(self) -> None:
-        """Crée les 10 instances par défaut (ports 8000-8009) si absentes."""
-        for port in range(8000, 8010):
+        """Crée les instances par défaut (ports 8000 à 8000+SCRIBE_MAX_SLOTS-1,
+        défaut 50) si absentes. Un slot vide ne coûte qu'une entrée de config —
+        aucun processus tant qu'il n'est pas démarré."""
+        _end = 8000 + max(1, int(os.getenv("SCRIBE_MAX_SLOTS", "50")))
+        for port in range(8000, _end):
             if port not in self.instances:
                 cfg = InstanceConfig(port=port)
                 self.instances[port] = InstanceState(config=cfg)

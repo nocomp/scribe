@@ -15,6 +15,7 @@ import hashlib
 import json
 import logging
 import os
+_SLOT_END = 8000 + max(1, int(os.getenv("SCRIBE_MAX_SLOTS", "50")))  # découverte instances (défaut 50)
 import secrets
 import time
 from datetime import datetime, timezone, timedelta
@@ -1605,7 +1606,7 @@ async def get_repondeur_lignes():
     expose lignes_repondeur (libellé + numéro, non-nominatif). Aucun couplage
     à federation.py : simple lecture publique. Map { SIGLE: [lignes] }."""
     import httpx, asyncio
-    ports = list(range(8000, 8010)) + [7474]
+    ports = list(range(8000, _SLOT_END)) + [7474]
     async def _fetch(port):
         try:
             async with httpx.AsyncClient(timeout=2.5) as client:
@@ -1636,7 +1637,7 @@ async def get_annuaire_interght():
     PORT_MAP codé en dur (qui cassait avec des sigles personnalisés comme
     « CH THONON » → tout retombait sur le port 8000). Dédup par sigle déclaré."""
     import httpx, asyncio
-    ports = list(range(8000, 8010)) + [7474]   # instances nominales + démo
+    ports = list(range(8000, _SLOT_END)) + [7474]   # instances nominales + démo
     async def _fetch(port):
         try:
             async with httpx.AsyncClient(timeout=2.5) as client:
@@ -4561,7 +4562,7 @@ async function adminSyncConfigs() {
          '<th style="padding:6px 8px;text-align:left">Instance</th><th style="padding:6px 8px">Joignable</th><th style="padding:6px 8px">Mail</th><th style="padding:6px 8px">SMS</th><th style="padding:6px 8px">BlueFiles</th></tr></thead>' +
          '<tbody>' + rows + '</tbody></table>' +
          '<div style="font-size:9px;color:var(--muted);margin-top:6px">' + list.length + ' instance(s) · « OK » = canal/service matérialisé et opérationnel côté instance.</div>')
-      : '<div style="font-size:11px;color:var(--muted)">Aucune instance découverte (ports 8000-8009).</div>';
+      : '<div style="font-size:11px;color:var(--muted)">Aucune instance découverte.</div>';
   } catch(e) {
     out.innerHTML = '<div style="font-size:11px;color:#b34000">Erreur de synchronisation : ' + e + '</div>';
   } finally {
@@ -5784,7 +5785,7 @@ async def coll_msg_to_instance(
     # à la mauvaise instance). Repli PORT_MAP uniquement si la découverte échoue.
     import httpx, asyncio
     _want = (target_sigle or "").upper().strip()
-    _ports = list(range(8000, 8010)) + [7474]
+    _ports = list(range(8000, _SLOT_END)) + [7474]
 
     # ── Diffusion à TOUTES les instances (communiqué) : target_sigle == "*" ──
     if _want == "*":
@@ -5996,7 +5997,7 @@ async def admin_sync_configs(credentials=Depends(security)):
     if not _check_any_auth(credentials):
         raise HTTPException(401)
     import httpx, asyncio
-    ports = list(range(8000, 8010)) + [7474]
+    ports = list(range(8000, _SLOT_END)) + [7474]
 
     async def _probe(p):
         try:
@@ -6102,7 +6103,7 @@ async def diffuser_fiche_reflexe(
     corps = ((note.strip() + "\n\n") if note.strip() else "") + \
             f"📁 Fiche réflexe partagée par la supervision : [url={abs_url}]{nom}[/url]"
     _want = (target_sigle or "*").upper().strip()
-    _ports = list(range(8000, 8010)) + [7474]
+    _ports = list(range(8000, _SLOT_END)) + [7474]
     async def _disc(p):
         try:
             async with httpx.AsyncClient(timeout=2.5) as _c:
