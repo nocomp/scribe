@@ -27,6 +27,7 @@ from app.api import scenario_export  # v2.4.8.3 — Générateur scénario depui
 from app.api import lang_admin  # v2.4.8.3 — Admin sélection langue
 from app.api import mfa as mfa_module  # v2315 — MFA TOTP
 from app.api import admin_uf  # v2.4.8.3 — Admin UF (activer/désactiver/éditer)
+from app.api import basemap as basemap_api  # 3.6.1 — Fond de carte sans configuration
 from core import admin_plugins
 from core.plugin_loader import load_all_plugins, get_loaded_plugins
 
@@ -117,16 +118,30 @@ def _build_csp() -> str:
                 frame_ancestors_list.append(orig)
     frame_ancestors_extra = " ".join(frame_ancestors_list)
 
+    # Fonds de carte : la liste des hotes vient de core/basemap.py et couvre
+    # TOUS les fournisseurs de la chaine, pas seulement l actif. La chaine peut
+    # ainsi basculer a chaud sans que la CSP ait a etre recalculee — sinon un
+    # changement de fond donnerait une carte grise et un blocage en console.
+    try:
+        from core.basemap import csp_hosts as _bm_hosts
+        carto_hosts = " ".join(_bm_hosts())
+    except Exception as _e:
+        logger.warning(f"Hotes fond de carte indisponibles, repli statique : {_e}")
+        carto_hosts = ("data.geopf.fr *.geopf.fr *.tile.openstreetmap.org "
+                       "tiles.openfreemap.org server.arcgisonline.com "
+                       "*.basemaps.cartocdn.com")
+
     return (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' unpkg.com cdnjs.cloudflare.com cdn.jsdelivr.net; "
         "style-src 'self' 'unsafe-inline' fonts.googleapis.com unpkg.com cdnjs.cloudflare.com; "
         "font-src 'self' fonts.gstatic.com data:; "
-        "img-src 'self' data: blob: *.basemaps.cartocdn.com *.tile.openstreetmap.org "
-        "server.arcgisonline.com unpkg.com cdnjs.cloudflare.com; "
+        f"img-src 'self' data: blob: {carto_hosts} unpkg.com cdnjs.cloudflare.com; "
         "media-src 'self' blob: data:; "
-        f"connect-src {connect_src}; "
-        "worker-src 'self'; "
+        f"connect-src {connect_src} {carto_hosts}; "
+        # blob: requis par MapLibre (mode vectoriel), qui instancie ses workers
+        # depuis un blob. Sans cela, le fond OpenFreeMap reste vide.
+        "worker-src 'self' blob:; "
         f"frame-ancestors 'self' {frame_ancestors_extra}"
     )
 
@@ -263,6 +278,7 @@ app.include_router(mfa_module.router)
 app.include_router(status_page.router, prefix="/api/v1/status",        tags=["Status Page"])
 # v2.4.8.3 — Admin UF : activer / désactiver / éditer le référentiel
 app.include_router(admin_uf.router, tags=["Admin UF"])
+app.include_router(basemap_api.router, prefix="/api/v1/config", tags=["Fond de carte"])
 # ── Compatibilité v140 (endpoints non encore migrés en plugins) ────────────
 app.include_router(v140.router,         prefix="/api/v1",              tags=["v1.4.0 legacy"])
 
@@ -652,7 +668,7 @@ async def public_status():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "3.6.0-beta", "build": "beta-public"}
+    return {"status": "ok", "version": "3.6.2-beta", "build": "beta-public"}
 
 
 @app.get("/api/push-test")

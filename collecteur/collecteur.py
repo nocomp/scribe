@@ -1761,6 +1761,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <!-- polices terminal retirées 3.6.0-beta — police système Suite, aucune dépendance externe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/js/basemap.js?v=362beta"></script>
 <style>
 :root{
   --bg:#060608;--s1:#0d0d12;--s2:#111118;--s3:#18181f;
@@ -2382,7 +2383,7 @@ async function submitMasterForcedPw() {
 
   <!-- KPI BAR -->
   <div id="kpi-bar">
-    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.6.0-alpha119</div>
+    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.6.2-beta</div>
     <div class="kpi-cell"><span class="kpi-label">GHT</span><span class="kpi-val" id="k-ght">—</span></div>
     <div class="kpi-cell" style="cursor:pointer" title="Délai avant masquage incidents résolus (clic pour modifier)">
       <span class="kpi-label">RÉSOLU → masqué</span>
@@ -4134,15 +4135,9 @@ function showTransfertDetail(sigle, filter) {
 function initMap() {
   if (map) return;
   map = L.map('map', {zoomControl:true}).setView([45.5, 6.2], 8);
-  const _osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {attribution:'© OpenStreetMap', maxZoom:19});
-  const _cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    {attribution:'CartoDB Light', maxZoom:19});
-  const _satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    {attribution:'Esri World Imagery', maxZoom:19});
-  const _baseLayers = {'⬜ CartoDB Clair': _cartoLight, '🗺 OpenStreetMap': _osmLayer, '🛰 Satellite': _satellite};
-  _cartoLight.addTo(map);
-  L.control.layers(_baseLayers, {}, {position:'topright', collapsed:false}).addTo(map);
+  // 3.6.1 — Fond de carte resolu par le serveur et rendu par basemap.js,
+  // fichier partage avec les instances. Aucune URL de tuiles ici.
+  scribeBasemap.init(map, {control:true, collapsed:false});
   updateMapMarkers();
 }
 
@@ -5662,6 +5657,93 @@ async def dashboard():
         "Cache-Control": "no-store, no-cache, must-revalidate",
         "Pragma": "no-cache", "Expires": "0"
     })
+
+
+# ── 3.6.1 — Fond de carte ────────────────────────────────────────────────────
+# Le collecteur tourne dans un processus separe des instances. Il partage
+# neanmoins le meme fichier basemap.js et le meme module de resolution
+# core/basemap.py : une seule declaration de couche de fond dans tout le
+# projet, donc un seul endroit a corriger quand un fournisseur change ses
+# conditions.
+
+@app.get("/static/js/basemap.js")
+async def serve_basemap_js():
+    from fastapi.responses import FileResponse
+    import os as _os
+    p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
+                      "..", "app", "static", "js", "basemap.js")
+    if _os.path.exists(p):
+        return FileResponse(p, media_type="application/javascript")
+    raise HTTPException(404, "basemap.js non trouve")
+
+
+@app.get("/api/v1/config/basemap")
+async def coll_basemap_config():
+    """Config du fond de carte, meme contrat que cote instance."""
+    import os as _os, sys as _sys
+    _parent = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    if _parent not in _sys.path:
+        _sys.path.insert(0, _parent)
+    try:
+        from core import basemap as _bm
+    except Exception as _e:
+        logger.warning(f"core.basemap indisponible : {_e}")
+        return {"id": "osm", "label": "OpenStreetMap", "mode": "raster",
+                "url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                "attribution": "\u00a9 OpenStreetMap contributors",
+                "maxZoom": 19, "reason": "module de resolution indisponible"}
+
+    # Coordonnees des etablissements supervises : elles decident si le Plan IGN
+    # est pertinent pour ce territoire.
+    coords = []
+    try:
+        for _sig, _d in etablissements.items():
+            if _d.get("latitude") and _d.get("longitude"):
+                coords.append((_d["latitude"], _d["longitude"]))
+            for _s in (_d.get("sites") or []):
+                if _s.get("latitude") and _s.get("longitude"):
+                    coords.append((_s["latitude"], _s["longitude"]))
+    except Exception:
+        coords = []
+
+    cfg = _bm.resolve(coords)
+    return {
+        "id": cfg["id"], "label": cfg["label"], "mode": cfg["mode"],
+        "url": cfg["url"], "attribution": cfg["attribution"],
+        "maxZoom": cfg["maxZoom"], "reason": cfg["reason"],
+        "offline": cfg.get("offline", False),
+        "fallback": {
+            "url":         _bm.PROVIDERS["osm"]["url"],
+            "attribution": _bm.PROVIDERS["osm"]["attribution"],
+            "maxZoom":     _bm.PROVIDERS["osm"]["maxZoom"],
+        },
+        "satellite": {
+            "url":         _bm.PROVIDERS["satellite"]["url"],
+            "attribution": _bm.PROVIDERS["satellite"]["attribution"],
+            "maxZoom":     _bm.PROVIDERS["satellite"]["maxZoom"],
+        },
+    }
+
+
+@app.get("/api/v1/config/basemap/tiles/{z}/{x}/{y}.png")
+async def coll_basemap_tile(z: int, x: int, y: int):
+    """Tuiles locales, si un MBTiles est present. Aucune sortie reseau."""
+    from fastapi.responses import Response as _Resp
+    import os as _os, sys as _sys
+    _parent = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    if _parent not in _sys.path:
+        _sys.path.insert(0, _parent)
+    try:
+        from core import basemap as _bm
+    except Exception:
+        return _Resp(status_code=204)
+    data = _bm.read_tile(z, x, y)
+    if data is None:
+        return _Resp(status_code=204)
+    fmt = _bm.mbtiles_metadata().get("format", "png").lower()
+    media = "image/jpeg" if fmt in ("jpg", "jpeg") else "image/png"
+    return _Resp(content=data, media_type=media,
+                 headers={"Cache-Control": "public, max-age=604800, immutable"})
 
 
 @app.get("/static/logo-scribe.png")

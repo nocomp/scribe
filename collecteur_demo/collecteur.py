@@ -167,6 +167,52 @@ def save_data():
 
 app = FastAPI(title="SCRIBE Collecteur territorial", version="1.2.0")
 
+
+# ── 3.6.1 — Fond de carte partage ────────────────────────────────────────────
+
+@app.get("/static/js/basemap.js")
+async def serve_basemap_js_demo():
+    from fastapi.responses import FileResponse, Response as _R
+    import os as _os
+    p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
+                      "..", "app", "static", "js", "basemap.js")
+    if _os.path.exists(p):
+        return FileResponse(p, media_type="application/javascript")
+    return _R(status_code=404)
+
+
+@app.get("/api/v1/config/basemap")
+async def demo_basemap_config():
+    import os as _os, sys as _sys
+    _parent = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+    if _parent not in _sys.path:
+        _sys.path.insert(0, _parent)
+    try:
+        from core import basemap as _bm
+    except Exception:
+        return {"id": "osm", "label": "OpenStreetMap", "mode": "raster",
+                "url": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                "attribution": "\u00a9 OpenStreetMap contributors",
+                "maxZoom": 19, "reason": "module de resolution indisponible"}
+    cfg = _bm.resolve()
+    return {
+        "id": cfg["id"], "label": cfg["label"], "mode": cfg["mode"],
+        "url": cfg["url"], "attribution": cfg["attribution"],
+        "maxZoom": cfg["maxZoom"], "reason": cfg["reason"],
+        "offline": cfg.get("offline", False),
+        "fallback": {
+            "url":         _bm.PROVIDERS["osm"]["url"],
+            "attribution": _bm.PROVIDERS["osm"]["attribution"],
+            "maxZoom":     _bm.PROVIDERS["osm"]["maxZoom"],
+        },
+        "satellite": {
+            "url":         _bm.PROVIDERS["satellite"]["url"],
+            "attribution": _bm.PROVIDERS["satellite"]["attribution"],
+            "maxZoom":     _bm.PROVIDERS["satellite"]["maxZoom"],
+        },
+    }
+
+
 # ── CORS : middleware http natif Starlette ────────────────────────────────
 @app.middleware("http")
 async def cors_middleware(request: Request, call_next):
@@ -1049,6 +1095,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/js/basemap.js?v=362beta"></script>
 <style>
 :root{
   --bg:#060608;--s1:#0d0d12;--s2:#111118;--s3:#18181f;
@@ -1848,15 +1895,8 @@ function renderDetail(e) {
 function initMap() {
   if (map) return;
   map = L.map('map', {zoomControl:true}).setView([45.5, 6.2], 8);
-  const _osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {attribution:'© OpenStreetMap', maxZoom:19});
-  const _cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    {attribution:'CartoDB Light', maxZoom:19});
-  const _satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    {attribution:'Esri World Imagery', maxZoom:19});
-  const _baseLayers = {'⬜ CartoDB Clair': _cartoLight, '🗺 OpenStreetMap': _osmLayer, '🛰 Satellite': _satellite};
-  _cartoLight.addTo(map);
-  L.control.layers(_baseLayers, {}, {position:'topright', collapsed:false}).addTo(map);
+  // 3.6.1 — Fond de carte partage (basemap.js + core/basemap.py).
+  scribeBasemap.init(map, {control:true, collapsed:false});
   updateMapMarkers();
 }
 

@@ -561,15 +561,11 @@ function openTab(id, btn) {
 let mapSoins = null;
 function initMap() {
   map = L.map('map', {zoomControl:true}).setView([45.9, 6.1], 10);
-  const _osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {attribution:'© OpenStreetMap', maxZoom:19});
-  const _cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    {attribution:'CartoDB Light', maxZoom:19});
-  const _satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    {attribution:'Esri World Imagery', maxZoom:19});
-  const _baseLayers = {'⬜ Clair': _cartoLight, '🗺 OSM': _osmLayer, '🛰 Satellite': _satellite};
-  _cartoLight.addTo(map);
-  L.control.layers(_baseLayers, {}, {position:'topright', collapsed:false}).addTo(map);
+  // 3.6.1 — Le fond de carte est resolu par le serveur (core/basemap.py) et
+  // rendu par app/static/js/basemap.js, partage avec le collecteur. Plus
+  // aucune URL de tuiles n est ecrite ici : lorsqu un fournisseur change ses
+  // conditions, un seul fichier est a corriger.
+  scribeBasemap.init(map, {control:true, collapsed:false});
   // Resize observer : invalide la carte quand le conteneur change de taille
   if (window.ResizeObserver) {
     new ResizeObserver(() => { if (map) map.invalidateSize(); }).observe(document.getElementById('map'));
@@ -578,8 +574,7 @@ function initMap() {
   const mapSoinsEl = document.getElementById('map-soins');
   if (mapSoinsEl) {
     mapSoins = L.map('map-soins', {zoomControl:true}).setView([45.9, 6.1], 10);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      {attribution:'CartoDB Light', maxZoom:19}).addTo(mapSoins);
+    scribeBasemap.init(mapSoins);
     // Synchroniser zoom/center avec la carte principale
     map.on('moveend zoomend', () => {
       if (mapSoins) mapSoins.setView(map.getCenter(), map.getZoom(), {animate:false});
@@ -4844,7 +4839,7 @@ function adminShowSection(section, btn) {
   if (btn) btn.classList.add('active');
   if (section === 'users')   { loadAdminUsers(); loadSetPwUsers(); }
   if (section === 'plugins') { loadAdminPlugins(); }
-  if (section === 'apis')    { loadAdminIA(); loadAdminRouting(); }
+  if (section === 'apis')    { loadAdminIA(); loadAdminRouting(); loadAdminBasemap(); }
   if (section === 'network') { loadAdminNetwork(); }
   if (section === 'lang')    { loadAdminLang(); }
   if (section === 'mfa')     { loadMfaSection(); }
@@ -8588,6 +8583,48 @@ async function loadAdminRouting() {
         '<div style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px">' +
           'Modifier via SCRIBE_ROUTING_ENGINE / SCRIBE_OSRM_URL</div>' +
       '</div>';
+  } catch(e) { box.innerHTML = '<span style="color:var(--muted);font-size:10px">Non disponible</span>'; }
+}
+
+async function loadAdminBasemap() {
+  const box = document.getElementById('admin-basemap-info');
+  if (!box) return;
+  try {
+    const r = await apiFetch('/api/v1/config/basemap/providers');
+    if (!r.ok) { box.innerHTML = '<span style="color:#f87171">Erreur</span>'; return; }
+    const d = await r.json();
+    const a = d.active || {};
+    let html =
+      '<div style="display:flex;flex-direction:column;gap:6px">' +
+        '<div><span style="color:var(--muted);font-family:var(--mono);font-size:9px">FOND ACTIF</span>' +
+          '<div style="font-weight:700;margin-top:2px">' + (a.label || "?") + '</div></div>' +
+        '<div style="font-size:10px;color:var(--muted)">' +
+          (a.offline ? "\u2713 Hors-ligne \u00b7 aucune sortie r\u00e9seau" : "\u2713 Sans clef d\u2019API") +
+          ' \u00b7 ' + (a.mode === "vector" ? "vectoriel" : "raster") + '</div>' +
+        '<div style="font-size:10px;color:var(--muted)">Choix automatique : ' + (a.reason || "") + '</div>' +
+      '</div>';
+    if (Array.isArray(d.providers) && d.providers.length) {
+      html += '<div style="margin-top:12px;display:flex;flex-direction:column;gap:4px">';
+      d.providers.forEach(function(p) {
+        html +=
+          '<div style="border:1px solid ' + (p.active ? 'var(--accent,#003189)' : 'var(--border)') +
+            ';border-radius:4px;padding:8px 10px;font-family:var(--mono);font-size:10px">' +
+            '<span style="font-weight:700">' + p.label + '</span>' +
+            (p.active ? '<span style="color:#4ade80"> \u2190 actif</span>' : '') +
+            '<div style="color:var(--muted);margin-top:2px">' +
+              (p.offline ? "\u2713 Hors-ligne" : "\u2713 Sans clef") + ' \u00b7 ' + (p.scope || "") +
+            '</div>' +
+          '</div>';
+      });
+      html += '</div>';
+    }
+    if (!d.has_local) {
+      html += '<p style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:10px">' +
+        'Pour un fonctionnement totalement hors-ligne : d\u00e9poser un fichier ' +
+        '<code>data/basemap.mbtiles</code> (voir <code>tools/build_basemap.py</code>). ' +
+        'Il devient prioritaire automatiquement.</p>';
+    }
+    box.innerHTML = html;
   } catch(e) { box.innerHTML = '<span style="color:var(--muted);font-size:10px">Non disponible</span>'; }
 }
 

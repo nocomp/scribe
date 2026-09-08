@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SCRIBE v3.6.0-alpha119 | Crisis OS</title>
+<title>SCRIBE v3.6.2-beta | Crisis OS</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="/api/config.js"></script>
@@ -39,14 +39,15 @@
   </div>
 </div>
 
-<script src="/static/js/scribe.js?v=360beta"></script>
+<script src="/static/js/basemap.js?v=362beta"></script>
+<script src="/static/js/scribe.js?v=362beta"></script>
 <script src="/static/js/coach.js?v=360beta"></script>
 
 <header id="main-header" style="display:none">
   <div class="header-top">
   <div class="brand">
     <img src="/static/logo-scribe.png" alt="SCRIBE" style="height:30px;width:auto;flex-shrink:0">
-    <span style="font-family:var(--font-ui);font-weight:400;font-size:11px;color:#9aa0ac;letter-spacing:0">v3.6.0-alpha119</span>
+    <span style="font-family:var(--font-ui);font-weight:400;font-size:11px;color:#9aa0ac;letter-spacing:0">v3.6.2-beta</span>
     <span id="etab-sigle" style="font-family:var(--font-ui);font-size:11px;color:#000091;margin-left:4px;letter-spacing:0;padding:2px 8px;background:#eef0fb;border-radius:6px;font-weight:500"></span>
   </div>
   <div class="header-right">
@@ -1397,6 +1398,16 @@ window.changeLanguagePreference = function(code) {
             <div id="admin-routing-info"><div style="color:var(--muted);font-size:11px">Chargement...</div></div>
             <p style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:10px">
               Changer via <code>SCRIBE_ROUTING_ENGINE</code> (osrm_public | osrm_local | openrouteservice | graphhopper | valhalla)
+            </p>
+          </div>
+          <div class="admin-section">
+            <h3>&#128506; Fond de carte</h3>
+            <div id="admin-basemap-info"><div style="color:var(--muted);font-size:11px">Chargement...</div></div>
+            <p style="font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:10px">
+              Le fond est choisi automatiquement, sans clef d&rsquo;API : tuiles locales si pr&eacute;sentes,
+              sinon Plan IGN dans son emprise, sinon OpenStreetMap.
+              Forcer via <code>SCRIBE_BASEMAP</code> (auto | local | ign | osm | openfreemap | custom)
+              et <code>SCRIBE_BASEMAP_URL</code>.
             </p>
           </div>
         </div>
