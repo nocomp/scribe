@@ -353,8 +353,29 @@ async def _auto_archive_transferts():
 
 @app.on_event("startup")
 async def _on_startup():
-    """Démarre les tâches de fond au lancement du collecteur."""
+    """Démarre les tâches de fond au lancement du collecteur.
+
+    Charge aussi l'état persisté. C'est indispensable : uvicorn est lancé avec
+    une chaîne d'import ("collecteur:app"), donc il réimporte le module dans un
+    espace de noms distinct de __main__. Les load_*() du bloc __main__
+    remplissaient les dictionnaires de __main__, pas ceux de l'application
+    servie — qui démarrait donc sans aucun token, rejetant en 401 des instances
+    pourtant enrôlées, et reperdait ses acceptations à chaque redémarrage.
+
+    Les fonctions de chargement fusionnent avec les valeurs par défaut et sont
+    idempotentes : les appeler ici et dans __main__ est sans effet de bord.
+    """
     import asyncio
+
+    for _charger in (load_tokens, load_data, load_pending,
+                     load_messages_inter, load_relay):
+        try:
+            _charger()
+        except Exception as _exc:
+            print(f"[collecteur] chargement {_charger.__name__} : {_exc}")
+    print(f"[collecteur] État chargé : {len(tokens)} token(s), "
+          f"{len(etablissements)} établissement(s), {len(pending)} en attente")
+
     asyncio.create_task(_auto_archive_transferts())
     print("[collecteur] Tâche auto-archive démarrée")
 
@@ -1761,7 +1782,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <!-- polices terminal retirées 3.6.0-beta — police système Suite, aucune dépendance externe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/js/basemap.js?v=362beta"></script>
+<script src="/static/js/basemap.js?v=363beta"></script>
 <style>
 :root{
   --bg:#060608;--s1:#0d0d12;--s2:#111118;--s3:#18181f;
@@ -2383,7 +2404,7 @@ async function submitMasterForcedPw() {
 
   <!-- KPI BAR -->
   <div id="kpi-bar">
-    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.6.2-beta</div>
+    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.6.3-beta</div>
     <div class="kpi-cell"><span class="kpi-label">GHT</span><span class="kpi-val" id="k-ght">—</span></div>
     <div class="kpi-cell" style="cursor:pointer" title="Délai avant masquage incidents résolus (clic pour modifier)">
       <span class="kpi-label">RÉSOLU → masqué</span>

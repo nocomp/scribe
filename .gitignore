@@ -69,3 +69,18 @@ config_g7_*.xml
 # ── Documentation drafts ────────────────────────────────────────────
 *.draft.md
 NOTES_PRIVE.md
+
+# Secrets d'exécution — ne doivent jamais être versionnés.
+# collecteur_tokens.json était déjà listé, mais les fichiers avaient été
+# committés avant l'ajout de la règle : .gitignore n'agit pas sur ce qui
+# est déjà suivi. Il faut un `git rm --cached` en plus.
+collecteur/collecteur_admin.json
+collecteur/collecteur_tokens.json
+collecteur_demo/collecteur_admin.json
+collecteur_demo/collecteur_tokens.json
+collecteur_exercice/collecteur_admin.json
+collecteur_exercice/collecteur_tokens.json
+data/.scribe_secret
+data/
+archives/
+

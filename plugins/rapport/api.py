@@ -435,7 +435,13 @@ def export_main_courante(db: Session = Depends(get_db)):
 # ── Nouvelle crise : archive ZIP + reset ─────────────────────────────────
 
 @router.post("/archiver-crise")
-def archiver_crise(db: Session = Depends(get_db), user=Depends(get_current_user)):
+def archiver_crise(
+    generer_scenario: bool = False,
+    anonymiser: bool = True,
+    titre_scenario: str = "",
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
     """Archive la crise courante en ZIP sans toucher au tableau de bord."""
     """Archive la crise courante en ZIP et remet à zéro le tableau de bord."""
     import zipfile, io as _io, csv
@@ -525,7 +531,62 @@ def archiver_crise(db: Session = Depends(get_db), user=Depends(get_current_user)
             f"Décisions : {len(decs)}\n"
             f"Tâches Kanban : {len(tasks)}\n"
         )
-        zf.writestr("README.txt", meta)
+        # ── Scenario rejouable ───────────────────────────────────────
+        # L archive ne sert pas qu au REX : elle contient de quoi rejouer la
+        # crise a l identique lors d un exercice, pour verifier que les
+        # mesures de remediation tiennent. C est ce qui referme la boucle
+        # crise -> archive -> scenario -> rejeu -> debriefing.
+        scen_note = ""
+        if generer_scenario:
+            try:
+                from app.scenario_generator import (
+                    generate_scenario_from_crisis, serialize_scenario
+                )
+
+                # Sigle reel de l instance plutot qu une valeur codee en dur :
+                # un scenario dont l acteur porte le mauvais sigle n est pas
+                # rejouable tel quel.
+                sigle = "CHV"
+                try:
+                    from app.api.federation import get_config as _fed_cfg
+                    sigle = (_fed_cfg().etablissement_sigle or "CHV").strip() or "CHV"
+                except Exception:
+                    pass
+
+                titre = titre_scenario.strip() or (
+                    f"Rejouage crise {datetime.now().strftime('%Y-%m-%d')}"
+                )
+                scen = generate_scenario_from_crisis(
+                    db,
+                    titre=titre,
+                    description=(
+                        f"Scenario genere automatiquement lors de l'archivage de "
+                        f"la crise du {datetime.now().strftime('%d/%m/%Y a %H:%M')}. "
+                        f"Permet de rejouer la crise pour valider les mesures de "
+                        f"remediation mises en place."
+                    ),
+                    cible_sigle=sigle,
+                    anonymize=anonymiser,
+                    type_crise="MIXTE",
+                    complexite="MOYEN",
+                )
+                zf.writestr("scenario.json", serialize_scenario(scen))
+                nb = scen.get("meta", {}).get("nb_stimuli", "?")
+                scen_note = (
+                    f"\nScenario rejouable : scenario.json "
+                    f"({nb} stimuli, "
+                    f"{'anonymise' if anonymiser else 'non anonymise'})\n"
+                )
+            except Exception as e:
+                # L archive CSV doit sortir meme si la generation echoue.
+                zf.writestr(
+                    "scenario_error.txt",
+                    f"Generation du scenario echouee : {e}\n"
+                    f"L'archive CSV classique reste exploitable.\n"
+                )
+                scen_note = "\nScenario rejouable : generation echouee (voir scenario_error.txt)\n"
+
+        zf.writestr("README.txt", meta + scen_note)
 
     # Sauvegarder l'archive
     with open(zip_path, 'wb') as f:
@@ -533,10 +594,14 @@ def archiver_crise(db: Session = Depends(get_db), user=Depends(get_current_user)
 
     db.commit()
 
+    msg = f"Crise archivée dans {zip_path}."
+    if generer_scenario:
+        msg += " Scénario rejouable inclus (scenario.json)."
     return {
         "ok": True,
         "archive": zip_path,
-        "message": f"Crise archivée dans {zip_path}."
+        "scenario_inclus": bool(generer_scenario),
+        "message": msg,
     }
 
 

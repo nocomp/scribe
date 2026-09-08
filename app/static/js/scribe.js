@@ -4077,12 +4077,31 @@ async function archiverCrise() {
         toast(d.scenario_inclus ? "Archive créée + scénario rejouable inclus" : "Archive créée", "ok");
         if (d.archive) {
           const nomFichier = d.archive.split('/').pop();
-          const lien = document.createElement('a');
-          lien.href = '/api/v1/rapport/telecharger-archive?nom=' + encodeURIComponent(nomFichier);
-          lien.download = nomFichier;
-          document.body.appendChild(lien);
-          lien.click();
-          document.body.removeChild(lien);
+          // Le telechargement doit passer par apiFetch. Un <a href> declenche
+          // une navigation du navigateur, qui n'envoie pas l'en-tete
+          // Authorization : la route protegee repondait 401 et l'archive,
+          // pourtant bien ecrite sur le disque, n'arrivait jamais.
+          // Le contenu est recupere puis remis au navigateur via un blob, ce
+          // qui evite de faire circuler le jeton dans une URL.
+          try {
+            const rz = await apiFetch('/api/v1/rapport/telecharger-archive?nom=' + encodeURIComponent(nomFichier));
+            if (!rz.ok) {
+              toast("Archive creee mais telechargement impossible (" + rz.status + ")", "err");
+              resolve(true);
+              return;
+            }
+            const blob = await rz.blob();
+            const objUrl = URL.createObjectURL(blob);
+            const lien = document.createElement('a');
+            lien.href = objUrl;
+            lien.download = nomFichier;
+            document.body.appendChild(lien);
+            lien.click();
+            document.body.removeChild(lien);
+            setTimeout(function() { URL.revokeObjectURL(objUrl); }, 10000);
+          } catch(e) {
+            toast("Archive creee mais telechargement impossible : " + e.message, "err");
+          }
         }
         resolve(true);
       } catch(e) {
