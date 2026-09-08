@@ -91,6 +91,50 @@ tokens: dict = {}           # token → sigle établissement
 # Structure : {salon_nom: [{id, auteur_nom, auteur_sigle, contenu, mentions, horodatage}]}
 CHAT_SALONS_DEFAULT = ["général","coordination","transferts","logistique","direction"]
 chat_messages: dict = {s: [] for s in CHAT_SALONS_DEFAULT}
+
+# ── Persistance du chat territorial ─────────────────────────────────────────
+# Sans elle, l'historique disparait a chaque redemarrage ET les identifiants
+# de messages repartent de 1. Les instances, elles, gardent un filigrane de
+# synchronisation qui ne fait que croitre : un onglet ouvert avant le
+# redemarrage demandait alors des messages plus recents qu'un identifiant qui
+# n'existait plus, et ne recevait plus jamais rien.
+CHAT_FILE = os.environ.get("COLLECTEUR_CHAT", "collecteur_chat.json")
+
+
+def load_chat():
+    """Recharge les messages et restaure le compteur d'identifiants."""
+    global chat_messages, _chat_msg_counter
+    if not Path(CHAT_FILE).exists():
+        return
+    try:
+        brut = json.loads(Path(CHAT_FILE).read_text())
+    except Exception:
+        return
+    salons = brut.get("salons") if isinstance(brut, dict) else None
+    if not isinstance(salons, dict):
+        return
+    for nom, msgs in salons.items():
+        if isinstance(msgs, list):
+            chat_messages[nom] = msgs
+    # Le compteur repart du plus grand identifiant connu : les identifiants ne
+    # doivent jamais reculer, sinon les filigranes des instances se bloquent.
+    plus_grand = 0
+    for msgs in chat_messages.values():
+        for m in msgs:
+            try:
+                plus_grand = max(plus_grand, int(m.get("id", 0)))
+            except (TypeError, ValueError):
+                continue
+    _chat_msg_counter = max(_chat_msg_counter, plus_grand)
+
+
+def save_chat():
+    try:
+        Path(CHAT_FILE).write_text(json.dumps(
+            {"compteur": _chat_msg_counter, "salons": chat_messages},
+            ensure_ascii=False, indent=2))
+    except Exception as exc:
+        print(f"[collecteur] sauvegarde du chat impossible : {exc}")
 # Sessions UI actives : {token: {"login": ..., "role": ...}}
 ui_sessions: dict = {}
 # Présence : {sigle: [{user_id, display_name, last_seen}]}
@@ -368,7 +412,7 @@ async def _on_startup():
     import asyncio
 
     for _charger in (load_tokens, load_data, load_pending,
-                     load_messages_inter, load_relay):
+                     load_messages_inter, load_relay, load_chat):
         try:
             _charger()
         except Exception as _exc:
@@ -1525,6 +1569,7 @@ async def chat_push_message(request: Request, credentials=Depends(security)):
     # Garder max 500 messages par salon
     if len(chat_messages[salon_nom]) > 500:
         chat_messages[salon_nom] = chat_messages[salon_nom][-500:]
+    save_chat()
     return {"ok": True, "id": _chat_msg_counter}
 
 
@@ -1782,7 +1827,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <!-- polices terminal retirées 3.6.0-beta — police système Suite, aucune dépendance externe -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/js/basemap.js?v=363beta"></script>
+<script src="/static/js/basemap.js?v=364beta"></script>
 <style>
 :root{
   --bg:#060608;--s1:#0d0d12;--s2:#111118;--s3:#18181f;
@@ -2404,7 +2449,7 @@ async function submitMasterForcedPw() {
 
   <!-- KPI BAR -->
   <div id="kpi-bar">
-    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.6.3-beta</div>
+    <div id="kpi-title"><img src="/static/logo-scribe.png" alt="SCRIBE" style="height:24px;vertical-align:middle;margin-right:8px;object-fit:contain">SUPERVISION v3.6.4-beta</div>
     <div class="kpi-cell"><span class="kpi-label">GHT</span><span class="kpi-val" id="k-ght">—</span></div>
     <div class="kpi-cell" style="cursor:pointer" title="Délai avant masquage incidents résolus (clic pour modifier)">
       <span class="kpi-label">RÉSOLU → masqué</span>
@@ -6970,6 +7015,7 @@ if __name__ == "__main__":
     load_pending()
     load_messages_inter()
     load_relay()
+    load_chat()
 
     # Tokens: enrôlement MANUEL via l'UI (⏳ EN ATTENTE → ✓ ACCEPTER)
     # Le bouton "⚡ Enregistrer" dans l'UI force l'enregistrement si besoin

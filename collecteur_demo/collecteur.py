@@ -1095,7 +1095,7 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/js/basemap.js?v=363beta"></script>
+<script src="/static/js/basemap.js?v=364beta"></script>
 <style>
 :root{
   --bg:#060608;--s1:#0d0d12;--s2:#111118;--s3:#18181f;

@@ -668,7 +668,7 @@ async def public_status():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "3.6.3-beta", "build": "beta-public"}
+    return {"status": "ok", "version": "3.6.4-beta", "build": "beta-public"}
 
 
 @app.get("/api/push-test")

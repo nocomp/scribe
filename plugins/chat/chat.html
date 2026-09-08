@@ -487,14 +487,63 @@ var _chatCollFailCount = 0;
 var _chatCollDisabled = false;
 var _chatSyncTimer = null;
 var _chatPresenceTimer = null;
+// Paliers de reprise, en millisecondes. La coupure est une suspension, pas un
+// arrêt : un collecteur redémarré, un jeton en cours de réenrôlement ou une
+// coupure réseau de quelques secondes ne doivent pas éteindre le canal de
+// coordination jusqu'au prochain rechargement de page.
+var _chatCollPaliers = [30000, 60000, 120000, 300000];
+var _chatCollPalier  = 0;
+var _chatCollReprise = null;
+
+function _chatCollArmer() {
+  if (_chatSyncTimer) clearInterval(_chatSyncTimer);
+  if (_chatPresenceTimer) clearInterval(_chatPresenceTimer);
+  _chatSyncTimer     = setInterval(chat_syncCollecteur, 4000);
+  _chatPresenceTimer = setInterval(chat_pushPresence, 25000);
+}
+
 window._chatCollNoteFail = function() {
   _chatCollFailCount++;
-  if (_chatCollFailCount >= 3 && !_chatCollDisabled) {
-    _chatCollDisabled = true;
-    if (_chatSyncTimer) clearInterval(_chatSyncTimer);
-    if (_chatPresenceTimer) clearInterval(_chatPresenceTimer);
-    console.warn("SCRIBE Chat: sync collecteur désactivée (3 x 401). Probablement mode exercice sans token fédération valide.");
-  }
+  if (_chatCollFailCount < 3 || _chatCollDisabled) return;
+
+  _chatCollDisabled = true;
+  if (_chatSyncTimer) clearInterval(_chatSyncTimer);
+  if (_chatPresenceTimer) clearInterval(_chatPresenceTimer);
+
+  var attente = _chatCollPaliers[Math.min(_chatCollPalier, _chatCollPaliers.length - 1)];
+  _chatCollPalier++;
+  console.warn("SCRIBE Chat : synchronisation suspendue apres 3 echecs. "
+               + "Nouvelle tentative dans " + Math.round(attente / 1000) + " s.");
+
+  if (_chatCollReprise) clearTimeout(_chatCollReprise);
+  _chatCollReprise = setTimeout(function() {
+    _chatCollDisabled = false;
+    _chatCollFailCount = 0;
+    _chatCollArmer();
+    console.info("SCRIBE Chat : reprise de la synchronisation.");
+  }, attente);
+};
+
+// Appelée dès qu'un appel au collecteur aboutit : une panne passagère ne doit
+// laisser aucune trace.
+window._chatCollNoteOk = function() {
+  if (_chatCollFailCount === 0 && _chatCollPalier === 0) return;
+  _chatCollFailCount = 0;
+  _chatCollPalier = 0;
+  if (_chatCollReprise) { clearTimeout(_chatCollReprise); _chatCollReprise = null; }
+};
+
+// Diagnostic depuis la console du navigateur.
+window._chatCollEtat = function() {
+  return {
+    suspendu: _chatCollDisabled,
+    echecs: _chatCollFailCount,
+    palier: _chatCollPalier,
+    federation_prete: _syncReady,
+    collecteur: _fedBase,
+    jeton: _fedToken ? "present" : "absent",
+    filigranes: _chatLastSyncId
+  };
 };
 
 // ── Init ─────────────────────────────────────────────────────────────────────
@@ -642,6 +691,10 @@ function chat_openSalon(sJson) {
   _currentSalon = s;
   _lastMsgId = 0;
   _messages = [];
+  // Le fil local vient d'etre vide : le filigrane distant doit repartir de
+  // zero, sinon l'historique territorial du salon qu'on ouvre ne serait
+  // jamais repris. Le dedoublonnage par contenu evite les doublons.
+  if (s && s.nom) _chatLastSyncId[s.nom] = 0;
 
   // v3.4 (h34) — Pour les DM, afficher le nom du peer dans le bandeau
   var isDM = (s.is_dm || s.type === "dm");
@@ -1425,14 +1478,27 @@ function chat_popout() {
 
 // Track le dernier message ID reçu par salon (clé = salon_nom)
 var _chatLastSyncId = {};
+var _chatSyncTick = 0;   // compteur de boucles, pour la reconciliation periodique
 
 function chat_syncCollecteur() {
   if (_chatCollDisabled || !_syncReady || !_fedBase || !_fedToken) return;
   // Pour chaque salon territorial connu, pull les nouveaux messages
+  // Seul le salon affiche est synchronise : `_messages` est un tableau plat
+  // qui ne contient que le fil courant. Les autres salons sont repris a
+  // l'ouverture, leur filigrane etant remis a zero au changement de salon.
   (_salons || []).forEach(function(salon) {
     if (!salon || salon.type !== "territorial") return;
+    if (!_currentSalon || _currentSalon.id !== salon.id) return;
     var key = salon.nom;
-    var since = _chatLastSyncId[key] || 0;
+    // Le collecteur ne garantit pas que ses identifiants soient monotones dans
+    // le temps : s'il a redemarre sans persistance, ils repartent de 1. Un
+    // filigrane local plus haut que le maximum disponible bloquerait la
+    // synchronisation indefiniment. Toutes les vingt boucles, on redemande
+    // l'historique complet : le filigrane se recale tout seul, et le
+    // dedoublonnage par contenu evite les messages en double.
+    _chatSyncTick = (_chatSyncTick + 1) % 20;
+    var reconcilier = (_chatSyncTick === 0);
+    var since = reconcilier ? 0 : (_chatLastSyncId[key] || 0);
     var url = _fedBase + "/api/chat/messages?salon_nom=" + encodeURIComponent(key)
               + "&since_id=" + since;
     fetch(url, {
@@ -1443,6 +1509,9 @@ function chat_syncCollecteur() {
           window._chatCollNoteFail();
         }
         return null;
+      }
+      if (r.ok && typeof window._chatCollNoteOk === "function") {
+        window._chatCollNoteOk();
       }
       return r.ok ? r.json() : null;
     }).then(function(msgs) {
@@ -1464,11 +1533,15 @@ function chat_syncCollecteur() {
       }, since);
       _chatLastSyncId[key] = maxId;
       if (!foreign.length) return;
-      // Injecter dans la mémoire locale et afficher si salon courant
-      if (!_messages[salon.id]) _messages[salon.id] = [];
+      // `_messages` est un TABLEAU des messages du salon courant, pas un
+      // dictionnaire indexe par salon. L'ancien code ecrivait dans
+      // _messages[salon.id] : des que le fil comptait assez de messages, cet
+      // index designait un objet message, `.some()` levait une TypeError, et
+      // l'exception disparaissait dans le catch de fin de boucle.
+      if (!Array.isArray(_messages)) _messages = [];
       foreign.forEach(function(m) {
         // Anti-doublon par contenu (au cas où)
-        var dup = _messages[salon.id].some(function(existing) {
+        var dup = _messages.some(function(existing) {
           return existing.contenu === m.contenu
               && existing.auteur_sigle === m.auteur_sigle
               && Math.abs(
@@ -1490,17 +1563,21 @@ function chat_syncCollecteur() {
           pj:            m.pj || [],
           reply_to_id:   m.reply_to_id || null,
         };
-        _messages[salon.id].push(msg);
-        if (_currentSalon && _currentSalon.id === salon.id) {
-          chat_appendMessage(msg);
-        }
+        _messages.push(msg);
+        chat_appendMessage(msg);
       });
       if (_currentSalon && _currentSalon.id === salon.id) {
         var feed = document.getElementById("msg-feed");
         if (feed) feed.scrollTop = 9999999;
       }
     }).catch(function(e) {
-      // Erreur réseau silencieuse (le circuit breaker s'en chargera si trop)
+      // Ne jamais avaler l'erreur en silence : c'est ce qui avait rendu
+      // invisible une TypeError d'injection pendant des semaines. Les echecs
+      // reseau sont deja comptes par _chatCollNoteFail, cette trace ne sert
+      // qu'au diagnostic.
+      if (window.console && console.debug) {
+        console.debug("SCRIBE Chat : synchronisation, " + (e && e.message ? e.message : e));
+      }
     });
   });
 }

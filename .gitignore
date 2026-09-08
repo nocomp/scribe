@@ -83,4 +83,6 @@ collecteur_exercice/collecteur_tokens.json
 data/.scribe_secret
 data/
 archives/
-
+collecteur/collecteur_chat.json
+collecteur_demo/collecteur_chat.json
+collecteur_exercice/collecteur_chat.json
