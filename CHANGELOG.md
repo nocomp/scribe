@@ -10,6 +10,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## 🇫🇷 Français
 
+### [3.6.1-beta] — 2026-11-22
+
+#### 🔒 Sécurité — correctif critique (signalé par [@kemrec](https://github.com/kemrec))
+
+- **Le collecteur n'expose plus son token admin maître** (`collecteur/collecteur.py`)
+  - `GET /` servait la page de supervision **sans authentification** en y injectant
+    le vrai `ADMIN_TOKEN` (dans une variable JS, l'iframe messagerie et un en-tête).
+    Un visiteur anonyme récupérait donc le token maître (`curl / | grep ADMIN_TOKEN`)
+    et obtenait un contrôle admin complet (enrôler de faux établissements, révoquer
+    des hôpitaux réels…). Cela **réouvrait aussi** les lectures agrégées corrigées en
+    3.6.0 (puisque `require_any_auth` accepte le token maître).
+  - Correctif : le token maître **n'est plus jamais injecté** dans la page. L'UI
+    s'authentifie via le login (`/api/ui/login`) et utilise une **session de rôle**
+    (`ui_sessions`, stockée en `coll_session`) pour tous ses appels, y compris
+    l'iframe messagerie.
+  - `require_admin` (collecteur) et `_check_admin` (routes `/api/master`) acceptent
+    désormais une **session UI de rôle admin** en plus du token maître — lequel reste
+    valable uniquement en server-to-server. Les sessions **viewer** sont refusées sur
+    les actions admin.
+
+---
+
 ### [3.6.0-beta] — 2026-11-22
 
 #### 🔒 Sécurité — correctifs signalés par audit externe
@@ -68,6 +90,26 @@ d'un audit indépendant mené par **[@kemrec](https://github.com/kemrec)**
 
 ## 🇬🇧 English
 
+### [3.6.1-beta] — 2026-11-22
+
+#### 🔒 Security — critical fix (reported by [@kemrec](https://github.com/kemrec))
+
+- **The collector no longer exposes its master admin token** (`collecteur/collecteur.py`)
+  - `GET /` served the supervision page **without authentication** while injecting the
+    real `ADMIN_TOKEN` into it (a JS variable, the messagerie iframe, and a header). An
+    anonymous visitor could therefore recover the master token
+    (`curl / | grep ADMIN_TOKEN`) and gain full admin control (enroll rogue
+    establishments, revoke real hospitals…). It **also re-opened** the aggregate reads
+    fixed in 3.6.0 (since `require_any_auth` accepts the master token).
+  - Fix: the master token is **never injected** into the page. The UI authenticates via
+    login (`/api/ui/login`) and uses a **role-scoped session** (`ui_sessions`, stored as
+    `coll_session`) for all calls, including the messagerie iframe.
+  - `require_admin` (collector) and `_check_admin` (`/api/master` routes) now accept a
+    **role-admin UI session** in addition to the master token — which remains valid for
+    server-to-server only. **Viewer** sessions are rejected on admin actions.
+
+---
+
 ### [3.6.0-beta] — 2026-11-22
 
 #### 🔒 Security — fixes reported by external audit
@@ -124,22 +166,27 @@ audit by **[@kemrec](https://github.com/kemrec)** (see **Credits**).
 ## Remerciements / Credits
 
 🇫🇷 Un grand merci à **[@kemrec](https://github.com/kemrec)** pour son audit de
-SCRIBE et le signalement responsable des trois vulnérabilités de divulgation
-d'informations corrigées dans cette version (fuite du token de fédération via
-`/federation/status` et `/info` ; accès anonyme aux lectures agrégées du
-collecteur). Son rapport précis, accompagné de preuves de concept reproductibles
-et de correctifs suggérés, a permis une remédiation rapide et ciblée. Ce type de
-signalement rigoureux est précieux pour un outil de gestion de crise hospitalière,
-où la confidentialité des données inter-établissements est critique. Merci. 🙏
+SCRIBE et le signalement responsable de plusieurs vulnérabilités de divulgation
+d'informations : la fuite du token de fédération via `/federation/status` et
+`/info` et l'accès anonyme aux lectures agrégées du collecteur (corrigées en
+3.6.0), puis — après re-test — l'**exposition du token admin maître sur la page
+d'accueil du collecteur** (corrigée en 3.6.1), la plus grave car elle redonnait un
+contrôle admin complet. Ses rapports précis, accompagnés de preuves de concept
+reproductibles et de correctifs suggérés, ont permis des remédiations rapides et
+ciblées. Ce type de signalement rigoureux est précieux pour un outil de gestion de
+crise hospitalière, où la confidentialité des données inter-établissements est
+critique. Merci. 🙏
 
 🇬🇧 Many thanks to **[@kemrec](https://github.com/kemrec)** for auditing SCRIBE and
-responsibly reporting the three information-disclosure vulnerabilities fixed in
-this release (federation-token leak via `/federation/status` and `/info`; anonymous
-access to the collector's aggregate reads). The report was precise, with
-reproducible proofs of concept and suggested fixes, enabling a fast, targeted
-remediation. This kind of rigorous disclosure is invaluable for a hospital
-crisis-management tool, where the confidentiality of cross-hospital data is
-critical. Thank you. 🙏
+responsibly reporting several information-disclosure vulnerabilities: the
+federation-token leak via `/federation/status` and `/info` and anonymous access to
+the collector's aggregate reads (fixed in 3.6.0), then — after re-testing — the
+**exposure of the master admin token on the collector's home page** (fixed in
+3.6.1), the most serious as it restored full admin control. The reports were
+precise, with reproducible proofs of concept and suggested fixes, enabling fast,
+targeted remediations. This kind of rigorous disclosure is invaluable for a
+hospital crisis-management tool, where the confidentiality of cross-hospital data
+is critical. Thank you. 🙏
 
 ---
 

@@ -64,23 +64,39 @@ router = APIRouter(prefix="/api/master", tags=["master"])
 # Auth — réutilise require_admin du collecteur si possible, sinon fallback
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _check_admin(request: Request) -> None:
-    """Vérifie un token admin Bearer dans le header Authorization.
+# Hook injecté par le collecteur au démarrage : renvoie True si un token
+# correspond à une session UI de rôle admin. Permet d'accepter la session de
+# supervision sans jamais exposer le token maître au navigateur.
+_ui_session_is_admin = None  # Callable[[str], bool] | None
 
-    Réutilise le admin_token du collecteur (collecteur/collecteur_admin.json).
-    """
+
+def _check_admin(request: Request) -> None:
+    """Vérifie l'autorisation admin : token maître du collecteur
+    (collecteur_admin.json) OU session UI de rôle admin (login supervision)."""
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(401, "Authorization Bearer requis")
     token = auth[7:].strip()
 
     admin_file = PROJECT_ROOT / "collecteur" / "collecteur_admin.json"
-    if not admin_file.exists():
-        raise HTTPException(500, "collecteur_admin.json introuvable")
-    with open(admin_file, encoding="utf-8") as f:
-        admin = json.load(f)
-    if token != admin.get("admin_token"):
-        raise HTTPException(403, "Token admin invalide")
+    if admin_file.exists():
+        try:
+            with open(admin_file, encoding="utf-8") as f:
+                admin = json.load(f)
+            if token and token == admin.get("admin_token"):
+                return
+        except Exception:
+            pass
+
+    # Session UI admin (le navigateur n'a plus le token maître)
+    if _ui_session_is_admin is not None:
+        try:
+            if _ui_session_is_admin(token):
+                return
+        except Exception:
+            pass
+
+    raise HTTPException(403, "Token admin invalide")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

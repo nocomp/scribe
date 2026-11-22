@@ -438,6 +438,10 @@ try:
     from master.master_routes import router as _master_router, lifecycle_register as _master_lifecycle
     app.include_router(_master_router)
     _master_lifecycle(app)
+    # Les routes /api/master acceptent une session UI admin (le navigateur n'a plus
+    # le token maître). On injecte le vérificateur de session.
+    import master.master_routes as _mr_mod
+    _mr_mod._ui_session_is_admin = lambda t: bool(t) and ui_sessions.get(t, {}).get("role") == "admin"
     print("[master] Module pilotage instances activé")
 except Exception as _e:
     print(f"[master] Module non chargé (OK si non utilisé) : {_e}")
@@ -455,9 +459,17 @@ def get_etab_from_token(credentials: Optional[HTTPAuthorizationCredentials]) -> 
 
 
 def require_admin(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
-    if not credentials or credentials.credentials != ADMIN_TOKEN:
-        raise HTTPException(status_code=403, detail="Token admin invalide")
-    return True
+    # Accepte le token maître (server-to-server / bootstrap) OU une session UI de
+    # rôle admin. Le token maître n'est JAMAIS exposé au navigateur : l'UI
+    # s'authentifie par login et utilise sa session.
+    if credentials:
+        tok = credentials.credentials
+        if tok == ADMIN_TOKEN:
+            return True
+        sess = ui_sessions.get(tok)
+        if sess and sess.get("role") == "admin":
+            return True
+    raise HTTPException(status_code=403, detail="Token admin invalide")
 
 def require_node_or_admin(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> str:
     """Accepte le token admin collecteur OU un token de fédération d'instance.
@@ -2264,6 +2276,7 @@ async function collLogin() {
   const d = await r.json();
   if (d.ok) {
     localStorage.setItem('coll_session', d.token);
+    ADMIN_TOKEN = d.token;  // la session devient le jeton utilisé par l'UI
     // v3.4 (h38e) — Si l'utilisateur utilise encore le mdp par défaut
     // (Scribe2026!), on force le changement AVANT d'entrer dans l'app.
     if (d.must_change_password) {
@@ -2534,7 +2547,7 @@ async function submitMasterForcedPw() {
     <!-- MESSAGERIE INTER-GHT -->
     <div class="tab-pane" id="pane-messagerie">
       <iframe id="msg-iframe" title="Messagerie supervision"
-              src="/messagerie/ui?token=PLACEHOLDER_ADMIN_TOKEN"
+              src="about:blank" data-msgsrc="/messagerie/ui"
               style="flex:1;width:100%;border:none;display:block"></iframe>
     </div>
 
@@ -3096,7 +3109,9 @@ async function submitMasterForcedPw() {
 <div id="toast"></div>
 
 <script>
-const ADMIN_TOKEN = 'PLACEHOLDER_ADMIN_TOKEN';  // remplacé côté serveur
+// Jeton utilisé par l'UI = la session de supervision (login), JAMAIS le token
+// maître (qui n'est plus injecté dans la page). Réassigné après login.
+let ADMIN_TOKEN = localStorage.getItem('coll_session') || '';
 let allData = [];
 let repondeurLignes = {};
 let pendingList = [];
@@ -3177,7 +3192,13 @@ function switchTab(id, btn) {
   }
   if (btn) btn.classList.add('active');
   if (id === 'carto') { setTimeout(() => { if (map) { map.invalidateSize(); updateMapMarkers(); } else { initMap(); } window._mapUpdatePending = false; }, 150); }
-  if (id === 'messagerie') { /* iframe autonome — pas d'ancien rendu */ }
+  if (id === 'messagerie') {
+    // Charger l'iframe messagerie avec la session UI (pas le token maître).
+    var _mf = document.getElementById('msg-iframe');
+    if (_mf && ADMIN_TOKEN && (!_mf.src || _mf.src === 'about:blank' || _mf.src.endsWith('about:blank'))) {
+      _mf.src = _mf.getAttribute('data-msgsrc') + '?token=' + encodeURIComponent(ADMIN_TOKEN);
+    }
+  }
   if (id === 'statuts') renderStatuts(allData);
   if (id === 'admin') adminLoad();
   if (id === 'transferts') { trSupLoad(); _trSupInitDnD(); }
@@ -5419,7 +5440,7 @@ function renderKpiSites(data, body, count) {
 function renderKpiPending(body, count) {
   // Lire pending depuis l'API admin
   fetch('/api/admin/pending', {
-    headers: {Authorization: 'Bearer PLACEHOLDER_ADMIN_TOKEN'}
+    headers: {Authorization: 'Bearer ' + ADMIN_TOKEN}
   }).then(function(r){ return r.ok ? r.json() : null; })
     .then(function(data){
       var list = data && data.pending ? Object.entries(data.pending) : [];
@@ -5673,7 +5694,10 @@ function helpShowArticle(id){
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard():
-    html = DASHBOARD_HTML.replace("PLACEHOLDER_ADMIN_TOKEN", ADMIN_TOKEN)
+    # SÉCURITÉ : ne JAMAIS injecter le token admin maître dans la page servie en
+    # anonyme. Le navigateur s'authentifie via le login (/api/ui/login) et utilise
+    # la session (coll_session). Tout placeholder résiduel est neutralisé (vide).
+    html = DASHBOARD_HTML.replace("PLACEHOLDER_ADMIN_TOKEN", "")
     return HTMLResponse(content=html, headers={
         "Cache-Control": "no-store, no-cache, must-revalidate",
         "Pragma": "no-cache", "Expires": "0"
