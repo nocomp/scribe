@@ -16,6 +16,8 @@ logger = logging.getLogger("scribe.plugins")
 
 # ── Registre en mémoire des plugins chargés ───────────────────────────────────
 _loaded_plugins: dict[str, dict] = {}
+# v3.6.0-alpha3 — Registre des erreurs de chargement (pour diagnostic admin)
+_plugin_errors: dict[str, str] = {}
 
 
 def load_all_plugins(app: FastAPI, db_session: Session) -> list[dict]:
@@ -93,8 +95,16 @@ def _load_plugin(app: FastAPI, plugin_id: str) -> Optional[dict]:
         return manifest
 
     except Exception as e:
+        # v3.6.0-alpha3 — Stocker l'erreur pour diagnostic via endpoint debug
+        import traceback as _tb
+        _plugin_errors[plugin_id] = f"{type(e).__name__}: {e}\n{_tb.format_exc()}"
         logger.error(f"Plugin '{plugin_id}' en échec : {e}", exc_info=True)
         return None
+
+
+def get_plugin_errors() -> dict[str, str]:
+    """Retourne les erreurs de chargement des plugins (vide si tout OK)."""
+    return dict(_plugin_errors)
 
 
 def _compat_manifest(plugin_id: str) -> dict:
@@ -161,8 +171,20 @@ def get_all_plugin_states(db: Session) -> list[dict]:
             if d.is_dir() and (d / "plugin.py").exists():
                 all_ids.add(d.name)
 
+    import os as _os_ex
+    _is_exercice_mode = _os_ex.getenv("SCRIBE_EXERCICE_MODE", "0") == "1"
+    import os as _os_ex
+    _is_exercice = _os_ex.getenv("SCRIBE_EXERCICE_MODE", "0") == "1"
     result = []
     for plugin_id in all_ids:
+        # h149 — exercice n'apparaît que si SCRIBE_EXERCICE_MODE=1
+        # En prod, l'afficher avec "démarrage requis" crée de la confusion.
+        if plugin_id == "exercice" and not _is_exercice:
+            continue
+        # h149 — Le plugin exercice n'est ni affiché ni chargeable en mode production
+        # (SCRIBE_EXERCICE_MODE=1 requis). Évite la confusion "démarrage requis" en prod.
+        if plugin_id == "exercice" and not _is_exercice_mode:
+            continue
         # Lire le MANIFEST du plugin si disponible
         manifest = _loaded_plugins.get(plugin_id, {})
         # Tenter de lire le MANIFEST depuis le fichier plugin.py si pas chargé

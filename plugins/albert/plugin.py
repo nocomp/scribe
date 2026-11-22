@@ -21,4 +21,6 @@ MANIFEST = {
 def register(app: FastAPI) -> None:
     """Enregistre les routes du plugin Albert dans l'application FastAPI."""
     from plugins.albert.api import router
-    app.include_router(router, prefix="/api/v1/albert", tags=["Albert AI"])
+    from fastapi import Depends as _Depends
+    from app.api.auth import require_user as _require_user
+    app.include_router(router, prefix="/api/v1/albert", tags=["Albert AI"], dependencies=[_Depends(_require_user)])

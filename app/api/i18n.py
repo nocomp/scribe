@@ -34,7 +34,7 @@ def get_available_languages() -> list:
         return [{"code": "fr", "name": "Français", "flag": "🇫🇷"}]
     
     for fname in sorted(os.listdir(LANG_DIR)):
-        if fname.endswith(".json"):
+        if fname.endswith(".json") and not fname.startswith("_"):
             try:
                 with open(os.path.join(LANG_DIR, fname), encoding="utf-8") as f:
                     data = json.load(f)
@@ -62,13 +62,18 @@ def list_languages():
 _CURRENT_LANG_FILE = os.path.join(LANG_DIR, "_current.json")
 
 
-def get_current_lang() -> str:
-    """Retourne le code de la langue active pour cette instance."""
+def get_current_lang() -> str | None:
+    """Retourne le code de la langue active pour cette instance.
+    
+    v3.4 (h38n) — Retourne None si pas de fichier _current.json (= pas d'override
+    admin). Cela permet à scribe.js de tomber sur SCRIBE_CONFIG.langue (langue
+    posée au wizard) plutôt que de toujours renvoyer 'fr' par défaut.
+    """
     try:
         with open(_CURRENT_LANG_FILE, encoding="utf-8") as f:
-            return json.load(f).get("code", DEFAULT_LANG)
+            return json.load(f).get("code")
     except Exception:
-        return DEFAULT_LANG
+        return None
 
 
 def set_current_lang(code: str) -> None:
@@ -85,8 +90,13 @@ def set_current_lang(code: str) -> None:
 
 @router.get("/current")
 def get_current():
-    """Retourne la langue active pour cette instance."""
-    return {"code": get_current_lang()}
+    """Retourne la langue active pour cette instance.
+    
+    Si pas de configuration admin (_current.json absent), retourne {code: null}
+    pour que le frontend fallback sur SCRIBE_CONFIG.langue (wizard).
+    """
+    code = get_current_lang()
+    return {"code": code}  # null si pas configuré
 
 
 @router.get("/{lang_code}")

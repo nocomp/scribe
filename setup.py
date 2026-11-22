@@ -83,7 +83,7 @@ def menu():
         print("  Choisissez un mode :\n")
         print(f"   {bold('1')}  {green('Démo ransomware LockBit 48h')} (CHV Valmont — recommandé pour découvrir SCRIBE)")
         print(f"   {bold('2')}  {green('Démo clinique Montrelay')}")
-        print(f"   {bold('3')}  {yellow('Supervision multi-établissements')} (démo 4 GHTs + collecteur démo)")
+        print(f"   {bold('3')}  {yellow('Supervision multi-établissements')} (démo 4 GHTs + collecteur Réseau Démo)")
         print(f"   {bold('4')}  {cyan('Mon établissement')} (depuis config.xml)")
         print(f"   {bold('5')}  {cyan('Mon établissement')} (depuis fichier Excel SCRIBE_config_etablissement.xlsx)")
         print(f"   {bold('6')}  Docker")
@@ -118,7 +118,7 @@ def demo2():
     demarrer()
 
 def supervision():
-    banner("[SUPERVISION] Démo 4 GHTs + collecteur territorial (démo)")
+    banner("[SUPERVISION] Démo 4 GHTs + collecteur territorial (Réseau Démo)")
     print()
     print("  Ce mode démarre 5 services :")
     print(f"  {dim('→')} Collecteur      : http://localhost:9000")
@@ -127,16 +127,16 @@ def supervision():
     print(f"  {dim('→')} Site 3 (8002)   : http://localhost:8002")
     print(f"  {dim('→')} Site 4 (8003)   : http://localhost:8003")
     print()
-    script = os.path.join(BASE_DIR, "lancer_demo.sh")
+    script = os.path.join(BASE_DIR, "lancer_scribe_demo.sh")
     if not os.path.exists(script):
-        err("lancer_demo.sh introuvable.")
+        err("lancer_scribe_demo.sh introuvable.")
         warn("Ce script est fourni dans la version de déploiement multi-GHT.")
         input("\n  Appuyez sur Entrée pour revenir au menu...")
         return
     reset = input("  Réinitialiser les bases de données ? (o/N) : ").strip().lower()
     print()
     flag = "--reset" if reset in ("o", "oui", "y", "yes") else ""
-    run(f"bash lancer_demo.sh {flag}")
+    run(f"bash lancer_scribe_demo.sh {flag}")
 
 def from_xml(xml_file=None):
     banner("[MON ÉTABLISSEMENT] Initialisation depuis config.xml")
@@ -214,7 +214,7 @@ def docker_menu():
     print()
     if dsub == "1":
         if run("docker compose up -d") != 0: return
-        ok("SCRIBE → http://localhost:8000  |  login: dircrise / changeme")
+        ok("SCRIBE → http://localhost:8000  |  login: dircrise / Scribe2026!")
         print(f"  {dim('Logs : docker compose logs -f')}")
         input("\n  Appuyez sur Entrée...")
     elif dsub == "2":
@@ -237,7 +237,7 @@ def _print_demarrer(port, login, sigle):
     print(cyan("  ====================================================="))
     print(cyan(f"   SCRIBE [{sigle}] → http://localhost:{port}"))
     print(cyan(f"   Login    : {login}"))
-    print(cyan("   Password : changeme (ou celui défini dans config.xml)"))
+    print(cyan("   Password : Scribe2026! (ou celui défini dans config.xml)"))
     print(cyan("  ====================================================="))
     print()
     print(f"  {dim('Ctrl+C pour arrêter')}\n")

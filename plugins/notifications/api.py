@@ -18,17 +18,31 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone, timedelta
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.api.auth import get_current_user, require_admin
+from app.models import User
 from plugins.notifications.models import (
     NotifChannel, NotifSubscription, NotifSilence, NotifLog, NotifSettings
 )
 from plugins.notifications.backends import BACKENDS, NotifPayload
 from plugins.notifications.dispatcher import notify
+
+
+def _utc_iso(dt):
+    """h75 — Sérialise un datetime en ISO 8601 avec fuseau UTC explicite.
+    Les datetimes relus depuis SQLite sont naïfs (sans tzinfo) mais représentent
+    de l'UTC. Sans marqueur de fuseau, le front les interprète en heure LOCALE,
+    d'où un décalage (ex. journal SMS 2 h en retard en été). On force donc UTC."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        from datetime import timezone as _tz
+        dt = dt.replace(tzinfo=_tz.utc)
+    return dt.isoformat()
 
 router = APIRouter()
 
@@ -176,8 +190,8 @@ def my_subscriptions(db: Session = Depends(get_db),
         "id": s.id, "channel_kind": s.channel_kind, "label": s.label,
         "target_preview": s.target[:40] + ("..." if len(s.target) > 40 else ""),
         "min_urgency": s.min_urgency,
-        "created_at": s.created_at.isoformat() if s.created_at else None,
-        "last_used_at": s.last_used_at.isoformat() if s.last_used_at else None,
+        "created_at": _utc_iso(s.created_at),
+        "last_used_at": _utc_iso(s.last_used_at),
     } for s in subs]
 
 
@@ -208,7 +222,7 @@ def silence(body: SilenceIn, db: Session = Depends(get_db),
     s = NotifSilence(user_id=user.id, active=True, until=until, reason=body.reason)
     db.add(s)
     db.commit()
-    return {"ok": True, "id": s.id, "until": until.isoformat() if until else None}
+    return {"ok": True, "id": s.id, "until": _utc_iso(until)}
 
 
 @router.delete("/silence")
@@ -243,9 +257,9 @@ def get_silence(db: Session = Depends(get_db),
         return {"active": False}
     return {
         "active": True,
-        "until": s.until.isoformat() if s.until else None,
+        "until": _utc_iso(s.until),
         "reason": s.reason,
-        "started_at": s.created_at.isoformat() if s.created_at else None,
+        "started_at": _utc_iso(s.created_at),
     }
 
 
@@ -269,17 +283,175 @@ async def test_channel(kind: str, db: Session = Depends(get_db),
     if not channel or not channel.enabled:
         raise HTTPException(400, f"Canal {kind} non activé côté serveur")
 
-    # On passe par le dispatcher (même chemin que la vraie notif) pour
-    # tester aussi les règles (rate, dedup, silence).
-    await notify(
+    # h78 — Test SPÉCIFIQUE au canal : envoi DIRECT via le backend du canal testé,
+    # sans passer par notify() (qui diffusait à TOUS les canaux abonnés — un test
+    # SMS arrivait aussi par mail). On teste exactement le canal demandé.
+    from plugins.notifications.dispatcher import _apply_central_config, _log_notif
+    cfg = _apply_central_config(kind, json.loads(channel.config_json or "{}"))
+    backend_cls = BACKENDS.get(kind)
+    if not backend_cls:
+        raise HTTPException(400, f"Backend {kind} indisponible")
+    backend = backend_cls(cfg)
+    if not backend.is_configured():
+        raise HTTPException(400, f"Canal {kind} mal configuré")
+    payload = NotifPayload(
         event_type="test",
         title="Test SCRIBE — Notification de diagnostic",
-        body=f"Si vous recevez ce message sur votre canal {kind}, la configuration est opérationnelle. Heure du test : " + datetime.now(timezone.utc).isoformat(),
-        urgency=2,
-        context={},
-        target_users=[user.id],
+        body=("Si vous recevez ce message sur votre canal " + kind +
+              ", la configuration est opérationnelle. Heure du test : " +
+              datetime.now(timezone.utc).isoformat()),
+        urgency=4, context={},
     )
-    return {"ok": True, "target_preview": sub.target[:40]}
+    try:
+        res = await backend.send(payload, sub.target)
+        ok, err = res.success, res.error
+    except Exception as e:
+        ok, err = False, str(e)
+    _log_notif(db, "test", None, 4, user.id, kind, (sub.target or "")[:200],
+               payload.title, payload.body,
+               status=("sent" if ok else "failed"), error=err)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+    if not ok:
+        raise HTTPException(502, f"Échec envoi {kind} : {err}")
+    return {"ok": True, "target_preview": (sub.target or "")[:40]}
+
+
+class RappelIn(BaseModel):
+    titre:   Optional[str] = None
+    message: Optional[str] = None
+    roles:   Optional[list] = None   # ex. ["admin"] pour restreindre la cible
+
+
+@router.post("/rappel-personnel")
+async def rappel_personnel(body: RappelIn, db: Session = Depends(get_db),
+                           admin=Depends(require_admin)):
+    """Rappel du personnel : notifie (SMS/mail selon souscriptions) TOUS les
+    comptes actifs disposant d'un téléphone. `roles` optionnel pour restreindre
+    (ex. ["admin"]). Réservé aux administrateurs."""
+    q = db.query(User).filter(
+        User.active == True,                 # noqa: E712
+        User.telephone.isnot(None),
+        User.telephone != "",
+    )
+    if body.roles:
+        q = q.filter(User.role.in_(body.roles))
+    ids = [u.id for u in q.all()]
+    if not ids:
+        return {"ok": True, "destinataires": 0,
+                "message": "Aucun compte actif avec téléphone renseigné"}
+    await notify(
+        event_type="rappel_personnel",
+        title=(body.titre or "Rappel du personnel — SCRIBE").strip()[:120],
+        body=(body.message or "Activation de la cellule de crise. Merci de vous "
+              "connecter à SCRIBE et de rejoindre votre poste.").strip()[:480],
+        urgency=4,
+        context={"motif": "rappel_personnel"},
+        target_users=ids,
+    )
+    return {"ok": True, "destinataires": len(ids)}
+
+
+# ── Notification SMS sélective sur incident ──────────────────────────────────
+
+@router.get("/sms-recipients")
+def sms_recipients(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    """h73 — Liste des comptes actifs disposant d'un téléphone configuré.
+    Sert au sélecteur de destinataires SMS d'un incident : on ne propose QUE
+    les utilisateurs joignables par SMS. Le numéro est masqué (vie privée)."""
+    rows = (db.query(User)
+              .filter(User.active == True,                     # noqa: E712
+                      User.telephone.isnot(None),
+                      User.telephone != "")
+              .order_by(User.display_name).all())
+
+    def _mask(t: str) -> str:
+        t = (t or "").strip()
+        return (t[:3] + "…" + t[-2:]) if len(t) > 5 else "•••"
+
+    return [{"id": u.id,
+             "display_name": u.display_name or u.username,
+             "role": u.role,
+             "telephone_masque": _mask(u.telephone)} for u in rows]
+
+
+class IncidentSmsIn(BaseModel):
+    incident_id: Optional[int] = None
+    titre:       Optional[str] = None
+    message:     Optional[str] = None
+    user_ids:    list[int]
+
+
+@router.post("/incident-sms")
+async def incident_sms(body: IncidentSmsIn, request: Request,
+                       db: Session = Depends(get_db),
+                       admin=Depends(require_admin)):
+    """h73 — Envoie un SMS d'incident aux utilisateurs SÉLECTIONNÉS, uniquement
+    ceux ayant un téléphone configuré. Envoi DIRECT vers User.telephone (urgency
+    4 pour passer le filtre SMS), en réutilisant la config du canal SMS activé.
+    Chaque envoi est tracé dans le journal des notifications. Réservé admin."""
+    if not body.user_ids:
+        raise HTTPException(400, "Aucun destinataire sélectionné")
+
+    ch = (db.query(NotifChannel)
+            .filter(NotifChannel.kind == "sms", NotifChannel.enabled == True)  # noqa: E712
+            .first())
+    if not ch:
+        raise HTTPException(400, "Canal SMS non activé côté serveur")
+
+    from plugins.notifications.dispatcher import _apply_central_config, _log_notif
+    cfg = _apply_central_config("sms", json.loads(ch.config_json or "{}"))
+    backend_cls = BACKENDS.get("sms")
+    if not backend_cls:
+        raise HTTPException(400, "Backend SMS indisponible")
+    backend = backend_cls(cfg)
+    if not backend.is_configured():
+        raise HTTPException(400, "Canal SMS mal configuré")
+
+    targets = (db.query(User)
+                 .filter(User.id.in_(body.user_ids),
+                         User.active == True,                   # noqa: E712
+                         User.telephone.isnot(None),
+                         User.telephone != "")
+                 .all())
+    if not targets:
+        raise HTTPException(400, "Aucun destinataire avec téléphone parmi la sélection")
+
+    titre   = (body.titre or "Incident SCRIBE").strip()[:120]
+    message = (body.message or "").strip()[:480]
+    # h74 — Lien absolu vers l'incident (titre déjà dans `titre`). On ne le
+    # construit que si un incident_id est fourni (incident enregistré).
+    ctx = {}
+    if body.incident_id:
+        ctx = {"incident_id": body.incident_id,
+               "url": f"/#incidents/{body.incident_id}",
+               "base_url": str(request.base_url).rstrip("/")}
+    payload = NotifPayload(
+        event_type="incident_sms", title=titre, body=message, urgency=4, context=ctx,
+    )
+
+    resultats = []
+    for u in targets:
+        try:
+            res = await backend.send(payload, u.telephone)
+            ok, err = res.success, res.error
+        except Exception as e:
+            ok, err = False, str(e)
+        _log_notif(db, "incident_sms", body.incident_id, 4, u.id, "sms",
+                   (u.telephone or "")[:200], titre, message,
+                   status=("sent" if ok else "failed"), error=err)
+        resultats.append({"user_id": u.id,
+                          "display_name": u.display_name or u.username,
+                          "ok": ok, "error": err})
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+
+    n_ok = sum(1 for r in resultats if r["ok"])
+    return {"ok": True, "envoyes": n_ok, "total": len(resultats), "resultats": resultats}
 
 
 # ── Audit trail ──────────────────────────────────────────────────────────────
@@ -302,7 +474,7 @@ def get_log(limit: int = Query(100, le=500),
     rows = q.limit(limit).all()
     return [{
         "id": r.id,
-        "ts": r.ts.isoformat() if r.ts else None,
+        "ts": _utc_iso(r.ts),
         "event_type": r.event_type,
         "event_ref_id": r.event_ref_id,
         "urgency": r.urgency,
@@ -384,3 +556,125 @@ def generate_vapid_keys(admin=Depends(require_admin)):
         }
     except Exception as e:
         raise HTTPException(500, f"Génération VAPID échouée : {e}")
+
+
+@router.get("/sent-incidents")
+def sent_incidents(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    """h76 — IDs des incidents ayant au moins une notification émise avec succès
+    (statut 'sent'). Alimente l'indicateur visuel 🔔 « notifié » des cartes."""
+    rows = (db.query(NotifLog.event_ref_id)
+              .filter(NotifLog.event_ref_id.isnot(None), NotifLog.status == "sent")
+              .distinct().all())
+    return {"incident_ids": sorted({r[0] for r in rows if r[0] is not None})}
+
+
+# ── Synchronisation config centrale → canaux opérationnels ──────────────────
+def materialize_central_channels(db: Session = None) -> dict:
+    """Crée/active les canaux mail + sms à partir de la config centrale diffusée
+    (domaines 'smtp'/'sms' avec enabled=True ET config complète). Idempotent.
+
+    Précédence locale respectée : si un canal a déjà une config LOCALE, on n'écrase
+    pas. On ne matérialise que les canaux vides — ce qui résout le cas « instance
+    qui tire la config mais n'a aucun canal » → « pas de canal configuré ».
+    Renvoie l'état par canal pour le tableau de synchronisation.
+    """
+    own = False
+    if db is None:
+        from app.database import SessionLocal
+        db = SessionLocal(); own = True
+    report = {}
+    try:
+        from app.central_config import get_domain
+        for kind, domain in (("mail", "smtp"), ("sms", "sms")):
+            try:
+                cc = get_domain(domain) or {}
+            except Exception:
+                cc = {}
+            diffused = bool(cc.get("enabled"))
+            cfg = {k: v for k, v in cc.items() if k != "enabled" and v not in (None, "")}
+            c = db.query(NotifChannel).filter(NotifChannel.kind == kind).first()
+            has_local = bool(c and c.config_json and c.config_json not in ("", "{}"))
+            if not diffused or kind not in BACKENDS:
+                report[kind] = {"configured": has_local, "enabled": bool(c and c.enabled), "diffused": diffused}
+                continue
+            try:
+                is_ok = BACKENDS[kind](cfg).is_configured()
+            except Exception:
+                is_ok = False
+            if is_ok and not has_local:
+                if not c:
+                    c = NotifChannel(kind=kind); db.add(c)
+                c.label = getattr(c, "label", None) or kind
+                c.config_json = json.dumps(cfg, ensure_ascii=False)
+                c.enabled = True
+                c.updated_at = datetime.now(timezone.utc)
+                db.commit()
+                has_local = True
+            report[kind] = {"configured": has_local, "enabled": bool(c and c.enabled), "diffused": True}
+    finally:
+        if own:
+            db.close()
+    return report
+
+
+def _sync_auth(request: Request) -> str:
+    """Auth des endpoints de synchronisation : accepte le token ADMIN de
+    l'instance OU son propre token de FÉDÉRATION (celui que la supervision
+    connaît et utilise pour pousser). Évite de partager un token admin entre
+    collecteur et instances."""
+    auth = request.headers.get("Authorization", "") or ""
+    tok = auth[7:].strip() if auth[:7].lower() == "bearer " else ""
+    if not tok:
+        raise HTTPException(401, "Token requis")
+    # 1) Token de fédération de CETTE instance (chemin supervision → instance)
+    try:
+        from app.central_config import _read_federation
+        _, fedtok = _read_federation()
+        if fedtok and tok == fedtok:
+            return "federation"
+    except Exception:
+        pass
+    # 2) Token admin (chemin admin local)
+    try:
+        from app.api.auth import decode_token
+        payload = decode_token(tok) or {}
+        if payload.get("role") in ("admin", "superadmin") or payload.get("is_admin"):
+            return "admin"
+    except Exception:
+        pass
+    raise HTTPException(401, "Non autorisé")
+
+
+def _bf_sync_status() -> dict:
+    """État opérationnel BlueFiles de l'instance (binaire CLI + identifiants,
+    config locale OU centrale diffusée)."""
+    try:
+        from plugins.bluefiles.cli_sender import cli_available
+        return {"configured": bool(cli_available())}
+    except Exception:
+        return {"configured": False}
+
+
+@router.get("/sync-status")
+def notif_sync_status(request: Request, db: Session = Depends(get_db)):
+    """État opérationnel des canaux mail/SMS de CETTE instance, après tentative
+    de matérialisation depuis la config centrale déjà tirée. Consommé par le
+    tableau de synchronisation de la supervision."""
+    _sync_auth(request)
+    rep = materialize_central_channels(db)
+    return {"ok": True, "channels": rep, "bluefiles": _bf_sync_status()}
+
+
+@router.post("/sync-apply")
+def notif_sync_apply(request: Request, db: Session = Depends(get_db)):
+    """Force un pull de la config centrale PUIS matérialise les canaux. Renvoie
+    l'état opérationnel par canal. Déclenché par le bouton « Synchroniser » de la
+    supervision (push actif)."""
+    _sync_auth(request)
+    try:
+        from app.central_config import pull_now
+        pulled = pull_now(timeout=8.0)
+    except Exception:
+        pulled = False
+    rep = materialize_central_channels(db)
+    return {"ok": True, "pulled": pulled, "channels": rep, "bluefiles": _bf_sync_status()}

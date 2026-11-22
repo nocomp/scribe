@@ -5,9 +5,11 @@ Le fournisseur effectif est défini dans config.xml <ia> ou via variables d'envi
 Ce fichier contient uniquement les prompts et la logique métier.
 L'appel réseau est délégué à app/api/ai_router.py.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Optional
+from sqlalchemy.orm import Session
+from app.database import get_db
 from app.api.ai_router import call_ai, get_ai_config, require_ia_configured
 
 router = APIRouter()
@@ -37,6 +39,62 @@ class SituationGlobaleRequest(BaseModel):
     poles_impactes: Optional[str] = ""
 
 
+
+
+# ── Contexte mobilisation pour l'aide à la décision ──────────────────────────
+# RGPD : on n'expose JAMAIS de nominatif (nom/téléphone/email) à l'IA. Seuls
+# remontent des AGRÉGATS par compétence (fonction) et par délai d'arrivée (ETA).
+def _mobilisation_context(db) -> str:
+    try:
+        from app.models import AlerteMobilisation, AlerteCible
+    except Exception:
+        return ""
+    try:
+        alerts = (db.query(AlerteMobilisation)
+                    .order_by(AlerteMobilisation.id.desc()).limit(10).all())
+        alerts = [a for a in alerts if not getattr(a, "archived", 0)]
+    except Exception:
+        return ""
+    if not alerts:
+        return ""
+    _eta_lbl = {"15": "moins de 15 min", "30": "environ 30 min",
+                "60": "environ 1 h", "indispo": "indisponible"}
+    blocs = []
+    for a in alerts:
+        cibles = db.query(AlerteCible).filter(AlerteCible.alerte_id == a.id).all()
+        total = len(cibles)
+        rep = sum(1 for c in cibles if c.statut == "repondu")
+        eta_counts = {"15": 0, "30": 0, "60": 0, "indispo": 0}
+        comp_soon = {}   # compétences arrivant sous ~30 min
+        for c in cibles:
+            if c.statut == "repondu" and c.eta_choice in eta_counts:
+                eta_counts[c.eta_choice] += 1
+                if c.eta_choice in ("15", "30"):
+                    f = (c.fonction or "Compétence non précisée").strip()
+                    comp_soon[f] = comp_soon.get(f, 0) + 1
+        taux = round(rep / total * 100) if total else 0
+        ligne = (f'- Campagne "{a.titre}" : {total} sollicité(s), {rep} réponse(s) ({taux}%). '
+                 f'Arrivées déclarées — <15 min: {eta_counts["15"]}, ~30 min: {eta_counts["30"]}, '
+                 f'~1 h: {eta_counts["60"]}, indisponible: {eta_counts["indispo"]}.')
+        if comp_soon:
+            comp = ", ".join(f"{k} x{v}" for k, v in sorted(comp_soon.items(), key=lambda x: -x[1]))
+            ligne += f" Compétences arrivant sous 30 min : {comp}."
+        else:
+            ligne += " Aucune compétence confirmée sous 30 min pour l'instant."
+        en_attente = sum(1 for c in cibles if c.statut == "attente")
+        echecs = sum(1 for c in cibles if getattr(c, "livraison", "") == "echec")
+        if getattr(a, "vague_courante", 0):
+            ligne += f" Escalade : vague {a.vague_courante} en cours"
+            if en_attente:
+                next_w = min((c.vague for c in cibles if c.statut == "attente"), default=None)
+                ligne += f" ; {en_attente} destinataire(s) en attente (vague suivante : {next_w})"
+            ligne += "."
+        if echecs:
+            ligne += f" {echecs} echec(s) d'envoi (a relancer)."
+        blocs.append(ligne)
+    return ("MOBILISATION EN COURS (chaîne d'alerte / rappel du personnel) — "
+            "données agrégées par compétence et délai, sans nominatif :\n" + "\n".join(blocs))
+
 # ── Prompts système ──────────────────────────────────────
 
 SYSTEM_CYBER = """Tu es un expert en gestion de crise cyber pour les hôpitaux publics français.
@@ -56,6 +114,14 @@ RÈGLES IMPÉRATIVES :
 - Un incident isolé de faible urgence = recommandations de surveillance, pas de crise.
 - Ne cite les obligations NIS2/ANSSI (notification 24h) que si l'incident est CYBER et urgence >= 2.
 - Sois synthétique : 3-4 phrases max par section. Évite le catastrophisme inutile.
+
+AIDE À LA DÉCISION — MOBILISATION :
+- Si une « MOBILISATION EN COURS » est fournie, CROISE les compétences qui arrivent (et leur délai) avec les incidents ouverts.
+- Tu peux RECOMMANDER d'attendre un renfort interne plutôt que d'engager un prestataire externe quand une compétence pertinente arrive sous peu (ex. « 2 techniciens < 30 min : attendre leur constat avant d'engager un prestataire »).
+- Tu peux PROPOSER d'organiser un rappel d'un type de personnel quand un incident le justifie (ex. perte d'Active Directory un week-end → proposer un rappel de techniciens DSI).
+- Sépare toujours le FAIT (ce que disent les retours) de la RECOMMANDATION. Une réponse « j'arrive » est une déclaration, pas une garantie ; une compétence présente ne garantit pas la résolution.
+- Si une campagne est EN ESCALADE et que la couverture reste insuffisante alors que des destinataires d'une vague suivante sont en attente, tu peux PROPOSER de lancer la vague suivante (priorité supérieure) — la cellule confirme.
+- Tu PROPOSES et tu OBSERVES, tu ne déclenches JAMAIS d'alerte ni d'action toi-même : la cellule décide et valide.
 Réponds en français."""
 
 
@@ -114,7 +180,7 @@ async def analyser_incident(req: AlbertRequest):
 
 
 @router.post("/situation-globale")
-async def analyser_situation_globale(req: SituationGlobaleRequest):
+async def analyser_situation_globale(req: SituationGlobaleRequest, db: Session = Depends(get_db)):
     """Analyse globale : tous les incidents ouverts + décisions prises."""
     if not req.incidents:
         return {"analyse": "Aucun incident ouvert.", "niveau_global": "VEILLE", "source": "—"}
@@ -142,6 +208,8 @@ async def analyser_situation_globale(req: SituationGlobaleRequest):
     )
     contexte = req.contexte or "Aucune cellule de crise activée. Situation de veille."
     poles    = req.poles_impactes or "Non déterminé"
+    _mob = _mobilisation_context(db)
+    _mob_block = (_mob + "\n\n") if _mob else ""
 
     prompt = (
         f"CONTEXTE ORGANISATIONNEL : {contexte}\n"
@@ -149,6 +217,7 @@ async def analyser_situation_globale(req: SituationGlobaleRequest):
         f"PÔLES SOINS IMPACTÉS : {poles}\n\n"
         f"INCIDENTS OUVERTS :\n{incidents_txt}\n\n"
         f"DÉCISIONS DÉJÀ PRISES :\n{decisions_txt}\n\n"
+        f"{_mob_block}"
         "Produis UNIQUEMENT ces 4 sections, de façon PROPORTIONNELLE à la situation :\n"
         "1. SYNTHÈSE (2-3 phrases)\n"
         "2. NIVEAU GLOBAL : [VEILLE|ALERTE|CRISE|CRITIQUE] — justification en 1 phrase\n"
@@ -194,7 +263,7 @@ class AnalyseCriseRequest(BaseModel):
     mode: Optional[str] = "analyse_crise"
 
 @router.post("/analyse-crise")
-async def analyse_crise(req: AnalyseCriseRequest):
+async def analyse_crise(req: AnalyseCriseRequest, db: Session = Depends(get_db)):
     """Répond à une question libre sur une main courante ou situation capacitaire."""
     err = require_ia_configured()
     if err:
@@ -216,10 +285,16 @@ async def analyse_crise(req: AnalyseCriseRequest):
             "Identifie les patterns, délais critiques, décisions manquées ou bonnes pratiques. "
             "Réponds toujours en français sauf si la question est dans une autre langue."
         )
-    # Injecter le contexte dans la question si fourni
-    full_prompt = req.question
+    # Injecter le contexte (main courante + mobilisation agrégée) si disponible
+    _mob = _mobilisation_context(db)
+    _ctx_parts = []
     if req.main_courante:
-        full_prompt = f"CONTEXTE:\n{req.main_courante}\n\nQUESTION: {req.question}"
+        _ctx_parts.append(req.main_courante)
+    if _mob:
+        _ctx_parts.append(_mob)
+    full_prompt = req.question
+    if _ctx_parts:
+        full_prompt = "CONTEXTE:\n" + "\n\n".join(_ctx_parts) + "\n\nQUESTION: " + req.question
     try:
         from app.api.ai_router import call_ai
         text, source = await call_ai(system=system, prompt=full_prompt, max_tokens=700)
@@ -233,17 +308,25 @@ class AskRequest(BaseModel):
     contexte: str = ""
 
 @router.post("/ask")
-async def ask_albert(req: AskRequest):
+async def ask_albert(req: AskRequest, db: Session = Depends(get_db)):
     """Question libre à Albert AI — avec contexte optionnel pour les questions de suivi."""
     err = require_ia_configured()
     if err:
         raise HTTPException(status_code=400, detail=err)
-    prompt = req.question
+    _mob = _mobilisation_context(db)
+    _parts = []
     if req.contexte:
-        prompt = f"Contexte de l'analyse précédente :\n{req.contexte[:600]}\n\nQuestion : {req.question}"
+        _parts.append("Contexte de l'analyse précédente :\n" + req.contexte[:600])
+    if _mob:
+        _parts.append(_mob)
+    prompt = req.question
+    if _parts:
+        prompt = "\n\n".join(_parts) + "\n\nQuestion : " + req.question
     try:
         text, source = await call_ai(
-            system="Tu es un expert en gestion de crise hospitalière. Réponds en français, de façon concise et opérationnelle.",
+            system=("Tu es un expert en gestion de crise hospitalière. Réponds en français, de façon concise et opérationnelle. "
+                    "Si un état de mobilisation en cours est fourni, croise les compétences qui arrivent (et leur délai) avec la situation pour aider à la décision ; "
+                    "sépare le fait de la recommandation, et tu PROPOSES/OBSERVES sans jamais déclencher d'action toi-même."),
             prompt=prompt,
             max_tokens=600
         )

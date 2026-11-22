@@ -8,118 +8,112 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f8fafc;--surface:#ffffff;--surface2:#f1f5f9;
-  --border:#e2e8f0;--text:#0f172a;--muted:#64748b;--muted2:#94a3b8;
-  --green:#16a34a;--green-bg:#f0fdf4;--green-border:#bbf7d0;
-  --yellow:#b45309;--yellow-bg:#fffbeb;--yellow-border:#fde68a;
-  --orange:#c2410c;--orange-bg:#fff7ed;--orange-border:#fed7aa;
-  --red:#dc2626;--red-bg:#fef2f2;--red-border:#fecaca;
-  --blue:#1d4ed8;--blue-bg:#eff6ff;--blue-border:#bfdbfe;
-  --mono:'Courier New',monospace;
-  --radius:8px;
+  --blue-france:#000091;--blue-france-hover:#1212ff;--rouge-marianne:#e1000f;
+  --bg:#f7f7fb;--surface:#ffffff;--surface2:#f6f6f6;
+  --border:#dddddd;--border-strong:#929292;
+  --text:#161616;--muted:#666666;--muted2:#7b7b7b;
+  --green:#18753c;--green-bg:#e3fdeb;--green-border:#b8fec9;
+  --yellow:#b34000;--yellow-bg:#feecc2;--yellow-border:#fcc63a;
+  --orange:#b34000;--orange-bg:#ffe9c8;--orange-border:#ffca9e;
+  --red:#ce0500;--red-bg:#ffe9e9;--red-border:#ffc6c6;
+  --blue:#0063cb;--blue-bg:#e8edff;--blue-border:#c2d1ff;
+  --mono:ui-monospace,'Courier New',monospace;
+  --radius:4px;
 }
-@media(prefers-color-scheme:dark){
-  :root{
-    --bg:#0f172a;--surface:#1e293b;--surface2:#0f172a;
-    --border:#334155;--text:#f1f5f9;--muted:#94a3b8;--muted2:#64748b;
-    --green:#4ade80;--green-bg:rgba(22,163,74,.12);--green-border:rgba(74,222,128,.25);
-    --yellow:#fbbf24;--yellow-bg:rgba(180,83,9,.12);--yellow-border:rgba(251,191,36,.25);
-    --orange:#fb923c;--orange-bg:rgba(194,65,12,.12);--orange-border:rgba(251,146,60,.25);
-    --red:#f87171;--red-bg:rgba(220,38,38,.12);--red-border:rgba(248,113,113,.25);
-    --blue:#60a5fa;--blue-bg:rgba(29,78,216,.12);--blue-border:rgba(96,165,250,.25);
-  }
-}
-body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;line-height:1.6;min-height:100vh}
-a{color:var(--blue);text-decoration:none}
+html{font-size:16px}
+body{background:var(--bg);color:var(--text);font-family:"Marianne",system-ui,-apple-system,arial,sans-serif;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
+a{color:var(--blue-france);text-decoration:underline;text-underline-offset:2px}
+a:hover{color:var(--blue-france-hover)}
 
-/* HEADER */
-.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 0}
-.hdr-inner{max-width:900px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.hdr-left h1{font-size:18px;font-weight:600}
-.hdr-left .sub{font-size:13px;color:var(--muted);margin-top:1px}
-.hdr-ts{font-size:12px;color:var(--muted);font-family:var(--mono)}
+/* EN-TÊTE (DSFR) */
+.hdr{background:linear-gradient(135deg,#000091,#1e4ec4);color:#fff;box-shadow:0 2px 8px rgba(0,0,60,.15)}
+.hdr-inner{max-width:960px;margin:0 auto;padding:22px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.hdr-left h1{font-size:22px;font-weight:700;color:#fff;letter-spacing:-.01em}
+.hdr-left .sub{font-size:13px;color:rgba(255,255,255,.85);margin-top:4px}
+.hdr-ts{font-size:12px;color:rgba(255,255,255,.8);white-space:nowrap}
 
-/* LEVEL BANNER */
-.banner{padding:16px 0;margin-bottom:0}
-.banner-inner{max-width:900px;margin:0 auto;padding:0 20px}
-.banner-card{border-radius:var(--radius);border:1px solid;padding:16px 20px;display:flex;align-items:center;gap:14px}
-.banner-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
-.banner-level{font-size:15px;font-weight:600}
-.banner-msg{font-size:14px;color:var(--muted);margin-top:2px}
-.banner-by{font-size:11px;color:var(--muted2);margin-top:4px;font-family:var(--mono)}
-.level-OPERATIONNEL  .banner-card{background:var(--green-bg);border-color:var(--green-border)}
-.level-OPERATIONNEL  .banner-dot{background:var(--green)}
-.level-OPERATIONNEL  .banner-level{color:var(--green)}
-.level-PERTURBE      .banner-card{background:var(--yellow-bg);border-color:var(--yellow-border)}
-.level-PERTURBE      .banner-dot{background:var(--yellow)}
-.level-PERTURBE      .banner-level{color:var(--yellow)}
-.level-INCIDENT_MAJEUR .banner-card{background:var(--red-bg);border-color:var(--red-border)}
+/* BANDEAU DE NIVEAU (alerte DSFR) */
+.banner{max-width:960px;margin:24px auto 0;padding:0 24px}
+.banner-card{border-radius:12px;border:1px solid;border-left-width:.35rem;padding:18px 22px;display:flex;align-items:flex-start;gap:14px;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,30,.05)}
+.banner-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.banner-level{font-size:16px;font-weight:700}
+.banner-msg{font-size:15px;color:var(--text);margin-top:4px;line-height:1.5}
+.banner-by{font-size:12px;color:var(--muted);margin-top:8px}
+.level-OPERATIONNEL .banner-card{background:var(--green-bg);border-color:var(--green)}
+.level-OPERATIONNEL .banner-dot{background:var(--green)}
+.level-OPERATIONNEL .banner-level{color:var(--green)}
+.level-PERTURBE .banner-card{background:var(--yellow-bg);border-color:var(--yellow)}
+.level-PERTURBE .banner-dot{background:var(--yellow)}
+.level-PERTURBE .banner-level{color:var(--yellow)}
+.level-INCIDENT_MAJEUR .banner-card{background:var(--red-bg);border-color:var(--red)}
 .level-INCIDENT_MAJEUR .banner-dot{background:var(--red)}
 .level-INCIDENT_MAJEUR .banner-level{color:var(--red)}
-.level-MAINTENANCE   .banner-card{background:var(--blue-bg);border-color:var(--blue-border)}
-.level-MAINTENANCE   .banner-dot{background:var(--blue)}
-.level-MAINTENANCE   .banner-level{color:var(--blue)}
+.level-MAINTENANCE .banner-card{background:var(--blue-bg);border-color:var(--blue)}
+.level-MAINTENANCE .banner-dot{background:var(--blue)}
+.level-MAINTENANCE .banner-level{color:var(--blue)}
 
-/* MAIN */
-.main{max-width:900px;margin:0 auto;padding:20px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+/* CORPS */
+.main{max-width:960px;margin:0 auto;padding:24px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 @media(max-width:640px){.grid2{grid-template-columns:1fr}}
 
-/* CARDS */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
-.card-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
-.card-hdr h2{font-size:13px;font-weight:600;letter-spacing:.3px}
-.card-hdr .count{font-size:11px;color:var(--muted);font-family:var(--mono);margin-left:auto}
+/* CARTES (DSFR) */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,30,.05);overflow:hidden;margin-bottom:20px}
+.card-hdr{padding:14px 20px;border-bottom:1px solid var(--border);background:#f5f5fe;display:flex;align-items:center;gap:8px}
+.card-hdr h2{font-size:14px;font-weight:700;color:#000091}
+.card-hdr .count{font-size:12px;color:var(--muted);margin-left:auto}
 .card-body{padding:0}
 
-/* SERVICE ROWS */
-.svc-row{display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);gap:10px}
+/* SERVICES + badges (badge DSFR) */
+.svc-row{display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);gap:12px}
 .svc-row:last-child{border-bottom:none}
 .svc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.svc-label{font-size:13px;flex:1}
-.svc-badge{font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;white-space:nowrap}
-.s-OK{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
-.s-PERTURBE{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border)}
-.s-HS{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
-.s-MAINTENANCE{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border)}
+.svc-label{font-size:14px;flex:1;color:var(--text)}
+.svc-badge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:4px 8px;border-radius:var(--radius);white-space:nowrap}
+.s-OK{background:var(--green-bg);color:var(--green)}
+.s-PERTURBE{background:var(--yellow-bg);color:var(--yellow)}
+.s-HS{background:var(--red-bg);color:var(--red)}
+.s-MAINTENANCE{background:var(--blue-bg);color:var(--blue)}
 .dot-OK{background:var(--green)}
 .dot-PERTURBE{background:var(--yellow)}
 .dot-HS{background:var(--red)}
 .dot-MAINTENANCE{background:var(--blue)}
 
-/* FAQ */
-.faq-item{padding:14px 16px;border-bottom:1px solid var(--border)}
+/* QUESTIONS FRÉQUENTES */
+.faq-item{padding:16px 20px;border-bottom:1px solid var(--border)}
 .faq-item:last-child{border-bottom:none}
-.faq-q{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px}
-.faq-r{font-size:13px;color:var(--muted);line-height:1.6}
+.faq-q{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px}
+.faq-r{font-size:14px;color:var(--muted);line-height:1.6}
 
 /* CHRONOLOGIE */
-.chron-item{display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border)}
+.chron-item{display:flex;gap:14px;padding:12px 20px;border-bottom:1px solid var(--border)}
 .chron-item:last-child{border-bottom:none}
-.chron-line{display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;padding-top:4px}
-.chron-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0}
-.chron-stem{width:1px;flex:1;background:var(--border);margin:3px 0;min-height:14px}
+.chron-line{display:flex;flex-direction:column;align-items:center;flex-shrink:0;padding-top:5px}
+.chron-dot{width:9px;height:9px;border-radius:50%;background:var(--blue-france);flex-shrink:0}
+.chron-stem{width:2px;flex:1;background:var(--border);margin:3px 0;min-height:16px}
 .chron-item:last-child .chron-stem{display:none}
 .chron-content{flex:1}
-.chron-ts{font-size:11px;color:var(--muted2);font-family:var(--mono);margin-bottom:2px}
-.chron-texte{font-size:13px;color:var(--text)}
-.chron-by{font-size:11px;color:var(--muted2);font-family:var(--mono);margin-top:2px}
+.chron-ts{font-size:12px;color:var(--muted2);margin-bottom:3px}
+.chron-texte{font-size:14px;color:var(--text);line-height:1.5}
+.chron-by{font-size:12px;color:var(--muted2);margin-top:3px}
 
-/* FOOTER */
-.footer{max-width:900px;margin:0 auto;padding:16px 20px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
-.footer-left{font-size:11px;color:var(--muted2);font-family:var(--mono)}
+/* PIED (DSFR) */
+.footer{border-top:2px solid var(--blue-france);background:var(--surface);margin-top:12px}
+.footer,.footer *{max-width:none}
+.footer{max-width:960px;margin:12px auto 0;padding:20px 24px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.footer-left{font-size:12px;color:var(--muted)}
 .footer-qr{text-align:right}
-.qr-label{font-size:10px;color:var(--muted2);margin-top:4px;font-family:var(--mono)}
+.qr-label{font-size:11px;color:var(--muted2);margin-top:4px}
 
-/* NO STATUS */
-.no-status{max-width:900px;margin:60px auto;padding:0 20px;text-align:center}
-.no-status h2{font-size:18px;font-weight:500;margin-bottom:8px}
-.no-status p{font-size:14px;color:var(--muted)}
+/* AUCUN STATUT */
+.no-status{max-width:960px;margin:64px auto;padding:0 24px;text-align:center}
+.no-status h2{font-size:20px;font-weight:700;color:var(--text);margin-bottom:10px}
+.no-status p{font-size:15px;color:var(--muted);line-height:1.6}
 </style>
 </head>
 <body>
 <div id="app">
-  <div style="text-align:center;padding:40px;color:#64748b;font-family:monospace;font-size:13px">Chargement…</div>
+  <div style="text-align:center;padding:40px;color:#000091;font-size:13px">Chargement…</div>
 </div>
 
 <script>
@@ -187,6 +181,8 @@ async function load(){
     const pecSvcs = d.prise_en_charge || [];
     const faq = (d.faq || []).filter(f=>f.visible && f.reponse);
     const chrons = d.chronologie || [];
+    const lignes = d.lignes_repondeur || [];
+    const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
     const nbPertSI  = siSvcs.filter(s=>s.statut!=='OK').length;
     const nbPertPEC = pecSvcs.filter(s=>s.statut!=='OK').length;
@@ -216,6 +212,20 @@ async function load(){
 </div>
 
 <div class="main">
+  ${lignes.length?`
+  <div class="card" style="margin-bottom:20px;border-left:4px solid var(--blue-france,#000091)">
+    <div class="card-hdr"><h2>📞 Numéros d'information</h2></div>
+    <div class="card-body">${lignes.map(l=>`
+      <div class="faq-item" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div class="faq-q">${esc(l.libelle)}</div>
+          ${l.langues && l.langues.length?`<div class="faq-r" style="font-size:11px">${l.langues.map(x=>esc(String(x).toUpperCase())).join(' · ')}</div>`:''}
+        </div>
+        <a href="tel:${esc((l.numero||'').replace(/\s+/g,''))}" style="font-size:18px;font-weight:700;color:var(--blue-france,#000091);text-decoration:none;font-family:monospace">${esc(l.numero)}</a>
+      </div>`).join('')}
+    </div>
+  </div>`:''}
+
   <div class="grid2">
     <div class="card">
       <div class="card-hdr">

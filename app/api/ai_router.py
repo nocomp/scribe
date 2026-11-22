@@ -90,6 +90,23 @@ class AIConfig:
 
         self._load_from_config_js()
 
+        # Couche centrale (supervision) — comble UNIQUEMENT les champs non définis
+        # localement. Précédence : local explicite > central > env.
+        try:
+            from app.central_config import get_domain as _cc_get
+            cc = _cc_get("ia")
+            if cc and cc.get("enabled"):
+                if not (self.api_key or "").strip() and cc.get("api_key"):
+                    self.api_key = cc["api_key"]
+                    if cc.get("provider"):
+                        self.provider = (cc["provider"] or self.provider).lower()
+                if not (self.model or "").strip() and cc.get("model"):
+                    self.model = cc["model"]
+                if not (self.base_url or "").strip() and cc.get("base_url"):
+                    self.base_url = cc["base_url"]
+        except Exception:
+            pass
+
         defaults = PROVIDER_DEFAULTS.get(self.provider, PROVIDER_DEFAULTS["albert"])
         if not self.model:
             self.model = defaults["model"]

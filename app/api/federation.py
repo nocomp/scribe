@@ -11,7 +11,7 @@ Principe :
 Configuration dans config.xml :
   <federation>
     <enabled>true</enabled>
-    <collecteur_url>https://supervision.cert-sante74.fr/api/push</collecteur_url>
+    <collecteur_url>https://supervision.supervision.example.org/api/push</collecteur_url>
     <token>TOKEN_256BITS_GENERE_PAR_LE_COLLECTEUR</token>
     <intervalle_secondes>120</intervalle_secondes>   <!-- défaut : 120s -->
     <share_details>true</share_details>              <!-- inclure résumés incidents ou KPIs seuls -->
@@ -70,8 +70,11 @@ class FederationConfig:
                 end   = raw.rfind(";")
                 cfg   = json.loads(raw[start:end])
                 etb = cfg.get("etablissement", {})
-                self.etablissement_nom   = etb.get("nom",   "Établissement")
-                self.etablissement_sigle = etb.get("sigle", "ETB")
+                # v3.4 (h38) — Strip défensif : un sigle avec espace en fin
+                # casse les headers HTTP du push ("Illegal header value").
+                # On strip ici pour tolérer les configs déjà polluées.
+                self.etablissement_nom   = (etb.get("nom",   "Établissement") or "").strip()
+                self.etablissement_sigle = (etb.get("sigle", "ETB") or "").strip()
                 fed = cfg.get("federation", {})
                 self.enabled           = str(fed.get("enabled", "false")).lower() == "true"
                 self.collecteur_url    = fed.get("collecteur_url", "").strip()
@@ -676,7 +679,7 @@ Principe :
 Configuration dans config.xml :
   <federation>
     <enabled>true</enabled>
-    <collecteur_url>https://supervision.cert-sante74.fr/api/push</collecteur_url>
+    <collecteur_url>https://supervision.supervision.example.org/api/push</collecteur_url>
     <token>TOKEN_256BITS_GENERE_PAR_LE_COLLECTEUR</token>
     <intervalle_secondes>120</intervalle_secondes>   <!-- défaut : 120s -->
     <share_details>true</share_details>              <!-- inclure résumés incidents ou KPIs seuls -->

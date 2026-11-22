@@ -371,6 +371,10 @@ async function resetAllDbs() {
 }
 
 // ─── Instances exercice ───────────────────────────────────────
+// v3000h13 — Set des ports en cours de démarrage. renderInstances respecte
+// ce flag pour ne pas écraser le feedback "⏳ Démarrage…" pendant le spawn.
+const _startingPorts = new Set();
+
 async function refreshInstances() {
   try {
     const r = await fetch('/api/master/exercice/instances', {headers: authHeaders()});
@@ -397,10 +401,16 @@ function renderInstances(instances) {
 
     let actionsHtml = '';
     if (actif) {
+      // L'instance est devenue active → on peut retirer son port du set
+      _startingPorts.delete(port);
       actionsHtml =
-        '<a class="btn-icon" href="http://localhost:' + port + '" target="_blank" title="Ouvrir">↗</a>' +
+        '<a class="btn-icon" href="http://' + window.location.hostname + ':' + port + '" target="_blank" title="Ouvrir">↗</a>' +
         '<button class="btn-icon" onclick="copyCreds(' + port + ')" title="Copier login/mdp">📋</button>' +
         '<button class="btn-danger" onclick="stopInstance(' + port + ')">⏸</button>';
+    } else if (_startingPorts.has(port)) {
+      // Instance en cours de démarrage : préserver le feedback visuel
+      actionsHtml =
+        '<button class="btn-success" disabled style="opacity:0.6;cursor:wait">⏳ Démarrage…</button>';
     } else {
       actionsHtml =
         '<button class="btn-success" onclick="startInstance(' + port + ')">▶ Lancer</button>';
@@ -426,16 +436,20 @@ function renderInstances(instances) {
         '</div>' +
 
         '<div class="field">' +
-          '<input type="text" value="' + esc(cfg.admin_login) + '" ' +
-                 'onchange="updateField(' + port + ', \'admin_login\', this.value)" ' +
-                 (actif ? 'disabled' : '') + ' placeholder="Login admin">' +
+          '<input type="text" value="' + esc(cfg.admin_login || "dircrise") + '" ' +
+                 'readonly title="Login exercice standard (non modifiable)" ' +
+                 'style="background:var(--s2);cursor:default" placeholder="Login admin">' +
         '</div>' +
 
         '<div class="field">' +
           '<div class="field-pwd">' +
-            '<input type="text" value="' +
-                   (actif ? '••••••••' : '(masqué — utilisez 📋)') + '" disabled>' +
-            (actif ? '' : '<button class="btn-icon" onclick="regenPwd(' + port + ')" title="Regénérer">🎲</button>') +
+            // v3.0.0 — Mdp exercice FIXE et non secret ("Exercice2026!").
+            // Affiché en clair, en lecture seule. Non éditable et pas de regen :
+            // le collecteur animateur doit pouvoir se logger avec ce mdp connu
+            // pour injecter les stimuli. Le rendre éditable cassait l'injection.
+            '<input type="text" value="' + esc(cfg.admin_password || "Exercice2026!") + '" ' +
+                   'readonly title="Mot de passe exercice standard (non modifiable)" ' +
+                   'style="background:var(--s2);cursor:default">' +
           '</div>' +
         '</div>' +
 
@@ -530,15 +544,25 @@ async function copyCreds(port) {
 }
 
 async function startInstance(port) {
+  // v3000h13 — Feedback visuel persistant via _startingPorts.
+  // refreshInstances respecte ce set et préserve "⏳ Démarrage…" pendant tout
+  // le spawn (qui peut prendre 2-5s, et le polling tourne toutes les 8s).
+  _startingPorts.add(port);
+  // Re-render immédiat pour afficher "⏳ Démarrage…"
+  await refreshInstances();
   try {
     const r = await fetch('/api/master/exercice/instances/' + port + '/start', {
       method: 'POST', headers: authHeaders(),
     });
-    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || ('HTTP ' + r.status)); }
+    if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.detail || ('HTTP ' + r.status)); }
     const data = await r.json();
     toast('✓ Instance exercice :' + port + ' démarrée (PID ' + data.pid + ')', 'ok');
+    // refreshAll va appeler refreshInstances qui détectera actif=true et
+    // retirera le port du set automatiquement
     await refreshAll();
   } catch (e) {
+    // En cas d'erreur, retirer du set pour rétablir le bouton "▶ Lancer"
+    _startingPorts.delete(port);
     toast('Démarrage :' + port + ' : ' + e.message, 'err');
     await refreshInstances();
   }

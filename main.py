@@ -6,7 +6,7 @@ import logging
 import os
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -17,8 +17,10 @@ import app.models  # noqa
 import app.api.status_page  # noqa — enregistre les tables StatusPage
 from app.api import status_page  # v2.4.8.3 — explicitement pour include_router
 
-from app.api import sitrep, cartographie, attachments, i18n
-from app.api import auth, tasks
+from app.api import sitrep, cartographie, attachments, i18n, mobilisation
+from app.api import auth
+from app.api.auth import get_current_user, require_user, require_admin
+from app.api import tasks
 from app.api import v140
 from app.api import scenario_export  # v2.4.8.3 — Générateur scénario depuis crise
 from app.api import lang_admin  # v2.4.8.3 — Admin sélection langue
@@ -89,11 +91,30 @@ def _build_csp() -> str:
 
     connect_src = " ".join(sorted(connect_origins))
 
-    # TODO ANSSI: retirer 'unsafe-inline' de script-src et style-src en migrant
-    # vers des nonces CSP. Chantier non trivial (refactor des onclick inline).
-    # En attendant, mitigation via Permissions-Policy stricte + Referrer-Policy.
-    # frame-ancestors : autoriser self + origines configurées (pour iframe master)
-    frame_ancestors_extra = os.getenv("SCRIBE_FRAME_ANCESTORS", "http://localhost:8565")
+    # v3000h33 — frame-ancestors : autoriser self + origines configurées
+    # ET le hostname externe configuré via hostname.conf, sur les ports
+    # 8565 (collecteur exercice) et 9000 (collecteur prod). Sans ça, quand
+    # l'utilisateur accède via le hostname VPS (au lieu de localhost),
+    # le navigateur bloque l'iframing des instances joueurs dans la
+    # console animateur exercice.
+    frame_ancestors_list = ["http://localhost:8565", "http://localhost:9000"]
+    try:
+        from master.hostname_config import get_configured_hostname
+        ext_host = get_configured_hostname()
+        if ext_host:
+            for port in ("8565", "9000"):
+                frame_ancestors_list.append(f"http://{ext_host}:{port}")
+                frame_ancestors_list.append(f"https://{ext_host}:{port}")
+    except Exception as e:
+        logger.warning(f"Lecture hostname pour frame-ancestors impossible : {e}")
+    # Override via env var possible (rétro-compat)
+    env_extra = os.getenv("SCRIBE_FRAME_ANCESTORS", "")
+    if env_extra:
+        for orig in env_extra.split(","):
+            orig = orig.strip()
+            if orig and orig not in frame_ancestors_list:
+                frame_ancestors_list.append(orig)
+    frame_ancestors_extra = " ".join(frame_ancestors_list)
 
     return (
         "default-src 'self'; "
@@ -102,6 +123,7 @@ def _build_csp() -> str:
         "font-src 'self' fonts.gstatic.com data:; "
         "img-src 'self' data: blob: *.basemaps.cartocdn.com *.tile.openstreetmap.org "
         "server.arcgisonline.com unpkg.com cdnjs.cloudflare.com; "
+        "media-src 'self' blob: data:; "
         f"connect-src {connect_src}; "
         "worker-src 'self'; "
         f"frame-ancestors 'self' {frame_ancestors_extra}"
@@ -120,11 +142,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"
         response.headers["Content-Security-Policy"] = _CSP
+        response.headers["Server"] = "SCRIBE"  # h152 — masquer le fingerprinting
         if request.url.scheme == "https":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
-app = FastAPI(title="SCRIBE v2.5.0 Crisis OS", version="2.5.0")
+# h152 — Désactiver la doc API publique sur les instances (audit sécurité).
+app = FastAPI(
+    title="SCRIBE Crisis OS",
+    version="3.6.0",
+    openapi_url=None,
+    docs_url=None,
+    redoc_url=None,
+)
 
 # CORS — restreint aux origines configurées (jamais wildcard en prod)
 _VPS = "http://localhost"
@@ -150,19 +180,72 @@ app.add_middleware(CORSMiddleware,
 )
 app.add_middleware(SecurityHeadersMiddleware)
 
+# ── Télémétrie sécurité (OBSERVE ONLY — ne bloque jamais une requête) ──────────
+from app.api import sectelemetry as _sectel
+
+class SecurityTelemetryMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        try:
+            _sectel.record(
+                _sectel.client_ip(request),
+                request.method,
+                request.url.path,
+                response.status_code,
+                request.headers.get("user-agent", ""),
+            )
+        except Exception:
+            pass
+        return response
+
+app.add_middleware(SecurityTelemetryMiddleware)
+
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "app", "static")
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app.mount("/static",  StaticFiles(directory=STATIC_DIR), name="static")
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+# /uploads — NE PAS servir en statique public : ce répertoire contient les pièces
+# jointes d'incident (potentiellement sensibles). Route authentifiée à la place :
+# jeton via en-tête Authorization OU paramètre ?token= (les <a href>/<img src> ne
+# peuvent pas envoyer d'en-tête). Anti-path-traversal.
+@app.get("/uploads/{fname:path}", tags=["Uploads"])
+def serve_upload(fname: str, request: Request, token: str = ""):
+    auth = request.headers.get("Authorization", "") or ""
+    tok = auth[7:].strip() if auth[:7].lower() == "bearer " else (token or "")
+    ok = False
+    if tok:
+        try:
+            from app.api.auth import _decode_token
+            from app.database import SessionLocal
+            from app.models import User
+            payload = _decode_token(tok)
+            uid = int(payload["sub"])
+            _db = SessionLocal()
+            try:
+                ok = _db.query(User).filter(User.id == uid, User.active == True).first() is not None
+            finally:
+                _db.close()
+        except Exception:
+            ok = False
+    if not ok:
+        raise HTTPException(status_code=401, detail="Authentification requise")
+    base = os.path.realpath(UPLOAD_DIR)
+    target = os.path.realpath(os.path.join(base, fname))
+    if not (target == base or target.startswith(base + os.sep)) or not os.path.isfile(target):
+        raise HTTPException(status_code=404, detail="Fichier introuvable")
+    return FileResponse(target)
 
 # ── Core (toujours actif) ──────────────────────────────────────────────────
-app.include_router(sitrep.router,       prefix="/api/v1/sitrep",       tags=["Incidents"])
-app.include_router(cartographie.router, prefix="/api/v1/cartographie", tags=["Cartographie"])
-app.include_router(attachments.router,  prefix="/api/v1/attachments",  tags=["PJ"])
+app.include_router(sitrep.router,       prefix="/api/v1/sitrep",       tags=["Incidents"], dependencies=[Depends(require_user)])
+app.include_router(mobilisation.router,  prefix="/api/v1/mobilisation", tags=["Mobilisation"])
+from app.api import securite as _securite
+app.include_router(_securite.router,     prefix="/api/v1/securite",     tags=["Sécurité"])
+app.include_router(cartographie.router, prefix="/api/v1/cartographie", tags=["Cartographie"], dependencies=[Depends(require_user)])
+app.include_router(attachments.router,  prefix="/api/v1/attachments",  tags=["PJ"], dependencies=[Depends(require_user)])
 app.include_router(auth.router,         prefix="/api/v1/auth",         tags=["Auth"])
-app.include_router(tasks.router,        prefix="/api/v1/tasks",        tags=["Kanban"])
+app.include_router(tasks.router,        prefix="/api/v1/tasks",        tags=["Kanban"], dependencies=[Depends(require_user)])
 app.include_router(i18n.router,         prefix="",                     tags=["i18n"])
 # ── Admin plugins ──────────────────────────────────────────────────────────
 app.include_router(admin_plugins.router, prefix="/api/v1/admin",       tags=["Admin Plugins"])
@@ -184,11 +267,17 @@ app.include_router(v140.router,         prefix="/api/v1",              tags=["v1
 
 
 @app.get("/api/v1/plugins/active")
-def get_active_plugins():
+def get_active_plugins(request: Request):
     """
     Retourne les plugins actifs selon l'état DB.
     Inclut les plugins auto-découverts (uploadés).
     Retourne le MANIFEST complet pour permettre la création dynamique d'onglets.
+
+    v3.4 (h34) — Filtrage selon le rôle de l'utilisateur.
+    Si un plugin déclare `allowed_roles` dans son MANIFEST, il n'apparaît que
+    pour les utilisateurs ayant un de ces rôles. L'admin voit tous les plugins.
+    Si `allowed_roles` est absent du manifest → comportement historique
+    (visible par tous).
     """
     import pathlib, importlib
     from config import PLUGINS, PLUGIN_META, get_plugin_enabled
@@ -199,6 +288,34 @@ def get_active_plugins():
         db_state = _load_db_state(db)
     finally:
         db.close()
+
+    # v3.4 (h34) — Récupération du rôle utilisateur courant (pour filtrage).
+    # Inline pour éviter une dépendance forte au moment du chargement de main.
+    # Si on n'arrive pas à le récupérer (anonyme, token invalide…), user=None
+    # → comportement de fallback : on n'expose pas les plugins restreints.
+    user_role = ""
+    is_admin = False
+    try:
+        from app.api.auth import _decode_token
+        from app.models import User
+        auth_hdr = request.headers.get("authorization", "")
+        if auth_hdr.lower().startswith("bearer "):
+            tok = auth_hdr[7:].strip()
+            payload = _decode_token(tok)
+            db2 = SessionLocal()
+            try:
+                u = db2.query(User).filter(
+                    User.id == int(payload.get("sub", 0)),
+                    User.active == True,
+                ).first()
+                if u:
+                    user_role = u.role or ""
+                    is_admin = (user_role == "admin")
+            finally:
+                db2.close()
+    except Exception:
+        # Anonyme ou token KO → rôle vide, on filtre les plugins restreints
+        pass
 
     # Fusionner PLUGINS + plugins physiquement présents
     all_pids = set(PLUGINS.keys())
@@ -212,13 +329,14 @@ def get_active_plugins():
     for pid in all_pids:
         if not get_plugin_enabled(pid, db_state, default=False):
             continue
-        # v2186a — ne pas lister l'onglet exercice dans une instance de prod.
-        # Même condition que dans core/plugin_loader.py : seul le mode exercice
-        # (lancer_exercice.sh) doit afficher cet onglet côté joueur.
+        # v3.0.0 — L'onglet EXERCICE ne doit JAMAIS apparaître dans une instance
+        # joueur. Le pilotage d'exercice (scénarios, stimuli, contrôle) se fait
+        # exclusivement depuis la console animateur (port 8565). Côté joueur, seul
+        # le bandeau "MODE EXERCICE" + bouton "Me déclarer prêt" subsistent (gérés
+        # par index.html via config.js, pas par cet onglet). Le plugin reste chargé
+        # en backend (tables, routes) mais invisible côté UI.
         if pid == "exercice":
-            import os as _os
-            if _os.getenv("SCRIBE_EXERCICE_MODE", "0") != "1":
-                continue
+            continue
         # Priorité : MANIFEST chargé en mémoire > fichier plugin.py > PLUGIN_META
         manifest = dict(_loaded_plugins.get(pid, {}))
         if not manifest:
@@ -228,6 +346,10 @@ def get_active_plugins():
             except Exception:
                 pass
         meta = PLUGIN_META.get(pid, {})
+        # v3.4 (h34) — Filtrage selon rôle utilisateur via allowed_roles du manifest
+        allowed_roles = manifest.get("allowed_roles")
+        if allowed_roles and not is_admin and user_role not in allowed_roles:
+            continue
         result.append({
             "id":      pid,
             "label":   manifest.get("label") or meta.get("label",  pid.upper()),
@@ -257,9 +379,22 @@ def get_all_plugins_public():
     ]
 
 
+@app.get("/api/v1/_debug/plugins")
+def debug_plugins_status(user=Depends(require_admin)):
+    """v3.6.0-alpha3 — Diagnostic plugins : retourne les chargés et les erreurs.
+    Pas d'auth ici (info non sensible : juste savoir si un plugin a planté au boot)."""
+    from core.plugin_loader import _loaded_plugins, get_plugin_errors
+    return {
+        "loaded": list(_loaded_plugins.keys()),
+        "loaded_count": len(_loaded_plugins),
+        "errors": get_plugin_errors(),
+    }
+
+
 @app.on_event("startup")
 async def startup():
     _run_migrations()
+    _migrate_hospital_name()
     _init_status_page()
     # Charger les plugins activés (config.py + surcharge DB)
     from app.database import SessionLocal
@@ -284,6 +419,41 @@ async def startup():
     if not is_plugin_loaded("federation"):
         from app.api import federation as fed_legacy
         asyncio.create_task(fed_legacy.federation_loop())
+
+
+def _migrate_hospital_name():
+    """h153 — Si le Hospital principal a le nom auto-generé Site_PORT,
+    le remplacer par le vrai nom de l etablissement depuis config.js.
+    S execute au demarrage de chaque instance.
+    """
+    import re, os, json as _j
+    try:
+        port = os.environ.get("SCRIBE_PORT", "8000")
+        auto_name = f"Site_{port}"
+        config_js = os.environ.get("SCRIBE_CONFIG_JS", "")
+        if not config_js or not os.path.exists(config_js):
+            return
+        raw   = open(config_js, encoding="utf-8").read()
+        start = raw.find("const SCRIBE_CONFIG = ") + len("const SCRIBE_CONFIG = ")
+        end   = raw.rfind(";")
+        cfg   = _j.loads(raw[start:end])
+        etb   = cfg.get("etablissement", {})
+        nom   = (etb.get("nom") or etb.get("sigle") or "").strip()
+        if not nom or re.match(r"^Site_\d+$", nom, re.IGNORECASE):
+            return
+        from app.database import SessionLocal
+        from app.models import Hospital
+        db = SessionLocal()
+        try:
+            h = db.query(Hospital).filter(Hospital.nom == auto_name).first()
+            if h:
+                h.nom = nom
+                db.commit()
+                print(f"[migrate_hospital] {auto_name!r} -> {nom!r}")
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[migrate_hospital] {e}")
 
 
 def _init_status_page():
@@ -315,12 +485,21 @@ def _run_migrations():
         user_cols = [r[1] for r in cx.execute("PRAGMA table_info(users)")]
         if "must_change_password" not in user_cols:
             cx.execute("ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0")
+        # v3000h41 — Coordonnées de contact (email / téléphone) pour notifications
+        if "email"     not in user_cols: cx.execute("ALTER TABLE users ADD COLUMN email TEXT")
+        if "telephone" not in user_cols: cx.execute("ALTER TABLE users ADD COLUMN telephone TEXT")
         # Migration expediteur_nom / destinataire_nom sur messages_internes
         if "expediteur_nom" not in cols: cx.execute("ALTER TABLE messages_internes ADD COLUMN expediteur_nom TEXT")
         if "destinataire_nom" not in cols: cx.execute("ALTER TABLE messages_internes ADD COLUMN destinataire_nom TEXT")
-        # Migration rôles : directeur → collaborateur, observateur → soignant
-        cx.execute("UPDATE users SET role='collaborateur' WHERE role='directeur'")
-        cx.execute("UPDATE users SET role='soignant' WHERE role='observateur'")
+        # v3.4 (h34) — Migration des rôles vers le nouveau modèle RGPD.
+        # Mapping :
+        #   directeur, observateur, collaborateur → cellule_crise (rôle hérité)
+        # Le rôle `soignant` est NOUVEAU et doit être attribué explicitement par
+        # un admin via l'UI (jamais par migration automatique). Pour éviter
+        # qu'un observateur historique se retrouve avec accès brancardage par
+        # erreur, on les bascule tous en cellule_crise (zéro régression).
+        # Le rôle `admin` est préservé.
+        cx.execute("UPDATE users SET role='cellule_crise' WHERE role IN ('directeur','observateur','collaborateur')")
         # v2315 — Colonnes MFA TOTP sur users
         if "mfa_enabled"      not in user_cols: cx.execute("ALTER TABLE users ADD COLUMN mfa_enabled INTEGER DEFAULT 0")
         if "mfa_secret"       not in user_cols: cx.execute("ALTER TABLE users ADD COLUMN mfa_secret TEXT")
@@ -329,6 +508,55 @@ def _run_migrations():
         sitrep_cols = [r[1] for r in cx.execute("PRAGMA table_info(sitrep_entries)")]
         if "impact_fonctionnel" not in sitrep_cols:
             cx.execute("ALTER TABLE sitrep_entries ADD COLUMN impact_fonctionnel INTEGER DEFAULT 0")
+        # v3.4 (h34) — Visibilité côté soignant sur incidents.
+        # Par défaut décoché (0) : l'incident n'est pas exposé au personnel
+        # soignant sauf via une tâche ou mission de brancardage qui le pointe.
+        # La cellule de crise coche explicitement pour exposer un incident
+        # impactant l'activité soignante (panne DPI, ascenseur, équipement
+        # médical, indisponibilité service).
+        if "visible_soignant" not in sitrep_cols:
+            cx.execute("ALTER TABLE sitrep_entries ADD COLUMN visible_soignant INTEGER DEFAULT 0")
+        # h82 — Archivage des campagnes d'alerte + commentaire libre sur la réponse ETA.
+        alerte_cols = [r[1] for r in cx.execute("PRAGMA table_info(alertes_mobilisation)")]
+        if alerte_cols and "archived" not in alerte_cols:
+            cx.execute("ALTER TABLE alertes_mobilisation ADD COLUMN archived INTEGER DEFAULT 0")
+        cible_cols = [r[1] for r in cx.execute("PRAGMA table_info(alerte_cibles)")]
+        if cible_cols and "commentaire" not in cible_cols:
+            cx.execute("ALTER TABLE alerte_cibles ADD COLUMN commentaire TEXT")
+        # h89 — Périmètre d'abonnement + priorité d'alerte sur l'annuaire de mobilisation.
+        cm_cols = [r[1] for r in cx.execute("PRAGMA table_info(contacts_mobilisation)")]
+        if cm_cols and "perimetre_abonnement" not in cm_cols:
+            cx.execute("ALTER TABLE contacts_mobilisation ADD COLUMN perimetre_abonnement TEXT DEFAULT 'uf'")
+        if cm_cols and "priorite" not in cm_cols:
+            cx.execute("ALTER TABLE contacts_mobilisation ADD COLUMN priorite INTEGER DEFAULT 3")
+        # h93 — Escalade par vagues : vague courante de la campagne + vague par cible.
+        am_cols = [r[1] for r in cx.execute("PRAGMA table_info(alertes_mobilisation)")]
+        if am_cols and "vague_courante" not in am_cols:
+            cx.execute("ALTER TABLE alertes_mobilisation ADD COLUMN vague_courante INTEGER DEFAULT 0")
+        ac_cols = [r[1] for r in cx.execute("PRAGMA table_info(alerte_cibles)")]
+        if ac_cols and "vague" not in ac_cols:
+            cx.execute("ALTER TABLE alerte_cibles ADD COLUMN vague INTEGER DEFAULT 0")
+        if ac_cols and "livraison" not in ac_cols:
+            cx.execute("ALTER TABLE alerte_cibles ADD COLUMN livraison TEXT DEFAULT ''")
+        # h96 — Impact transversal (tous les services de soins).
+        se_cols = [r[1] for r in cx.execute("PRAGMA table_info(sitrep_entries)")]
+        if se_cols and "impact_global" not in se_cols:
+            cx.execute("ALTER TABLE sitrep_entries ADD COLUMN impact_global BOOLEAN DEFAULT 0")
+        # v3.4 (h34) — Visibilité salons chat (DM 1-à-1 + salons restreints).
+        salon_cols = [r[1] for r in cx.execute("PRAGMA table_info(chat_salons)")]
+        if salon_cols and "visibility" not in salon_cols:
+            cx.execute("ALTER TABLE chat_salons ADD COLUMN visibility TEXT DEFAULT 'all'")
+        # Table chat_salon_members (DM 1-à-1 et salons à accès restreint).
+        # SQLite crée la table via Base.metadata.create_all() mais on garantit
+        # son existence ici aussi (et son schéma) pour les DB historiques.
+        cx.execute("""
+            CREATE TABLE IF NOT EXISTS chat_salon_members (
+                salon_id  INTEGER NOT NULL,
+                user_id   INTEGER NOT NULL,
+                joined_at TIMESTAMP,
+                PRIMARY KEY (salon_id, user_id)
+            )
+        """)
         cx.commit(); cx.close()
     except Exception as e:
         logger.warning(f"Migration: {e}")
@@ -423,7 +651,7 @@ async def public_status():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": "2.5.0", "build": "v2500"}
+    return {"status": "ok", "version": "3.6.0-beta", "build": "beta-public"}
 
 
 @app.get("/api/push-test")
@@ -449,7 +677,7 @@ async def push_test():
 
 
 @app.get("/api/debug")
-def debug_info():
+def debug_info(user=Depends(require_admin)):
     """Diagnostic rapide — config, DB, fédération."""
     fed_cfg = federation.FederationConfig()
     config_js = os.environ.get("SCRIBE_CONFIG_JS", os.path.join(STATIC_DIR, "config.js"))
@@ -488,4 +716,41 @@ def debug_info():
 
 if __name__ == "__main__":
     port = int(os.environ.get("SCRIBE_PORT", 8000))
+
+    # v3.0.0 — Nettoyage prudent des ports SCRIBE avant démarrage.
+    # Stratégie : on tue UNIQUEMENT les process clairement identifiables comme
+    # SCRIBE (commande contient main.py / collecteur* / scribe). Tout autre
+    # process est laissé intact. Évite l'erreur récurrente [Errno 10048] /
+    # [Errno 98] "Address already in use" causée par des process orphelins.
+    try:
+        from master.port_cleanup import (
+            free_port_if_scribe, free_all_scribe_ports, summarize_results,
+        )
+        # Toujours libérer le port d'écoute du master lui-même
+        r = free_port_if_scribe(port)
+        if r["status"] in ("freed", "failed_kill", "foreign", "unidentified"):
+            import logging as _lg
+            _lg.getLogger("scribe.boot").info(
+                f"Port master {port}: {r['status']} — {r.get('detail', '')}"
+            )
+        # Cleanup étendu (tous les ports SCRIBE) si SCRIBE_PORT_CLEANUP_ALL=1
+        # Permet à l'utilisateur de demander un grand ménage au boot du master.
+        if os.environ.get("SCRIBE_PORT_CLEANUP_ALL", "0") == "1":
+            results = free_all_scribe_ports()
+            import logging as _lg
+            _lg.getLogger("scribe.boot").info(
+                f"Cleanup étendu ports SCRIBE : {summarize_results(results)}"
+            )
+            # Signaler les process tiers détectés (l'utilisateur doit décider)
+            for r in results:
+                if r["status"] == "foreign":
+                    _lg.getLogger("scribe.boot").warning(
+                        f"  Port {r['port']} occupé par tiers (PID {r['pid']}): "
+                        f"{r.get('cmdline', '')[:120]}"
+                    )
+    except Exception as _e:
+        # Échec du cleanup = non bloquant, on tente de démarrer quand même
+        import logging as _lg
+        _lg.getLogger("scribe.boot").warning(f"port_cleanup ignoré : {_e}")
+
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

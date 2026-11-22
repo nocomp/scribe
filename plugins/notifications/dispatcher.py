@@ -49,6 +49,29 @@ _dedup_cache: Dict[str, datetime] = {}
 DEDUP_WINDOW_SEC = 3600  # 1h
 
 
+def _apply_central_config(kind: str, cfg: dict) -> dict:
+    """Comble la config d'un canal avec la config centrale (supervision) si le
+    domaine y est activé. Précédence : config locale (cfg) > centrale > env.
+    mail ← domaine 'smtp' ; sms ← domaine 'sms'. Jamais bloquant."""
+    domain = {"mail": "smtp", "sms": "sms"}.get(kind)
+    if not domain:
+        return cfg
+    try:
+        from app.central_config import get_domain
+        cc = get_domain(domain)
+    except Exception:
+        return cfg
+    if not cc or not cc.get("enabled"):
+        return cfg
+    merged = dict(cfg or {})
+    for k, v in cc.items():
+        if k == "enabled" or v in (None, ""):
+            continue
+        if merged.get(k) in (None, ""):   # trou local → on comble avec le central
+            merged[k] = v
+    return merged
+
+
 def _rate_check(user_id: int, limit_per_min: int = 10) -> bool:
     """True si l'user peut recevoir une nouvelle notif dans cette minute."""
     global _rate_bucket_window, _rate_bucket
@@ -177,6 +200,7 @@ async def _notify_impl(
             if not cls: continue
             try:
                 cfg = json.loads(channel.config_json or "{}")
+                cfg = _apply_central_config(kind, cfg)  # local > central > env
                 inst = cls(cfg)
                 if inst.is_configured():
                     backend_instances[kind] = inst

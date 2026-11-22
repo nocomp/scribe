@@ -136,7 +136,7 @@ PLUGINS: dict[str, bool] = {
     "messagerie": True,
     # v2307 → v2320 : Plugin inter_ght normalement désactivé en public car
     # le chat temps réel couvre les besoins d'échanges inter-établissements.
-    # Activé ici pour build privé où l'onglet est attendu.
+    # Activé ici pour build privé Réseau Démo / G7 où l'onglet est attendu.
     "inter_ght":  True,
     "federation": True,
     "albert":     True,
@@ -148,6 +148,18 @@ PLUGINS: dict[str, bool] = {
     # GitHub : repasser à False (opt-in admin via /admin/plugins) pour
     # rétrocompatibilité.
     "tuteur":        True,
+    # v3.5 (alpha1) — Plugin BLUEFILES : transfert sécurisé HDS via Bluefiles
+    # (Forecomm/Orange Healthcare). En l'absence de clé API configurée, le
+    # plugin fonctionne en mode DEV simulé (aucun appel réseau). Activé par
+    # défaut pour la phase de développement et démonstration.
+    "bluefiles":     True,
+    # v3000h154a — Plugin FICHIERS : drive interne (drive perso, partage à
+    # jeton, partage ÉPHÉMÈRE auto-destructeur). Charte Suite numérique,
+    # multilingue 24 langues. Activé par défaut.
+    "fichiers":      True,
+    # v3000h155 — Plugin RÉPONDEUR : lignes d'information de crise (audiotext /
+    # SVI) via Twilio. Mode DEV sans identifiants. Activé par défaut.
+    "repondeur":     True,
     # "chaine_alerte": False,
 }
 
@@ -166,7 +178,10 @@ PLUGIN_META: dict[str, dict] = {
     "albert":     {"label": "ASSISTANT IA", "icon": "🤖", "order": 120, "tab": False},
     "exercice":   {"label": "EXERCICE",    "icon": "🎯", "order": 88,  "tab": True},
     "notifications": {"label": "NOTIFICATIONS", "icon": "🔔", "order": 95, "tab": False},
-    "tuteur":     {"label": "MON COACH",   "icon": "🎓", "order": 115, "tab": True},
+    "tuteur":     {"label": "MON ASSISTANT",   "icon": "🎓", "order": 115, "tab": True},
+    "bluefiles":  {"label": "BLUEFILES",        "icon": "🔒", "order": 105, "tab": False},
+    "fichiers":   {"label": "FICHIERS",         "icon": "📁", "order": 92,  "tab": True},
+    "repondeur":  {"label": "RÉPONDEUR",        "icon": "☎️", "order": 96,  "tab": True},
 }
 
 # ── FEDERATION ────────────────────────────────────────────────────────────────
@@ -175,13 +190,13 @@ FEDERATION: dict = {
     "demo_port":           int(os.getenv("SCRIBE_DEMO_PORT",      "7474")),
     "demo_collector_port": int(os.getenv("SCRIBE_DEMO_COLL_PORT", "7373")),
     "instances": [
-        {"sigle": "DEMO",      "port": 8000},
-        {"sigle": "DEMO2",    "port": 8001},
-        {"sigle": "DEMO3", "port": 8002},
-        {"sigle": "DEMO4",   "port": 8003},
-        {"sigle": "DEMO5",      "port": 8004},
-        {"sigle": "DEMO6",       "port": 8005},
-        {"sigle": "DEMO7",      "port": 8006},
+        {"sigle": "CHV",      "port": 8000},
+        {"sigle": "GHT1",    "port": 8001},
+        {"sigle": "CHR1", "port": 8002},
+        {"sigle": "CH2",   "port": 8003},
+        {"sigle": "CH3",      "port": 8004},
+        {"sigle": "CH4",       "port": 8005},
+        {"sigle": "CH5",      "port": 8006},
     ],
 }
 
@@ -190,7 +205,7 @@ FEDERATION: dict = {
 # (lus dynamiquement depuis config.js par le frontend, ou ici comme défauts).
 LOGIN: dict = {
     # Ligne de sous-titre sous le logo (nom de l'établissement + contexte)
-    # Exemples : "DEMO — Crisis OS" | "CHU Grenoble — Cellule de Crise"
+    # Exemples : "CHV — Crisis OS" | "CHU Grenoble — Cellule de Crise"
     "subtitle":    os.getenv("SCRIBE_LOGIN_SUBTITLE",   "Votre Établissement — Crisis OS"),
 
     # Texte en bas de la login box (contexte réseau, mention légale, etc.)

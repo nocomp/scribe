@@ -3,7 +3,7 @@ chcp 65001 > nul 2>&1
 cd /d "%~dp0"
 title SCRIBE - Supervision + Pilotage d'instances
 
-REM v2.4.8.4 — Support de l'option --reset pour repartir d'un état propre
+REM v2.4.8.4 - Support de l'option --reset pour repartir d'un etat propre
 REM (nettoie les flags onboarding + supprime les DB d'instances + state master)
 if /i "%1"=="--reset" goto :do_reset
 if /i "%1"=="-r"      goto :do_reset
@@ -91,6 +91,13 @@ if not exist master\profil_base.xlsx (
 echo.
 echo  ^>^> Demarrage de la supervision sur :9000...
 echo.
+
+REM v3.0.0 - Liberer les ports SCRIBE occupes par d'anciens process orphelins
+REM AVANT de lancer le master. Tue UNIQUEMENT les python.exe/pythonw.exe
+REM identifiables comme SCRIBE sur les ports proteges. Process tiers epargnes.
+echo  [boot] Nettoyage des ports SCRIBE orphelins...
+python -c "import sys; sys.path.insert(0, '.'); from master.port_cleanup import free_all_scribe_ports, summarize_results; r = free_all_scribe_ports(); print('  Resultat:', summarize_results(r))" 2>nul
+if errorlevel 1 echo  [boot] Cleanup ignore (module port_cleanup non disponible)
 
 cd collecteur
 python collecteur.py

@@ -338,6 +338,14 @@ async def upload_plugin(
             dest = plugins_dir / plugin_id
             if dest.exists():
                 shutil.rmtree(dest)
+            # Extraction sûre : en plus du filtrage des noms ci-dessus, on résout
+            # chaque cible et on confirme qu'elle reste confinée dans plugins_dir
+            # (défense en profondeur contre le zip-slip).
+            _base = plugins_dir.resolve()
+            for _member in names:
+                _target = (plugins_dir / _member).resolve()
+                if _target != _base and _base not in _target.parents:
+                    raise HTTPException(400, "ZIP invalide : chemin hors périmètre")
             zf.extractall(plugins_dir)
 
     except zipfile.BadZipFile:

@@ -15,7 +15,10 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+import io
+import pathlib
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -23,7 +26,7 @@ from app.database import get_db
 from app.models import (
     CapaciteReferentiel, CapaciteDeclaration, SitrepEntry
 )
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, require_role
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -175,7 +178,7 @@ def get_referentiel(db: Session = Depends(get_db)):
 def create_or_update_referentiel(
     payload: ReferentielCreate,
     db: Session = Depends(get_db),
-    user=Depends(get_current_user)
+    user=Depends(require_role("cadre_sante", "admin"))
 ):
     """Crée ou met à jour une unité de référence."""
     existing = db.query(CapaciteReferentiel).filter(
@@ -407,3 +410,110 @@ def export_capacite_csv(db: Session = Depends(get_db)):
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=capacite_{now_str}.csv"}
     )
+
+
+@router.post("/import-xlsx")
+async def import_from_xlsx(
+    file: UploadFile = File(...),
+    user=Depends(require_role("cadre_sante", "admin")),
+    db: Session = Depends(get_db),
+):
+    """h151 — Import Excel du référentiel capacitaire.
+    Colonnes attendues (ligne 5 = en-têtes, données dès ligne 6) :
+      N° UF | Nom du service | Pôle | Site | Établissement |
+      Lits total | Personnel soignant (ETP) | Accept H | Accept F | Ordre affichage
+    Les UF existantes (même uf_code) sont mises à jour, les nouvelles créées.
+    """
+    try:
+        import openpyxl
+    except ImportError:
+        raise HTTPException(500, "openpyxl non installé — pip install openpyxl")
+    try:
+        content = await file.read()
+        wb = openpyxl.load_workbook(io.BytesIO(content), data_only=True)
+        # Chercher la feuille Capacite_Lits ou la première
+        ws = wb["Capacite_Lits"] if "Capacite_Lits" in wb.sheetnames else wb.active
+        # Ligne 5 = en-têtes, données dès ligne 6
+        header_row = 5
+        data_start = 6
+        rows_processed = 0
+        rows_created = 0
+        rows_updated = 0
+        errors = []
+        for row in ws.iter_rows(min_row=data_start, values_only=True):
+            # Ignorer les lignes vides ou les notes
+            if not row or not row[0]:
+                continue
+            uf_code  = str(row[0]).strip() if row[0] is not None else ""
+            svc_nom  = str(row[1]).strip() if row[1] is not None else ""
+            pole     = str(row[2]).strip() if row[2] is not None else ""
+            site     = str(row[3]).strip() if row[3] is not None else ""
+            etab     = str(row[4]).strip() if row[4] is not None else ""
+            lits     = int(row[5]) if row[5] is not None and str(row[5]).isdigit() else 0
+            personnel = int(row[6]) if row[6] is not None and str(row[6]).strip().isdigit() else 0
+            acc_h    = str(row[7]).strip().upper() != "NON" if row[7] else True
+            acc_f    = str(row[8]).strip().upper() != "NON" if row[8] else True
+            ordre    = int(row[9]) if row[9] is not None else 99
+            if not svc_nom:
+                continue
+            rows_processed += 1
+            existing = None
+            if uf_code:
+                existing = db.query(CapaciteReferentiel).filter(
+                    CapaciteReferentiel.uf_code == uf_code
+                ).first()
+            if not existing and svc_nom:
+                existing = db.query(CapaciteReferentiel).filter(
+                    CapaciteReferentiel.service_nom == svc_nom
+                ).first()
+            if existing:
+                existing.service_nom     = svc_nom
+                existing.uf_code         = uf_code or existing.uf_code
+                existing.pole            = pole or existing.pole
+                existing.site            = site or existing.site
+                existing.capacite_totale = lits
+                existing.accept_homme    = acc_h
+                existing.accept_femme    = acc_f
+                existing.accept_indiffer = True
+                existing.ordre_affichage = ordre
+                rows_updated += 1
+            else:
+                new_ref = CapaciteReferentiel(
+                    service_nom=svc_nom, uf_code=uf_code, pole=pole,
+                    site=site, capacite_totale=lits,
+                    accept_homme=acc_h, accept_femme=acc_f,
+                    accept_indiffer=True, ordre_affichage=ordre, actif=True,
+                )
+                db.add(new_ref)
+                rows_created += 1
+        db.commit()
+        return {
+            "ok": True,
+            "processed": rows_processed,
+            "created": rows_created,
+            "updated": rows_updated,
+            "errors": errors,
+            "message": f"{rows_created} service(s) créé(s), {rows_updated} mis à jour.",
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(400, f"Erreur import Excel : {e}")
+
+
+@router.get("/template.xlsx")
+def download_template():
+    """h149 — Télécharge le template Excel vierge pour configurer les UF
+    et faciliter la déclaration capacitaire.
+    Cherche uf_modele.xlsx dans uploads/ puis à la racine du projet."""
+    for candidate in [
+        pathlib.Path(__file__).parent.parent.parent / "uploads" / "uf_modele.xlsx",
+        pathlib.Path(__file__).parent.parent.parent / "uf_modele.xlsx",
+    ]:
+        if candidate.exists():
+            return FileResponse(
+                str(candidate),
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                filename="SCRIBE_capacite_template.xlsx",
+            )
+    raise HTTPException(404, "Template non trouvé — déposez uf_modele.xlsx dans uploads/")
+

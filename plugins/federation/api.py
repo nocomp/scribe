@@ -11,7 +11,7 @@ Principe :
 Configuration dans config.xml :
   <federation>
     <enabled>true</enabled>
-    <collecteur_url>https://supervision.cert-sante74.fr/api/push</collecteur_url>
+    <collecteur_url>https://supervision.supervision.example.org/api/push</collecteur_url>
     <token>TOKEN_256BITS_GENERE_PAR_LE_COLLECTEUR</token>
     <intervalle_secondes>120</intervalle_secondes>   <!-- défaut : 120s -->
     <share_details>true</share_details>              <!-- inclure résumés incidents ou KPIs seuls -->
@@ -20,6 +20,7 @@ Configuration dans config.xml :
 """
 
 import asyncio
+import unicodedata
 import hashlib
 import json
 import logging
@@ -29,7 +30,8 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.api.auth import require_admin as _require_admin
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
@@ -358,7 +360,9 @@ async def push_to_collecteur(cfg: FederationConfig, payload: dict) -> bool:
                     "Authorization": f"Bearer {cfg.token}",
                     "Content-Type":  "application/json",
                     "X-Scribe-Version": "6",
-                    "X-Scribe-Etab":    cfg.etablissement_sigle,
+                    # h153 — X-Scribe-Etab doit être ASCII (RFC 7230).
+                    # Les sigles accentués (ex: "Hôpitaux Du Lac") cassent httpx.
+                    "X-Scribe-Etab": unicodedata.normalize("NFD", cfg.etablissement_sigle or "").encode("ascii","ignore").decode("ascii").strip(),
                 },
             )
         if resp.status_code in (200, 201, 204):
@@ -563,7 +567,8 @@ def federation_status():
         "ready":         cfg.is_ready,
         "sync_paused":   _fed_sync_paused,
         "collecteur_url": cfg.collecteur_url,
-        "token":         cfg.token,
+        # Ne JAMAIS renvoyer le token en clair (credential Bearer de push vers le
+        # collecteur) : seul l'aperçu non exploitable est exposé.
         "token_preview": cfg.token[:8] + "..." if cfg.token else "",
         "etablissement": cfg.etablissement_sigle,
         "intervalle_s":  cfg.intervalle,
@@ -581,7 +586,10 @@ async def get_collecteur_sites():
         import httpx
         coll_url = cfg.collecteur_url.replace("/api/push","")
         async with httpx.AsyncClient(timeout=5.0) as client:
-            r = await client.get(f"{coll_url}/api/summary")
+            # /api/summary est désormais authentifié côté collecteur : on présente
+            # le token de fédération de l'instance (accepté comme jeton de nœud).
+            r = await client.get(f"{coll_url}/api/summary",
+                                 headers={"Authorization": f"Bearer {cfg.token}"})
             if r.status_code == 200:
                 summary = r.json()
                 sites = []
@@ -602,9 +610,10 @@ async def get_collecteur_sites():
     return []
 
 
-@router.get("/info")
+@router.get("/info", dependencies=[Depends(_require_admin)])
 def federation_info():
-    """Retourne les infos de fédération — token, URL collecteur, commande d'enregistrement."""
+    """Infos de fédération + commande d'enregistrement. ADMIN UNIQUEMENT : la
+    commande contient le token Bearer de l'établissement."""
     cfg = get_fed_config()
     cmd = ""
     if cfg.token and cfg.collecteur_url:
@@ -619,7 +628,8 @@ def federation_info():
         "enabled":        cfg.enabled,
         "collecteur_url": cfg.collecteur_url,
         "sigle":          cfg.etablissement_sigle,
-        "token":          cfg.token,
+        # Pas de champ "token" brut : le token n'apparaît que dans la commande
+        # d'enregistrement ci-dessous, et cette route est réservée à l'admin.
         "commande_enregistrement": cmd,
         "message": "Copiez la commande ci-dessus et exécutez-la sur le serveur collecteur" if cmd else "Fédération non configurée"
     }
@@ -654,7 +664,7 @@ Principe :
 Configuration dans config.xml :
   <federation>
     <enabled>true</enabled>
-    <collecteur_url>https://supervision.cert-sante74.fr/api/push</collecteur_url>
+    <collecteur_url>https://supervision.supervision.example.org/api/push</collecteur_url>
     <token>TOKEN_256BITS_GENERE_PAR_LE_COLLECTEUR</token>
     <intervalle_secondes>120</intervalle_secondes>   <!-- défaut : 120s -->
     <share_details>true</share_details>              <!-- inclure résumés incidents ou KPIs seuls -->
@@ -665,69 +675,106 @@ Configuration dans config.xml :
 # ── Push capacité vers le collecteur ──────────────────────────────────────
 
 def build_capacite_payload(db, cfg: "FederationConfig") -> dict:
-    """Construit le payload capacitaire (lits, RH, matériel)."""
+    """Construit le payload capacitaire — une entrée par UF/service (pas par pôle).
+    h151 : envoi de toutes les UF individuelles pour affichage complet en supervision.
+    Par défaut (sans déclaration) : lits_vides = capacité_totale (tout est libre).
+    """
     try:
-        from app.models import CapaciteReferentiel, CapaciteDeclaration, Hospital
-        from sqlalchemy import func as sqlfunc
+        from app.models import CapaciteReferentiel, CapaciteDeclaration
         STATUT_POIDS = {"ferme": 3, "critique": 2, "tension": 1, "normal": 0}
-        refs = db.query(CapaciteReferentiel).all()
-        synthese = {}
+        refs = db.query(CapaciteReferentiel).filter(CapaciteReferentiel.actif == True).all()  # noqa: E712
+        services = []
         alertes = []
         nb_alertes = 0
         for ref in refs:
-            site = ref.site or "?"
+            site = ref.site or "Principal"
             pole = ref.pole or "Autre"
-            key = f"{site}||{pole}"
             last = (db.query(CapaciteDeclaration)
                     .filter(CapaciteDeclaration.referentiel_id == ref.id)
                     .order_by(CapaciteDeclaration.horodatage.desc()).first())
-            if key not in synthese:
-                synthese[key] = {"site": site, "pole": pole, "lits_total": 0,
-                                 "lits_vides_h": 0, "lits_vides_f": 0, "lits_vides_i": 0,
-                                 "nb_alertes": 0, "statut": "normal"}
-            synthese[key]["lits_total"] += ref.capacite_totale or 0
+            total = ref.capacite_totale or 0
             if last:
-                synthese[key]["lits_vides_h"] += last.lits_vides_h or 0
-                synthese[key]["lits_vides_f"] += last.lits_vides_f or 0
-                synthese[key]["lits_vides_i"] += last.lits_vides_i or 0
-                if last.alerte_lits or last.alerte_rh or last.alerte_materiel:
-                    nb_alertes += 1
-                    synthese[key]["nb_alertes"] += 1
-                    alertes.append({"service": ref.service_nom, "site": site, "pole": pole,
-                                    "alerte_lits": last.alerte_lits,
-                                    "alerte_rh": last.alerte_rh,
-                                    "alerte_materiel": last.alerte_materiel,
-                                    "commentaire": last.commentaire_general or "",
-                                    "horodatage": last.horodatage.isoformat() if last.horodatage else None})
-                if getattr(last, "mode_degrade", False):
-                    alertes.append({"service": ref.service_nom, "site": site, "pole": pole,
-                                    "mode_degrade": True,
-                                    "besoin_renfort": getattr(last, "besoin_renfort", 0),
-                                    "peut_preter": getattr(last, "peut_preter", 0),
-                                    "commentaire": last.commentaire_general or "",
-                                    "horodatage": last.horodatage.isoformat() if last.horodatage else None})
+                # Déclaration existante — utiliser les valeurs déclarées
+                lits_h = last.lits_vides_h or 0
+                lits_f = last.lits_vides_f or 0
+                lits_i = last.lits_vides_i or 0
+                statut_rh  = last.statut_rh  or "complet"
+                nb_pers    = 0  # nb_personnel non présent dans CapaciteDeclaration v1
                 poids = max(STATUT_POIDS.get(last.statut_lits, 0),
                             STATUT_POIDS.get(last.statut_rh, 0),
                             STATUT_POIDS.get(last.statut_materiel, 0))
-                statut_actuel = {3: "ferme", 2: "critique", 1: "tension", 0: "normal"}.get(poids, "normal")
-                if poids > STATUT_POIDS.get(synthese[key]["statut"], 0):
-                    synthese[key]["statut"] = statut_actuel
+                statut = {3: "ferme", 2: "critique", 1: "tension", 0: "normal"}.get(poids, "normal")
+                has_declaration = True
+                horodatage = last.horodatage.isoformat() if last.horodatage else None
+                if last.alerte_lits or last.alerte_rh or last.alerte_materiel:
+                    nb_alertes += 1
+                    alertes.append({
+                        "service": ref.service_nom, "site": site, "pole": pole,
+                        "uf_code": ref.uf_code or "",
+                        "alerte_lits": last.alerte_lits,
+                        "alerte_rh": last.alerte_rh,
+                        "alerte_materiel": last.alerte_materiel,
+                        "commentaire": last.commentaire_general or "",
+                        "horodatage": horodatage,
+                    })
+                if getattr(last, "mode_degrade", False):
+                    alertes.append({
+                        "service": ref.service_nom, "site": site, "pole": pole,
+                        "mode_degrade": True,
+                        "besoin_renfort": getattr(last, "besoin_renfort", 0),
+                        "peut_preter": getattr(last, "peut_preter", 0),
+                        "commentaire": last.commentaire_general or "",
+                        "horodatage": horodatage,
+                    })
+            else:
+                # h152 — Pas de déclaration : par défaut TOUT est libre.
+                # On met tout en H pour éviter d'afficher un total×3.
+                lits_h, lits_f, lits_i = total, 0, 0
+                statut_rh = "complet"
+                nb_pers   = 0
+                statut    = "normal"
+                has_declaration = False
+                horodatage = None
+
+            services.append({
+                "service": ref.service_nom,
+                "uf_code": ref.uf_code or "",
+                "pole":    pole,
+                "site":    site,
+                "lits_total":   total,
+                "lits_vides_h": lits_h,
+                "lits_vides_f": lits_f,
+                "lits_vides_i": lits_i,
+                "statut":       statut,
+                "statut_rh":    statut_rh,
+
+                "has_declaration": has_declaration,
+                "horodatage":   horodatage,
+            })
+
         nb_degrade = sum(1 for a in alertes if a.get("mode_degrade"))
-        services_renfort = [{"service": a["service"], "site": a["site"],
-                             "besoin_renfort": a["besoin_renfort"], "peut_preter": a["peut_preter"]}
-                           for a in alertes if a.get("mode_degrade")]
+        services_renfort = [
+            {"service": a["service"], "site": a["site"],
+             "besoin_renfort": a["besoin_renfort"], "peut_preter": a["peut_preter"]}
+            for a in alertes if a.get("mode_degrade")
+        ]
+        # Champ "synthese" maintenu pour compatibilité ascendante (= services)
         return {
             "etablissement": {"nom": cfg.etablissement_nom, "sigle": cfg.etablissement_sigle},
-            "synthese": list(synthese.values()), "alertes": alertes,
-            "nb_services": len(refs), "nb_alertes": nb_alertes,
-            "nb_degrade": nb_degrade, "services_renfort": services_renfort,
+            "synthese":      services,   # alias pour la supervision (liste complète des UF)
+            "services":      services,
+            "alertes":       alertes,
+            "nb_services":   len(refs),
+            "nb_alertes":    nb_alertes,
+            "nb_degrade":    nb_degrade,
+            "services_renfort": services_renfort,
             "transferts_en_cours": len(_get_transferts_anonymes(db)),
-            "timestamp": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+            "timestamp": __import__("datetime").datetime.now(
+                __import__("datetime").timezone.utc).isoformat(),
         }
     except Exception as e:
         logger.warning(f"build_capacite_payload erreur : {e}")
         return {}
-
 
 async def push_capacite_to_collecteur(cfg: "FederationConfig", payload: dict) -> bool:
     """Envoie le payload capacitaire vers /api/push-capacite du collecteur."""

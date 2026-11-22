@@ -101,5 +101,11 @@ echo ""
 echo "  ▶ Démarrage de la supervision sur :9000..."
 echo ""
 
+# v3.0.0 — Libérer les ports SCRIBE occupés par d'anciens process orphelins
+# AVANT de lancer le master. Tue uniquement les process identifiables comme
+# SCRIBE sur les ports protégés. Process tiers épargnés.
+echo "  [boot] Nettoyage des ports SCRIBE orphelins..."
+$PYTHON_BIN -c "import sys; sys.path.insert(0, '.'); from master.port_cleanup import free_all_scribe_ports, summarize_results; r = free_all_scribe_ports(); print('  Résultat:', summarize_results(r))" 2>/dev/null || echo "  [boot] Cleanup ignoré (module port_cleanup non disponible)"
+
 cd collecteur
 exec $PYTHON_BIN collecteur.py

@@ -12,9 +12,19 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import TransfertPatient
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, require_role
 
 router = APIRouter(prefix="/transferts", tags=["transferts"])
+
+# v3.4 (h34) — Les transferts patient internes contiennent des données
+# nominatives (nom, prénom, IPP, date de naissance). Au sens RGPD/HDS, seul
+# le rôle 'soignant' (et l'admin via court-circuit) a un besoin légitime de
+# les consulter. La cellule de crise voit les transferts inter-GHT
+# anonymisés via la fédération, ce qui suffit à son besoin de pilotage.
+#
+# Pour un futur besoin de comptage anonymisé côté cellule de crise, ajouter
+# une route /transferts/stats ou /transferts/anonymes dédiée.
+_require_tx = require_role("soignant")
 
 
 class TransfertCreate(BaseModel):
@@ -62,14 +72,14 @@ def _serialize(t: TransfertPatient) -> dict:
 
 @router.get("")
 def list_transferts(db: Session = Depends(get_db),
-                    current_user=Depends(get_current_user)):
+                    current_user=Depends(_require_tx)):
     items = db.query(TransfertPatient).order_by(TransfertPatient.horodatage_creation.desc()).all()
     return [_serialize(t) for t in items]
 
 
 @router.post("", status_code=201)
 def create_transfert(body: TransfertCreate, db: Session = Depends(get_db),
-                     current_user=Depends(get_current_user)):
+                     current_user=Depends(_require_tx)):
     if body.statut not in STATUTS_VALIDES:
         raise HTTPException(400, f"Statut invalide : {body.statut}")
     t = TransfertPatient(**body.dict())
@@ -79,7 +89,7 @@ def create_transfert(body: TransfertCreate, db: Session = Depends(get_db),
 
 @router.put("/{tid}")
 def update_transfert(tid: int, body: TransfertCreate, db: Session = Depends(get_db),
-                     current_user=Depends(get_current_user)):
+                     current_user=Depends(_require_tx)):
     t = db.query(TransfertPatient).filter(TransfertPatient.id == tid).first()
     if not t: raise HTTPException(404, "Transfert introuvable")
     for k, v in body.dict().items():
@@ -90,7 +100,7 @@ def update_transfert(tid: int, body: TransfertCreate, db: Session = Depends(get_
 
 @router.patch("/{tid}/statut")
 def update_statut(tid: int, body: StatutUpdate, db: Session = Depends(get_db),
-                  current_user=Depends(get_current_user)):
+                  current_user=Depends(_require_tx)):
     if body.statut not in STATUTS_VALIDES:
         raise HTTPException(400, f"Statut invalide : {body.statut}")
     t = db.query(TransfertPatient).filter(TransfertPatient.id == tid).first()
@@ -106,7 +116,7 @@ def update_statut(tid: int, body: StatutUpdate, db: Session = Depends(get_db),
 
 @router.delete("/{tid}")
 def delete_transfert(tid: int, db: Session = Depends(get_db),
-                     current_user=Depends(get_current_user)):
+                     current_user=Depends(_require_tx)):
     t = db.query(TransfertPatient).filter(TransfertPatient.id == tid).first()
     if not t: raise HTTPException(404, "Transfert introuvable")
     db.delete(t); db.commit()
